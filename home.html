@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sol Argentino TV MOVIES — Home</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="home.html">
+                <div class="logo" aria-hidden="true"></div>
+                <div>
+                    <div>Sol Argentino TV MOVIES</div>
+                    <small>Home</small>
+                </div>
+            </a>
+
+            <nav class="nav">
+                <a data-nav href="home.html" class="active"><i class="fa-solid fa-tv"></i> Inicio</a>
+                <a data-nav href="profile.html"><i class="fa-solid fa-user"></i> Perfiles</a>
+                <a data-nav href="auth.html"><i class="fa-solid fa-user-lock"></i> Auth</a>
+            </nav>
+
+            <div class="actions">
+                <span id="profilePill" class="pill"><i class="fa-solid fa-id-badge"></i> <span>Cargando…</span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="hero">
+            <div>
+                <h1>Catálogo</h1>
+                <p>Continuar viendo, Mi lista y títulos. Estilo streaming, sin blur, UI limpia.</p>
+            </div>
+            <div class="cta">
+                <input id="search" class="input" style="width:min(360px, 70vw);" placeholder="Buscar títulos…" />
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div>
+                    <h2>Continuar viendo</h2>
+                    <p>Progreso por perfil: películas y episodios.</p>
+                </div>
+            </div>
+            <div id="continueGrid" class="grid"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div>
+                    <h2>Mi lista</h2>
+                    <p>Guardados del perfil activo.</p>
+                </div>
+            </div>
+            <div id="myListGrid" class="grid"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div>
+                    <h2>Todos los títulos</h2>
+                    <p>Películas y series.</p>
+                </div>
+            </div>
+            <div id="catalogGrid" class="grid"></div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script type="module" src="assets/js/home.js"></script>
+</body>
+
+</html>

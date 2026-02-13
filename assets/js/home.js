@@ -1,0 +1,175 @@
+import { supabase, getActiveProfileId } from "./supabaseClient.js";
+import { qs, toast, escapeHtml } from "./ui.js";
+
+async function ensureReady() {
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session?.user) {
+        location.href = "auth.html";
+        return null;
+    }
+    const pid = getActiveProfileId();
+    if (!pid) {
+        location.href = "profile.html";
+        return null;
+    }
+    return { user: data.session.user, profileId: pid };
+}
+
+function titleHref(contentRow) {
+    // Para URL linda: /titles/index.html?slug=xxx o /titles/index.html#xxx
+    // Ideal: que "slug" sea un campo en content. Si no, usamos id.
+    return `titles/index.html?id=${encodeURIComponent(contentRow.id)}`;
+}
+
+function cardFromContent(c, opts = {}) {
+    const badge = c.type === "series" ? "Serie" : "Película";
+    const poster = c.thumbnail_url || c.banner_url || "";
+    const year = c.release_year ? `${c.release_year}` : "";
+    const dur = c.duration_seconds ? `${Math.round(c.duration_seconds / 60)} min` : "";
+    const right = opts.rightHtml || "";
+
+    return `
+    <a class="card" href="${titleHref(c)}" aria-label="${escapeHtml(c.title)}">
+      <div class="poster">
+        ${poster ? `<img alt="" src="${escapeHtml(poster)}" loading="lazy">` : ""}
+        <div class="badge">${badge}</div>
+      </div>
+      <div class="card-body">
+        <div class="title-row">
+          <h3>${escapeHtml(c.title)}</h3>
+          <div style="color:var(--muted)">${right}</div>
+        </div>
+        <div class="meta">
+          ${year ? `<span><i class="fa-regular fa-calendar"></i> ${year}</span>` : ""}
+          ${dur ? `<span><i class="fa-regular fa-clock"></i> ${dur}</span>` : ""}
+        </div>
+        ${opts.progressHtml || ""}
+      </div>
+    </a>
+  `;
+}
+
+function progressBlock({ pct, label }) {
+    const p = Math.max(0, Math.min(100, pct || 0));
+    return `
+    <div class="progress-wrap">
+      <div class="progress" aria-label="progreso">
+        <div style="width:${p.toFixed(2)}%"></div>
+      </div>
+      <div class="progress-label">${escapeHtml(label || "")}</div>
+    </div>
+  `;
+}
+
+async function loadProfilePill(profileId) {
+    const { data, error } = await supabase
+        .from("profiles")
+        .select("display_name, avatar_url")
+        .eq("id", profileId)
+        .single();
+
+    if (error) return;
+
+    const pill = qs("#profilePill");
+    const name = data?.display_name || "Perfil";
+    pill.innerHTML = `<i class="fa-solid fa-id-badge"></i> <span>${escapeHtml(name)}</span>`;
+}
+
+async function loadCatalog(filterText = "") {
+    const grid = qs("#catalogGrid");
+    grid.innerHTML = "";
+
+    // Si querés, sumale un campo "slug" en content para URLs humanas.
+    let q = supabase.from("content")
+        .select("id, type, title, description, thumbnail_url, banner_url, release_year, duration_seconds")
+        .order("created_at", { ascending: false });
+
+    if (filterText) {
+        q = q.ilike("title", `%${filterText}%`);
+    }
+
+    const { data, error } = await q;
+    if (error) return toast("No se pudo cargar el catálogo", error.message);
+
+    grid.innerHTML = (data || []).map(c => cardFromContent(c)).join("") || `
+    <div class="panel">No hay títulos todavía.</div>
+  `;
+}
+
+async function loadMyList(profileId) {
+    const grid = qs("#myListGrid");
+    grid.innerHTML = "";
+
+    const { data, error } = await supabase
+        .from("my_list")
+        .select("content:content_id(id, type, title, thumbnail_url, banner_url, release_year, duration_seconds)")
+        .eq("profile_id", profileId)
+        .order("added_at", { ascending: false });
+
+    if (error) return toast("No se pudo cargar Mi lista", error.message);
+
+    const rows = (data || []).map(x => x.content).filter(Boolean);
+    grid.innerHTML = rows.map(c => cardFromContent(c, { rightHtml: `<i class="fa-solid fa-bookmark"></i>` })).join("") || `
+    <div class="panel">Tu lista está vacía.</div>
+  `;
+}
+
+async function loadContinueWatching(profileId) {
+    const grid = qs("#continueGrid");
+    grid.innerHTML = "";
+
+    // En tu schema: watch_progress tiene content_id y episode_id (nullable)
+    // Necesitamos label T{season} E{episode} si episode_id != null
+    const { data, error } = await supabase
+        .from("watch_progress")
+        .select(`
+      id,
+      progress_seconds,
+      duration_seconds,
+      completed,
+      updated_at,
+      content:content_id(id, type, title, thumbnail_url, banner_url, release_year, duration_seconds),
+      episode:episode_id(
+        id,
+        episode_number,
+        title,
+        season:season_id(season_number)
+      )
+    `)
+        .eq("profile_id", profileId)
+        .order("updated_at", { ascending: false })
+        .limit(24);
+
+    if (error) return toast("No se pudo cargar Continuar viendo", error.message);
+
+    const rows = data || [];
+    grid.innerHTML = rows.map(r => {
+        const c = r.content;
+        if (!c) return "";
+        const pct = r.duration_seconds ? (r.progress_seconds / r.duration_seconds) * 100 : 0;
+
+        let label = `${Math.round(pct)}%`;
+        if (r.episode?.season?.season_number && r.episode?.episode_number) {
+            label = `T${r.episode.season.season_number} E${r.episode.episode_number}`;
+        }
+
+        return cardFromContent(c, { progressHtml: progressBlock({ pct, label }) });
+    }).join("") || `<div class="panel">Todavía no hay progreso.</div>`;
+}
+
+(async function main() {
+    const ctx = await ensureReady();
+    if (!ctx) return;
+
+    await loadProfilePill(ctx.profileId);
+    await loadContinueWatching(ctx.profileId);
+    await loadMyList(ctx.profileId);
+    await loadCatalog("");
+
+    const search = qs("#search");
+    let t = null;
+    search?.addEventListener("input", () => {
+        clearTimeout(t);
+        t = setTimeout(() => loadCatalog(search.value.trim()), 220);
+    });
+})();

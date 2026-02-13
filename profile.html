@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sol Argentino TV MOVIES — Perfiles</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="home.html">
+                <div class="logo" aria-hidden="true"></div>
+                <div>
+                    <div>Sol Argentino TV MOVIES</div>
+                    <small>Seleccioná tu perfil</small>
+                </div>
+            </a>
+            <div class="actions">
+                <a class="btn" href="auth.html"><i class="fa-solid fa-user-lock"></i> Auth</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="hero">
+            <div>
+                <h1>¿Quién está viendo?</h1>
+                <p>Perfiles por usuario. RLS asegura que solo veas los tuyos.</p>
+            </div>
+            <div class="cta">
+                <button id="btnGoHome" class="btn primary"><i class="fa-solid fa-play"></i> Ir a Home</button>
+                <button id="btnLogout" class="btn"><i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar
+                    sesión</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div>
+                    <h2>Mis perfiles</h2>
+                    <p>Elegí uno para continuar.</p>
+                </div>
+            </div>
+
+            <div id="profilesGrid" class="grid"></div>
+        </div>
+
+        <div class="section">
+            <div class="panel">
+                <div class="section-header" style="margin:0 0 10px;">
+                    <div>
+                        <h2>Crear perfil</h2>
+                        <p>Nombre + avatar (URL).</p>
+                    </div>
+                </div>
+
+                <form id="formProfile" class="form">
+                    <div class="row">
+                        <input class="input" id="display_name" placeholder="Nombre del perfil" required />
+                        <input class="input" id="avatar_url" placeholder="Avatar URL (opcional)" />
+                    </div>
+                    <button class="btn primary" type="submit"><i class="fa-solid fa-plus"></i> Crear</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script type="module" src="assets/js/profile.js"></script>
+</body>
+
+</html>

@@ -1,7 +1,0 @@
-
-body { background:#0b0b0c; color:#fff; font-family:Arial; margin:0; }
-.header { padding:20px; border-bottom:1px solid #222; }
-.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:20px; padding:40px; }
-.card { background:#1a1a1d; border:1px solid #242427; border-radius:6px; overflow:hidden; }
-.card img { width:100%; display:block; }
-.card h3 { padding:10px; font-size:14px; }

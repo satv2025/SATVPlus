@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sol Argentino TV MOVIES — Auth</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="home.html">
+                <div class="logo" aria-hidden="true"></div>
+                <div>
+                    <div>Sol Argentino TV MOVIES</div>
+                    <small>movies.solargentinotv.com.ar</small>
+                </div>
+            </a>
+            <div class="actions">
+                <a class="btn ghost" href="home.html"><i class="fa-solid fa-house"></i> Home</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="hero">
+            <div>
+                <h1>Ingresá a tu cuenta</h1>
+                <p>Autenticación con Supabase. Después elegís o creás tu perfil (tipo Netflix).</p>
+            </div>
+            <div class="pill">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>RLS activo</span>
+                <span class="kbd">auth.uid()</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="panel">
+                <div class="row">
+                    <div>
+                        <h2 style="margin:0 0 10px;">Email + Password</h2>
+                        <form id="formEmail" class="form">
+                            <input class="input" id="email" type="email" placeholder="Email" required />
+                            <input class="input" id="password" type="password" placeholder="Password" required />
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                <button class="btn primary" type="submit"><i class="fa-solid fa-right-to-bracket"></i>
+                                    Iniciar sesión</button>
+                                <button class="btn" id="btnSignup" type="button"><i class="fa-solid fa-user-plus"></i>
+                                    Crear cuenta</button>
+                            </div>
+                            <div class="hr"></div>
+                            <button class="btn" id="btnLogout" type="button"><i
+                                    class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar sesión</button>
+                            <div id="authState" class="meta"></div>
+                        </form>
+                    </div>
+
+                    <div>
+                        <h2 style="margin:0 0 10px;">Tips de seguridad</h2>
+                        <div class="meta" style="line-height:1.6;">
+                            <div>• La <span class="kbd">anon key</span> es pública. Nunca uses la <span
+                                    class="kbd">service_role</span> en frontend.</div>
+                            <div>• Tus tablas privadas (profiles, my_list, watch_progress) quedan aisladas por RLS.
+                            </div>
+                            <div>• El catálogo (content, seasons, episodes) lo dejamos de lectura pública.</div>
+                        </div>
+                        <div class="hr"></div>
+                        <a class="btn" href="profile.html"><i class="fa-solid fa-id-badge"></i> Ir a perfiles</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script type="module" src="assets/js/auth.js"></script>
+</body>
+
+</html>
