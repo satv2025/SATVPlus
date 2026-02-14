@@ -1,216 +1,172 @@
-import { renderNav, renderAuthButtons, toast, $, escapeHtml } from "./ui.js";
-import { requireAuthOrRedirect } from "./auth.js";
-import { fetchMovie, fetchEpisodes, getProgress, upsertProgress } from "./api.js";
-import { CONFIG } from "./config.js";
+/*  Player SATV + miniaturas VTT (Vidstack 1.11.x)  */
 
-function param(name) {
-  return new URL(window.location.href).searchParams.get(name);
-}
+import { renderNav, renderAuthButtons, toast, $, escapeHtml } from './ui.js';
+import { requireAuthOrRedirect } from './auth.js';
+import {
+  fetchMovie,
+  fetchEpisodes,
+  getProgress,
+  upsertProgress
+} from './api.js';
+import { CONFIG } from './config.js';
 
-function buildEpisodes(episodes, currentEpisodeId, movieId) {
-  const wrap = $("#episodes-wrap");
-  const host = $("#episodes");
+/* ─ helpers ─ */
+const param = name => new URL(location.href).searchParams.get(name);
+
+function buildEpisodes(list, currentId, movieId) {
+  const wrap = $('#episodes-wrap');
+  const host = $('#episodes');
   if (!wrap || !host) return;
 
-  if (!episodes.length) {
-    wrap.classList.remove("hidden");
-    host.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
+  if (!list.length) {
+    wrap.classList.remove('hidden');
+    host.innerHTML = '<div class="muted">No hay episodios cargados.</div>';
     return;
   }
 
-  wrap.classList.remove("hidden");
-  host.innerHTML = episodes.map(ep => {
-    const active = ep.id === currentEpisodeId ? "active" : "";
-    const href = `/watch.html?movie=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(ep.id)}`;
-    return `
-      <a class="ep ${active}" href="${href}">
-        <div class="ep-title">
-          S${ep.season}E${ep.episode_number} · ${escapeHtml(ep.title || "Episodio")}
-        </div>
-      </a>
-    `;
-  }).join("");
+  wrap.classList.remove('hidden');
+  host.innerHTML = list.map(ep => {
+    const active = ep.id === currentId ? 'active' : '';
+    const href =
+      `/watch.html?movie=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(ep.id)}`;
+    return `<a class="ep ${active}" href="${href}">
+              <div class="ep-title">
+                T${ep.season}E${ep.episode_number} · ${escapeHtml(ep.title || 'Episodio')}
+              </div>
+            </a>`;
+  }).join('');
 }
 
+/* ─ main ─ */
 async function init() {
-  renderNav({ active: "home" });
+  renderNav({ active: 'home' });
   await renderAuthButtons();
 
   const session = await requireAuthOrRedirect();
   if (!session) return;
-  const userId = session.user.id;
 
-  const movieId = param("movie");
-  const episodeIdParam = param("episode");
+  const movieId = param('movie');
+  if (!movieId) { toast('Falta ?movie=', 'error'); return; }
 
-  if (!movieId) {
-    toast("Falta ?movie=", "error");
-    return;
-  }
+  const player = $('#player');
+  const titleEl = $('#title');
+  const metaEl = $('#meta');
+  const descEl = $('#desc');
 
-  const player = document.getElementById("player");
-  const titleEl = $("#title");
-  const metaEl = $("#meta");
-  const descEl = $("#desc");
-
+  /* ─ cargar película ─ */
   let movie;
-  let episodes = [];
-  let currentEpisode = null;
-  let currentEpisodeId = null;
+  try { movie = await fetchMovie(movieId); }
+  catch { toast('No se pudo cargar el título.', 'error'); return; }
 
-  try {
-    movie = await fetchMovie(movieId);
-  } catch (e) {
-    console.error(e);
-    toast("No se pudo cargar el título (movies).", "error");
-    return;
-  }
-
-  titleEl.textContent = movie.title || "Sin título";
-  descEl.textContent = movie.description || "";
+  titleEl.textContent = movie.title || 'Sin título';
+  descEl.textContent = movie.description || '';
+  document.title = `${movie.title || 'Sin título'} · SATV+`;
 
   let src = movie.m3u8_url;
-  let vttUrl = movie.vtt_url || null; // 🔥 soporte thumbnails película
+  let vttUrl = movie.vtt_url || null;
 
-  if (movie.category === "series") {
-    try {
-      episodes = await fetchEpisodes(movieId);
-    } catch (e) {
-      console.error(e);
-      toast("No se pudieron cargar episodios (episodes).", "error");
-    }
+  /* ─ episodios ─ */
+  let episodes = [], curEp = null, curEpId = null;
+  const epIdParam = param('episode');
 
-    currentEpisode = episodeIdParam
-      ? episodes.find(x => x.id === episodeIdParam) || null
-      : (episodes[0] || null);
+  if (movie.category === 'series') {
+    episodes = await fetchEpisodes(movieId).catch(() => []);
+    curEp = epIdParam ? episodes.find(e => e.id === epIdParam) || null : episodes[0] || null;
+    curEpId = curEp?.id || null;
 
-    currentEpisodeId = currentEpisode?.id || null;
+    if (curEp?.m3u8_url) src = curEp.m3u8_url;
+    if (curEp?.vtt_url) vttUrl = curEp.vtt_url;
 
-    if (currentEpisode?.m3u8_url) {
-      src = currentEpisode.m3u8_url;
-    }
+    metaEl.textContent = curEp
+      ? `Serie · S${curEp.season}E${curEp.episode_number}`
+      : 'Serie';
 
-    // 🔥 si episodio tiene vtt, lo usamos
-    if (currentEpisode?.vtt_url) {
-      vttUrl = currentEpisode.vtt_url;
-    }
-
-    metaEl.textContent = currentEpisode
-      ? `Serie · S${currentEpisode.season}E${currentEpisode.episode_number}`
-      : "Serie";
-
-    buildEpisodes(episodes, currentEpisodeId, movieId);
+    buildEpisodes(episodes, curEpId, movieId);
   } else {
-    metaEl.textContent = "Película";
-    const wrap = $("#episodes-wrap");
-    if (wrap) wrap.classList.add("hidden");
+    metaEl.textContent = 'Película';
+    $('#episodes-wrap')?.classList.add('hidden');
   }
 
-  // ===============================
-  // 🎬 CONFIGURAR VIDSTACK
-  // ===============================
-
+  /* ─ configurar Vidstack ─ */
   player.src = src;
 
-  // 🔥 PREVIEW THUMBNAILS VTT
-  if (vttUrl && typeof vttUrl === "string" && vttUrl.startsWith("http")) {
-    player.thumbnails = vttUrl;
+  /*  Miniaturas sobre la barra  */
+  if (vttUrl?.startsWith('http')) {
+    // Cuando el provider (y, por ende, el <video>) están listos…
+    player.addEventListener('provider-change', () => {
+      let thumbnail = player.querySelector('media-slider-thumbnail');
+
+      // Si el layout aún no generó el thumbnail, lo esperamos.
+      if (!thumbnail) {
+        const obs = new MutationObserver(() => {
+          thumbnail = player.querySelector('media-slider-thumbnail');
+          if (!thumbnail) return;
+
+          obs.disconnect();               // encontrado → dejar de observar
+          thumbnail.src = vttUrl;         // asignar VTT
+          console.log('Thumbnail VTT puesto (obs):', vttUrl);
+        });
+
+        obs.observe(player, { childList: true, subtree: true });
+      } else {
+        thumbnail.src = vttUrl;           // ya estaba en el DOM
+        console.log('Thumbnail VTT puesto:', vttUrl);
+      }
+    }, { once: true });
   }
 
-  // ===============================
-  // 💾 CARGAR PROGRESO
-  // ===============================
-
-  let saved = null;
-  try {
-    saved = await getProgress({
-      userId,
-      movieId,
-      episodeId: currentEpisodeId
-    });
-  } catch (e) {
-    console.error(e);
-  }
+  /* ─ reanudar progreso ─ */
+  const saved = await getProgress({
+    userId: session.user.id,
+    movieId,
+    episodeId: curEpId
+  }).catch(() => null);
 
   const startAt = saved?.progress_seconds || 0;
 
-  const seekIfNeeded = () => {
-    if (!startAt || startAt < 5) return;
+  player.addEventListener('loaded-metadata', seek, { once: true });
+  player.addEventListener('can-play', seek, { once: true });
 
-    try {
-      const dur = Number(player.duration || 0);
-
-      // evitar saltar al final
-      if (dur && startAt > dur - CONFIG.NEAR_END_SECONDS) return;
-
-      player.currentTime = startAt;
-      toast(`Continuando desde ${Math.floor(startAt)}s`, "info");
-    } catch (e) { }
+  /* ─ guardar progreso ─ */
+  let lastSave = 0, lastSecond = -1;
+  const save = async (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastSave < CONFIG.PROGRESS_THROTTLE_MS) return;
+    const ct = Math.floor(player.currentTime || 0);
+    if (!force && ct === lastSecond) return;
+    lastSecond = ct; lastSave = now;
+    await upsertProgress({
+      userId: session.user.id,
+      movieId,
+      episodeId: curEpId,
+      progressSeconds: ct
+    }).catch(console.error);
   };
 
-  player.addEventListener("loaded-metadata", seekIfNeeded, { once: true });
-  player.addEventListener("can-play", seekIfNeeded, { once: true });
+  player.addEventListener('time-update', () => save(false));
+  player.addEventListener('pause', () => save(true));
 
-  // ===============================
-  // 💾 GUARDAR PROGRESO
-  // ===============================
-
-  let lastSave = 0;
-  let lastSecond = -1;
-
-  async function save(force = false) {
-    const now = Date.now();
-
-    if (!force && (now - lastSave) < CONFIG.PROGRESS_THROTTLE_MS)
-      return;
-
-    const ct = Number(player.currentTime || 0);
-    const sec = Math.floor(ct);
-
-    if (!force && sec === lastSecond)
-      return;
-
-    lastSecond = sec;
-    lastSave = now;
-
-    try {
-      await upsertProgress({
-        userId,
-        movieId,
-        episodeId: currentEpisodeId,
-        progressSeconds: ct
-      });
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  player.addEventListener("time-update", () => save(false));
-  player.addEventListener("pause", () => save(true));
-
-  player.addEventListener("ended", async () => {
+  player.addEventListener('ended', async () => {
     await save(true);
-
-    // 🔥 AUTOPLAY SIGUIENTE EPISODIO
-    if (movie.category === "series" && episodes.length) {
-      const currentIndex = episodes.findIndex(e => e.id === currentEpisodeId);
-      const next = episodes[currentIndex + 1];
-
+    if (movie.category === 'series') {
+      const i = episodes.findIndex(e => e.id === curEpId);
+      const next = episodes[i + 1];
       if (next) {
-        const nextUrl = `/watch.html?movie=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(next.id)}`;
-        window.location.href = nextUrl;
+        location.href =
+          `/watch.html?movie=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(next.id)}`;
       }
     }
   });
 
-  window.addEventListener("beforeunload", () => {
+  window.addEventListener('beforeunload', () =>
     upsertProgress({
-      userId,
+      userId: session.user.id,
       movieId,
-      episodeId: currentEpisodeId,
-      progressSeconds: Number(player.currentTime || 0)
-    }).catch(() => { });
-  });
+      episodeId: curEpId,
+      progressSeconds: Math.floor(player.currentTime || 0)
+    }).catch(() => { })
+  );
 }
 
-document.addEventListener("DOMContentLoaded", init);
+/* boot */
+document.addEventListener('DOMContentLoaded', init);

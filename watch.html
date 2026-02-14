@@ -4,39 +4,64 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Reproducción · SATV</title>
+  <title>Reproducción · SATV+</title>
+
+  <!-- tus estilos -->
   <link rel="stylesheet" href="/css/styles.css" />
-  <link rel="stylesheet" href="/css/vidstack/1.css">
-  <link rel="stylesheet" href="/css/vidstack/2.css">
-  <link rel="icon" href="https://old.movies.solargentinotv.com.ar/assets/media/images/SolArgentinoTVMOVIES.ico">
-  <script src="https://cdn.vidstack.io/player" type="module"></script>
+  <link rel="stylesheet" href="/css/vidstack/1.css" />
+  <link rel="stylesheet" href="/css/vidstack/2.css" />
+
+  <link rel="icon" href="https://old.movies.solargentinotv.com.ar/assets/media/images/SolArgentinoTVMOVIES.ico" />
+
+  <!-- Vidstack core 1.11.21 -->
+  <script src="https://cdn.vidstack.io/player@1.11.21" type="module"></script>
+
+  <style>
+    media-player {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
 </head>
 
 <body>
+
   <header class="topnav">
     <div class="nav-inner container" id="topnav"></div>
   </header>
 
   <main class="container">
     <div class="panel">
-      <h2 id="title" style="margin:0 0 4px 0;"></h2>
-      <div class="muted" id="meta"></div>
-      <p class="muted" id="desc" style="margin:10px 0 14px 0;"></p>
 
+      <h2 id="title"></h2>
+      <div class="muted" id="meta"></div>
+      <p class="muted" id="desc"></p>
+
+      <!-- player -->
       <div class="video-wrap">
-        <media-player id="player" crossorigin playsinline stream-type="on-demand">
-          <media-provider id="provider"></media-provider>
-          <media-video-layout></media-video-layout>
+        <media-player id="player" preload="metadata" crossorigin playsinline stream-type="on-demand">
+
+          <media-provider></media-provider>
+
+          <!-- layout principal -->
+          <media-video-layout id="layout"></media-video-layout>
+
+          <!-- miniatura sobre el scrubber -->
+          <media-thumbnail></media-thumbnail>
         </media-player>
       </div>
 
+      <!-- lista de episodios -->
       <div id="episodes-wrap" class="section hidden">
         <div class="section-head">
           <h3 class="section-title">Episodios</h3>
-          <div class="muted">Cambiar episodio</div>
         </div>
         <div class="ep-list" id="episodes"></div>
       </div>
+
     </div>
   </main>
 
@@ -44,6 +69,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module" src="/js/player.js"></script>
+
 </body>
 
 </html>

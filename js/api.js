@@ -7,7 +7,17 @@ import { supabase } from "./supabaseClient.js";
 export async function fetchLatest(limit = 24) {
   const { data, error } = await supabase
     .from("movies")
-    .select("id,title,description,thumbnail_url,banner_url,m3u8_url,category,created_at")
+    .select(`
+      id,
+      title,
+      description,
+      thumbnail_url,
+      banner_url,
+      m3u8_url,
+      vtt_url,
+      category,
+      created_at
+    `)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -18,7 +28,17 @@ export async function fetchLatest(limit = 24) {
 export async function fetchByCategory(category, limit = 24) {
   const { data, error } = await supabase
     .from("movies")
-    .select("id,title,description,thumbnail_url,banner_url,m3u8_url,category,created_at")
+    .select(`
+      id,
+      title,
+      description,
+      thumbnail_url,
+      banner_url,
+      m3u8_url,
+      vtt_url,
+      category,
+      created_at
+    `)
     .eq("category", category)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -30,12 +50,21 @@ export async function fetchByCategory(category, limit = 24) {
 export async function fetchMovie(movieId) {
   const { data, error } = await supabase
     .from("movies")
-    .select("id,title,description,thumbnail_url,banner_url,m3u8_url,category,created_at")
+    .select(`
+      id,
+      title,
+      description,
+      thumbnail_url,
+      banner_url,
+      m3u8_url,
+      vtt_url,
+      category,
+      created_at
+    `)
     .eq("id", movieId)
     .limit(1);
 
   if (error) throw error;
-
   return data?.[0] || null;
 }
 
@@ -46,7 +75,16 @@ export async function fetchMovie(movieId) {
 export async function fetchEpisodes(seriesId) {
   const { data, error } = await supabase
     .from("episodes")
-    .select("id,series_id,season,episode_number,title,m3u8_url,created_at")
+    .select(`
+      id,
+      series_id,
+      season,
+      episode_number,
+      title,
+      m3u8_url,
+      vtt_url,
+      created_at
+    `)
     .eq("series_id", seriesId)
     .order("season", { ascending: true })
     .order("episode_number", { ascending: true });
@@ -56,7 +94,7 @@ export async function fetchEpisodes(seriesId) {
 }
 
 /* =========================================================
-   WATCH PROGRESS (ROBUSTO)
+   WATCH PROGRESS
 ========================================================= */
 
 export async function getProgress({ userId, movieId, episodeId = null }) {
@@ -76,7 +114,6 @@ export async function getProgress({ userId, movieId, episodeId = null }) {
     .limit(1);
 
   if (error) throw error;
-
   return data?.[0] || null;
 }
 
@@ -115,8 +152,21 @@ export async function fetchContinueWatching(userId, limit = 24) {
       updated_at,
       movie_id,
       episode_id,
-      movies ( id, title, thumbnail_url, banner_url, category ),
-      episodes ( id, title, season, episode_number )
+      movies (
+        id,
+        title,
+        thumbnail_url,
+        banner_url,
+        category,
+        vtt_url
+      ),
+      episodes (
+        id,
+        title,
+        season,
+        episode_number,
+        vtt_url
+      )
     `)
     .eq("user_id", userId)
     .order("updated_at", { ascending: false })
@@ -133,7 +183,15 @@ export async function fetchContinueWatching(userId, limit = 24) {
 export async function fetchProfile(userId) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id,email,full_name,username,phone,avatar_url,created_at")
+    .select(`
+      id,
+      email,
+      full_name,
+      username,
+      phone,
+      avatar_url,
+      created_at
+    `)
     .eq("id", userId)
     .limit(1);
 

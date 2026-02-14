@@ -3,29 +3,114 @@ import { requireAuthOrRedirect } from "./auth.js";
 import { createMovie, createEpisode, fetchByCategory } from "./api.js";
 import { CONFIG } from "./config.js";
 
+/* =========================================================
+   🔥 DROPDOWN GENERIC INIT
+   ========================================================= */
+
+function initDropdown(id) {
+  const dropdown = document.getElementById(id);
+  if (!dropdown) return;
+
+  const selected = dropdown.querySelector(".dropdown-selected");
+  const options = dropdown.querySelectorAll(".dropdown-option");
+
+  selected.addEventListener("click", () => {
+    dropdown.classList.toggle("open");
+  });
+
+  options.forEach(opt => {
+    opt.addEventListener("click", () => {
+      selected.querySelector(".dropdown-text").textContent =
+        opt.textContent;
+      selected.dataset.value = opt.dataset.value;
+      dropdown.classList.remove("open");
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target)) {
+      dropdown.classList.remove("open");
+    }
+  });
+}
+
+function getDropdownValue(id) {
+  const dropdown = document.getElementById(id);
+  const selected = dropdown.querySelector(".dropdown-selected");
+  return selected?.dataset.value || "";
+}
+
+function resetDropdown(id, text, value = "") {
+  const dropdown = document.getElementById(id);
+  if (!dropdown) return;
+
+  const selected = dropdown.querySelector(".dropdown-selected");
+  selected.querySelector(".dropdown-text").textContent = text;
+  selected.dataset.value = value;
+}
+
+/* =========================================================
+   🔐 ADMIN CHECK
+   ========================================================= */
+
 function isAdmin(email) {
   if (!CONFIG.ADMIN_EMAILS || !CONFIG.ADMIN_EMAILS.length) return true;
-  return CONFIG.ADMIN_EMAILS.map(x => String(x).toLowerCase())
+  return CONFIG.ADMIN_EMAILS
+    .map(x => String(x).toLowerCase())
     .includes(String(email || "").toLowerCase());
 }
 
-async function loadSeriesSelect() {
+/* =========================================================
+   🎬 LOAD SERIES DROPDOWN
+   ========================================================= */
+
+async function loadSeriesDropdown() {
   const series = await fetchByCategory("series", 500);
-  const sel = $("#ep-series");
-  sel.innerHTML = `<option value="">Seleccioná una serie…</option>` + series
-    .map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.title)}</option>`)
-    .join("");
+
+  const optionsContainer = document.getElementById("ep-series-options");
+  const dropdown = document.getElementById("ep-series-dropdown");
+  const selected = dropdown.querySelector(".dropdown-selected");
+
+  optionsContainer.innerHTML = "";
+
+  if (!series.length) {
+    optionsContainer.innerHTML = `
+      <div class="dropdown-option" data-value="">
+        No hay series cargadas
+      </div>
+    `;
+    return;
+  }
+
+  series.forEach(s => {
+    const opt = document.createElement("div");
+    opt.className = "dropdown-option";
+    opt.dataset.value = s.id;
+    opt.textContent = s.title;
+
+    opt.addEventListener("click", () => {
+      selected.querySelector(".dropdown-text").textContent = s.title;
+      selected.dataset.value = s.id;
+      dropdown.classList.remove("open");
+    });
+
+    optionsContainer.appendChild(opt);
+  });
 }
+
+/* =========================================================
+   📦 PAYLOADS
+   ========================================================= */
 
 function moviePayload() {
   return {
-    category: $("#m-category").value,
+    category: getDropdownValue("m-category-dropdown"),
     title: $("#m-title").value.trim(),
     description: $("#m-desc").value.trim(),
     thumbnail_url: $("#m-thumb").value.trim(),
     banner_url: $("#m-banner").value.trim(),
     m3u8_url: $("#m-m3u8").value.trim(),
-    vtt_url: $("#m-vtt").value.trim() || null, // 🔥 NUEVO
+    vtt_url: $("#m-vtt").value.trim() || null,
   };
 }
 
@@ -39,12 +124,12 @@ function validateMovie(m) {
 
 function episodePayload() {
   return {
-    series_id: $("#ep-series").value,
+    series_id: getDropdownValue("ep-series-dropdown"),
     season: Number($("#ep-season").value),
     episode_number: Number($("#ep-number").value),
     title: $("#ep-title").value.trim(),
     m3u8_url: $("#ep-m3u8").value.trim(),
-    vtt_url: $("#ep-vtt").value.trim() || null, // 🔥 NUEVO
+    vtt_url: $("#ep-vtt").value.trim() || null,
   };
 }
 
@@ -58,14 +143,22 @@ function validateEpisode(e) {
   return null;
 }
 
+/* =========================================================
+   🚀 INIT
+   ========================================================= */
+
 async function init() {
   renderNav({ active: "upload" });
   await renderAuthButtons();
+
+  initDropdown("m-category-dropdown");
+  initDropdown("ep-series-dropdown");
 
   const session = await requireAuthOrRedirect();
   if (!session) return;
 
   const email = session.user.email || "";
+
   if (!isAdmin(email)) {
     $("#upload-root").innerHTML = `
       <div class="panel">
@@ -77,14 +170,17 @@ async function init() {
   }
 
   try {
-    await loadSeriesSelect();
+    await loadSeriesDropdown();
   } catch (e) {
     console.error(e);
     toast("No se pudieron cargar series.", "error");
   }
 
+  /* ================= MOVIE ================= */
+
   $("#movie-form").addEventListener("submit", async (ev) => {
     ev.preventDefault();
+
     const m = moviePayload();
     const err = validateMovie(m);
     if (err) return toast(err, "error");
@@ -92,16 +188,21 @@ async function init() {
     try {
       const created = await createMovie(m);
       toast(`Creado: ${m.category} (${created.id})`, "success");
+
       ev.target.reset();
-      await loadSeriesSelect();
+      resetDropdown("m-category-dropdown", "movie", "movie");
+      await loadSeriesDropdown();
     } catch (e) {
       console.error(e);
       toast(e.message || "Error creando título", "error");
     }
   });
 
+  /* ================= EPISODE ================= */
+
   $("#episode-form").addEventListener("submit", async (ev) => {
     ev.preventDefault();
+
     const ep = episodePayload();
     const err = validateEpisode(ep);
     if (err) return toast(err, "error");
@@ -109,7 +210,9 @@ async function init() {
     try {
       const created = await createEpisode(ep);
       toast(`Episodio creado (${created.id})`, "success");
+
       ev.target.reset();
+      resetDropdown("ep-series-dropdown", "Seleccioná una serie…", "");
     } catch (e) {
       console.error(e);
       toast(e.message || "Error creando episodio", "error");

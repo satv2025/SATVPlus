@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cargar · SATV</title>
+  <title>Cargar · SATV+</title>
 
   <link rel="stylesheet" href="/css/styles.css" />
   <link rel="stylesheet" href="/css/vidstack/1.css">
@@ -29,10 +29,23 @@
           <form id="movie-form">
 
             <label>Categoría</label>
-            <select id="m-category" required>
-              <option value="movie">movie</option>
-              <option value="series">series</option>
-            </select>
+
+            <div class="dropdown" id="m-category-dropdown">
+              <div class="dropdown-selected" data-value="movie">
+                <span class="dropdown-text">movie</span>
+                <span class="dropdown-arrow">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                </span>
+              </div>
+
+              <div class="dropdown-options">
+                <div class="dropdown-option" data-value="movie">movie</div>
+                <div class="dropdown-option" data-value="series">series</div>
+              </div>
+            </div>
 
             <label>Título</label>
             <input id="m-title" required />
@@ -65,7 +78,22 @@
           <form id="episode-form">
 
             <label>Serie</label>
-            <select id="ep-series" required></select>
+
+            <div class="dropdown" id="ep-series-dropdown">
+              <div class="dropdown-selected" data-value="">
+                <span class="dropdown-text">Seleccioná una serie…</span>
+                <span class="dropdown-arrow">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                </span>
+              </div>
+
+              <div class="dropdown-options" id="ep-series-options">
+                <!-- Se cargan dinámicamente -->
+              </div>
+            </div>
 
             <div class="grid">
               <div>

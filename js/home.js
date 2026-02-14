@@ -1,5 +1,5 @@
 import { renderNav, renderAuthButtons, toast, cardHtml, $, formatTime } from "./ui.js";
-import { getSession } from "./auth.js";
+import { getSession, requireAuthOrRedirect } from "./auth.js";
 import { fetchContinueWatching, fetchLatest, fetchByCategory } from "./api.js";
 import { CONFIG } from "./config.js";
 
@@ -81,10 +81,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     row.id === "series-row" ||
     row.id === "continue-row";
 
-  /* ======================================================
-     RULE: Series & Continue ≤ 6 → NO LOOP + NO FLECHAS
-     ====================================================== */
-
   if (isRestrictedRow && itemCount <= 6) {
     if (btnLeft) btnLeft.remove();
     if (btnRight) btnRight.remove();
@@ -92,19 +88,11 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     return;
   }
 
-  /* ======================================================
-     If only 1 item → hide arrows
-     ====================================================== */
-
   if (itemCount === 1) {
     if (btnLeft) btnLeft.style.display = "none";
     if (btnRight) btnRight.style.display = "none";
     return;
   }
-
-  /* ======================================================
-     INFINITE LOOP
-     ====================================================== */
 
   const gap = parseFloat(getComputedStyle(row).gap || "0");
   const firstCard = row.querySelector(".card");
@@ -115,12 +103,15 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
 
   row.dataset.carouselBlock = blockWidth;
 
-  // Clone both sides
+  /* =========================
+     CLONES (MISMO ORDEN)
+     ========================= */
+
   const leftFrag = document.createDocumentFragment();
   const rightFrag = document.createDocumentFragment();
 
   for (let r = 0; r < cloneRounds; r++) {
-    for (let i = itemCount - 1; i >= 0; i--) {
+    for (let i = 0; i < itemCount; i++) {
       leftFrag.appendChild(originals[i].cloneNode(true));
     }
   }
@@ -134,9 +125,9 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   row.prepend(leftFrag);
   row.append(rightFrag);
 
-  /* ======================================================
-     CENTER CORRECTLY (NO DUPLICATE GLITCH)
-     ====================================================== */
+  /* =========================
+     CENTRAR SIN GLITCH
+     ========================= */
 
   const oldVis = row.style.visibility;
   const oldBehavior = row.style.scrollBehavior;
@@ -146,7 +137,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
 
   const leftCloneCount = itemCount * cloneRounds;
   const firstOriginal = row.children[leftCloneCount];
-
   if (!firstOriginal) return;
 
   row.scrollLeft = firstOriginal.offsetLeft;
@@ -158,11 +148,12 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
 
   const base = firstOriginal.offsetLeft;
 
-  /* ======================================================
-     WRAP LOGIC (STABLE)
-     ====================================================== */
+  /* =========================
+     WRAP ESTABLE
+     ========================= */
 
   let wrapping = false;
+  let isManualScrolling = false;
 
   function wrapTo(value) {
     if (wrapping) return;
@@ -179,10 +170,9 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   }
 
   row.addEventListener("scroll", () => {
-    if (wrapping) return;
+    if (wrapping || isManualScrolling) return;
 
     const x = row.scrollLeft;
-
     const leftLimit = base - blockWidth * 0.75;
     const rightLimit = base + blockWidth * 0.75;
 
@@ -193,19 +183,25 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     }
   }, { passive: true });
 
-  /* ======================================================
-     ARROWS
-     ====================================================== */
+  /* =========================
+     FLECHAS SIN FRENO
+     ========================= */
 
   const moveAmount = () => Math.max(260, row.clientWidth * 0.9);
 
-  btnRight.onclick = () => {
-    row.scrollBy({ left: moveAmount(), behavior: "smooth" });
-  };
+  function handleArrow(direction) {
+    if (isManualScrolling) return;
 
-  btnLeft.onclick = () => {
-    row.scrollBy({ left: -moveAmount(), behavior: "smooth" });
-  };
+    isManualScrolling = true;
+    row.scrollBy({ left: direction * moveAmount(), behavior: "smooth" });
+
+    setTimeout(() => {
+      isManualScrolling = false;
+    }, 450);
+  }
+
+  btnRight.onclick = () => handleArrow(1);
+  btnLeft.onclick = () => handleArrow(-1);
 }
 
 /* =========================================================
@@ -235,7 +231,6 @@ async function init() {
   if (userId) {
     try {
       const rows = await fetchContinueWatching(userId, 24);
-
       const filtered = rows.filter(r => (r.progress_seconds || 0) >= 5);
 
       const grouped = filtered.reduce((acc, r) => {
@@ -313,11 +308,8 @@ async function init() {
   }
 }
 
-import { requireAuthOrRedirect } from "./auth.js";
-
 document.addEventListener("DOMContentLoaded", async () => {
   const session = await requireAuthOrRedirect();
   if (!session) return;
-
   init();
 });

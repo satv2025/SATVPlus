@@ -13,15 +13,33 @@ export function escapeHtml(str = "") {
     .replaceAll("'", "&#039;");
 }
 
+/* =========================
+   APP NAME + TITLE
+========================= */
+
 export function setAppName() {
   const els = $all("[data-appname]");
   for (const el of els) el.textContent = CONFIG.APP_NAME;
-  document.title = CONFIG.APP_NAME;
+
+  const currentTitle = document.title.trim();
+
+  // Solo cambiar si está vacío
+  // o si el título es exactamente el nombre de la app
+  if (!currentTitle || currentTitle === CONFIG.APP_NAME) {
+    document.title = CONFIG.APP_NAME;
+  }
 }
+
+/* =========================
+   TOAST
+========================= */
 
 export function toast(msg, type = "info") {
   const host = document.getElementById("toast-host");
-  if (!host) { alert(msg); return; }
+  if (!host) {
+    alert(msg);
+    return;
+  }
 
   const t = document.createElement("div");
   t.className = `toast ${type}`;
@@ -35,6 +53,10 @@ export function toast(msg, type = "info") {
     setTimeout(() => t.remove(), 200);
   }, 2800);
 }
+
+/* =========================
+   TIME FORMAT
+========================= */
 
 export function formatTime(secs) {
   const s = Math.max(0, Math.floor(secs || 0));
@@ -85,7 +107,6 @@ export async function renderAuthButtons() {
     return;
   }
 
-  // 🔥 Ahora usamos el nombre en vez del email
   const name = escapeHtml(
     session.user.name || session.user.email || "Usuario"
   );
