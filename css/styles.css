@@ -26,6 +26,10 @@
   font-family: "HBOMaxSans" !important;
 }
 
+img.brand-logo {
+  width: 10em;
+}
+
 #continue-row .card {
   height: 14.6em !important;
 }

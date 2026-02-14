@@ -82,15 +82,13 @@ export function renderNav({ active = "home" } = {}) {
   nav.innerHTML = `
     <div class="nav-left">
       <a class="brand" href="/index.html">
-        <span class="brand-dot"></span>
-        <span data-appname></span>
+        <!-- Reemplazar data-appname por la imagen -->
+        <img src="/images/satvpluslogo1.png" alt="Logo" class="brand-logo"/>
       </a>
       <a class="navlink ${active === "home" ? "active" : ""}" href="/index.html">Inicio</a>
     </div>
     <div class="nav-right" id="nav-right"></div>
   `;
-
-  setAppName();
 }
 
 export async function renderAuthButtons() {
