@@ -313,4 +313,11 @@ async function init() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", init);
+import { requireAuthOrRedirect } from "./auth.js";
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const session = await requireAuthOrRedirect();
+  if (!session) return;
+
+  init();
+});

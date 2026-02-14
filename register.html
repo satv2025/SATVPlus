@@ -68,6 +68,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module">
+    import { getSession } from "/js/auth.js";
+
+    const session = await getSession();
+    if (session) {
+      window.location.replace("/index.html");
+    }
+
     import { renderNav, renderAuthButtons, toast, $ } from "/js/ui.js";
     import { signUpWithEmail } from "/js/auth.js";
 
