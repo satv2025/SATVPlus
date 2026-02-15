@@ -539,10 +539,11 @@ media-player {
   color: var(--text);
   max-width: 360px;
   box-shadow: var(--shadow);
+  display: none;
 }
 
 .toast.show {
-  opacity: 1;
+  opacity: 0;
 }
 
 .toast.success {

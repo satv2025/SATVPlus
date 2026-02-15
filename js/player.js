@@ -1,90 +1,170 @@
-// Inicializa los parámetros
-const player = document.querySelector('#player');  // Referencia al reproductor
-const session = await requireAuthOrRedirect();  // Obtiene la sesión del usuario
-const movieId = param('movie');  // Obtiene el ID de la película desde los parámetros
-const curEpId = param('episode');  // Obtiene el ID del episodio si es una serie
+import { renderNav, renderAuthButtons, toast, $, escapeHtml } from "./ui.js";
+import { requireAuthOrRedirect } from "./auth.js";
+import { fetchMovie, fetchEpisodes, getProgress, upsertProgress } from "./api.js";
+import { CONFIG } from "./config.js";
 
-// Función para cargar el progreso guardado
-async function loadProgress() {
-  let savedProgress = null;
+function param(name) {
+  return new URL(window.location.href).searchParams.get(name);
+}
+
+function buildEpisodes(episodes, currentEpisodeId, movieId) {
+  const wrap = $("#episodes-wrap");
+  const host = $("#episodes");
+  if (!wrap || !host) return;
+
+  if (!episodes.length) {
+    wrap.classList.remove("hidden");
+    host.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
+    return;
+  }
+
+  wrap.classList.remove("hidden");
+  host.innerHTML = episodes.map(ep => {
+    const active = ep.id === currentEpisodeId ? "active" : "";
+    const href = `/watch.html?movie=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(ep.id)}`;
+    return `
+      <a class="ep ${active}" href="${href}">
+        <div class="ep-title">S${ep.season}E${ep.episode_number} · ${escapeHtml(ep.title || "Episodio")}</div>
+      </a>
+    `;
+  }).join("");
+}
+
+async function init() {
+  renderNav({ active: "home" });
+  await renderAuthButtons();
+
+  const session = await requireAuthOrRedirect();
+  if (!session) return;
+  const userId = session.user.id;
+
+  const movieId = param("movie");
+  const episodeIdParam = param("episode");
+
+  if (!movieId) {
+    toast("Falta ?movie=", "error");
+    return;
+  }
+
+  const player = document.getElementById("player");
+  const provider = document.getElementById("provider");
+  const titleEl = $("#title");
+  const metaEl = $("#meta");
+  const descEl = $("#desc");
+
+  let movie;
+  let episodes = [];
+  let currentEpisode = null;
+  let currentEpisodeId = null;
+
   try {
-    savedProgress = await getProgress({
-      userId: session.user.id,
-      movieId,
-      episodeId: curEpId
-    });
-  } catch (err) {
-    console.error("Error al obtener el progreso guardado:", err);
+    movie = await fetchMovie(movieId);
+  } catch (e) {
+    console.error(e);
+    toast("No se pudo cargar el título (movies).", "error");
+    return;
   }
 
-  const startAt = savedProgress?.progress_seconds || 0;  // Tiempo guardado, por defecto 0
-  console.log("Progreso guardado:", startAt);
-  return startAt;
-}
+  titleEl.textContent = movie.title || "Sin título";
+  descEl.textContent = movie.description || "";
 
-// Configura el reproductor con el progreso guardado
-async function configurePlayer() {
-  const startAt = await loadProgress();
-  const provider = player.provider;
+  let src = movie.m3u8_url;
 
-  // Espera a que se carguen los metadatos del video
-  player.addEventListener('provider-change', () => {
-    if (!provider) return;
+  if (movie.category === "series") {
+    try {
+      episodes = await fetchEpisodes(movieId);
+    } catch (e) {
+      console.error(e);
+      toast("No se pudieron cargar episodios (episodes).", "error");
+    }
 
-    const trySeek = () => {
-      const duration = provider.duration || 0;
-      if (duration > 0 && startAt > 0) {
-        provider.currentTime = startAt;  // Reanudar desde el progreso guardado
-        console.log(`Reanudado en ${startAt} segundos`);
-        provider.removeEventListener('loadedmetadata', trySeek);  // Elimina el listener después de la primera vez
-      }
-    };
+    currentEpisode = episodeIdParam
+      ? episodes.find(x => x.id === episodeIdParam) || null
+      : (episodes[0] || null);
 
-    provider.addEventListener('loadedmetadata', trySeek);
-  }, { once: true });
-}
+    currentEpisodeId = currentEpisode?.id || null;
+    if (currentEpisode?.m3u8_url) src = currentEpisode.m3u8_url;
 
-// Guardar el progreso del video
-function saveProgress(force = false) {
-  const now = Date.now();
-  if (!force && now - lastSave < CONFIG.PROGRESS_THROTTLE_MS) return;
+    metaEl.textContent = currentEpisode
+      ? `Serie · S${currentEpisode.season}E${currentEpisode.episode_number}`
+      : "Serie";
 
-  const currentTime = Math.floor(player.currentTime || 0);
-  if (!force && currentTime === lastSecond) return;
-
-  lastSecond = currentTime;
-  lastSave = now;
-
-  if (currentTime > 0) {
-    console.log(`Guardando progreso: ${currentTime} segundos`);
-    upsertProgress({
-      userId: session.user.id,
-      movieId,
-      episodeId: curEpId,
-      progressSeconds: currentTime
-    }).catch(err => console.error("Error al guardar el progreso:", err));
+    buildEpisodes(episodes, currentEpisodeId, movieId);
+  } else {
+    metaEl.textContent = "Película";
+    const wrap = $("#episodes-wrap");
+    if (wrap) wrap.classList.add("hidden");
   }
-}
 
-// Guardar progreso en eventos de pausa y actualización del tiempo
-player.addEventListener('timeupdate', () => saveProgress(false));
-player.addEventListener('pause', () => saveProgress(true));
+  // Set source (Vidstack)
+  // Vidstack supports setting `src` directly on media-player for HLS.
+  player.src = src;
 
-// Guardar progreso al terminar el video
-player.addEventListener('ended', async () => {
-  await saveProgress(true);
-  if (movie.category === 'series') {
-    const nextEpisode = episodes[episodes.findIndex(ep => ep.id === curEpId) + 1];
-    if (nextEpisode) {
-      location.href = `/watch.html?movie=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(nextEpisode.id)}`;
+  // Load saved progress
+  let saved = null;
+  try {
+    saved = await getProgress({ userId, movieId, episodeId: currentEpisodeId });
+  } catch (e) {
+    console.error(e);
+  }
+  const startAt = saved?.progress_seconds || 0;
+
+  // Seek when metadata ready
+  const seekIfNeeded = () => {
+    if (!startAt || startAt < 5) return;
+    try {
+      // guard against near-end seek if duration available
+      const dur = Number(player.duration || 0);
+      if (dur && startAt > dur - CONFIG.NEAR_END_SECONDS) return;
+      player.currentTime = startAt;
+      toast(`Continuando desde ${Math.floor(startAt)}s`, "info");
+    } catch (e) { }
+  };
+
+  // Vidstack events: "loaded-metadata" and "can-play"
+  player.addEventListener("loaded-metadata", seekIfNeeded, { once: true });
+  player.addEventListener("can-play", seekIfNeeded, { once: true });
+
+  // Save progress throttled
+  let lastSave = 0;
+  let lastSecond = -1;
+
+  async function save(force = false) {
+    const now = Date.now();
+    if (!force && (now - lastSave) < CONFIG.PROGRESS_THROTTLE_MS) return;
+
+    const ct = Number(player.currentTime || 0);
+    const sec = Math.floor(ct);
+    if (!force && sec === lastSecond) return;
+    lastSecond = sec;
+
+    lastSave = now;
+    try {
+      await upsertProgress({
+        userId,
+        movieId,
+        episodeId: currentEpisodeId,
+        progressSeconds: ct
+      });
+    } catch (e) {
+      console.error(e);
     }
   }
-});
 
-// Guardar progreso antes de cerrar la página
-window.addEventListener('beforeunload', () => saveProgress(true));
+  // Vidstack time update: "time-update" (detail.currentTime)
+  player.addEventListener("time-update", () => save(false));
+  player.addEventListener("pause", () => save(true));
+  player.addEventListener("ended", () => save(true));
 
-// Inicializar el reproductor al cargar la página
-document.addEventListener('DOMContentLoaded', () => {
-  configurePlayer();
-});
+  window.addEventListener("beforeunload", () => {
+    // best effort
+    upsertProgress({
+      userId,
+      movieId,
+      episodeId: currentEpisodeId,
+      progressSeconds: Number(player.currentTime || 0)
+    }).catch(() => { });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", init);
