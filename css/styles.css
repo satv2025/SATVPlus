@@ -28,6 +28,13 @@
 
 img.brand-logo {
   width: 10em;
+  margin-left: -89%;
+}
+
+@media (max-width: 768px) {
+  img.brand-logo {
+    margin-left: 1%;
+  }
 }
 
 #continue-row .card {
