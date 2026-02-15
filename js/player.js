@@ -113,7 +113,7 @@ async function init() {
     if (currentEpisode?.m3u8_url) src = currentEpisode.m3u8_url;
 
     metaEl.textContent = currentEpisode
-      ? `Serie · S${currentEpisode.season}E${currentEpisode.episode_number}`
+      ? `Serie · T${currentEpisode.season}E${currentEpisode.episode_number}`
       : "Serie";
 
     buildEpisodes(episodes, currentEpisodeId, movieId);
@@ -140,7 +140,7 @@ async function init() {
     if (currentEpisode?.m3u8_url) src = currentEpisode.m3u8_url;
 
     metaEl.textContent = currentEpisode
-      ? `Serie · S${currentEpisode.season}E${currentEpisode.episode_number}`
+      ? `Serie · T${currentEpisode.season}E${currentEpisode.episode_number}`
       : "Serie";
 
     // Agregar el dropdown de temporadas

@@ -171,36 +171,42 @@ export function cardHtml(
 
 export async function setMovieTitleFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
-  const movieId = urlParams.get('movie');
-  const episodeId = urlParams.get('episode');  // Obtener el ID del episodio si está presente
+  const movieId = urlParams.get('movie');  // Obtener el ID de la película desde la URL
+  const episodeId = urlParams.get('episode');  // Obtener el ID del episodio, si está presente
 
-  // Si no se encuentra el ID de la película en la URL
+  // Si no se encuentra el ID de la película en la URL, asignamos un título predeterminado
   if (!movieId) {
     document.title = "Película no encontrada · SATV+";
     return;
   }
 
   try {
-    const movie = await fetchMovie(movieId); // Llamamos a la API para obtener la película
+    // Consulta la película usando su ID
+    const movie = await fetchMovie(movieId);
+
+    // Si la película es encontrada, configuramos el título de la página
     if (movie) {
-      let title = movie.title; // Usamos el 'title' de la película para el título de la página
-      // Si hay un episodio, agregar el título del episodio al título de la película
+      let title = movie.title;  // Usamos el título de la película para el título de la página
+
+      // Si hay un episodio, agregamos el título del episodio al título de la película
       if (episodeId) {
-        const episode = await fetchEpisode(episodeId); // Aquí debes definir fetchEpisode si lo necesitas
+        const episode = await fetchEpisode(episodeId); // Aquí llamamos a la función para obtener detalles del episodio
         if (episode) {
           title += ` - Episodio ${episode.episode_number}: ${episode.title || 'Sin título'}`;
         }
       }
+
+      // Finalmente, establecemos el título de la página
       document.title = `${title} · SATV+`;
     } else {
-      // Si no se encuentra la película, asignamos un nombre por defecto
+      // Si la película no se encuentra, asignamos un nombre por defecto
       const randomTitles = ["Nivel X", "Reite666", "Película Desconocida", "Film Genérico"];
       const randomTitle = randomTitles[Math.floor(Math.random() * randomTitles.length)];
       document.title = `${randomTitle} · SATV+`;
     }
   } catch (error) {
     console.error("Error al obtener la película:", error);
-    // En caso de error, se asigna un nombre por defecto
+    // Si ocurre un error, asignamos un nombre por defecto
     const randomTitles = ["Nivel X", "Reite666", "Película Desconocida", "Film Genérico"];
     const randomTitle = randomTitles[Math.floor(Math.random() * randomTitles.length)];
     document.title = `${randomTitle} · SATV+`;

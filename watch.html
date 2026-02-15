@@ -24,6 +24,10 @@
       overflow: hidden;
       background: #000;
     }
+
+    .section-title {
+      display: none !important;
+    }
   </style>
 </head>
 
@@ -64,6 +68,13 @@
 
   <!-- Solo player.js. Dentro de player.js importás auth.js -->
   <script type="module" src="/js/player.js"></script>
+
+  <script type="module">
+    import { setMovieTitleFromUrl } from "/js/ui.js"; // Asegúrate de que la ruta sea correcta
+    document.addEventListener("DOMContentLoaded", function () {
+      setMovieTitleFromUrl(); // Llama a la función para actualizar el título con el nombre de la película
+    });
+  </script>
 </body>
 
 </html>

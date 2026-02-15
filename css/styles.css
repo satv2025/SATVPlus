@@ -479,7 +479,7 @@ textarea {
 /* ================= PLAYER ================= */
 
 .video-wrap {
-  height: 54.5em !important;
+  height: 49em !important;
   position: relative;
   /* Para asegurar que los controles estén en la capa correcta */
 }
