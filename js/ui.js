@@ -1,5 +1,6 @@
 import { CONFIG } from "./config.js";
 import { getSession, signOut } from "./auth.js";
+import { fetchMovie } from "./api.js"; // Asegúrate de importar fetchMovie
 
 export function $(sel) { return document.querySelector(sel); }
 export function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
@@ -162,4 +163,46 @@ export function cardHtml(
       ${sub}
     </a>
   `;
+}
+
+/* =========================
+   SET MOVIE TITLE (for watch.html)
+========================= */
+
+export async function setMovieTitleFromUrl() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const movieId = urlParams.get('movie');
+  const episodeId = urlParams.get('episode');  // Obtener el ID del episodio si está presente
+
+  // Si no se encuentra el ID de la película en la URL
+  if (!movieId) {
+    document.title = "Película no encontrada · SATV+";
+    return;
+  }
+
+  try {
+    const movie = await fetchMovie(movieId); // Llamamos a la API para obtener la película
+    if (movie) {
+      let title = movie.title; // Usamos el 'title' de la película para el título de la página
+      // Si hay un episodio, agregar el título del episodio al título de la película
+      if (episodeId) {
+        const episode = await fetchEpisode(episodeId); // Aquí debes definir fetchEpisode si lo necesitas
+        if (episode) {
+          title += ` - Episodio ${episode.episode_number}: ${episode.title || 'Sin título'}`;
+        }
+      }
+      document.title = `${title} · SATV+`;
+    } else {
+      // Si no se encuentra la película, asignamos un nombre por defecto
+      const randomTitles = ["Nivel X", "Reite666", "Película Desconocida", "Film Genérico"];
+      const randomTitle = randomTitles[Math.floor(Math.random() * randomTitles.length)];
+      document.title = `${randomTitle} · SATV+`;
+    }
+  } catch (error) {
+    console.error("Error al obtener la película:", error);
+    // En caso de error, se asigna un nombre por defecto
+    const randomTitles = ["Nivel X", "Reite666", "Película Desconocida", "Film Genérico"];
+    const randomTitle = randomTitles[Math.floor(Math.random() * randomTitles.length)];
+    document.title = `${randomTitle} · SATV+`;
+  }
 }

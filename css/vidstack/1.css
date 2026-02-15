@@ -1755,11 +1755,12 @@ iframe.vds-youtube[data-no-controls] {
     align-items: center;
     opacity: 0;
     background-color: var(--media-slider-preview-bg);
-    border-radius: var(--media-slider-preview-border-radius, 2px);
+    border-radius: 12px;
     pointer-events: none;
     transition: opacity .2s ease-out;
     will-change: left, opacity;
-    contain: layout paint style
+    contain: layout paint style;
+    border: 2px solid #2563eb;
 }
 
 :where(.vds-slider-preview[data-visible]) {
