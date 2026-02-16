@@ -56,8 +56,7 @@
             <h2 style="margin:0 0 8px 0;">Recuperar correo</h2>
 
             <p class="muted" style="margin:0 0 12px 0;" id="subtitle">
-                Ingresá tu contraseña y el nuevo correo. Si el usuario existe y la contraseña es correcta,
-                Supabase enviará el email “Change email address”.
+                Ingresá tu contraseña y el nuevo correo, se te enviará un email al correo nuevo.
             </p>
 
             <form id="form-emailchange">
@@ -87,6 +86,17 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
+        // ===== DEBUG GLOBAL =====
+        console.log("[emailchange] module start", new Date().toISOString());
+
+        window.addEventListener("error", (e) => {
+            console.error("[emailchange] window error:", e.error || e.message, e);
+        });
+        window.addEventListener("unhandledrejection", (e) => {
+            console.error("[emailchange] unhandledrejection:", e.reason);
+        });
+        // ========================
+
         import { renderNav, renderAuthButtons, toast, $ } from "/js/ui.js";
         import { CONFIG } from "/js/config.js";
 
@@ -155,25 +165,34 @@
         const FN_URL = "https://eksgaqgakzwvqctekkgj.supabase.co/functions/v1/request-email-change";
 
         async function callFn(payload) {
+            console.log("[emailchange] calling function:", payload);
+
             const res = await fetch(FN_URL, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "apikey": CONFIG.SUPABASE_ANON_KEY,
                     "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+                    // ✅ debug opcional para que la function te devuelva detalles
+                    "x-debug": "1",
                 },
                 body: JSON.stringify(payload),
             });
+
             const txt = await res.text();
+            console.log("[emailchange] function http:", res.status, txt);
+
             if (!res.ok) {
                 console.error("Edge HTTP", res.status, txt);
                 throw new Error(`Edge Function error (${res.status})`);
             }
-            try { return JSON.parse(txt); } catch { return { ok: true }; }
+
+            try { return JSON.parse(txt); } catch { return { ok: true, raw: txt }; }
         }
 
         document.getElementById("form-emailchange").addEventListener("submit", async (e) => {
             e.preventDefault();
+            console.log("[emailchange] submit");
 
             const e1 = $("#email").value.trim().toLowerCase();
             const e2 = $("#email2").value.trim().toLowerCase();
@@ -189,24 +208,30 @@
             btn.textContent = "Enviando...";
 
             try {
-                await callFn({
+                const resp = await callFn({
                     username,
                     password: pw,
                     new_email: e1,
                     origin: window.location.origin
                 });
 
+                console.log("[emailchange] function response obj:", resp);
+
                 invalidateEmailChangeGate();
 
                 // neutro (anti-enumeración)
-                toast("Si el usuario existe y la contraseña es correcta, te va a llegar el email ✅", "success");
+                toast("Solicitud recibida ✅ Revisá tu correo actual y el nuevo.", "success");
 
-                // limpiamos recién al “éxito”
-                $("#email").value = "";
-                $("#email2").value = "";
-                $("#password").value = "";
+                // ✅ Solo limpiamos si la función confirma que ejecutó updateUser (modo debug)
+                if (resp?.debug?.did_update_email === true) {
+                    $("#email").value = "";
+                    $("#email2").value = "";
+                    $("#password").value = "";
+                } else {
+                    console.warn("[emailchange] did_update_email is not true; keeping inputs for retry.");
+                }
             } catch (err) {
-                console.error(err);
+                console.error("[emailchange] error:", err);
                 toast(err.message || "No se pudo iniciar el proceso", "error");
             } finally {
                 btn.disabled = false;
