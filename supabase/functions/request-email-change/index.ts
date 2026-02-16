@@ -14,8 +14,8 @@ function corsHeaders(origin: string | null) {
   return {
     "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
+    // ✅ ACÁ está la clave: incluimos x-debug
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-debug",
     "Access-Control-Allow-Credentials": "true",
     "Vary": "Origin",
   };
@@ -25,27 +25,48 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   const cors = corsHeaders(origin);
 
-  // ✅ Preflight
+  // ✅ Preflight SIEMPRE
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: cors });
   }
 
   const headers = { "Content-Type": "application/json", ...cors };
-  const ok = new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+
+  // neutro por defecto
+  const ok = (extra: unknown = {}) =>
+    new Response(JSON.stringify({ ok: true, ...extra }), { status: 200, headers });
+
+  const debugOn = req.headers.get("x-debug") === "1";
+  const debug: Record<string, unknown> = { debugOn };
 
   try {
-    if (req.method !== "POST") return ok;
+    if (req.method !== "POST") return ok();
 
-    const body = await req.json().catch(() => null);
-    if (!body) return ok;
+    const body = await req.json().catch(() => null) as any;
+    debug.bodyReceived = Boolean(body);
 
-    const { username, password, new_email, origin: bodyOrigin } = body;
-    if (!username || !password || !new_email || !bodyOrigin) return ok;
+    const username = body?.username;
+    const password = body?.password;
+    const new_email = body?.new_email;
+    const bodyOrigin = body?.origin;
+
+    if (!username || !password || !new_email || !bodyOrigin) {
+      debug.missing = true;
+      return debugOn ? ok({ debug }) : ok();
+    }
 
     const SB_URL = Deno.env.get("SB_URL");
     const SB_SERVICE_ROLE_KEY = Deno.env.get("SB_SERVICE_ROLE_KEY");
     const SB_ANON_KEY = Deno.env.get("SB_ANON_KEY");
-    if (!SB_URL || !SB_SERVICE_ROLE_KEY || !SB_ANON_KEY) return ok;
+
+    debug.hasSBURL = Boolean(SB_URL);
+    debug.hasSRK = Boolean(SB_SERVICE_ROLE_KEY);
+    debug.hasAnon = Boolean(SB_ANON_KEY);
+
+    if (!SB_URL || !SB_SERVICE_ROLE_KEY || !SB_ANON_KEY) {
+      debug.envMissing = true;
+      return debugOn ? ok({ debug }) : ok();
+    }
 
     const safeOrigin = ALLOWED_ORIGINS.has(String(bodyOrigin))
       ? String(bodyOrigin)
@@ -57,20 +78,28 @@ Deno.serve(async (req) => {
     const newEmail = String(new_email).toLowerCase().trim();
     const pw = String(password);
 
-    // 1) Resolver email actual por username (profiles)
-    const { data: profile } = await admin
+    // 1) Buscar UUID por username en profiles
+    const { data: profile, error: profErr } = await admin
       .from("profiles")
       .select("id")
       .eq("username", uname)
       .maybeSingle();
 
-    if (!profile?.id) return ok;
+    debug.profileFound = Boolean(profile?.id);
+    debug.profileError = profErr?.message;
 
-    const { data: userRes } = await admin.auth.admin.getUserById(String(profile.id));
+    if (!profile?.id) return debugOn ? ok({ debug }) : ok();
+
+    // 2) Email actual desde auth.users
+    const { data: userRes, error: userErr } = await admin.auth.admin.getUserById(String(profile.id));
     const currentEmail = userRes?.user?.email;
-    if (!currentEmail) return ok;
 
-    // 2) Login con password (esto NO manda magic link)
+    debug.currentEmailFound = Boolean(currentEmail);
+    debug.userErr = userErr?.message;
+
+    if (!currentEmail) return debugOn ? ok({ debug }) : ok();
+
+    // 3) Login con password (para crear sesión) y luego updateUser => "Change email address"
     const client = createClient(SB_URL, SB_ANON_KEY, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
@@ -80,17 +109,22 @@ Deno.serve(async (req) => {
       password: pw,
     });
 
-    // neutro: si falla, no revelamos nada
-    if (signInErr || !signInData?.session) return ok;
+    debug.signInOk = Boolean(signInData?.session);
+    debug.signInErr = signInErr?.message;
 
-    // 3) Disparar el mail "Change email address"
-    await client.auth.updateUser(
+    if (signInErr || !signInData?.session) return debugOn ? ok({ debug }) : ok();
+
+    const { error: updErr } = await client.auth.updateUser(
       { email: newEmail },
       { emailRedirectTo: `${safeOrigin}/login.html` }
     );
 
-    return ok;
-  } catch {
-    return ok;
+    debug.did_update_email = !updErr;
+    debug.updateErr = updErr?.message;
+
+    return debugOn ? ok({ debug }) : ok();
+  } catch (e) {
+    debug.exception = String(e?.message || e);
+    return debugOn ? ok({ debug }) : ok();
   }
 });
