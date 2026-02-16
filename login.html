@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="/css/styles.css" />
   <link rel="icon" href="images/satvpluslogo.png">
 
-  <!-- estilos SOLO para el ojo -->
   <style>
     .password-field {
       position: relative;
@@ -75,7 +74,7 @@
 
           <span class="muted" style="font-size:14px;"> · </span>
 
-          <a id="forgot-email" class="muted" href="/emailchange.html" style="font-size:14px;text-decoration:underline;">
+          <a id="forgot-email" class="muted" href="/recovery.html" style="font-size:14px;text-decoration:underline;">
             ¿Olvidaste tu correo electrónico?
           </a>
         </div>
@@ -95,13 +94,20 @@
     import { getSession, signInWithEmail } from "/js/auth.js";
     import { renderNav, renderAuthButtons, toast, $ } from "/js/ui.js";
 
-    const session = await getSession();
-    if (session) window.location.replace("/index.html");
-
     renderNav({ active: "" });
     renderAuthButtons();
 
-    // ====== OJO CONTRASEÑA (SVG via currentColor) ======
+    // ✅ IMPORTANTE: que un error de Supabase NO rompa el login
+    try {
+      const session = await getSession();
+      if (session) window.location.replace("/index.html");
+    } catch (err) {
+      console.warn("getSession falló (no bloquea login):", err);
+      // opcional: toast suave para debug
+      // toast("No se pudo verificar sesión (seguí normal)", "info");
+    }
+
+    // ====== OJO CONTRASEÑA ======
     const ICON_HIDE = `
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path fill-rule="evenodd" clip-rule="evenodd"
@@ -111,8 +117,8 @@
 
     const ICON_SHOW = `
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M2.68936 6.70456C2.52619 6.32384 2.08528 6.14747 1.70456 6.31064C1.32384 6.47381 1.14747 6.91472 1.31064 7.29544L2.68936 6.70456ZM15.5872 13.3287L15.3125 12.6308L15.5872 13.3287ZM9.04145 13.7377C9.26736 13.3906 9.16904 12.926 8.82185 12.7001C8.47466 12.4742 8.01008 12.5725 7.78417 12.9197L9.04145 13.7377ZM6.37136 15.091C6.14545 15.4381 6.24377 15.9027 6.59096 16.1286C6.93815 16.3545 7.40273 16.2562 7.62864 15.909L6.37136 15.091ZM22.6894 7.29544C22.8525 6.91472 22.6762 6.47381 22.2954 6.31064C21.9147 6.14747 21.4738 6.32384 21.3106 6.70456L22.6894 7.29544ZM19 11.1288L18.4867 10.582V10.582L19 11.1288ZM19.9697 13.1592C20.2626 13.4521 20.7374 13.4521 21.0303 13.1592C21.3232 12.8663 21.3232 12.3914 21.0303 12.0985L19.9697 13.1592ZM11.25 16.5C11.25 16.9142 11.5858 17.25 12 17.25C12.4142 17.25 12.75 16.9142 12.75 16.5H11.25ZM16.3714 15.909C16.5973 16.2562 17.0619 16.3545 17.409 16.1286C17.7562 15.9027 17.8545 15.4381 17.6286 15.091L16.3714 15.909ZM5.53033 11.6592C5.82322 11.3663 5.82322 10.8914 5.53033 10.5985C5.23744 10.3056 4.76256 10.3056 4.46967 10.5985L5.53033 11.6592ZM2.96967 12.0985C2.67678 12.3914 2.67678 12.8663 2.96967 13.1592C3.26256 13.4521 3.73744 13.4521 4.03033 13.1592L2.96967 12.0985ZM12 13.25C8.77611 13.25 6.46133 11.6446 4.9246 9.98966C4.15645 9.16243 3.59325 8.33284 3.22259 7.71014C3.03769 7.3995 2.90187 7.14232 2.8134 6.96537C2.76919 6.87696 2.73689 6.80875 2.71627 6.76411C2.70597 6.7418 2.69859 6.7254 2.69411 6.71533C2.68925 6.7043 2.68936 6.70456 2 7C1.31064 7.29544 1.31218 7.299 1.35453 7.39311C1.47176 7.63619 1.93366 8.47736 3.8254 11.0103C5.53867 12.8554 8.22389 14.75 12 14.75V13.25ZM15.3125 12.6308C14.3421 13.0128 13.2417 13.25 12 13.25V14.75C13.4382 14.75 14.7246 14.4742 15.8619 14.0266L15.3125 12.6308ZM7.78417 12.9197L6.37136 15.091L7.62864 15.909L9.04145 13.7377L7.78417 12.9197ZM22 7C21.3106 6.70456 21.3111 6.70349 21.3111 6.7036C21.3107 6.70452 21.307 6.71275 21.2758 6.78125C21.1526 7.03267 20.6354 7.9432 18.4867 10.582L19.5133 11.6757C20.6023 10.6535 21.3917 9.56587 21.9085 8.73646C22.4889 7.71415 22.6894 7.29544 22 7ZM18.4867 10.582C17.6277 11.3882 16.5739 12.1343 15.3125 12.6308L15.8619 14.0266C17.3355 13.4466 18.5466 12.583 19.5133 11.6757L18.4867 10.582ZM18.4697 11.6592L19.9697 13.1592L21.0303 12.0985L19.5303 10.5985L18.4697 11.6592ZM11.25 14V16.5H12.75V14H11.25ZM14.9586 13.7377L16.3714 15.909L17.6286 15.091L16.2158 12.9197L14.9586 13.7377ZM4.46967 10.5985L2.96967 12.0985L4.03033 13.1592L5.53033 11.6592L4.46967 10.5985Z"
-        fill="currentColor"/>
+        <path d="M2.68936 6.70456C2.52619 6.32384 2.08528 6.14747 1.70456 6.31064C1.32384 6.47381 1.14747 6.91472 1.31064 7.29544L2.68936 6.70456ZM15.5872 13.3287L15.3125 12.6308L15.5872 13.3287ZM9.04145 13.7377C9.26736 13.3906 9.16904 12.926 8.82185 12.7001C8.47466 12.4742 8.01008 12.5725 7.78417 12.9197L9.04145 13.7377ZM6.37136 15.091C6.14545 15.4381 6.24377 15.9027 6.59096 16.1286C6.93815 16.3545 7.40273 16.2562 7.62864 15.909L6.37136 15.091ZM22.6894 7.29544C22.8525 6.91472 22.6762 6.47381 22.2954 6.31064C21.9147 6.14747 21.4738 6.32384 21.3106 6.70456L22.6894 7.29544ZM19 11.1288L18.4867 10.582V10.582L19 11.1288ZM19.9697 13.1592C20.2626 13.4521 20.7374 13.4521 21.0303 13.1592C21.3232 12.8663 21.3232 12.3914 21.0303 12.0985L19.9697 13.1592ZM11.25 16.5C11.25 16.9142 11.5858 17.25 12 17.25C12.4142 17.25 12.75 16.9142 12.75 16.5H11.25Z"
+          fill="currentColor"/>
       </svg>`;
 
     function setupPasswordToggles() {
@@ -132,9 +138,8 @@
       });
     }
     setupPasswordToggles();
-    // ====== FIN OJO ======
 
-    // ====== GATE ======
+    // ====== GATES ======
     function newGateId() {
       return (crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
     }
@@ -143,6 +148,8 @@
       const gateId = newGateId();
       sessionStorage.setItem(storagePrefix + "_gate", gateId);
       sessionStorage.setItem(storagePrefix + "_gate_ts", String(Date.now()));
+      // DEBUG: descomentá si querés ver si setea
+      // toast(`${storagePrefix} gate ✅`, "success");
       window.location.href = `${path}?id=${encodeURIComponent(gateId)}`;
     }
 
@@ -151,12 +158,13 @@
       goWithGate("/recovery.html", "recovery");
     });
 
+    // ✅ OJO: "olvidé correo" primero va a recovery (ahí elegís email o usuario)
     document.getElementById("forgot-email").addEventListener("click", (e) => {
       e.preventDefault();
-      goWithGate("/emailchange.html", "emailchange");
+      goWithGate("/recovery.html", "recovery");
     });
-    // ====== FIN GATE ======
 
+    // ====== LOGIN SUBMIT ======
     document.getElementById("form-login").addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
