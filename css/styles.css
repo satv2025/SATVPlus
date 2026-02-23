@@ -19,6 +19,10 @@
   /* cuánto “se pierde” por los bordes */
   --arrow-w: 48px;
   --arrow-h: 92px;
+
+  /* ✅ logo spacing */
+  --logo-gap: 14px;
+  /* separación entre pared y logo */
 }
 
 * {
@@ -27,10 +31,16 @@
 }
 
 /* =========================================================
-   ✅ BRAND LOGO (RESPONSIVO, SIN MÁRGENES, NO ROMPE LAYOUT)
-   Reemplaza tus margin-left por un comportamiento natural
-   dentro del flujo del flex.
+   ✅ BRAND LOGO (SIEMPRE ARRIBA-IZQUIERDA)
+   - SIN MÁRGENES raros
+   - separación con pared controlada por --logo-gap
+   - no rompe layout
    ========================================================= */
+
+/* Mata cualquier regla vieja que meta margin-left en el logo */
+img.brand-logo {
+  margin-left: 0 !important;
+}
 
 /* Evita overflow raro en flex cuando hay textos largos o wrap */
 .nav-left,
@@ -45,32 +55,18 @@
   /* responsivo */
   max-width: 100%;
   height: auto;
+
   margin: 0;
   /* ✅ sin margin */
   padding: 0;
-  /* ✅ por si alguien mete padding */
+  /* ✅ sin padding */
+
   flex: 0 0 auto;
-  /* no estira ni se aplasta extraño */
+  /* no se estira ni se aplasta */
   object-fit: contain;
   /* evita deformación */
   object-position: left center;
 }
-
-/* Mobile: el logo se adapta más al ancho disponible sin empujar */
-@media (max-width: 768px) {
-  .brand-logo {
-    width: clamp(120px, 38vw, 200px);
-    object-position: left center;
-  }
-}
-
-/* (Opcional) si alguna vez querés centrar el logo en mobile:
-@media (max-width: 768px) {
-  .nav-left { justify-content: center; }
-  .brand { justify-content: center; }
-  .brand-logo { object-position: center; }
-}
-*/
 
 /* ================= BASE ================= */
 
@@ -109,6 +105,7 @@ body {
   backdrop-filter: blur(10px);
   background: rgba(11, 12, 16, .72);
   border-bottom: 1px solid var(--line);
+  width: 100%;
 }
 
 .nav-inner {
@@ -116,22 +113,33 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 18px;
+
+  /* ✅ separación del logo con la pared, siempre */
+  padding-top: 14px;
+  padding-bottom: 14px;
+  padding-left: var(--logo-gap);
+  padding-right: 18px;
 }
 
+/* Izquierda ocupa espacio, y el logo queda siempre al inicio */
 .nav-left {
   display: flex;
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
+
+  flex: 1 1 auto;
 }
 
+/* Brand se queda en el inicio del bloque izquierdo */
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
   font-weight: 900;
   letter-spacing: .2px;
+
+  flex: 0 0 auto;
 }
 
 .brand-dot {
@@ -159,11 +167,15 @@ body {
   color: var(--text);
 }
 
+/* Derecha siempre a la punta */
 .nav-right {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 /* ================= BUTTONS ================= */
@@ -226,24 +238,6 @@ body {
   margin-bottom: 5em;
 }
 
-section.section:after {
-  content: "";
-  /* Es necesario para que el pseudo-elemento sea visible */
-  display: block;
-  /* Asegura que el pseudo-elemento sea un bloque */
-  border-bottom: 2px solid #2563eb;
-  /* El borde que quieres aplicar */
-  position: relative;
-  /* Si deseas dar espacio entre el contenido de la sección y el borde */
-  top: 3.4em;
-}
-
-/* El último section no tendrá el borde inferior */
-section.section:last-of-type:after {
-  content: none;
-  /* Elimina el contenido del pseudo-elemento :after */
-}
-
 .section-head {
   display: flex;
   align-items: baseline;
@@ -279,7 +273,6 @@ section.section:last-of-type:after {
   position: relative;
   width: 100%;
   overflow: hidden;
-  /* “no se limite a bordes” visualmente => se pierde con fade */
 }
 
 /* fade edges */
@@ -330,8 +323,7 @@ section.section:last-of-type:after {
 
 .carousel-btn:hover {
   background: rgba(0, 0, 0, .85);
-  transform: scale(1.06);
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(1.06);
 }
 
 .carousel-btn.left {
@@ -348,7 +340,7 @@ section.section:last-of-type:after {
 }
 
 /* =========================================================
-   ROWS + CARDS (tu base, con ajuste para flechas/fade)
+   ROWS + CARDS
    ========================================================= */
 
 .row {
@@ -424,7 +416,7 @@ section.section:last-of-type:after {
   outline: 2px solid #fff;
 }
 
-/* 🔥 16:9 REAL SIN ALTURA FIJA */
+/* 16:9 */
 .thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -434,7 +426,6 @@ section.section:last-of-type:after {
   position: relative;
 }
 
-/* 🔥 TEXTO CRECE NATURALMENTE */
 .card-title {
   padding: 10px 10px 2px 10px;
   font-weight: 900;
@@ -451,7 +442,6 @@ section.section:last-of-type:after {
   word-break: break-word;
 }
 
-/* 🔥 PROGRESSBAR EXACTAMENTE EN TU POSICIÓN */
 .progressbar {
   position: absolute;
   left: 10px;
@@ -469,10 +459,8 @@ section.section:last-of-type:after {
   border-radius: inherit;
   transition: width .25s ease;
 
-  /* Color base */
   background: linear-gradient(90deg, #00eaff, #2563eb);
 
-  /* Glow neón fuerte pero elegante */
   box-shadow:
     0 0 4px #00eaff,
     0 0 8px #00eaff,
@@ -534,17 +522,13 @@ textarea {
 .video-wrap {
   height: 49em !important;
   position: relative;
-  /* Para asegurar que los controles estén en la capa correcta */
 }
 
 media-player {
   display: block;
-  /* Asegura que el reproductor esté visible */
   width: 100%;
   background: black;
-  /* Fondo negro para el reproductor */
   height: 100%;
-  /* Ajuste de altura */
 }
 
 /* ================= EPISODES ================= */
@@ -580,15 +564,11 @@ media-player {
 
 .ep-number {
   font-size: 35px;
-  /* Alinea el texto a la derecha */
   display: block;
-  /* Convierte el span en un bloque, para que text-align funcione */
   width: 1em;
-  /* Asegura que ocupe el ancho completo de su contenedor */
   text-align: right;
 }
 
-/* Miniatura de 16:9 con bordes suaves */
 .ep-thumbnail {
   width: 177px;
   height: 100px;
@@ -600,7 +580,6 @@ media-player {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Título del episodio */
 .ep-title {
   font-size: 18px;
   font-weight: 700;
@@ -611,13 +590,9 @@ media-player {
   overflow: hidden;
   white-space: break-spaces;
   width: 15%;
-  /* El título tiene ancho automático */
-
-  /* Esto hace que el título ocupe el espacio disponible */
   word-break: break-word;
 }
 
-/* Sinopsis */
 .ep-synopsis {
   font-size: 14px;
   color: #ffff !important;
@@ -629,12 +604,9 @@ media-player {
   text-align: left;
   position: relative;
   flex: 1;
-  /* Asegura que la sinopsis ocupe el mismo espacio que el título */
   width: auto;
-  /* Se ajusta dinámicamente al tamaño del título */
 }
 
-/* Acción del episodio */
 .ep-action {
   display: flex;
   align-items: center;
@@ -660,7 +632,6 @@ media-player {
   transform: scale(1.05);
 }
 
-/* Expansión de la sinopsis */
 .ep-synopsis-expander {
   margin-top: 8px;
   display: none;
@@ -668,16 +639,13 @@ media-player {
   color: var(--muted);
   text-align: justify;
   width: auto;
-  /* Se ajusta al contenido */
   word-wrap: break-word;
-  /* Asegura que el texto largo se ajuste bien */
 }
 
 .ep.expanded .ep-synopsis-expander {
   display: block;
 }
 
-/* Wrapper de episodios */
 #episodes-wrap {
   width: 100%;
   max-width: 88em;
@@ -762,7 +730,6 @@ media-player {
   user-select: none;
 }
 
-/* Caja principal */
 .dropdown-selected {
   display: flex;
   align-items: center;
@@ -782,25 +749,20 @@ media-player {
 
 .dropdown.open .dropdown-selected {
   border-color: rgba(37, 99, 235, .6);
-  /* Azul con la opacidad original */
   background: rgba(255, 255, 255, .06);
 }
 
-/* Texto */
 .dropdown-text {
   font-size: 14px;
   color: var(--text);
 }
 
-/* Flecha */
 .dropdown-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-
   width: 20px;
   height: 20px;
-
   transition: transform .25s ease, opacity .25s ease;
   opacity: .7;
 }
@@ -815,27 +777,21 @@ media-player {
   opacity: 1;
 }
 
-/* Opciones */
 .dropdown-options {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 14px;
-
   overflow: hidden;
   z-index: 30;
-
   max-height: 260px;
   overflow-y: auto;
-
   opacity: 0;
   transform: translateY(-6px);
   pointer-events: none;
-
   transition: opacity .18s ease, transform .18s ease;
 }
 
@@ -845,7 +801,6 @@ media-player {
   pointer-events: auto;
 }
 
-/* Scroll interno elegante */
 .dropdown-options::-webkit-scrollbar {
   width: 6px;
 }
@@ -855,7 +810,6 @@ media-player {
   border-radius: 6px;
 }
 
-/* Cada opción */
 .dropdown-option {
   padding: 12px;
   cursor: pointer;
@@ -867,7 +821,6 @@ media-player {
   background: rgba(255, 255, 255, .06);
 }
 
-/* Separación visual si querés en el futuro */
 .dropdown-option+.dropdown-option {
   border-top: 1px solid rgba(255, 255, 255, .05);
 }
@@ -880,22 +833,29 @@ media-player {
     padding: 10px;
   }
 
+  /* ✅ nav en columna PERO siempre pegado a la izquierda */
   .nav-inner {
     flex-direction: column;
     align-items: flex-start;
+    justify-content: flex-start;
     gap: 12px;
-    /* Asegura que haya espacio entre los elementos */
+
+    padding-left: var(--logo-gap);
+    padding-right: 10px;
   }
 
   .brand {
     font-size: 1.4em;
-    /* Aumenta ligeramente el tamaño para legibilidad */
+  }
+
+  /* Logo: sigue arriba izq y se adapta */
+  .brand-logo {
+    width: clamp(120px, 42vw, 220px);
   }
 
   .navlink {
     padding: 6px 12px;
     font-size: 14px;
-    /* Tamaño de fuente ajustado */
   }
 
   .hero h1 {
@@ -911,7 +871,6 @@ media-player {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    /* Ajuste del espacio entre los elementos */
   }
 
   .card {
@@ -919,7 +878,6 @@ media-player {
     max-width: 100%;
     height: auto;
     margin-bottom: 12px;
-    /* Añadimos margen entre las tarjetas */
   }
 
   .carousel-btn {
@@ -931,7 +889,6 @@ media-player {
     gap: 12px;
     padding: 6px 0;
     overflow-x: auto;
-    /* Asegura que se pueda desplazar horizontalmente */
     flex-wrap: nowrap;
   }
 
@@ -939,9 +896,7 @@ media-player {
     width: 100%;
     height: auto;
     aspect-ratio: 16 / 9;
-    /* Mantener proporción adecuada para miniaturas */
     object-fit: cover;
-    /* Asegura que la imagen cubra el área sin deformarse */
   }
 
   .ep-list {
@@ -955,7 +910,6 @@ media-player {
     right: 0;
     display: flex;
     flex-direction: column;
-    /* Cambiar dirección a columna para pantallas pequeñas */
     gap: 8px;
   }
 
@@ -976,7 +930,6 @@ media-player {
     height: auto;
     max-height: 480px;
     overflow: hidden;
-    /* Evita el desbordamiento */
   }
 
   .media-player {
@@ -1003,15 +956,16 @@ media-player {
 }
 
 @media (max-width: 480px) {
-
-  /* Ajustes para pantallas muy pequeñas (como en dispositivos móviles compactos) */
   .nav-inner {
     gap: 10px;
   }
 
   .brand {
     font-size: 1.2em;
-    /* Ajuste del tamaño para pantallas muy pequeñas */
+  }
+
+  .brand-logo {
+    width: clamp(110px, 52vw, 210px);
   }
 
   .navlink {
@@ -1177,50 +1131,37 @@ media-player {
 /* ================= RESPONSIVE EPISODES ================= */
 
 @media (max-width: 768px) {
-
-  /* Aseguramos que la lista de episodios se acomode en una barra horizontal */
   .ep-list {
     display: flex;
     gap: 12px;
     overflow-x: auto;
-    /* Habilita el desplazamiento horizontal */
     padding: 8px 0;
     margin-top: 0;
     flex-wrap: nowrap;
-    /* Los episodios se alinean en una fila horizontal */
   }
 
-  /* Ajuste del contenedor del episodio para que no sea cuadrado y sea una barra horizontal */
   .ep {
     display: flex;
     flex-direction: column;
-    /* Apilar contenido verticalmente (título, sinopsis, etc.) */
     width: auto;
-    /* Permite que el contenedor se ajuste en ancho */
     max-width: 320px;
-    /* Limita el ancho máximo para no estirarse demasiado */
     height: auto;
-    /* Ajuste de altura flexible */
     background: rgba(255, 255, 255, .1);
     border-radius: var(--radius2);
     padding: 16px;
     transition: background 0.3s ease, box-shadow 0.3s ease;
     flex-shrink: 0;
-    /* Evita que el contenedor se reduzca más allá del tamaño definido */
   }
 
-  /* Ajuste de la miniatura de episodio */
   .ep-thumbnail {
     width: 100%;
     height: auto;
     max-height: 200px;
-    /* Limita la altura máxima de la imagen para mantener proporciones */
     background-size: cover;
     background-position: center;
     border-radius: 8px;
   }
 
-  /* Ajuste del título del episodio */
   .ep-title {
     font-size: 16px;
     margin-top: 8px;
@@ -1231,17 +1172,13 @@ media-player {
     text-align: center;
   }
 
-  /* Ajuste de la sinopsis del episodio */
   .ep-synopsis {
     font-size: 14px;
     line-height: 1.5;
     max-height: none;
-    /* Permite que la sinopsis ocupe todo el espacio disponible */
     overflow: visible;
-    /* Asegura que el texto largo se muestre completamente */
   }
 
-  /* Ajuste de las acciones dentro del episodio */
   .ep-action {
     display: flex;
     justify-content: flex-end;
@@ -1249,37 +1186,30 @@ media-player {
     margin-top: 12px;
   }
 
-  /* Ajuste de los botones de acción dentro de episodios */
   .ep-action .btn {
     font-size: 14px;
     padding: 8px 12px;
     width: auto;
   }
 
-  /* Expansión de la sinopsis (si está expandida) */
   .ep-synopsis-expander {
     font-size: 12px;
     padding: 10px;
     width: 100%;
   }
 
-  /* Ajuste del hover en los episodios */
   .ep:hover {
     background: rgba(62, 61, 61, .9);
   }
 }
 
 @media (max-width: 480px) {
-  /* Ajustes adicionales para pantallas muy pequeñas */
-
   .ep-list {
     gap: 8px;
-    /* Menos espacio entre los episodios en pantallas más pequeñas */
   }
 
   .ep-thumbnail {
     max-height: 150px;
-    /* Limita más la altura de las miniaturas en móviles muy pequeños */
   }
 
   .ep-title {
