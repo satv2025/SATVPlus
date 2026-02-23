@@ -525,8 +525,9 @@ textarea {
 /* ================= PLAYER ================= */
 
 .video-wrap {
-  height: 49em !important;
+  height: auto !important;
   position: relative;
+  aspect-ratio: 16 / 9;
 }
 
 media-player {
