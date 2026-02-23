@@ -230,19 +230,6 @@ img.brand-logo,
   margin-bottom: 5em;
 }
 
-section.section:after {
-  content: "";
-  display: block;
-  border-bottom: 2px solid #2563eb;
-  position: relative;
-  top: 3.4em;
-}
-
-/* El último section no tendrá el borde inferior */
-section.section:last-of-type:after {
-  content: none;
-}
-
 .section-head {
   display: flex;
   align-items: baseline;
