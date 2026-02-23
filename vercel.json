@@ -11,11 +11,11 @@
     ],
     "rewrites": [
         {
-            "source": "/url/css/satvplusClient.:hash.css",
+            "source": "/css/satvplusClient.:hash.css",
             "destination": "/css/styles.css"
         },
         {
-            "source": "/url/css/styles.css",
+            "source": "/css/styles.css",
             "destination": "/css/styles.css"
         }
     ]
