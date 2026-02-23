@@ -26,16 +26,53 @@
   font-family: "HBOMaxSans" !important;
 }
 
-img.brand-logo {
-  width: 10em;
-  margin-left: -89%;
+/* =========================================================
+   ✅ BRAND LOGO (RESPONSIVO, SIN MÁRGENES, NO ROMPE LAYOUT)
+   Reemplaza tus margin-left por un comportamiento natural
+   dentro del flujo del flex.
+   ========================================================= */
+
+/* Evita overflow raro en flex cuando hay textos largos o wrap */
+.nav-left,
+.brand {
+  min-width: 0;
 }
 
+/* Logo sin offsets */
+.brand-logo {
+  display: block;
+  width: clamp(120px, 10vw, 180px);
+  /* responsivo */
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  /* ✅ sin margin */
+  padding: 0;
+  /* ✅ por si alguien mete padding */
+  flex: 0 0 auto;
+  /* no estira ni se aplasta extraño */
+  object-fit: contain;
+  /* evita deformación */
+  object-position: left center;
+}
+
+/* Mobile: el logo se adapta más al ancho disponible sin empujar */
 @media (max-width: 768px) {
-  img.brand-logo {
-    margin-left: 1%;
+  .brand-logo {
+    width: clamp(120px, 38vw, 200px);
+    object-position: left center;
   }
 }
+
+/* (Opcional) si alguna vez querés centrar el logo en mobile:
+@media (max-width: 768px) {
+  .nav-left { justify-content: center; }
+  .brand { justify-content: center; }
+  .brand-logo { object-position: center; }
+}
+*/
+
+/* ================= BASE ================= */
 
 #continue-row .card {
   height: 15.6em !important;
