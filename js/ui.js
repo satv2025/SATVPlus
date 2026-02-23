@@ -119,7 +119,6 @@ export async function renderAuthButtons() {
 
 /* =========================
    DATA-HREF NAVIGATION
-   (sin <a href> => no status bar)
 ========================= */
 
 let __dataHrefNavEnabled = false;
@@ -164,8 +163,6 @@ export function enableDataHrefNavigation() {
 
 /* =========================
    MOVIE CARD
-   - antes: <a class="card" href="...">
-   - ahora: <div class="card" data-href="...">
 ========================= */
 
 export function cardHtml(
@@ -177,7 +174,7 @@ export function cardHtml(
   const thumb = movie.thumbnail_url || "";
   const title = escapeHtml(movie.title || "Sin título");
 
-  // /watch (sin .html)
+  // /watch (sin .html) - Vercel lo reescribe a /watch.html
   const href = hrefOverride
     ? hrefOverride
     : `/watch?movie=${encodeURIComponent(movie.id)}`;
@@ -204,16 +201,46 @@ export function cardHtml(
 }
 
 /* =========================
-   SET MOVIE TITLE (for watch page)
+   CSS DISFRAZADO
+   - URL visible: /url/css/satvplusClient.{movieId}.css
+   - Contenido real servido por Vercel: /css/styles.css
+   Requisito: en watch.html
+     <link id="app-style" rel="stylesheet" href="/css/styles.css" />
+========================= */
+
+function getMovieIdFromUrl() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get("movie");
+}
+
+export function applyDisguisedCssFromMovieId({
+  linkId = "app-style",
+  disguisedPrefix = "/url/css/satvplusClient.",
+  disguisedSuffix = ".css",
+  disguisedDefaultHref = "/url/css/styles.css"
+} = {}) {
+  const link = document.getElementById(linkId);
+  if (!link) return;
+
+  const movieId = getMovieIdFromUrl();
+  const newHref = movieId
+    ? `${disguisedPrefix}${encodeURIComponent(movieId)}${disguisedSuffix}`
+    : disguisedDefaultHref;
+
+  // Cambia el href. Vercel reescribe a /css/styles.css.
+  link.href = newHref;
+}
+
+/* =========================
+   SET MOVIE TITLE (watch page)
 ========================= */
 
 export async function setMovieTitleFromUrl() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const movieId = urlParams.get("movie");
+  const movieId = getMovieIdFromUrl();
 
   if (!movieId) {
     document.title = "Película no encontrada · SATV+";
-    return;
+    return null;
   }
 
   try {
@@ -221,11 +248,14 @@ export async function setMovieTitleFromUrl() {
 
     if (movie) {
       document.title = `${movie.title} · SATV+`;
+      return movie;
     } else {
       document.title = "Película no encontrada · SATV+";
+      return null;
     }
   } catch (error) {
     console.error("Error al obtener la película:", error);
     document.title = "Error al cargar la película · SATV+";
+    return null;
   }
 }

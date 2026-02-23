@@ -1,10 +1,22 @@
 {
     "cleanUrls": true,
     "trailingSlash": false,
-    "rewrites": [
+    "routes": [
         {
-            "source": "/:path*",
-            "destination": "/:path*.html"
+            "handle": "filesystem"
+        },
+        {
+            "src": "^/(.+)\\.html$",
+            "dest": "/$1",
+            "status": 308
+        },
+        {
+            "src": "^/url/css/satvplusClient\\.[^/]+\\.css$",
+            "dest": "/css/styles.css"
+        },
+        {
+            "src": "^/url/css/styles\\.css$",
+            "dest": "/css/styles.css"
         }
     ]
 }
