@@ -20,52 +20,14 @@
   --arrow-w: 48px;
   --arrow-h: 92px;
 
-  /* ✅ logo spacing */
-  --logo-gap: 14px;
-  /* separación entre pared y logo */
+  /* ✅ CONTROL DEL PEGADO DEL LOGO A LA PARED */
+  --logo-gap: 6px;
+  /* ponelo en 4px si lo querés todavía más pegado */
 }
 
 * {
   box-sizing: border-box;
   font-family: "HBOMaxSans" !important;
-}
-
-/* =========================================================
-   ✅ BRAND LOGO (SIEMPRE ARRIBA-IZQUIERDA)
-   - SIN MÁRGENES raros
-   - separación con pared controlada por --logo-gap
-   - no rompe layout
-   ========================================================= */
-
-/* Mata cualquier regla vieja que meta margin-left en el logo */
-img.brand-logo {
-  margin-left: 0 !important;
-}
-
-/* Evita overflow raro en flex cuando hay textos largos o wrap */
-.nav-left,
-.brand {
-  min-width: 0;
-}
-
-/* Logo sin offsets */
-.brand-logo {
-  display: block;
-  width: clamp(120px, 10vw, 180px);
-  /* responsivo */
-  max-width: 100%;
-  height: auto;
-
-  margin: 0;
-  /* ✅ sin margin */
-  padding: 0;
-  /* ✅ sin padding */
-
-  flex: 0 0 auto;
-  /* no se estira ni se aplasta */
-  object-fit: contain;
-  /* evita deformación */
-  object-position: left center;
 }
 
 /* ================= BASE ================= */
@@ -108,38 +70,68 @@ body {
   width: 100%;
 }
 
+/* ✅ CLAVE: si nav-inner tiene "container", NO lo dejes al 85% nunca */
+.topnav .container,
+.topnav .nav-inner.container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+
+/* Nav layout */
 .nav-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 
-  /* ✅ separación del logo con la pared, siempre */
+  /* ✅ gap real con pared */
   padding-top: 14px;
   padding-bottom: 14px;
   padding-left: var(--logo-gap);
   padding-right: 18px;
 }
 
-/* Izquierda ocupa espacio, y el logo queda siempre al inicio */
+/* Evita overflow raro en flex cuando hay textos largos o wrap */
+.nav-left,
+.brand {
+  min-width: 0;
+}
+
 .nav-left {
   display: flex;
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
 
+  /* ✅ para que el bloque izq “mande” */
   flex: 1 1 auto;
 }
 
-/* Brand se queda en el inicio del bloque izquierdo */
+/* Brand */
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
   font-weight: 900;
   letter-spacing: .2px;
+  flex: 0 0 auto;
+}
+
+/* ✅ Logo SIEMPRE natural en flujo, sin margin-left */
+img.brand-logo,
+.brand-logo {
+  display: block;
+  width: clamp(120px, 10vw, 180px);
+  max-width: 100%;
+  height: auto;
+
+  margin: 0 !important;
+  padding: 0 !important;
 
   flex: 0 0 auto;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .brand-dot {
@@ -238,6 +230,19 @@ body {
   margin-bottom: 5em;
 }
 
+section.section:after {
+  content: "";
+  display: block;
+  border-bottom: 2px solid #2563eb;
+  position: relative;
+  top: 3.4em;
+}
+
+/* El último section no tendrá el borde inferior */
+section.section:last-of-type:after {
+  content: none;
+}
+
 .section-head {
   display: flex;
   align-items: baseline;
@@ -323,7 +328,8 @@ body {
 
 .carousel-btn:hover {
   background: rgba(0, 0, 0, .85);
-  transform: translateY(-50%) scale(1.06);
+  transform: scale(1.06);
+  transform: translateY(-50%);
 }
 
 .carousel-btn.left {
@@ -340,7 +346,7 @@ body {
 }
 
 /* =========================================================
-   ROWS + CARDS
+   ROWS + CARDS (tu base, con ajuste para flechas/fade)
    ========================================================= */
 
 .row {
@@ -416,7 +422,7 @@ body {
   outline: 2px solid #fff;
 }
 
-/* 16:9 */
+/* 🔥 16:9 REAL SIN ALTURA FIJA */
 .thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -426,6 +432,7 @@ body {
   position: relative;
 }
 
+/* 🔥 TEXTO CRECE NATURALMENTE */
 .card-title {
   padding: 10px 10px 2px 10px;
   font-weight: 900;
@@ -442,6 +449,7 @@ body {
   word-break: break-word;
 }
 
+/* 🔥 PROGRESSBAR EXACTAMENTE EN TU POSICIÓN */
 .progressbar {
   position: absolute;
   left: 10px;
@@ -459,8 +467,10 @@ body {
   border-radius: inherit;
   transition: width .25s ease;
 
+  /* Color base */
   background: linear-gradient(90deg, #00eaff, #2563eb);
 
+  /* Glow neón fuerte pero elegante */
   box-shadow:
     0 0 4px #00eaff,
     0 0 8px #00eaff,
@@ -569,6 +579,7 @@ media-player {
   text-align: right;
 }
 
+/* Miniatura de 16:9 con bordes suaves */
 .ep-thumbnail {
   width: 177px;
   height: 100px;
@@ -580,6 +591,7 @@ media-player {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Título del episodio */
 .ep-title {
   font-size: 18px;
   font-weight: 700;
@@ -593,6 +605,7 @@ media-player {
   word-break: break-word;
 }
 
+/* Sinopsis */
 .ep-synopsis {
   font-size: 14px;
   color: #ffff !important;
@@ -607,6 +620,7 @@ media-player {
   width: auto;
 }
 
+/* Acción del episodio */
 .ep-action {
   display: flex;
   align-items: center;
@@ -632,6 +646,7 @@ media-player {
   transform: scale(1.05);
 }
 
+/* Expansión de la sinopsis */
 .ep-synopsis-expander {
   margin-top: 8px;
   display: none;
@@ -646,6 +661,7 @@ media-player {
   display: block;
 }
 
+/* Wrapper de episodios */
 #episodes-wrap {
   width: 100%;
   max-width: 88em;
@@ -730,6 +746,7 @@ media-player {
   user-select: none;
 }
 
+/* Caja principal */
 .dropdown-selected {
   display: flex;
   align-items: center;
@@ -752,11 +769,13 @@ media-player {
   background: rgba(255, 255, 255, .06);
 }
 
+/* Texto */
 .dropdown-text {
   font-size: 14px;
   color: var(--text);
 }
 
+/* Flecha */
 .dropdown-arrow {
   display: flex;
   align-items: center;
@@ -777,21 +796,27 @@ media-player {
   opacity: 1;
 }
 
+/* Opciones */
 .dropdown-options {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
   right: 0;
+
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 14px;
+
   overflow: hidden;
   z-index: 30;
+
   max-height: 260px;
   overflow-y: auto;
+
   opacity: 0;
   transform: translateY(-6px);
   pointer-events: none;
+
   transition: opacity .18s ease, transform .18s ease;
 }
 
@@ -801,6 +826,7 @@ media-player {
   pointer-events: auto;
 }
 
+/* Scroll interno elegante */
 .dropdown-options::-webkit-scrollbar {
   width: 6px;
 }
@@ -810,6 +836,7 @@ media-player {
   border-radius: 6px;
 }
 
+/* Cada opción */
 .dropdown-option {
   padding: 12px;
   cursor: pointer;
@@ -821,6 +848,7 @@ media-player {
   background: rgba(255, 255, 255, .06);
 }
 
+/* Separación visual si querés en el futuro */
 .dropdown-option+.dropdown-option {
   border-top: 1px solid rgba(255, 255, 255, .05);
 }
@@ -837,9 +865,7 @@ media-player {
   .nav-inner {
     flex-direction: column;
     align-items: flex-start;
-    justify-content: flex-start;
     gap: 12px;
-
     padding-left: var(--logo-gap);
     padding-right: 10px;
   }
@@ -848,7 +874,7 @@ media-player {
     font-size: 1.4em;
   }
 
-  /* Logo: sigue arriba izq y se adapta */
+  /* Logo se adapta sin moverse del borde */
   .brand-logo {
     width: clamp(120px, 42vw, 220px);
   }
@@ -1126,6 +1152,8 @@ media-player {
   .media-player {
     height: 100%;
   }
+
+  /* ✅ IMPORTANTE: aunque .container sea 85%, el nav sigue full width por el override de arriba */
 }
 
 /* ================= RESPONSIVE EPISODES ================= */
