@@ -206,7 +206,7 @@ function setDisguisedCssHref(href, linkId = "app-style") {
 
 export function applyDisguisedCssFromId(id, {
   linkId = "app-style",
-  disguisedPrefix = "/url/css/satvplusClient.",
+  disguisedPrefix = "/css/satvplusClient.",
   disguisedSuffix = ".css"
 } = {}) {
   const safe = (id === null || id === undefined) ? "0" : String(id);
@@ -221,7 +221,7 @@ function getMovieIdFromUrl() {
 
 export function applyDisguisedCssFromMovieId({
   linkId = "app-style",
-  disguisedPrefix = "/url/css/satvplusClient.",
+  disguisedPrefix = "/css/satvplusClient.",
   disguisedSuffix = ".css",
   defaultId = "0"
 } = {}) {
