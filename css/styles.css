@@ -198,8 +198,15 @@ img.brand-logo,
   background: rgba(255, 255, 255, .04);
   padding: 8px 10px;
   border-radius: 999px;
-  color: var(--muted);
+  color: #ffffff;
   font-size: 13px;
+  text-decoration: none;
+  outline: 1px solid #fff;
+  opacity: 0.4;
+}
+
+a.pill.profile-link:hover {
+  opacity: 1;
 }
 
 /* ================= HERO ================= */

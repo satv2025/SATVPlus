@@ -1,3 +1,4 @@
+// ui.js
 import { CONFIG } from "./config.js";
 import { getSession, signOut } from "./auth.js";
 import { fetchMovie } from "./api.js";
@@ -87,6 +88,143 @@ export function renderNav({ active = "home" } = {}) {
   `;
 }
 
+/* =========================
+   PERFIL / USERNAME (profiles.username)
+   - Lee username desde la tabla "profiles" (columna username / "Username")
+   - Soporta Supabase PostgREST directo (sin supabase-js)
+========================= */
+
+function getUserIdFromSession(session) {
+  return (
+    session?.user?.id ||
+    session?.session?.user?.id ||
+    session?.data?.session?.user?.id ||
+    null
+  );
+}
+
+function getAccessTokenFromSession(session) {
+  return (
+    session?.access_token ||
+    session?.session?.access_token ||
+    session?.data?.session?.access_token ||
+    session?.token ||
+    null
+  );
+}
+
+function getSupabaseUrlFromConfig() {
+  return (
+    CONFIG?.SUPABASE_URL ||
+    CONFIG?.SUPABASE_PROJECT_URL ||
+    CONFIG?.SB_URL ||
+    null
+  );
+}
+
+function getSupabaseAnonKeyFromConfig() {
+  return (
+    CONFIG?.SUPABASE_ANON_KEY ||
+    CONFIG?.SUPABASE_ANON ||
+    CONFIG?.SUPABASE_KEY ||
+    CONFIG?.SB_ANON_KEY ||
+    null
+  );
+}
+
+function safeLocalPartFromEmail(email) {
+  const s = String(email || "");
+  const i = s.indexOf("@");
+  return (i > 0 ? s.slice(0, i) : s) || "";
+}
+
+async function fetchProfileRowByUserId({ userId, accessToken } = {}) {
+  const supabaseUrl = getSupabaseUrlFromConfig();
+  const anonKey = getSupabaseAnonKeyFromConfig();
+
+  // Si no hay config de Supabase, no podemos leer PostgREST
+  if (!supabaseUrl || !anonKey || !userId) return null;
+
+  // Endpoint PostgREST típico:
+  //   {SUPABASE_URL}/rest/v1/profiles?id=eq.{uuid}&select=username,full_name
+  // Nota: Si tu PK/relación usa otra columna (ej: user_id), cambiala acá.
+  const url =
+    `${supabaseUrl.replace(/\/+$/, "")}/rest/v1/profiles` +
+    `?id=eq.${encodeURIComponent(userId)}` +
+    `&select=username,full_name`;
+
+  const headers = {
+    "apikey": anonKey,
+    "Accept": "application/json",
+  };
+
+  // Para RLS normalmente hace falta el token del usuario logueado
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  } else {
+    // fallback mínimo (si tu RLS permite anon en lectura)
+    headers["Authorization"] = `Bearer ${anonKey}`;
+  }
+
+  const res = await fetch(url, { method: "GET", headers });
+  if (!res.ok) {
+    // No spameo toasts acá: el navbar se renderiza igual con fallback
+    return null;
+  }
+
+  const data = await res.json();
+  if (!Array.isArray(data) || data.length === 0) return null;
+  return data[0] || null;
+}
+
+async function getUsernameFromProfilesTable(session) {
+  const userId = getUserIdFromSession(session);
+  const accessToken = getAccessTokenFromSession(session);
+
+  if (!userId) return null;
+
+  // Cache simple para no pegarle siempre al endpoint
+  const cacheKey = `profiles.username.${userId}`;
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) return cached;
+  } catch (_) { }
+
+  const row = await fetchProfileRowByUserId({ userId, accessToken });
+  const username = row?.username ? String(row.username) : null;
+
+  if (username) {
+    try { sessionStorage.setItem(cacheKey, username); } catch (_) { }
+    return username;
+  }
+
+  return null;
+}
+
+function getFallbackDisplayName(session) {
+  // Prioridad de fallback si no se puede leer profiles.username:
+  // 1) session.user.username
+  // 2) session.user.user_metadata.username
+  // 3) session.user.name
+  // 4) email local-part
+  // 5) "Usuario"
+  const u =
+    session?.user ||
+    session?.session?.user ||
+    session?.data?.session?.user ||
+    {};
+
+  const meta = u?.user_metadata || u?.metadata || {};
+  return (
+    u?.username ||
+    meta?.username ||
+    u?.name ||
+    meta?.full_name ||
+    safeLocalPartFromEmail(u?.email) ||
+    "Usuario"
+  );
+}
+
 export async function renderAuthButtons() {
   const host = document.getElementById("nav-right");
   if (!host) return;
@@ -101,7 +239,18 @@ export async function renderAuthButtons() {
     return;
   }
 
-  const name = escapeHtml(session.user.name || "Usuario");
+  // 1) Intentamos username REAL desde profiles.username
+  // 2) Si falla, usamos fallback
+  let display = null;
+  try {
+    display = await getUsernameFromProfilesTable(session);
+  } catch (e) {
+    console.warn("No se pudo leer profiles.username:", e);
+  }
+
+  if (!display) display = getFallbackDisplayName(session);
+
+  const name = escapeHtml(display || "Usuario");
 
   host.innerHTML = `
     <a class="pill profile-link" href="/profile.html">${name}</a>
