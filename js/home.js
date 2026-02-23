@@ -226,7 +226,7 @@ async function init() {
   // Requisito: <link id="app-style" ...> en index.html
   applyDisguisedCssFromId(0, {
     linkId: "app-style",
-    disguisedPrefix: "/url/css/satvplusClient.",
+    disguisedPrefix: "/css/satvplusClient.",
     disguisedSuffix: ".css"
   });
 

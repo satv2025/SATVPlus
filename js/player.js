@@ -234,13 +234,13 @@ function mountSeasonDropdown({ movieId, currentEpisodeId, episodes, onSeasonEpis
 ========================= */
 
 async function init() {
-  // ✅ 1) CSS disfrazado: /url/css/satvplusClient.{movieId}.css -> (rewrite) /css/styles.css
+  // ✅ 1) CSS disfrazado: /css/satvplusClient.{movieId}.css -> (rewrite) /css/styles.css
   // OJO: requiere que en watch.html el link tenga id="app-style"
   applyDisguisedCssFromMovieId({
     linkId: "app-style",
-    disguisedPrefix: "/url/css/satvplusClient.",
+    disguisedPrefix: "/css/satvplusClient.",
     disguisedSuffix: ".css",
-    disguisedDefaultHref: "/url/css/styles.css"
+    disguisedDefaultHref: "/css/styles.css"
   });
 
   renderNav({ active: "home" });
