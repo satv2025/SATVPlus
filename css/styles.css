@@ -369,6 +369,20 @@ section.section:last-of-type:after {
   cursor: pointer;
 }
 
+.no-select,
+.no-select * {
+  -webkit-user-select: none;
+  /* Safari/iOS */
+  -moz-user-select: none;
+  /* Firefox */
+  -ms-user-select: none;
+  /* viejo Edge/IE */
+  user-select: none;
+  /* estándar */
+  -webkit-touch-callout: none;
+  /* iOS: evita menú copiar/pegar */
+}
+
 #continue-row .card {
   height: 14em;
 }

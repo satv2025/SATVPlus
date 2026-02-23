@@ -193,7 +193,7 @@ export function cardHtml(
     : "";
 
   return `
-    <div class="card" role="link" tabindex="0" data-href="${href}">
+    <div class="card no-select" role="link" tabindex="0" data-href="${href}">
       <div class="thumb" style="background-image:url('${thumb}')">
         ${pb}
       </div>
