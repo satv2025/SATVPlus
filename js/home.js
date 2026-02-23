@@ -1,4 +1,13 @@
-import { renderNav, renderAuthButtons, toast, cardHtml, $, formatTime } from "./ui.js";
+import {
+  renderNav,
+  renderAuthButtons,
+  toast,
+  cardHtml,
+  $,
+  formatTime,
+  enableDataHrefNavigation
+} from "./ui.js";
+
 import { getSession, requireAuthOrRedirect } from "./auth.js";
 import { fetchContinueWatching, fetchLatest, fetchByCategory } from "./api.js";
 import { CONFIG } from "./config.js";
@@ -219,6 +228,9 @@ function setRow(el, html) {
    ========================================================= */
 
 async function init() {
+  // Importantísimo: habilita navegación por data-href (una vez)
+  enableDataHrefNavigation();
+
   renderNav({ active: "home" });
   await renderAuthButtons();
 
@@ -237,8 +249,7 @@ async function init() {
         const movieId = r.movies?.id;
         if (!movieId) return acc;
 
-        if (!acc[movieId] ||
-          new Date(r.updated_at) > new Date(acc[movieId].updated_at)) {
+        if (!acc[movieId] || new Date(r.updated_at) > new Date(acc[movieId].updated_at)) {
           acc[movieId] = r;
         }
         return acc;
@@ -257,9 +268,10 @@ async function init() {
 
             const ep = r.episodes || null;
 
+            // /watch (sin .html)
             const href = ep
-              ? `/watch.html?movie=${encodeURIComponent(m.id)}&episode=${encodeURIComponent(ep.id)}`
-              : `/watch.html?movie=${encodeURIComponent(m.id)}`;
+              ? `/watch?movie=${encodeURIComponent(m.id)}&episode=${encodeURIComponent(ep.id)}`
+              : `/watch?movie=${encodeURIComponent(m.id)}`;
 
             const subtitle = ep
               ? `T${ep.season}E${ep.episode_number} · ${ep.title || ""} · ${formatTime(r.progress_seconds)}`
@@ -272,11 +284,9 @@ async function init() {
         );
 
         buildCarousel(contRow, { cloneRounds: 2 });
-
       } else {
         contWrap.classList.add("hidden");
       }
-
     } catch (e) {
       console.error(e);
       contWrap.classList.add("hidden");

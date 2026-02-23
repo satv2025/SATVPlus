@@ -1,6 +1,6 @@
 import { CONFIG } from "./config.js";
 import { getSession, signOut } from "./auth.js";
-import { fetchMovie } from "./api.js"; // Asegúrate de importar fetchMovie
+import { fetchMovie } from "./api.js";
 
 export function $(sel) { return document.querySelector(sel); }
 export function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
@@ -23,9 +23,6 @@ export function setAppName() {
   for (const el of els) el.textContent = CONFIG.APP_NAME;
 
   const currentTitle = document.title.trim();
-
-  // Solo cambiar si está vacío
-  // o si el título es exactamente el nombre de la app
   if (!currentTitle || currentTitle === CONFIG.APP_NAME) {
     document.title = CONFIG.APP_NAME;
   }
@@ -60,18 +57,15 @@ export function toast(msg, type = "info") {
 ========================= */
 
 export function formatTime(secs) {
-  const s = Math.max(0, Math.floor(secs || 0));  // Asegura que el tiempo sea un número válido
-  const h = Math.floor(s / 3600);                 // Calcula las horas
-  const m = Math.floor((s % 3600) / 60);         // Calcula los minutos
-  const r = s % 60;                              // Calcula los segundos
+  const s = Math.max(0, Math.floor(secs || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
 
-  // Si las horas son mayores o iguales a 1, mostramos el formato HH:MM:SS
   if (h > 0) {
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
   }
-
-  // Si las horas son 0, mostramos el formato MM:SS
-  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+  return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
 
 /* =========================
@@ -85,7 +79,6 @@ export function renderNav({ active = "home" } = {}) {
   nav.innerHTML = `
     <div class="nav-left">
       <a class="brand" href="/index.html">
-        <!-- Reemplazar data-appname por la imagen -->
         <img src="/images/satvpluslogo1.png" alt="Logo" class="brand-logo"/>
       </a>
       <a class="navlink ${active === "home" ? "active" : ""}" href="/index.html">Inicio</a>
@@ -108,7 +101,6 @@ export async function renderAuthButtons() {
     return;
   }
 
-  // Mostrar el nombre de usuario si está disponible
   const name = escapeHtml(session.user.name || "Usuario");
 
   host.innerHTML = `
@@ -117,7 +109,6 @@ export async function renderAuthButtons() {
   `;
 
   const btnLogout = document.getElementById("btn-logout");
-
   if (btnLogout) {
     btnLogout.addEventListener("click", async () => {
       await signOut();
@@ -127,7 +118,54 @@ export async function renderAuthButtons() {
 }
 
 /* =========================
+   DATA-HREF NAVIGATION
+   (sin <a href> => no status bar)
+========================= */
+
+let __dataHrefNavEnabled = false;
+
+export function enableDataHrefNavigation() {
+  if (__dataHrefNavEnabled) return;
+  __dataHrefNavEnabled = true;
+
+  // Click
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-href]");
+    if (!el) return;
+
+    const href = el.dataset.href;
+    if (!href) return;
+
+    // No secuestrar clicks en controles
+    const tag = e.target?.tagName?.toLowerCase?.() || "";
+    if (tag === "button" || tag === "input" || tag === "select" || tag === "textarea") return;
+
+    // Ctrl/Cmd click => nueva pestaña
+    if (e.ctrlKey || e.metaKey) {
+      window.open(href, "_blank", "noopener");
+      return;
+    }
+
+    window.location.href = href;
+  });
+
+  // Teclado (Enter / Space)
+  document.addEventListener("keydown", (e) => {
+    const el = e.target.closest("[data-href]");
+    if (!el) return;
+
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      const href = el.dataset.href;
+      if (href) window.location.href = href;
+    }
+  });
+}
+
+/* =========================
    MOVIE CARD
+   - antes: <a class="card" href="...">
+   - ahora: <div class="card" data-href="...">
 ========================= */
 
 export function cardHtml(
@@ -139,9 +177,10 @@ export function cardHtml(
   const thumb = movie.thumbnail_url || "";
   const title = escapeHtml(movie.title || "Sin título");
 
+  // /watch (sin .html)
   const href = hrefOverride
     ? hrefOverride
-    : `/watch.html?movie=${encodeURIComponent(movie.id)}`;
+    : `/watch?movie=${encodeURIComponent(movie.id)}`;
 
   const sub = subtitle
     ? `<div class="card-subtitle">${escapeHtml(subtitle)}</div>`
@@ -149,52 +188,44 @@ export function cardHtml(
 
   const pb = typeof progressPercent === "number"
     ? `<div class="progressbar">
-         <div class="progressfill" style="width:${Math.min(
-      100,
-      Math.max(0, progressPercent)
-    )}%"></div>
+         <div class="progressfill" style="width:${Math.min(100, Math.max(0, progressPercent))}%"></div>
        </div>`
     : "";
 
   return `
-    <a class="card" href="${href}">
+    <div class="card" role="link" tabindex="0" data-href="${href}">
       <div class="thumb" style="background-image:url('${thumb}')">
         ${pb}
       </div>
       <div class="card-title">${title}</div>
       ${sub}
-    </a>
+    </div>
   `;
 }
 
 /* =========================
-   SET MOVIE TITLE (for watch.html)
+   SET MOVIE TITLE (for watch page)
 ========================= */
 
 export async function setMovieTitleFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
-  const movieId = urlParams.get('movie');  // Obtener el ID de la película desde la URL
+  const movieId = urlParams.get("movie");
 
-  // Si no se encuentra el ID de la película en la URL, asignamos un título predeterminado
   if (!movieId) {
     document.title = "Película no encontrada · SATV+";
     return;
   }
 
   try {
-    // Consulta la película usando su ID
     const movie = await fetchMovie(movieId);
 
-    // Si la película es encontrada, configuramos el título de la página
     if (movie) {
-      document.title = `${movie.title} · SATV+`;  // Usamos solo el título de la película
+      document.title = `${movie.title} · SATV+`;
     } else {
-      // Si la película no se encuentra, asignamos un título claro
       document.title = "Película no encontrada · SATV+";
     }
   } catch (error) {
     console.error("Error al obtener la película:", error);
-    // Si ocurre un error, asignamos un mensaje claro de error
     document.title = "Error al cargar la película · SATV+";
   }
 }

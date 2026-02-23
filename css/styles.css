@@ -52,7 +52,7 @@ body {
   background: var(--bg);
 }
 
-a {
+.card {
   color: inherit;
   text-decoration: none;
 }
