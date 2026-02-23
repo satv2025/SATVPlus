@@ -3,6 +3,52 @@ import { requireAuthOrRedirect } from "./auth.js";
 import { fetchMovie, fetchEpisodes, getProgress, upsertProgress } from "./api.js";
 import { CONFIG } from "./config.js";
 
+/* ✅ Evita "undefined" en el log del final (porque el módulo ejecuta antes que init) */
+window.__playerEpisodes = window.__playerEpisodes || [];
+
+/* =========================================================
+   PROXY REMOTE MEDIA (VTT, etc) -> evita CORS
+   Vercel route:
+     /remote-media/(.*) -> https://movies.solargentinotv.com.ar/assets/media/$1
+========================================================= */
+
+function proxyRemoteMediaUrl(url) {
+  try {
+    if (!url) return null;
+
+    // Acepta strings o URL
+    const u = new URL(url, window.location.origin);
+
+    // Caso 1: ya es same-origin (no necesita proxy)
+    if (u.origin === window.location.origin) return u.href;
+
+    // Caso 2: viene del host remoto permitido
+    if (u.origin === "https://movies.solargentinotv.com.ar") {
+      // Esperado: /assets/media/....
+      const prefix = "/assets/media/";
+      if (u.pathname.startsWith(prefix)) {
+        const rest = u.pathname.slice(prefix.length); // lo que hay después de /assets/media/
+        return `/remote-media/${rest}${u.search || ""}${u.hash || ""}`;
+      }
+
+      // Si no matchea el patrón esperado, igual intentamos proxyear TODO el path:
+      // (por si algún día cambia la ruta)
+      const clean = u.pathname.replace(/^\/+/, "");
+      return `/remote-media/${clean}${u.search || ""}${u.hash || ""}`;
+    }
+
+    // Otros orígenes: no los proxy (podrías ampliarlo si querés)
+    return url;
+  } catch (e) {
+    return url;
+  }
+}
+
+function normalizeVttUrl(vttUrl) {
+  if (!vttUrl) return null;
+  return proxyRemoteMediaUrl(vttUrl);
+}
+
 function param(name) {
   return new URL(window.location.href).searchParams.get(name);
 }
@@ -60,7 +106,6 @@ function setPreviewThumbnails(playerEl, vttUrl) {
 async function init() {
   // ✅ CSS DISFRAZADO: /css/satvplusClient.{movieId}.css (Vercel -> /css/styles.css)
   // Requiere: <link id="app-style" rel="stylesheet" href="/css/styles.css" /> en watch.html
-  // Se basa en ?movie=
   applyDisguisedCssFromMovieId({
     linkId: "app-style",
     disguisedPrefix: "/css/satvplusClient.",
@@ -165,14 +210,16 @@ async function init() {
   }
 
   // Thumbnails VTT (preview thumbnails)
-  const thumbsVtt = (movie.category === "series")
+  const thumbsVttRaw = (movie.category === "series")
     ? (currentEpisode?.vtt_url || movie.vtt_url || null)
     : (movie.vtt_url || null);
+
+  // ✅ Normalizar (proxy) para evitar CORS si viene de movies.solargentinotv.com.ar
+  const thumbsVtt = normalizeVttUrl(thumbsVttRaw);
 
   setPreviewThumbnails(player, thumbsVtt);
 
   // Set source (Vidstack)
-  // Vidstack supports setting `src` directly on media-player for HLS.
   player.src = src;
 
   // Load saved progress
@@ -188,7 +235,6 @@ async function init() {
   const seekIfNeeded = () => {
     if (!startAt || startAt < 5) return;
     try {
-      // guard against near-end seek if duration available
       const dur = Number(player.duration || 0);
       if (dur && startAt > dur - CONFIG.NEAR_END_SECONDS) return;
       player.currentTime = startAt;
@@ -196,7 +242,6 @@ async function init() {
     } catch (e) { }
   };
 
-  // Vidstack events: "loaded-metadata" and "can-play"
   player.addEventListener("loaded-metadata", seekIfNeeded, { once: true });
   player.addEventListener("can-play", seekIfNeeded, { once: true });
 
@@ -226,13 +271,11 @@ async function init() {
     }
   }
 
-  // Vidstack time update: "time-update" (detail.currentTime)
   player.addEventListener("time-update", () => save(false));
   player.addEventListener("pause", () => save(true));
   player.addEventListener("ended", () => save(true));
 
   window.addEventListener("beforeunload", () => {
-    // best effort
     upsertProgress({
       userId,
       movieId,
@@ -241,8 +284,7 @@ async function init() {
     }).catch(() => { });
   });
 
-  // ✅ SOLO PARA DEBUG: deja disponible en window para inspección
-  // (no cambia tu lógica, solo evita romper por el console.log(episodes) del final)
+  // ✅ Mantengo tu debug sin romper nada
   window.__playerEpisodes = episodes;
 }
 
@@ -453,6 +495,4 @@ function mountSeasonDropdown({ movieId, currentEpisodeId, episodes, onSeasonEpis
   return dropdown;
 }
 
-// ✅ NO ROMPE: antes tiraba ReferenceError porque "episodes" no existe en este scope.
-// Te dejo un log equivalente (sin sacarte el debug):
 console.log(window.__playerEpisodes);  // Verifica si los episodios contienen la propiedad 'sinopsis' correctamente
