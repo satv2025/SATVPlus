@@ -5,7 +5,8 @@ import {
   cardHtml,
   $,
   formatTime,
-  enableDataHrefNavigation
+  enableDataHrefNavigation,
+  applyDisguisedCssFromId
 } from "./ui.js";
 
 import { getSession, requireAuthOrRedirect } from "./auth.js";
@@ -113,22 +114,18 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   row.dataset.carouselBlock = blockWidth;
 
   /* =========================
-     CLONES (MISMO ORDEN)
+     CLONES
      ========================= */
 
   const leftFrag = document.createDocumentFragment();
   const rightFrag = document.createDocumentFragment();
 
   for (let r = 0; r < cloneRounds; r++) {
-    for (let i = 0; i < itemCount; i++) {
-      leftFrag.appendChild(originals[i].cloneNode(true));
-    }
+    for (let i = 0; i < itemCount; i++) leftFrag.appendChild(originals[i].cloneNode(true));
   }
 
   for (let r = 0; r < cloneRounds; r++) {
-    for (let i = 0; i < itemCount; i++) {
-      rightFrag.appendChild(originals[i].cloneNode(true));
-    }
+    for (let i = 0; i < itemCount; i++) rightFrag.appendChild(originals[i].cloneNode(true));
   }
 
   row.prepend(leftFrag);
@@ -185,15 +182,12 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     const leftLimit = base - blockWidth * 0.75;
     const rightLimit = base + blockWidth * 0.75;
 
-    if (x < leftLimit) {
-      wrapTo(x + blockWidth);
-    } else if (x > rightLimit) {
-      wrapTo(x - blockWidth);
-    }
+    if (x < leftLimit) wrapTo(x + blockWidth);
+    else if (x > rightLimit) wrapTo(x - blockWidth);
   }, { passive: true });
 
   /* =========================
-     FLECHAS SIN FRENO
+     FLECHAS
      ========================= */
 
   const moveAmount = () => Math.max(260, row.clientWidth * 0.9);
@@ -228,7 +222,14 @@ function setRow(el, html) {
    ========================================================= */
 
 async function init() {
-  // Importantísimo: habilita navegación por data-href (una vez)
+  // ✅ HOME SIEMPRE usa satvplusClient.0.css (disfrazado)
+  // Requisito: <link id="app-style" ...> en index.html
+  applyDisguisedCssFromId(0, {
+    linkId: "app-style",
+    disguisedPrefix: "/url/css/satvplusClient.",
+    disguisedSuffix: ".css"
+  });
+
   enableDataHrefNavigation();
 
   renderNav({ active: "home" });
@@ -268,7 +269,6 @@ async function init() {
 
             const ep = r.episodes || null;
 
-            // /watch (sin .html)
             const href = ep
               ? `/watch?movie=${encodeURIComponent(m.id)}&episode=${encodeURIComponent(ep.id)}`
               : `/watch?movie=${encodeURIComponent(m.id)}`;

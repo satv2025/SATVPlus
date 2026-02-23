@@ -127,7 +127,6 @@ export function enableDataHrefNavigation() {
   if (__dataHrefNavEnabled) return;
   __dataHrefNavEnabled = true;
 
-  // Click
   document.addEventListener("click", (e) => {
     const el = e.target.closest("[data-href]");
     if (!el) return;
@@ -135,11 +134,9 @@ export function enableDataHrefNavigation() {
     const href = el.dataset.href;
     if (!href) return;
 
-    // No secuestrar clicks en controles
     const tag = e.target?.tagName?.toLowerCase?.() || "";
     if (tag === "button" || tag === "input" || tag === "select" || tag === "textarea") return;
 
-    // Ctrl/Cmd click => nueva pestaña
     if (e.ctrlKey || e.metaKey) {
       window.open(href, "_blank", "noopener");
       return;
@@ -148,7 +145,6 @@ export function enableDataHrefNavigation() {
     window.location.href = href;
   });
 
-  // Teclado (Enter / Space)
   document.addEventListener("keydown", (e) => {
     const el = e.target.closest("[data-href]");
     if (!el) return;
@@ -165,16 +161,10 @@ export function enableDataHrefNavigation() {
    MOVIE CARD
 ========================= */
 
-export function cardHtml(
-  movie,
-  hrefOverride = null,
-  subtitle = null,
-  progressPercent = null
-) {
+export function cardHtml(movie, hrefOverride = null, subtitle = null, progressPercent = null) {
   const thumb = movie.thumbnail_url || "";
   const title = escapeHtml(movie.title || "Sin título");
 
-  // /watch (sin .html) - Vercel lo reescribe a /watch.html
   const href = hrefOverride
     ? hrefOverride
     : `/watch?movie=${encodeURIComponent(movie.id)}`;
@@ -202,11 +192,27 @@ export function cardHtml(
 
 /* =========================
    CSS DISFRAZADO
-   - URL visible: /url/css/satvplusClient.{movieId}.css
-   - Contenido real servido por Vercel: /css/styles.css
-   Requisito: en watch.html
+   - URL visible: /url/css/satvplusClient.{id}.css
+   - Contenido real: /css/styles.css (via vercel.json rewrite)
+   Requisito en HTML:
      <link id="app-style" rel="stylesheet" href="/css/styles.css" />
 ========================= */
+
+function setDisguisedCssHref(href, linkId = "app-style") {
+  const link = document.getElementById(linkId);
+  if (!link) return;
+  link.href = href;
+}
+
+export function applyDisguisedCssFromId(id, {
+  linkId = "app-style",
+  disguisedPrefix = "/url/css/satvplusClient.",
+  disguisedSuffix = ".css"
+} = {}) {
+  const safe = (id === null || id === undefined) ? "0" : String(id);
+  const href = `${disguisedPrefix}${encodeURIComponent(safe)}${disguisedSuffix}`;
+  setDisguisedCssHref(href, linkId);
+}
 
 function getMovieIdFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -217,18 +223,11 @@ export function applyDisguisedCssFromMovieId({
   linkId = "app-style",
   disguisedPrefix = "/url/css/satvplusClient.",
   disguisedSuffix = ".css",
-  disguisedDefaultHref = "/url/css/styles.css"
+  defaultId = "0"
 } = {}) {
-  const link = document.getElementById(linkId);
-  if (!link) return;
-
   const movieId = getMovieIdFromUrl();
-  const newHref = movieId
-    ? `${disguisedPrefix}${encodeURIComponent(movieId)}${disguisedSuffix}`
-    : disguisedDefaultHref;
-
-  // Cambia el href. Vercel reescribe a /css/styles.css.
-  link.href = newHref;
+  const id = movieId || defaultId;
+  applyDisguisedCssFromId(id, { linkId, disguisedPrefix, disguisedSuffix });
 }
 
 /* =========================

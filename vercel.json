@@ -1,22 +1,22 @@
 {
+    "$schema": "https://openapi.vercel.sh/vercel.json",
     "cleanUrls": true,
     "trailingSlash": false,
-    "routes": [
+    "redirects": [
         {
-            "handle": "filesystem"
+            "source": "/:path(.*)\\.html",
+            "destination": "/:path",
+            "permanent": true
+        }
+    ],
+    "rewrites": [
+        {
+            "source": "/url/css/satvplusClient.:hash.css",
+            "destination": "/css/styles.css"
         },
         {
-            "src": "^/(.+)\\.html$",
-            "dest": "/$1",
-            "status": 308
-        },
-        {
-            "src": "^/url/css/satvplusClient\\.[^/]+\\.css$",
-            "dest": "/css/styles.css"
-        },
-        {
-            "src": "^/url/css/styles\\.css$",
-            "dest": "/css/styles.css"
+            "source": "/url/css/styles.css",
+            "destination": "/css/styles.css"
         }
     ]
 }
