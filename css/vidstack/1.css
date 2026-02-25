@@ -1755,12 +1755,10 @@ iframe.vds-youtube[data-no-controls] {
     align-items: center;
     opacity: 0;
     background-color: var(--media-slider-preview-bg);
-    border-radius: 12px;
     pointer-events: none;
     transition: opacity .2s ease-out;
     will-change: left, opacity;
     contain: layout paint style;
-    border: 2px solid #2563eb;
 }
 
 :where(.vds-slider-preview[data-visible]) {
@@ -1932,7 +1930,7 @@ iframe.vds-youtube[data-no-controls] {
 
 :where(.vds-thumbnail) {
     --min-width: var(--media-thumbnail-min-width, 140px);
-    --max-width: var(--media-thumbnail-max-width, 180px);
+    --max-width: var(--media-thumbnail-max-width, 300px);
     --aspect-ratio: var(--media-thumbnail-aspect-ratio, var(--thumbnail-aspect-ratio));
     display: block;
     width: var(--thumbnail-width);
