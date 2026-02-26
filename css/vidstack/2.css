@@ -43,7 +43,8 @@
     display: flex;
     pointer-events: auto;
     z-index: 0;
-    padding: 4px 6px
+    padding: 4px 6px;
+    padding-bottom: 5.2px;
 }
 
 .vds-video-layout .vds-controls-group:first-child {
@@ -110,19 +111,27 @@
 }
 
 .vds-video-layout .vds-time-slider .vds-slider-value {
-    background-color: #2563eb;
+    background-color: #0b0c10;
     color: #fff !important;
+<<<<<<< Updated upstream
     width: 100%;
 
     /* padding centrado calculado */
+=======
+    width: 10em;
+>>>>>>> Stashed changes
     padding-left: calc((3.56em + 4em) / 2);
     padding-right: calc((3.56em + 4em) / 2);
     padding-top: 0.25em;
     padding-bottom: 0.3em;
     margin-top: -0.4em;
+<<<<<<< Updated upstream
     font-size: 21px;
 
     /* centra el contenido */
+=======
+    font-size: 16px;
+>>>>>>> Stashed changes
     display: flex;
     justify-content: center;
     align-items: center;

@@ -270,8 +270,8 @@ async function init() {
             const ep = r.episodes || null;
 
             const href = ep
-              ? `/watch?movie=${encodeURIComponent(m.id)}&episode=${encodeURIComponent(ep.id)}`
-              : `/watch?movie=${encodeURIComponent(m.id)}`;
+              ? `/title?title=${encodeURIComponent(m.id)}&episode=${encodeURIComponent(ep.id)}`
+              : `/title?title=${encodeURIComponent(m.id)}`;
 
             const subtitle = ep
               ? `T${ep.season}E${ep.episode_number} · ${ep.title || ""} · ${formatTime(r.progress_seconds)}`

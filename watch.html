@@ -4,81 +4,126 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title></title>
+  <title>SATV+ Watch</title>
 
-  <!-- estilos -->
-  <link id="app-style" rel="stylesheet" href="/css/styles.css" />
-  <link rel="stylesheet" href="/css/vidstack/1.css" />
-  <link rel="stylesheet" href="/css/vidstack/2.css" />
-
-  <link rel="icon" href="/images/satvpluslogo.png" />
-
-  <!-- Vidstack core 1.11.21 -->
-  <script type="module" src="https://cdn.vidstack.io/player@1.11.21" defer></script>
+  <!-- CSS del player -->
+  <link rel="stylesheet" href="https://akira.satvplus.com.ar/akira-player.css" />
 
   <style>
-    media-player {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      border-radius: 16px;
+    html,
+    body {
+      margin: 0;
+      background: #000;
+      height: 100%;
+    }
+
+    body {
       overflow: hidden;
+    }
+
+    #akira-player-root {
+      width: 100%;
+      min-height: 100vh;
       background: #000;
     }
 
-    .section-title {
-      display: none !important;
-    }
-
-    .toast {
-      display: none !important;
+    .watch-error {
+      color: #fff;
+      font-family: system-ui, sans-serif;
+      padding: 16px;
+      margin: 16px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      line-height: 1.4;
     }
   </style>
 </head>
 
-<body>
-  <header class="topnav">
-    <div class="nav-inner container" id="topnav"></div>
-  </header>
+<body data-asset-base="https://akira.satvplus.com.ar/assets">
+  <div id="akira-player-root"></div>
 
-  <main class="container">
-    <div class="panel">
-      <h2 id="title"></h2>
-      <div class="muted" id="meta"></div>
-      <p class="muted" id="desc"></p>
+  <!-- 1) Supabase global (porque supabaseClient.js usa window.supabase) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-      <!-- player -->
-      <div class="video-wrap">
-        <media-player id="player" preload="metadata" crossorigin playsinline stream-type="on-demand">
-          <media-provider></media-provider>
-          <media-video-layout id="layout"></media-video-layout>
-          <media-thumbnail></media-thumbnail>
-        </media-player>
-      </div>
+  <!-- 2) UMD del player -->
+  <script src="https://akira.satvplus.com.ar/akira-player.umd.js"></script>
 
-      <!-- lista de episodios -->
-      <div id="episodes-wrap" class="section hidden">
-        <div class="section-head">
-          <h3 class="section-title">Episodios</h3>
-        </div>
-        <div class="ep-list" id="episodes"></div>
-      </div>
-    </div>
-  </main>
+  <!-- 3) Bridge: watch.js llamará window.renderAkiraPlayer(props) -->
+  <script>
+    (function () {
+      const rootEl = document.getElementById("akira-player-root");
 
-  <div class="toast-host" id="toast-host"></div>
+      function fail(msg) {
+        rootEl.innerHTML = '<div class="watch-error">' + msg + '</div>';
+      }
 
-  <!-- SDK de Supabase (global). OJO: si tu supabaseClient.js usa import, este script no hace falta -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+      // Si el UMD no expone este global, lo mostramos claro
+      if (!window.AkiraPlayer) {
+        fail("No cargó AkiraPlayer UMD (window.AkiraPlayer undefined).");
+        console.error("[watch.html] window.AkiraPlayer undefined");
+        return;
+      }
 
-  <!-- Solo player.js. Dentro de player.js importás auth.js -->
-  <script type="module" src="/js/player.js"></script>
+      window.renderAkiraPlayer = function renderAkiraPlayer(props) {
+        const mergedProps = Object.assign(
+          {
+            assetBaseUrl: document.body?.dataset?.assetBase || "https://akira.satvplus.com.ar/assets"
+          },
+          props || {}
+        );
 
-  <script type="module">
-    import { setMovieTitleFromUrl } from "/js/ui.js"; // Asegúrate de que la ruta sea correcta
-    document.addEventListener("DOMContentLoaded", function () {
-      setMovieTitleFromUrl(); // Llama a la función para actualizar el título con el nombre de la película
-    });
+        try {
+          // 1) API del UMD (si existe)
+          if (typeof window.AkiraPlayer.mount === "function") {
+            window.AkiraPlayer.mount(rootEl, mergedProps);
+            return;
+          }
+
+          if (typeof window.AkiraPlayer.render === "function") {
+            window.AkiraPlayer.render(rootEl, mergedProps);
+            return;
+          }
+
+          // 2) Fallback React/ReactDOM (si el UMD expone componentes)
+          const ReactGlobal = window.React || window.AkiraPlayer.React;
+          const ReactDOMGlobal = window.ReactDOM || window.AkiraPlayer.ReactDOM;
+          const Component =
+            window.AkiraPlayer.default ||
+            window.AkiraPlayer.AkiraPlayer ||
+            window.AkiraPlayer;
+
+          if (ReactGlobal && ReactDOMGlobal && typeof Component === "function") {
+            if (typeof ReactDOMGlobal.createRoot === "function") {
+              if (!window.__akiraWatchRoot) {
+                window.__akiraWatchRoot = ReactDOMGlobal.createRoot(rootEl);
+              }
+              window.__akiraWatchRoot.render(ReactGlobal.createElement(Component, mergedProps));
+              return;
+            }
+
+            if (typeof ReactDOMGlobal.render === "function") {
+              ReactDOMGlobal.render(ReactGlobal.createElement(Component, mergedProps), rootEl);
+              return;
+            }
+          }
+
+          fail("AkiraPlayer cargó pero no se pudo montar (sin mount/render ni ReactDOM compatible).");
+          console.error("[watch.html] No se pudo montar AkiraPlayer", {
+            akira: window.AkiraPlayer,
+            keys: Object.keys(window.AkiraPlayer || {})
+          });
+        } catch (e) {
+          fail("Error montando AkiraPlayer: " + (e?.message || e));
+          console.error("[watch.html] renderAkiraPlayer error", e);
+        }
+      };
+    })();
   </script>
+
+  <!-- 4) Loader (lee query params + Supabase + arma props) -->
+  <script type="module" src="./js/watch.js"></script>
 </body>
 
 </html>

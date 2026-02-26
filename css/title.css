@@ -1,0 +1,785 @@
+/* =========================================================
+   SATV+ â€” TITLE PAGE (RESPONSIVE + FIXES + ALL SEASONS)
+   - FIX 1: --ep-body-h ahora se usa (altura fija del overlay)
+   - FIX 2: se eliminan empujes raros del tÃ­tulo
+   - FIX 3: .episode-sub NO va con !important (rompÃ­a el toggle)
+   - FIX 4: overlay consistente, thumb no tapado, hover sin pisarse
+   - + DROPDOWN DIV-BASED para temporadas
+   - + ALL: mostrar todas las temporadas con header "Temporada X"
+   ========================================================= */
+
+/* =========================
+   ROOT / TOKENS
+   ========================= */
+:root {
+    --ep-body-h: 92px;
+    --ep-pad-x: 10px;
+    --ep-pad-y: 10px;
+    --ep-gap: 12px;
+    --ep-radius: .25em;
+    --line: rgba(255, 255, 255, .12);
+    --text: rgba(243, 244, 246, .92);
+    --radius2: .25em;
+}
+
+/* Mejora legibilidad */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+.season-title {
+    font-weight: 700;
+    font-size: 18px;
+}
+
+span.meta-dropitem {
+    font-size: 14px;
+    position: relative;
+    top: -1.2px;
+    font-weight: 400;
+}
+
+/* =========================
+   HERO
+   ========================= */
+.title-hero {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    background-color: #0b0c10;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+
+    aspect-ratio: 16 / 9;
+    min-height: 420px;
+    max-height: 670px;
+}
+
+.title-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+
+    /* Gradiente eased + micro-grain (2 capas) */
+    background: linear-gradient(to top,
+            rgba(11, 12, 16, 1.00) 0%,
+            rgba(11, 12, 16, 0.99) 1%,
+            rgba(11, 12, 16, 0.98) 2%,
+            rgba(11, 12, 16, 0.97) 3%,
+            rgba(11, 12, 16, 0.96) 4%,
+            rgba(11, 12, 16, 0.95) 5%,
+            rgba(11, 12, 16, 0.94) 6%,
+            rgba(11, 12, 16, 0.93) 7%,
+            rgba(11, 12, 16, 0.92) 8%,
+            rgba(11, 12, 16, 0.91) 9%,
+            rgba(11, 12, 16, 0.90) 10%,
+            rgba(11, 12, 16, 0.89) 11%,
+            rgba(11, 12, 16, 0.88) 12%,
+            rgba(11, 12, 16, 0.87) 13%,
+            rgba(11, 12, 16, 0.86) 14%,
+            rgba(11, 12, 16, 0.85) 15%,
+            rgba(11, 12, 16, 0.84) 16%,
+            rgba(11, 12, 16, 0.83) 17%,
+            rgba(11, 12, 16, 0.82) 18%,
+            rgba(11, 12, 16, 0.81) 19%,
+            rgba(11, 12, 16, 0.80) 20%,
+            rgba(11, 12, 16, 0.79) 21%,
+            rgba(11, 12, 16, 0.78) 22%,
+            rgba(11, 12, 16, 0.77) 23%,
+            rgba(11, 12, 16, 0.76) 24%,
+            rgba(11, 12, 16, 0.75) 25%,
+            rgba(11, 12, 16, 0.74) 26%,
+            rgba(11, 12, 16, 0.73) 27%,
+            rgba(11, 12, 16, 0.72) 28%,
+            rgba(11, 12, 16, 0.71) 29%,
+            rgba(11, 12, 16, 0.70) 30%,
+            rgba(11, 12, 16, 0.69) 31%,
+            rgba(11, 12, 16, 0.68) 32%,
+            rgba(11, 12, 16, 0.67) 33%,
+            rgba(11, 12, 16, 0.66) 34%,
+            rgba(11, 12, 16, 0.65) 35%,
+            rgba(11, 12, 16, 0.64) 36%,
+            rgba(11, 12, 16, 0.63) 37%,
+            rgba(11, 12, 16, 0.62) 38%,
+            rgba(11, 12, 16, 0.61) 39%,
+            rgba(11, 12, 16, 0.60) 40%,
+            rgba(11, 12, 16, 0.59) 41%,
+            rgba(11, 12, 16, 0.58) 42%,
+            rgba(11, 12, 16, 0.57) 43%,
+            rgba(11, 12, 16, 0.56) 44%,
+            rgba(11, 12, 16, 0.55) 45%,
+            rgba(11, 12, 16, 0.54) 46%,
+            rgba(11, 12, 16, 0.53) 47%,
+            rgba(11, 12, 16, 0.52) 48%,
+            rgba(11, 12, 16, 0.51) 49%,
+            rgba(11, 12, 16, 0.50) 50%,
+            rgba(11, 12, 16, 0.49) 51%,
+            rgba(11, 12, 16, 0.48) 52%,
+            rgba(11, 12, 16, 0.47) 53%,
+            rgba(11, 12, 16, 0.46) 54%,
+            rgba(11, 12, 16, 0.45) 55%,
+            rgba(11, 12, 16, 0.44) 56%,
+            rgba(11, 12, 16, 0.43) 57%,
+            rgba(11, 12, 16, 0.42) 58%,
+            rgba(11, 12, 16, 0.41) 59%,
+            rgba(11, 12, 16, 0.40) 60%,
+            rgba(11, 12, 16, 0.39) 61%,
+            rgba(11, 12, 16, 0.38) 62%,
+            rgba(11, 12, 16, 0.37) 63%,
+            rgba(11, 12, 16, 0.36) 64%,
+            rgba(11, 12, 16, 0.35) 65%,
+            rgba(11, 12, 16, 0.34) 66%,
+            rgba(11, 12, 16, 0.33) 67%,
+            rgba(11, 12, 16, 0.32) 68%,
+            rgba(11, 12, 16, 0.31) 69%,
+            rgba(11, 12, 16, 0.30) 70%,
+            rgba(11, 12, 16, 0.29) 71%,
+            rgba(11, 12, 16, 0.28) 72%,
+            rgba(11, 12, 16, 0.27) 73%,
+            rgba(11, 12, 16, 0.26) 74%,
+            rgba(11, 12, 16, 0.25) 75%,
+            rgba(11, 12, 16, 0.24) 76%,
+            rgba(11, 12, 16, 0.23) 77%,
+            rgba(11, 12, 16, 0.22) 78%,
+            rgba(11, 12, 16, 0.21) 79%,
+            rgba(11, 12, 16, 0.20) 80%,
+            rgba(11, 12, 16, 0.19) 81%,
+            rgba(11, 12, 16, 0.18) 82%,
+            rgba(11, 12, 16, 0.17) 83%,
+            rgba(11, 12, 16, 0.16) 84%,
+            rgba(11, 12, 16, 0.15) 85%,
+            rgba(11, 12, 16, 0.14) 86%,
+            rgba(11, 12, 16, 0.13) 87%,
+            rgba(11, 12, 16, 0.12) 88%,
+            rgba(11, 12, 16, 0.11) 89%,
+            rgba(11, 12, 16, 0.10) 90%,
+            rgba(11, 12, 16, 0.09) 91%,
+            rgba(11, 12, 16, 0.08) 92%,
+            rgba(11, 12, 16, 0.07) 93%,
+            rgba(11, 12, 16, 0.06) 94%,
+            rgba(11, 12, 16, 0.05) 95%,
+            rgba(11, 12, 16, 0.04) 96%,
+            rgba(11, 12, 16, 0.03) 97%,
+            rgba(11, 12, 16, 0.02) 98%,
+            rgba(11, 12, 16, 0.01) 99%,
+            rgba(11, 12, 16, 0.00) 100%);
+}
+
+.title-hero-inner {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 22px 22px 26px;
+    z-index: 2;
+    width: 104.2em;
+}
+
+#t-title {
+    font-size: clamp(26px, 4vw, 44px);
+    line-height: 1.08;
+    font-weight: 900;
+}
+
+.title-meta {
+    margin-top: 10px;
+    font-weight: 900;
+    letter-spacing: .2px;
+    font-size: 16px;
+    color: rgba(243, 244, 246, .92);
+    opacity: .95;
+}
+
+#t-sinopsis {
+    color: rgba(243, 244, 246, .92);
+    line-height: 1.55;
+    margin-top: 12px;
+    opacity: .92;
+    font-size: 20px;
+    max-width: 44em;
+}
+
+.section-title {
+    margin-left: -6em !important;
+    font-size: 20px;
+    margin-bottom: -0.1em !important;
+}
+
+/* =========================
+   ACTIONS / BUTTONS
+   ========================= */
+.title-actions {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    font-size: 16px;
+}
+
+.btn-primary,
+.btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    font-weight: 900;
+    border-radius: var(--ep-radius);
+    padding: 11px 14px;
+    cursor: pointer;
+
+    transition: scale .2s ease, transform .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary {
+    background: var(--satvblue);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #fff;
+    color: var(--satvblue);
+}
+
+.btn-ghost {
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--line);
+    color: var(--text);
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, .10);
+    border-color: rgba(255, 255, 255, .18);
+}
+
+/* =========================
+   EPISODES â€” SEASON FILTER
+   ========================= */
+.season-filter {
+    margin: 12px 0 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.season-chip {
+    padding: 9px 12px;
+    border-radius: var(--ep-radius);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .04);
+    color: var(--text);
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+
+    transition: scale .2s ease, transform .2s ease, background .15s ease, border-color .2s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.season-chip:hover {
+    background: rgba(255, 255, 255, .07);
+}
+
+.season-chip.active {
+    border-color: rgba(37, 99, 235, .75);
+    background: rgba(37, 99, 235, .18);
+}
+
+/* =========================
+   DROPDOWN (DIV-BASED) COMPACTO
+   - Items sin gap
+   - Menu e items sin padding lateral
+   ========================= */
+.dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Trigger */
+.dropdown-btn {
+    padding: 9px 12px;
+    border-radius: var(--ep-radius);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-color: rgba(37, 99, 235, .55);
+    background: rgba(37, 99, 235, .14);
+    color: var(--text);
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: background .15s ease, border-color .2s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+.dropdown-btn::after {
+    content: "";
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid rgba(243, 244, 246, .75);
+    transform: translateY(1px) rotate(0deg);
+    transform-origin: 50% 45%;
+    transition: transform .15s ease;
+}
+
+.dropdown-btn[aria-expanded="true"]::after {
+    transform: translateY(1px) rotate(180deg);
+}
+
+.dropdown-btn:hover {
+    border-color: rgba(37, 99, 235, .55);
+    background: rgba(37, 99, 235, .55);
+}
+
+.dropdown-btn:focus-visible {
+    border-color: rgba(37, 99, 235, .85);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .20);
+}
+
+.dropdown-btn[aria-expanded="true"] {
+    border-color: rgba(37, 99, 235, .55);
+    background: rgba(37, 99, 235, .55);
+}
+
+/* Menu: sin padding lateral */
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 231px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: rgb(3 19 55);
+
+    /* SIN padding lateral */
+    padding: 16px 0;
+    display: block;
+    z-index: 50;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
+    overflow: hidden;
+}
+
+/* Items: SIN padding lateral (0) */
+.dropdown-item {
+    /* SIN padding lateral */
+    padding: 12px 0;
+    margin: 0;
+    /* sin mÃ¡rgenes */
+    border: 0;
+    /* menos borde */
+    border-radius: 0;
+    /* lista compacta sin â€œpastillitasâ€ */
+    background: transparent;
+    color: rgba(243, 244, 246, .92);
+    font-weight: 800;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+
+    /* para que sea clickeable fÃ¡cil, alineado lindo */
+    display: block;
+    width: 100%;
+    text-align: left;
+
+    /* texto con margen interno â€œvisualâ€ pero sin padding real lateral:
+       usamos indent con pseudo-elemento */
+    position: relative;
+}
+
+/* â€œindentâ€ sin padding: pseudo */
+.dropdown-item::before {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    /* â€œaireâ€ visual sin padding */
+    height: 1px;
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, .06);
+}
+
+.dropdown-item:focus-visible {
+    background: rgba(255, 255, 255, .08);
+}
+
+.dropdown-item.active {
+    background: rgba(37, 99, 235, .18);
+}
+
+/* Separador Ãºnico */
+.separator {
+    height: 1px;
+    margin: 1rem 0.8em;
+    border: 1px solid #2563eb;
+    /* sin lateral */
+}
+
+/* Item ALL */
+.dropdown-item.dropdown-all {
+    font-size: 16px;
+    color: rgba(243, 244, 246, .95);
+}
+
+.dropdown-item.dropdown-all:hover {
+    background: rgba(255, 255, 255, .08);
+}
+
+/* hidden */
+.hidden {
+    display: none !important;
+}
+
+/* =========================
+   ALL SEASONS VIEW
+   ========================= */
+
+/* Contenedor de temporadas */
+.seasons-all {
+    display: grid;
+    gap: 18px;
+}
+
+/* Header "Temporada X" */
+.season-block-title {
+    margin: 0 0 10px;
+    font-weight: 900;
+    letter-spacing: .2px;
+    font-size: 18px;
+    color: rgba(243, 244, 246, .95);
+    opacity: .98;
+}
+
+/* Separador opcional debajo del tÃ­tulo */
+.season-block {
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, .06);
+}
+
+/* =========================
+   EPISODES GRID â€” 6 por lÃ­nea
+   ========================= */
+.episodes-grid {
+    display: grid;
+    gap: var(--ep-gap);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: stretch;
+}
+
+.episodes-grid {
+    margin-bottom: 1.9em;
+}
+
+.episode-card {
+    position: relative;
+    overflow: hidden;
+    background: #1A1D25;
+    border-radius: var(--ep-radius);
+    border: none;
+    outline: none;
+    cursor: pointer;
+    z-index: 0;
+
+    transition: background .2s ease, scale .2s ease, transform .2s ease, border-color .2s ease;
+    min-height: 0;
+}
+
+.episode-card:hover {
+    background: #454d62;
+    scale: 1.04;
+    transform: scale(1.04);
+    z-index: 2;
+}
+
+.episode-thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    display: block;
+    object-fit: cover;
+    height: auto;
+    background: #0f1118;
+}
+
+.episode-body {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--ep-body-h);
+    padding: var(--ep-pad-y) var(--ep-pad-x);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 6px;
+
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.episode-body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top,
+            rgba(9, 19, 58, .82) 0%,
+            rgba(9, 19, 58, .55) 55%,
+            rgba(9, 19, 58, 0) 100%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.episode-body>* {
+    position: relative;
+    z-index: 1;
+}
+
+.episode-title {
+    margin: 0;
+    font-weight: 900;
+    letter-spacing: .1px;
+    font-size: 13px;
+    line-height: 1.15;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+
+    color: rgba(255, 255, 255, .96);
+    text-shadow: 0 2px 14px rgba(0, 0, 0, .55);
+}
+
+.episode-sub {
+    margin: 0;
+    color: rgba(243, 244, 246, .88);
+    font-size: 12px;
+    line-height: 1.2;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+
+    min-height: 0;
+}
+
+/* =========================
+   INFO FULL
+   ========================= */
+.title-extra {
+    margin-top: 18px;
+    padding: 18px 0 18px;
+}
+
+.title-extra-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.title-extra-title {
+    margin: 0;
+    font-weight: 900;
+    font-size: 20px;
+}
+
+.title-extra-card {
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .06);
+    border-radius: var(--radius2);
+    padding: 14px 16px;
+    display: grid;
+    gap: 12px;
+}
+
+.title-extra-row {
+    display: grid;
+    gap: 6px;
+}
+
+.title-extra-label {
+    font-weight: 900;
+    font-size: 12px;
+    opacity: .85;
+    letter-spacing: .2px;
+}
+
+.title-extra-value {
+    color: rgba(243, 244, 246, .92);
+    line-height: 1.55;
+    font-size: 14px;
+    white-space: pre-wrap;
+}
+
+/* =========================
+   NIVEL X vs NO NIVEL X
+   ========================= */
+body.is-nivelx .episode-sub {
+    display: none;
+}
+
+body.is-nivelx {
+    --ep-body-h: 62px;
+}
+
+body:not(.is-nivelx) .episode-sub {
+    display: -webkit-box;
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+@media (max-width: 1200px) {
+    .episodes-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 992px) {
+    .episodes-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    :root {
+        --ep-body-h: 98px;
+    }
+
+    .episode-sub {
+        -webkit-line-clamp: 3;
+    }
+
+    .section-title {
+        margin-left: 0 !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .title-hero {
+        min-height: 360px;
+        max-height: none;
+        aspect-ratio: 4 / 3;
+    }
+
+    .title-hero-inner {
+        padding: 16px;
+        padding-bottom: 20px;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    #t-sinopsis {
+        font-size: 16px;
+    }
+
+    .title-actions {
+        gap: 8px;
+    }
+
+    .episodes-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    :root {
+        --ep-body-h: 108px;
+    }
+
+    .episode-sub {
+        -webkit-line-clamp: 3;
+    }
+
+    .dropdown-menu {
+        min-width: 180px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .btn-primary,
+    .btn-ghost {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .episodes-grid {
+        grid-template-columns: 1fr;
+    }
+
+    :root {
+        --ep-body-h: 116px;
+    }
+
+    .episode-sub {
+        -webkit-line-clamp: 4;
+    }
+}
+
+/* =========================
+   Reduce motion
+   ========================= */
+@media (prefers-reduced-motion: reduce) {
+
+    .btn-primary,
+    .btn-ghost,
+    .season-chip,
+    .episode-card,
+    .dropdown-btn,
+    .dropdown-item {
+        transition: none !important;
+    }
+
+    .btn-primary:hover,
+    .btn-ghost:hover,
+    .season-chip:hover,
+    .episode-card:hover {
+        scale: 1 !important;
+        transform: none !important;
+    }
+}
+
+section#more-section {
+    margin-top: -1em;
+}
+
+/* Bloquear selección de texto (Title page) */
+body {
+    -webkit-user-select: none;
+    /* Safari */
+    -ms-user-select: none;
+    /* IE/Edge viejo */
+    -moz-user-select: none;
+    /* Firefox */
+    user-select: none;
+    /* Standard */
+}
+
+/* Permití seleccionar/editar donde corresponde */
+input,
+textarea,
+[contenteditable="true"] {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    -moz-user-select: text;
+    user-select: text;
+}

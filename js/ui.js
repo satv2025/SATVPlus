@@ -316,7 +316,7 @@ export function cardHtml(movie, hrefOverride = null, subtitle = null, progressPe
 
   const href = hrefOverride
     ? hrefOverride
-    : `/watch?movie=${encodeURIComponent(movie.id)}`;
+    : `/title?movie=${encodeURIComponent(movie.id)}`;
 
   const sub = subtitle
     ? `<div class="card-subtitle">${escapeHtml(subtitle)}</div>`
