@@ -1,0 +1,147 @@
+{
+  "config": {
+    "BASE_OUTPUT": "C:\\Users\\skbof\\OneDrive\\Documentos\\GitHub\\SATVPlus\\remote-media",
+    "SRC_TILE_W": 288,
+    "SRC_TILE_H": 162,
+    "SPRITE_W": 1600,
+    "SPRITE_H": 810,
+    "COLS": 10,
+    "ROWS": 9,
+    "TILE_W": 160,
+    "TILE_H": 90,
+    "THUMBS_PER_SPRITE": 90,
+    "THUMB_INTERVAL_SEC": 20,
+    "JPEG_QUALITY": 85,
+    "FIT_MODE": "cover",
+    "CLEAN_DEST_FIRST": false,
+    "SKIP_IF_ALREADY_DONE": false,
+    "RETRIES_PER_FILE": 1,
+    "MAX_WORKERS": 1
+  },
+  "coverage_check": {
+    "reite_t1_expected_1_20": {
+      "got": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "missing": []
+    },
+    "reite_t2_expected_1_25 (E0..E24=>E1..E25)": {
+      "got": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25
+      ],
+      "missing": []
+    },
+    "nivelx_t1_expected_1_29": {
+      "got": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "missing": []
+    },
+    "nivelx_t2_expected_1_3": {
+      "got": [
+        1,
+        2,
+        3
+      ],
+      "missing": []
+    },
+    "app_t1_expected_1_6": {
+      "got": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "missing": []
+    }
+  },
+  "summary": {
+    "total_files_unique": 89,
+    "duplicates_filtered": 0,
+    "ok": 0,
+    "skip": 0,
+    "error": 0,
+    "total_time_sec": 2.048786300001666,
+    "total_video_duration_sec_ok": 0,
+    "total_thumbs_expected_ok": 0,
+    "total_sprites_generated_ok": 0,
+    "videos_per_second": 0.0,
+    "speed_vs_realtime_x": 0.0
+  },
+  "duplicates_filtered": [],
+  "ok_results": [],
+  "errors": []
+}
