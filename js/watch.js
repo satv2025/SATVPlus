@@ -1,6 +1,6 @@
 // js/watch.js
 // SATV+ Watch loader (SIN proxy / SIN remote-media)
-// Lee m3u8_url y vtt_url DESDE SUPABASE y los pasa directos al player.
+// Lee m3u8_url y vtt_url DESDE SUPABASE y los pasa directos al AkiraPlayer.
 //
 // Requiere:
 // - watch.html con window.renderAkiraPlayer(props)
@@ -10,7 +10,15 @@
 import { supabase } from "./supabaseClient.js";
 
 /* ============================================================
- * ESQUEMA REAL (según tus tablas)
+ * Config
+ * ============================================================ */
+const ROOT_ID = "akira-player-root";
+const DEFAULT_ASSET_BASE = "https://akira.satvplus.com.ar/assets";
+const NOW_URL = new URL(window.location.href);
+const DEBUG = NOW_URL.searchParams.get("debug") === "1" || NOW_URL.searchParams.get("debug") === "true";
+
+/* ============================================================
+ * Esquema DB
  * ============================================================ */
 const DB = {
   movies: {
@@ -33,7 +41,7 @@ const DB = {
     table: "episodes",
     cols: {
       id: "id",
-      seriesId: "series_id", // FK -> movies.id (category='series')
+      seriesId: "series_id",
       season: "season",
       episodeNumber: "episode_number",
       title: "title",
@@ -45,8 +53,18 @@ const DB = {
   }
 };
 
-const ROOT_ID = "akira-player-root";
-const DEBUG = true;
+/* ============================================================
+ * Logs
+ * ============================================================ */
+function debugLog(...args) {
+  if (DEBUG) console.log(...args);
+}
+function warnLog(...args) {
+  console.warn(...args);
+}
+function infoLog(...args) {
+  console.log(...args);
+}
 
 /* ============================================================
  * UI helpers
@@ -83,6 +101,7 @@ function setLoading() {
           border-top-color:#2563eb;
           animation:satv-spin .8s linear infinite;
         "></div>
+        <div style="font-size:12px;opacity:.9;">Cargando reproducción…</div>
       </div>
     </div>
     <style>
@@ -100,7 +119,7 @@ function setError(message, details = "") {
       font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     ">
       <div style="
-        width:min(820px,100%);
+        width:min(920px,100%);
         background:rgba(120,20,20,.22);
         border:1px solid rgba(255,80,80,.25);
         border-radius:14px;padding:18px;
@@ -108,7 +127,7 @@ function setError(message, details = "") {
         <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Error al cargar reproducción</div>
         <div style="opacity:.95;margin-bottom:10px;">${escapeHtml(message)}</div>
         ${details
-      ? `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;padding:12px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);font-size:12px;line-height:1.35;opacity:.9;">${escapeHtml(details)}</pre>`
+      ? `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;padding:12px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);font-size:12px;line-height:1.35;opacity:.95;">${escapeHtml(details)}</pre>`
       : ""
     }
       </div>
@@ -139,7 +158,7 @@ function getAssetBaseUrl() {
   return (
     document.body?.dataset?.assetBase ||
     window.AKIRA_ASSET_BASE ||
-    "https://akira.satvplus.com.ar/assets"
+    DEFAULT_ASSET_BASE
   );
 }
 
@@ -153,8 +172,8 @@ function getParams() {
     episodeId: url.searchParams.get("episode"),
     seriesId: url.searchParams.get("series"),
     autoplay: url.searchParams.get("autoplay") !== "0",
-    // debug opcional: ?forceThumbsLocal=1
-    forceThumbsLocal: url.searchParams.get("forceThumbsLocal") === "1"
+    forceThumbsLocal: url.searchParams.get("forceThumbsLocal") === "1",
+    probe: url.searchParams.get("probe") !== "0" // default ON
   };
 }
 
@@ -168,9 +187,7 @@ function buildWatchUrl(params) {
 }
 
 function isUuid(v) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    String(v || "")
-  );
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ""));
 }
 
 function safeArray(v) {
@@ -181,7 +198,10 @@ function isHlsUrl(url) {
   return /\.m3u8(\?|#|$)/i.test(String(url || ""));
 }
 
-// SIN PROXY: devuelve URL directa (normalizada)
+function isLikelyAbsoluteUrl(url) {
+  return /^https?:\/\//i.test(String(url || ""));
+}
+
 function proxifyRemoteUrl(url) {
   if (!url) return undefined;
   const s = String(url).trim();
@@ -200,10 +220,8 @@ function isLocalhostPage() {
 function normalizeSubtitlesFromVtt(vttUrlFromSupabase) {
   if (!vttUrlFromSupabase) return [];
 
-  // Si en DB guardaste thumbs.vtt acá, NO lo tratamos como subtítulo
-  if (isThumbsVtt(vttUrlFromSupabase)) {
-    return [];
-  }
+  // Si vtt_url contiene thumbs.vtt, NO lo tratamos como subtítulo
+  if (isThumbsVtt(vttUrlFromSupabase)) return [];
 
   const src = proxifyRemoteUrl(vttUrlFromSupabase);
   if (!src) return [];
@@ -218,41 +236,6 @@ function normalizeSubtitlesFromVtt(vttUrlFromSupabase) {
   ];
 }
 
-function buildTracksAlias(subtitles = []) {
-  // Alias para players que esperan "tracks" en vez de "subtitles"
-  return safeArray(subtitles).map((t) => ({
-    kind: "subtitles",
-    src: t.src,
-    srclang: t.srclang || "es",
-    label: t.label || "Español",
-    default: !!t.default
-  }));
-}
-
-function buildSourceAliases(src) {
-  const clean = proxifyRemoteUrl(src);
-  if (!clean) {
-    return {
-      src: undefined,
-      source: undefined,
-      sources: []
-    };
-  }
-
-  const type = isHlsUrl(clean) ? "application/x-mpegURL" : undefined;
-
-  return {
-    // Formato simple (muchos players custom)
-    src: clean,
-    // Alias por compatibilidad
-    source: clean,
-    // Formato array (video.js/otros wrappers)
-    sources: [
-      type ? { src: clean, type } : { src: clean }
-    ]
-  };
-}
-
 function computeThumbnailsVtt(vttUrlFromSupabase, { allowOnLocal = false } = {}) {
   if (!vttUrlFromSupabase) return undefined;
   if (!isThumbsVtt(vttUrlFromSupabase)) return undefined;
@@ -263,42 +246,102 @@ function computeThumbnailsVtt(vttUrlFromSupabase, { allowOnLocal = false } = {})
   return proxifyRemoteUrl(vttUrlFromSupabase);
 }
 
-function debugLog(...args) {
-  if (DEBUG) console.log(...args);
-}
-
 function withTimeout(promise, ms, label = "Operación") {
   let timer;
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error(`${label} excedió ${ms}ms`)), ms);
   });
-
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 /* ============================================================
- * Supabase queries (fuente única de m3u8/vtt)
+ * Probes (diagnóstico no bloqueante)
+ * ============================================================ */
+async function probeM3u8(url) {
+  if (!url || !isLikelyAbsoluteUrl(url) || !isHlsUrl(url)) return;
+
+  try {
+    infoLog("[watch][probe] Probing m3u8:", url);
+
+    const res = await fetch(url, {
+      method: "GET",
+      mode: "cors",
+      cache: "no-store"
+    });
+
+    const text = await res.text();
+    const lines = text.split("\n").slice(0, 10).join("\n");
+
+    infoLog("[watch][probe] m3u8 response:", {
+      ok: res.ok,
+      status: res.status,
+      type: res.type,
+      redirected: res.redirected,
+      finalUrl: res.url,
+      contentType: res.headers.get("content-type"),
+      firstLines: lines
+    });
+
+    if (!text.includes("#EXTM3U")) {
+      warnLog("[watch][probe] El m3u8 no contiene #EXTM3U");
+    }
+  } catch (e) {
+    console.error("[watch][probe] m3u8 fetch error:", {
+      message: e?.message || String(e),
+      name: e?.name || null,
+      url
+    });
+  }
+}
+
+async function probeVtt(url) {
+  if (!url || !isLikelyAbsoluteUrl(url)) return;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      mode: "cors",
+      cache: "no-store"
+    });
+    const text = await res.text();
+
+    infoLog("[watch][probe] vtt response:", {
+      url,
+      ok: res.ok,
+      status: res.status,
+      contentType: res.headers.get("content-type"),
+      firstLines: text.split("\n").slice(0, 6).join("\n")
+    });
+  } catch (e) {
+    console.error("[watch][probe] vtt fetch error:", {
+      message: e?.message || String(e),
+      name: e?.name || null,
+      url
+    });
+  }
+}
+
+/* ============================================================
+ * Supabase queries
  * ============================================================ */
 async function fetchMovieById(movieId) {
   const m = DB.movies.cols;
   const { data, error } = await withTimeout(
     supabase
       .from(DB.movies.table)
-      .select(
-        [
-          m.id,
-          m.title,
-          m.description,
-          m.thumbnail,
-          m.banner,
-          m.m3u8,
-          m.category,
-          m.createdAt,
-          m.vtt,
-          m.durationMinutes,
-          m.releaseYear
-        ].join(",")
-      )
+      .select([
+        m.id,
+        m.title,
+        m.description,
+        m.thumbnail,
+        m.banner,
+        m.m3u8,
+        m.category,
+        m.createdAt,
+        m.vtt,
+        m.durationMinutes,
+        m.releaseYear
+      ].join(","))
       .eq(m.id, movieId)
       .single(),
     15000,
@@ -314,17 +357,15 @@ async function fetchSeriesById(seriesId) {
   const { data, error } = await withTimeout(
     supabase
       .from(DB.movies.table)
-      .select(
-        [
-          m.id,
-          m.title,
-          m.description,
-          m.thumbnail,
-          m.banner,
-          m.category,
-          m.vtt
-        ].join(",")
-      )
+      .select([
+        m.id,
+        m.title,
+        m.description,
+        m.thumbnail,
+        m.banner,
+        m.category,
+        m.vtt
+      ].join(","))
       .eq(m.id, seriesId)
       .eq(m.category, "series")
       .single(),
@@ -341,19 +382,17 @@ async function fetchEpisodeById(episodeId) {
   const { data, error } = await withTimeout(
     supabase
       .from(DB.episodes.table)
-      .select(
-        [
-          e.id,
-          e.seriesId,
-          e.season,
-          e.episodeNumber,
-          e.title,
-          e.m3u8,
-          e.createdAt,
-          e.vtt,
-          e.sinopsis
-        ].join(",")
-      )
+      .select([
+        e.id,
+        e.seriesId,
+        e.season,
+        e.episodeNumber,
+        e.title,
+        e.m3u8,
+        e.createdAt,
+        e.vtt,
+        e.sinopsis
+      ].join(","))
       .eq(e.id, episodeId)
       .single(),
     15000,
@@ -369,18 +408,16 @@ async function fetchEpisodesForSeries(seriesId) {
   const { data, error } = await withTimeout(
     supabase
       .from(DB.episodes.table)
-      .select(
-        [
-          e.id,
-          e.seriesId,
-          e.season,
-          e.episodeNumber,
-          e.title,
-          e.m3u8,
-          e.vtt,
-          e.sinopsis
-        ].join(",")
-      )
+      .select([
+        e.id,
+        e.seriesId,
+        e.season,
+        e.episodeNumber,
+        e.title,
+        e.m3u8,
+        e.vtt,
+        e.sinopsis
+      ].join(","))
       .eq(e.seriesId, seriesId)
       .order(e.season, { ascending: true })
       .order(e.episodeNumber, { ascending: true })
@@ -407,25 +444,24 @@ async function fetchRecommendations(currentContentId = null) {
 
   let q = supabase
     .from(DB.movies.table)
-    .select(
-      [
-        m.id,
-        m.title,
-        m.description,
-        m.thumbnail,
-        m.banner,
-        m.category,
-        m.createdAt
-      ].join(",")
-    )
+    .select([
+      m.id,
+      m.title,
+      m.description,
+      m.thumbnail,
+      m.banner,
+      m.category,
+      m.createdAt
+    ].join(","))
     .order(m.createdAt, { ascending: false })
     .limit(12);
 
   if (currentContentId) q = q.neq(m.id, currentContentId);
 
   const { data, error } = await withTimeout(q, 15000, "fetchRecommendations");
+
   if (error) {
-    console.warn("[watch] recomendaciones fallback error:", error);
+    warnLog("[watch] recomendaciones fallback error:", error);
     return [];
   }
 
@@ -439,9 +475,9 @@ async function fetchRecommendations(currentContentId = null) {
 }
 
 /* ============================================================
- * Map -> AkiraPlayer props
+ * Mapping -> AkiraPlayer props (reales)
  * ============================================================ */
-function buildCommonPlaybackProps({
+function buildAkiraProps({
   srcUrl,
   poster,
   autoplay,
@@ -449,58 +485,37 @@ function buildCommonPlaybackProps({
   contentId,
   seasonId,
   episodeId,
-  recommendations,
-  episodes,
+  recommendations = [],
+  episodes = [],
   vttUrlFromSupabase,
   allowThumbsOnLocal = false
 }) {
-  const sourceAliases = buildSourceAliases(srcUrl);
+  const src = proxifyRemoteUrl(srcUrl);
   const subtitles = normalizeSubtitlesFromVtt(vttUrlFromSupabase);
-  const tracks = buildTracksAlias(subtitles);
-  const thumbsVtt = computeThumbnailsVtt(vttUrlFromSupabase, {
-    allowOnLocal: allowThumbsOnLocal
-  });
+  const thumbnailsVtt = computeThumbnailsVtt(vttUrlFromSupabase, { allowOnLocal: allowThumbsOnLocal });
 
-  // Extra aliases por compatibilidad entre builds del player
-  const thumbnailsObj = thumbsVtt ? { vtt: thumbsVtt } : undefined;
-
-  return {
-    ...sourceAliases,
-
+  const props = {
+    // === Props reales que espera AkiraPlayer.tsx ===
+    src,
     poster: poster || undefined,
     autoplay: !!autoplay,
-
-    // Ayuda contra autoplay-block en algunos navegadores:
-    // si querés autoplay real sin interacción, muchos navegadores exigen muted=true
-    muted: false,
-    playsInline: true,
-    preload: "auto",
-    crossorigin: "anonymous",
-
     title: title || "SATV+",
     channelLabel: "SATVPlus",
     assetBaseUrl: getAssetBaseUrl(),
 
-    contentId: contentId ?? null,
+    contentId: contentId ?? "",
     seasonId: seasonId ?? null,
     episodeId: episodeId ?? null,
 
-    // Thumbnails (varios aliases)
-    thumbnailsVtt: thumbsVtt,
-    previewThumbnailsVtt: thumbsVtt,
-    thumbnails: thumbnailsObj,
-
-    // Subtítulos (varios aliases)
+    thumbnailsVtt,
     subtitles,
-    tracks,
 
     recommendations: safeArray(recommendations),
     episodes: safeArray(episodes),
-    recommendationsLabel: "Te podría gustar",
-
-    // debug opcional para el player si lo soporta
-    debug: true
+    recommendationsLabel: "Te podría gustar"
   };
+
+  return props;
 }
 
 function movieToPlayerProps(movie, { autoplay = true, recommendations = [], forceThumbsLocal = false } = {}) {
@@ -512,7 +527,7 @@ function movieToPlayerProps(movie, { autoplay = true, recommendations = [], forc
   debugLog("[watch] movie m3u8 desde Supabase:", m3u8FromSupabase);
   debugLog("[watch] movie vtt desde Supabase:", vttFromSupabase);
 
-  const props = buildCommonPlaybackProps({
+  const props = buildAkiraProps({
     srcUrl: m3u8FromSupabase,
     poster: movie[m.banner] || movie[m.thumbnail],
     autoplay,
@@ -552,18 +567,17 @@ function episodeToPlayerProps(
   const m = DB.movies.cols;
 
   const seriesId = series?.[m.id] || episode[e.seriesId] || null;
-
   const m3u8FromSupabase = episode[e.m3u8];
   const vttFromSupabase = episode[e.vtt];
 
   debugLog("[watch] episode m3u8 desde Supabase:", m3u8FromSupabase);
   debugLog("[watch] episode vtt desde Supabase:", vttFromSupabase);
 
-  const props = buildCommonPlaybackProps({
+  const props = buildAkiraProps({
     srcUrl: m3u8FromSupabase,
     poster: (series && (series[m.banner] || series[m.thumbnail])) || undefined,
     autoplay,
-    title: episode[e.title] || (series && series[m.title]) || "SATV+",
+    title: episode[e.title] || series?.[m.title] || "SATV+",
     contentId: seriesId || episode[e.id],
     seasonId: episode[e.season] != null ? String(episode[e.season]) : null,
     episodeId: episode[e.id],
@@ -594,10 +608,10 @@ function episodeToPlayerProps(
 }
 
 /* ============================================================
- * Resolve route
+ * Route resolver
  * ============================================================ */
 async function resolveRouteAndBuildProps() {
-  const { movieId, episodeId, seriesId, autoplay, forceThumbsLocal } = getParams();
+  const { movieId, episodeId, seriesId, autoplay, forceThumbsLocal, probe } = getParams();
   const m = DB.movies.cols;
   const e = DB.episodes.cols;
 
@@ -608,7 +622,6 @@ async function resolveRouteAndBuildProps() {
     }
 
     const movie = await fetchMovieById(movieId);
-
     if (!movie) throw new Error("No se encontró la película");
 
     if (movie[m.category] !== "movie") {
@@ -622,6 +635,11 @@ async function resolveRouteAndBuildProps() {
     if (!movie[m.m3u8]) throw new Error("La película no tiene m3u8_url");
 
     const recommendations = await fetchRecommendations(movie[m.id]);
+
+    if (probe) {
+      probeM3u8(movie[m.m3u8]);
+      if (movie[m.vtt]) probeVtt(movie[m.vtt]);
+    }
 
     return {
       title: movie[m.title] || "Película",
@@ -649,17 +667,22 @@ async function resolveRouteAndBuildProps() {
       try {
         series = await fetchSeriesById(resolvedSeriesId);
       } catch (err) {
-        console.warn("[watch] No se pudo cargar serie:", err);
+        warnLog("[watch] No se pudo cargar serie:", err);
       }
 
       try {
         episodesList = await fetchEpisodesForSeries(resolvedSeriesId);
       } catch (err) {
-        console.warn("[watch] No se pudo cargar lista de episodios:", err);
+        warnLog("[watch] No se pudo cargar lista de episodios:", err);
       }
     }
 
     const recommendations = await fetchRecommendations(resolvedSeriesId || null);
+
+    if (probe) {
+      probeM3u8(episode[e.m3u8]);
+      if (episode[e.vtt]) probeVtt(episode[e.vtt]);
+    }
 
     const title = series?.[m.title]
       ? `${series[m.title]} · ${episode[e.title] || `E${episode[e.episodeNumber] ?? ""}`}`
@@ -677,13 +700,13 @@ async function resolveRouteAndBuildProps() {
     };
   }
 
-  // ?series=<uuid> -> primer episodio
+  // ?series=<uuid> -> redirige al primer episodio
   if (seriesId) {
     if (!isUuid(seriesId)) {
       throw new Error("Parámetro ?series inválido (UUID esperado)");
     }
 
-    await fetchSeriesById(seriesId); // valida existencia
+    await fetchSeriesById(seriesId);
 
     const episodesList = await fetchEpisodesForSeries(seriesId);
     if (!episodesList.length) {
@@ -703,31 +726,94 @@ async function resolveRouteAndBuildProps() {
 }
 
 /* ============================================================
- * Post-render debug
+ * Post-render debug del <video> (por fuera de Akira)
  * ============================================================ */
+function mediaErrorName(code) {
+  return ({
+    1: "MEDIA_ERR_ABORTED",
+    2: "MEDIA_ERR_NETWORK",
+    3: "MEDIA_ERR_DECODE",
+    4: "MEDIA_ERR_SRC_NOT_SUPPORTED"
+  })[code] || "UNKNOWN_MEDIA_ERROR";
+}
+
+function networkStateName(v) {
+  return ({
+    0: "NETWORK_EMPTY",
+    1: "NETWORK_IDLE",
+    2: "NETWORK_LOADING",
+    3: "NETWORK_NO_SOURCE"
+  })[v] || "UNKNOWN_NETWORK_STATE";
+}
+
+function readyStateName(v) {
+  return ({
+    0: "HAVE_NOTHING",
+    1: "HAVE_METADATA",
+    2: "HAVE_CURRENT_DATA",
+    3: "HAVE_FUTURE_DATA",
+    4: "HAVE_ENOUGH_DATA"
+  })[v] || "UNKNOWN_READY_STATE";
+}
+
+function getMediaErrorInfo(video) {
+  const err = video?.error;
+  if (!err) return null;
+  return {
+    code: err.code ?? null,
+    codeName: mediaErrorName(err.code),
+    message: err.message || null
+  };
+}
+
 function inspectMountedVideoLater() {
   setTimeout(() => {
     const root = getRootEl();
     const video = root?.querySelector?.("video");
     if (!video) {
-      console.warn("[watch] No se encontró <video> tras render.");
+      warnLog("[watch] No se encontró <video> tras render (t+2.5s)");
       return;
     }
 
-    const err = video.error
-      ? { code: video.error.code, message: video.error.message || null }
-      : null;
-
-    console.log("[watch] video debug (post-render)", {
-      currentSrc: video.currentSrc,
+    const info = {
+      currentSrc: video.currentSrc || null,
       srcAttr: video.getAttribute("src"),
       readyState: video.readyState,
+      readyStateName: readyStateName(video.readyState),
       networkState: video.networkState,
+      networkStateName: networkStateName(video.networkState),
       paused: video.paused,
       muted: video.muted,
-      error: err
-    });
+      canPlayHlsNative: video.canPlayType?.("application/vnd.apple.mpegurl") || "",
+      mediaError: getMediaErrorInfo(video)
+    };
+
+    console.log("[watch] video debug (t+2.5s)", info);
   }, 2500);
+
+  setTimeout(() => {
+    const root = getRootEl();
+    const video = root?.querySelector?.("video");
+    if (!video) return;
+
+    const info = {
+      currentSrc: video.currentSrc || null,
+      srcAttr: video.getAttribute("src"),
+      readyState: video.readyState,
+      readyStateName: readyStateName(video.readyState),
+      networkState: video.networkState,
+      networkStateName: networkStateName(video.networkState),
+      paused: video.paused,
+      muted: video.muted,
+      mediaError: getMediaErrorInfo(video)
+    };
+
+    console.log("[watch] video debug (t+6s)", info);
+
+    if (info.networkState === 3 && info.readyState === 0) {
+      console.error("[watch] VIDEO_STUCK_NO_SOURCE", info);
+    }
+  }, 6000);
 }
 
 /* ============================================================
@@ -746,12 +832,13 @@ async function boot() {
     const result = await resolveRouteAndBuildProps();
     if (!result) return; // redirect
 
+    window.__SATV_WATCH_LAST_RESULT__ = result;
+    window.__SATV_WATCH_LAST_PROPS__ = result.props;
+
     debugLog("[watch] props finales:", result.props);
-    debugLog("[watch] src final (directo desde Supabase):", result.props?.src);
-    debugLog("[watch] source alias:", result.props?.source);
-    debugLog("[watch] sources alias:", result.props?.sources);
+    debugLog("[watch] src final (Supabase):", result.props?.src);
     debugLog("[watch] thumbnailsVtt:", result.props?.thumbnailsVtt);
-    debugLog("[watch] subtitles (directo desde Supabase):", result.props?.subtitles);
+    debugLog("[watch] subtitles:", result.props?.subtitles);
 
     setDocumentTitle(result.title);
 
@@ -759,7 +846,6 @@ async function boot() {
     if (root) root.innerHTML = "";
 
     window.renderAkiraPlayer(result.props);
-
     inspectMountedVideoLater();
   } catch (err) {
     console.error("[watch] boot error:", err);
@@ -772,7 +858,8 @@ async function boot() {
             message: err.message,
             details: err.details || null,
             hint: err.hint || null,
-            code: err.code || null
+            code: err.code || null,
+            stack: err.stack || null
           },
           null,
           2
