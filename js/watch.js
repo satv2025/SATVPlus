@@ -41,13 +41,12 @@ const DB = {
       createdAt: "created_at",
       vtt: "vtt_url",
       sinopsis: "sinopsis"
-      // Si luego renombrás la columna rara:
-      // thumbnailsEpisodeVtt: "thumbnails_episode_vtt_url"
     }
   }
 };
 
 const ROOT_ID = "akira-player-root";
+const DEBUG = true;
 
 /* ============================================================
  * UI helpers
@@ -153,7 +152,9 @@ function getParams() {
     movieId: url.searchParams.get("movie"),
     episodeId: url.searchParams.get("episode"),
     seriesId: url.searchParams.get("series"),
-    autoplay: url.searchParams.get("autoplay") !== "0"
+    autoplay: url.searchParams.get("autoplay") !== "0",
+    // debug opcional: ?forceThumbsLocal=1
+    forceThumbsLocal: url.searchParams.get("forceThumbsLocal") === "1"
   };
 }
 
@@ -167,17 +168,24 @@ function buildWatchUrl(params) {
 }
 
 function isUuid(v) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ""));
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(v || "")
+  );
 }
 
 function safeArray(v) {
   return Array.isArray(v) ? v : [];
 }
 
-// SIN PROXY: devuelve URL directa
+function isHlsUrl(url) {
+  return /\.m3u8(\?|#|$)/i.test(String(url || ""));
+}
+
+// SIN PROXY: devuelve URL directa (normalizada)
 function proxifyRemoteUrl(url) {
   if (!url) return undefined;
-  return String(url).trim();
+  const s = String(url).trim();
+  return s || undefined;
 }
 
 function isThumbsVtt(url) {
@@ -197,9 +205,12 @@ function normalizeSubtitlesFromVtt(vttUrlFromSupabase) {
     return [];
   }
 
+  const src = proxifyRemoteUrl(vttUrlFromSupabase);
+  if (!src) return [];
+
   return [
     {
-      src: proxifyRemoteUrl(vttUrlFromSupabase),
+      src,
       srclang: "es",
       label: "Español",
       default: true
@@ -207,28 +218,92 @@ function normalizeSubtitlesFromVtt(vttUrlFromSupabase) {
   ];
 }
 
+function buildTracksAlias(subtitles = []) {
+  // Alias para players que esperan "tracks" en vez de "subtitles"
+  return safeArray(subtitles).map((t) => ({
+    kind: "subtitles",
+    src: t.src,
+    srclang: t.srclang || "es",
+    label: t.label || "Español",
+    default: !!t.default
+  }));
+}
+
+function buildSourceAliases(src) {
+  const clean = proxifyRemoteUrl(src);
+  if (!clean) {
+    return {
+      src: undefined,
+      source: undefined,
+      sources: []
+    };
+  }
+
+  const type = isHlsUrl(clean) ? "application/x-mpegURL" : undefined;
+
+  return {
+    // Formato simple (muchos players custom)
+    src: clean,
+    // Alias por compatibilidad
+    source: clean,
+    // Formato array (video.js/otros wrappers)
+    sources: [
+      type ? { src: clean, type } : { src: clean }
+    ]
+  };
+}
+
+function computeThumbnailsVtt(vttUrlFromSupabase, { allowOnLocal = false } = {}) {
+  if (!vttUrlFromSupabase) return undefined;
+  if (!isThumbsVtt(vttUrlFromSupabase)) return undefined;
+
+  const canUse = allowOnLocal || !isLocalhostPage();
+  if (!canUse) return undefined;
+
+  return proxifyRemoteUrl(vttUrlFromSupabase);
+}
+
+function debugLog(...args) {
+  if (DEBUG) console.log(...args);
+}
+
+function withTimeout(promise, ms, label = "Operación") {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} excedió ${ms}ms`)), ms);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /* ============================================================
  * Supabase queries (fuente única de m3u8/vtt)
  * ============================================================ */
 async function fetchMovieById(movieId) {
   const m = DB.movies.cols;
-  const { data, error } = await supabase
-    .from(DB.movies.table)
-    .select([
-      m.id,
-      m.title,
-      m.description,
-      m.thumbnail,
-      m.banner,
-      m.m3u8,
-      m.category,
-      m.createdAt,
-      m.vtt,
-      m.durationMinutes,
-      m.releaseYear
-    ].join(","))
-    .eq(m.id, movieId)
-    .single();
+  const { data, error } = await withTimeout(
+    supabase
+      .from(DB.movies.table)
+      .select(
+        [
+          m.id,
+          m.title,
+          m.description,
+          m.thumbnail,
+          m.banner,
+          m.m3u8,
+          m.category,
+          m.createdAt,
+          m.vtt,
+          m.durationMinutes,
+          m.releaseYear
+        ].join(",")
+      )
+      .eq(m.id, movieId)
+      .single(),
+    15000,
+    "fetchMovieById"
+  );
 
   if (error) throw error;
   return data;
@@ -236,20 +311,26 @@ async function fetchMovieById(movieId) {
 
 async function fetchSeriesById(seriesId) {
   const m = DB.movies.cols;
-  const { data, error } = await supabase
-    .from(DB.movies.table)
-    .select([
-      m.id,
-      m.title,
-      m.description,
-      m.thumbnail,
-      m.banner,
-      m.category,
-      m.vtt
-    ].join(","))
-    .eq(m.id, seriesId)
-    .eq(m.category, "series")
-    .single();
+  const { data, error } = await withTimeout(
+    supabase
+      .from(DB.movies.table)
+      .select(
+        [
+          m.id,
+          m.title,
+          m.description,
+          m.thumbnail,
+          m.banner,
+          m.category,
+          m.vtt
+        ].join(",")
+      )
+      .eq(m.id, seriesId)
+      .eq(m.category, "series")
+      .single(),
+    15000,
+    "fetchSeriesById"
+  );
 
   if (error) throw error;
   return data;
@@ -257,21 +338,27 @@ async function fetchSeriesById(seriesId) {
 
 async function fetchEpisodeById(episodeId) {
   const e = DB.episodes.cols;
-  const { data, error } = await supabase
-    .from(DB.episodes.table)
-    .select([
-      e.id,
-      e.seriesId,
-      e.season,
-      e.episodeNumber,
-      e.title,
-      e.m3u8,
-      e.createdAt,
-      e.vtt,
-      e.sinopsis
-    ].join(","))
-    .eq(e.id, episodeId)
-    .single();
+  const { data, error } = await withTimeout(
+    supabase
+      .from(DB.episodes.table)
+      .select(
+        [
+          e.id,
+          e.seriesId,
+          e.season,
+          e.episodeNumber,
+          e.title,
+          e.m3u8,
+          e.createdAt,
+          e.vtt,
+          e.sinopsis
+        ].join(",")
+      )
+      .eq(e.id, episodeId)
+      .single(),
+    15000,
+    "fetchEpisodeById"
+  );
 
   if (error) throw error;
   return data;
@@ -279,22 +366,28 @@ async function fetchEpisodeById(episodeId) {
 
 async function fetchEpisodesForSeries(seriesId) {
   const e = DB.episodes.cols;
-  const { data, error } = await supabase
-    .from(DB.episodes.table)
-    .select([
-      e.id,
-      e.seriesId,
-      e.season,
-      e.episodeNumber,
-      e.title,
-      e.m3u8,
-      e.vtt,
-      e.sinopsis
-    ].join(","))
-    .eq(e.seriesId, seriesId)
-    .order(e.season, { ascending: true })
-    .order(e.episodeNumber, { ascending: true })
-    .limit(500);
+  const { data, error } = await withTimeout(
+    supabase
+      .from(DB.episodes.table)
+      .select(
+        [
+          e.id,
+          e.seriesId,
+          e.season,
+          e.episodeNumber,
+          e.title,
+          e.m3u8,
+          e.vtt,
+          e.sinopsis
+        ].join(",")
+      )
+      .eq(e.seriesId, seriesId)
+      .order(e.season, { ascending: true })
+      .order(e.episodeNumber, { ascending: true })
+      .limit(500),
+    15000,
+    "fetchEpisodesForSeries"
+  );
 
   if (error) throw error;
 
@@ -314,21 +407,23 @@ async function fetchRecommendations(currentContentId = null) {
 
   let q = supabase
     .from(DB.movies.table)
-    .select([
-      m.id,
-      m.title,
-      m.description,
-      m.thumbnail,
-      m.banner,
-      m.category,
-      m.createdAt
-    ].join(","))
+    .select(
+      [
+        m.id,
+        m.title,
+        m.description,
+        m.thumbnail,
+        m.banner,
+        m.category,
+        m.createdAt
+      ].join(",")
+    )
     .order(m.createdAt, { ascending: false })
     .limit(12);
 
   if (currentContentId) q = q.neq(m.id, currentContentId);
 
-  const { data, error } = await q;
+  const { data, error } = await withTimeout(q, 15000, "fetchRecommendations");
   if (error) {
     console.warn("[watch] recomendaciones fallback error:", error);
     return [];
@@ -346,55 +441,112 @@ async function fetchRecommendations(currentContentId = null) {
 /* ============================================================
  * Map -> AkiraPlayer props
  * ============================================================ */
-function movieToPlayerProps(movie, { autoplay = true, recommendations = [] } = {}) {
+function buildCommonPlaybackProps({
+  srcUrl,
+  poster,
+  autoplay,
+  title,
+  contentId,
+  seasonId,
+  episodeId,
+  recommendations,
+  episodes,
+  vttUrlFromSupabase,
+  allowThumbsOnLocal = false
+}) {
+  const sourceAliases = buildSourceAliases(srcUrl);
+  const subtitles = normalizeSubtitlesFromVtt(vttUrlFromSupabase);
+  const tracks = buildTracksAlias(subtitles);
+  const thumbsVtt = computeThumbnailsVtt(vttUrlFromSupabase, {
+    allowOnLocal: allowThumbsOnLocal
+  });
+
+  // Extra aliases por compatibilidad entre builds del player
+  const thumbnailsObj = thumbsVtt ? { vtt: thumbsVtt } : undefined;
+
+  return {
+    ...sourceAliases,
+
+    poster: poster || undefined,
+    autoplay: !!autoplay,
+
+    // Ayuda contra autoplay-block en algunos navegadores:
+    // si querés autoplay real sin interacción, muchos navegadores exigen muted=true
+    muted: false,
+    playsInline: true,
+    preload: "auto",
+    crossorigin: "anonymous",
+
+    title: title || "SATV+",
+    channelLabel: "SATVPlus",
+    assetBaseUrl: getAssetBaseUrl(),
+
+    contentId: contentId ?? null,
+    seasonId: seasonId ?? null,
+    episodeId: episodeId ?? null,
+
+    // Thumbnails (varios aliases)
+    thumbnailsVtt: thumbsVtt,
+    previewThumbnailsVtt: thumbsVtt,
+    thumbnails: thumbnailsObj,
+
+    // Subtítulos (varios aliases)
+    subtitles,
+    tracks,
+
+    recommendations: safeArray(recommendations),
+    episodes: safeArray(episodes),
+    recommendationsLabel: "Te podría gustar",
+
+    // debug opcional para el player si lo soporta
+    debug: true
+  };
+}
+
+function movieToPlayerProps(movie, { autoplay = true, recommendations = [], forceThumbsLocal = false } = {}) {
   const m = DB.movies.cols;
 
   const m3u8FromSupabase = movie[m.m3u8];
   const vttFromSupabase = movie[m.vtt];
 
-  console.log("[watch] movie m3u8 desde Supabase:", m3u8FromSupabase);
-  console.log("[watch] movie vtt desde Supabase:", vttFromSupabase);
+  debugLog("[watch] movie m3u8 desde Supabase:", m3u8FromSupabase);
+  debugLog("[watch] movie vtt desde Supabase:", vttFromSupabase);
 
-  return {
-    src: proxifyRemoteUrl(m3u8FromSupabase),
-    poster: movie[m.banner] || movie[m.thumbnail] || undefined,
+  const props = buildCommonPlaybackProps({
+    srcUrl: m3u8FromSupabase,
+    poster: movie[m.banner] || movie[m.thumbnail],
     autoplay,
     title: movie[m.title] || "SATV+",
-    channelLabel: "SATVPlus",
-    assetBaseUrl: getAssetBaseUrl(),
-
     contentId: movie[m.id],
     seasonId: null,
     episodeId: null,
-
-    // Si alguna vez movies.vtt_url fuese un thumbs.vtt, esto lo activa solo fuera de localhost
-    thumbnailsVtt:
-      !isLocalhostPage() && isThumbsVtt(vttFromSupabase)
-        ? proxifyRemoteUrl(vttFromSupabase)
-        : undefined,
-
-    subtitles: normalizeSubtitlesFromVtt(vttFromSupabase),
-
     recommendations,
     episodes: [],
-    recommendationsLabel: "Te podría gustar",
+    vttUrlFromSupabase: vttFromSupabase,
+    allowThumbsOnLocal: forceThumbsLocal
+  });
 
-    onBack: () => window.history.back(),
+  props.onBack = () => window.history.back();
 
-    onSelectRecommendation: (item) => {
-      if (!item?.id) return;
-      window.location.href = buildWatchUrl(
-        item.type === "series"
-          ? { series: item.id }
-          : { movie: item.id }
-      );
-    }
+  props.onSelectRecommendation = (item) => {
+    if (!item?.id) return;
+    window.location.href = buildWatchUrl(
+      item.type === "series" ? { series: item.id } : { movie: item.id }
+    );
   };
+
+  return props;
 }
 
 function episodeToPlayerProps(
   episode,
-  { series, episodes, recommendations = [], autoplay = true } = {}
+  {
+    series,
+    episodes,
+    recommendations = [],
+    autoplay = true,
+    forceThumbsLocal = false
+  } = {}
 ) {
   const e = DB.episodes.cols;
   const m = DB.movies.cols;
@@ -404,60 +556,48 @@ function episodeToPlayerProps(
   const m3u8FromSupabase = episode[e.m3u8];
   const vttFromSupabase = episode[e.vtt];
 
-  console.log("[watch] episode m3u8 desde Supabase:", m3u8FromSupabase);
-  console.log("[watch] episode vtt desde Supabase:", vttFromSupabase);
+  debugLog("[watch] episode m3u8 desde Supabase:", m3u8FromSupabase);
+  debugLog("[watch] episode vtt desde Supabase:", vttFromSupabase);
 
-  return {
-    src: proxifyRemoteUrl(m3u8FromSupabase),
+  const props = buildCommonPlaybackProps({
+    srcUrl: m3u8FromSupabase,
     poster: (series && (series[m.banner] || series[m.thumbnail])) || undefined,
     autoplay,
     title: episode[e.title] || (series && series[m.title]) || "SATV+",
-    channelLabel: "SATVPlus",
-    assetBaseUrl: getAssetBaseUrl(),
-
     contentId: seriesId || episode[e.id],
     seasonId: episode[e.season] != null ? String(episode[e.season]) : null,
     episodeId: episode[e.id],
+    recommendations,
+    episodes,
+    vttUrlFromSupabase: vttFromSupabase,
+    allowThumbsOnLocal: forceThumbsLocal
+  });
 
-    // Si vtt_url es thumbs.vtt, lo usamos como preview SOLO fuera de localhost
-    thumbnailsVtt:
-      !isLocalhostPage() && isThumbsVtt(vttFromSupabase)
-        ? proxifyRemoteUrl(vttFromSupabase)
-        : undefined,
+  props.onBack = () => window.history.back();
 
-    // Si vtt_url es thumbs.vtt, esta función devuelve []
-    subtitles: normalizeSubtitlesFromVtt(vttFromSupabase),
-
-    episodes: safeArray(episodes),
-    recommendations: safeArray(recommendations),
-    recommendationsLabel: "Te podría gustar",
-
-    onBack: () => window.history.back(),
-
-    onSelectEpisode: (selectedEpisodeId) => {
-      if (!selectedEpisodeId) return;
-      window.location.href = buildWatchUrl({
-        series: seriesId,
-        episode: selectedEpisodeId
-      });
-    },
-
-    onSelectRecommendation: (item) => {
-      if (!item?.id) return;
-      window.location.href = buildWatchUrl(
-        item.type === "series"
-          ? { series: item.id }
-          : { movie: item.id }
-      );
-    }
+  props.onSelectEpisode = (selectedEpisodeId) => {
+    if (!selectedEpisodeId) return;
+    window.location.href = buildWatchUrl({
+      series: seriesId,
+      episode: selectedEpisodeId
+    });
   };
+
+  props.onSelectRecommendation = (item) => {
+    if (!item?.id) return;
+    window.location.href = buildWatchUrl(
+      item.type === "series" ? { series: item.id } : { movie: item.id }
+    );
+  };
+
+  return props;
 }
 
 /* ============================================================
  * Resolve route
  * ============================================================ */
 async function resolveRouteAndBuildProps() {
-  const { movieId, episodeId, seriesId, autoplay } = getParams();
+  const { movieId, episodeId, seriesId, autoplay, forceThumbsLocal } = getParams();
   const m = DB.movies.cols;
   const e = DB.episodes.cols;
 
@@ -485,7 +625,7 @@ async function resolveRouteAndBuildProps() {
 
     return {
       title: movie[m.title] || "Película",
-      props: movieToPlayerProps(movie, { autoplay, recommendations })
+      props: movieToPlayerProps(movie, { autoplay, recommendations, forceThumbsLocal })
     };
   }
 
@@ -531,7 +671,8 @@ async function resolveRouteAndBuildProps() {
         series,
         episodes: episodesList,
         recommendations,
-        autoplay
+        autoplay,
+        forceThumbsLocal
       })
     };
   }
@@ -562,6 +703,34 @@ async function resolveRouteAndBuildProps() {
 }
 
 /* ============================================================
+ * Post-render debug
+ * ============================================================ */
+function inspectMountedVideoLater() {
+  setTimeout(() => {
+    const root = getRootEl();
+    const video = root?.querySelector?.("video");
+    if (!video) {
+      console.warn("[watch] No se encontró <video> tras render.");
+      return;
+    }
+
+    const err = video.error
+      ? { code: video.error.code, message: video.error.message || null }
+      : null;
+
+    console.log("[watch] video debug (post-render)", {
+      currentSrc: video.currentSrc,
+      srcAttr: video.getAttribute("src"),
+      readyState: video.readyState,
+      networkState: video.networkState,
+      paused: video.paused,
+      muted: video.muted,
+      error: err
+    });
+  }, 2500);
+}
+
+/* ============================================================
  * Boot
  * ============================================================ */
 async function boot() {
@@ -577,9 +746,12 @@ async function boot() {
     const result = await resolveRouteAndBuildProps();
     if (!result) return; // redirect
 
-    console.log("[watch] props finales:", result.props);
-    console.log("[watch] src final (directo desde Supabase):", result.props?.src);
-    console.log("[watch] subtitles (directo desde Supabase):", result.props?.subtitles);
+    debugLog("[watch] props finales:", result.props);
+    debugLog("[watch] src final (directo desde Supabase):", result.props?.src);
+    debugLog("[watch] source alias:", result.props?.source);
+    debugLog("[watch] sources alias:", result.props?.sources);
+    debugLog("[watch] thumbnailsVtt:", result.props?.thumbnailsVtt);
+    debugLog("[watch] subtitles (directo desde Supabase):", result.props?.subtitles);
 
     setDocumentTitle(result.title);
 
@@ -587,6 +759,8 @@ async function boot() {
     if (root) root.innerHTML = "";
 
     window.renderAkiraPlayer(result.props);
+
+    inspectMountedVideoLater();
   } catch (err) {
     console.error("[watch] boot error:", err);
 

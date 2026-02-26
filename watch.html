@@ -26,6 +26,7 @@
       width: 100%;
       min-height: 100vh;
       background: #000;
+      color: #fff;
     }
 
     .watch-error {
@@ -39,32 +40,295 @@
       white-space: pre-wrap;
       line-height: 1.4;
     }
+
+    .watch-fallback {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #000;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    .watch-fallback-card {
+      width: min(1100px, 100%);
+      display: grid;
+      gap: 12px;
+    }
+
+    .watch-fallback-title {
+      font: 600 18px/1.3 system-ui, sans-serif;
+      color: #fff;
+      opacity: .95;
+    }
+
+    .watch-fallback-meta {
+      font: 500 12px/1.35 system-ui, sans-serif;
+      color: #93c5fd;
+      opacity: .95;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: rgba(20, 20, 20, .9);
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 10px;
+      padding: 10px;
+      margin: 0;
+    }
+
+    .watch-fallback video {
+      width: 100%;
+      max-height: 80vh;
+      background: #000;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, .1);
+    }
   </style>
 </head>
 
 <body data-asset-base="https://akira.satvplus.com.ar/assets">
   <div id="akira-player-root"></div>
 
-  <!-- 1) Supabase global (porque supabaseClient.js usa window.supabase) -->
+  <!-- 1) Supabase global (si supabaseClient.js usa window.supabase) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- 2) UMD del player -->
+  <!-- 2) HLS explícito (muchos UMD de players lo esperan como global window.Hls) -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.18/dist/hls.min.js"></script>
+
+  <!-- 3) UMD del player -->
   <script src="https://akira.satvplus.com.ar/akira-player.umd.js"></script>
 
-  <!-- 3) Bridge: watch.js llamará window.renderAkiraPlayer(props) -->
+  <!-- 4) Bridge: watch.js llamará window.renderAkiraPlayer(props) -->
   <script>
     (function () {
       const rootEl = document.getElementById("akira-player-root");
 
       function fail(msg) {
-        rootEl.innerHTML = '<div class="watch-error">' + msg + '</div>';
+        if (!rootEl) return;
+        rootEl.innerHTML = '<div class="watch-error">' + escapeHtml(String(msg || "Error")) + '</div>';
       }
 
-      // Si el UMD no expone este global, lo mostramos claro
+      function escapeHtml(str) {
+        return String(str ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function isHlsUrl(url) {
+        return /\.m3u8(\?|#|$)/i.test(String(url || ""));
+      }
+
+      function destroyPreviousMount() {
+        try {
+          if (window.AkiraPlayer && typeof window.AkiraPlayer.unmount === "function") {
+            window.AkiraPlayer.unmount(rootEl);
+          }
+        } catch (e) {
+          console.warn("[watch.html] Akira unmount warning:", e);
+        }
+
+        try {
+          if (window.__akiraWatchRoot && typeof window.__akiraWatchRoot.unmount === "function") {
+            window.__akiraWatchRoot.unmount();
+          }
+        } catch (e) {
+          console.warn("[watch.html] React root unmount warning:", e);
+        }
+      }
+
+      function attachVideoDebug(video, label) {
+        if (!video || video.__satvDebugBound) return;
+        video.__satvDebugBound = true;
+
+        const events = [
+          "loadstart", "loadedmetadata", "loadeddata",
+          "canplay", "canplaythrough", "play", "playing",
+          "pause", "waiting", "stalled", "seeking", "seeked",
+          "ended", "error"
+        ];
+
+        events.forEach((ev) => {
+          video.addEventListener(ev, () => {
+            const err = video.error
+              ? { code: video.error.code, message: video.error.message || null }
+              : null;
+
+            console.log(`[watch.html][video:${label}] ${ev}`, {
+              currentSrc: video.currentSrc,
+              readyState: video.readyState,
+              networkState: video.networkState,
+              paused: video.paused,
+              muted: video.muted,
+              error: err
+            });
+          });
+        });
+      }
+
+      function renderNativeFallback(props, reason) {
+        const src = props?.src || props?.source || props?.sources?.[0]?.src;
+        if (!src) {
+          fail("No hay src para fallback nativo.");
+          return;
+        }
+
+        console.warn("[watch.html] Usando fallback nativo HLS/video. Motivo:", reason);
+
+        rootEl.innerHTML = `
+          <div class="watch-fallback">
+            <div class="watch-fallback-card">
+              <div class="watch-fallback-title">${escapeHtml(props?.title || "SATV+ Watch")}</div>
+              <video id="satv-native-video" controls playsinline preload="auto" poster="${escapeHtml(props?.poster || "")}" crossorigin="anonymous"></video>
+              <pre class="watch-fallback-meta" id="satv-native-meta"></pre>
+            </div>
+          </div>
+        `;
+
+        const video = document.getElementById("satv-native-video");
+        const meta = document.getElementById("satv-native-meta");
+        if (!video) return;
+
+        attachVideoDebug(video, "native-fallback");
+
+        function setMeta(extra) {
+          const lines = [
+            "Fallback nativo activo",
+            "Motivo: " + (reason || "desconocido"),
+            "src: " + src,
+            "Hls.js global: " + (!!window.Hls),
+            "canPlayType(m3u8): " + (video.canPlayType?.("application/vnd.apple.mpegurl") || ""),
+            extra ? ("detalle: " + extra) : ""
+          ].filter(Boolean);
+          meta.textContent = lines.join("\n");
+        }
+
+        setMeta();
+
+        // Tracks de subtítulos (si vienen como subtitles/tracks)
+        const tracks = Array.isArray(props?.subtitles) ? props.subtitles : (Array.isArray(props?.tracks) ? props.tracks : []);
+        for (const t of tracks) {
+          if (!t?.src) continue;
+          const tr = document.createElement("track");
+          tr.kind = "subtitles";
+          tr.src = t.src;
+          tr.srclang = t.srclang || "es";
+          tr.label = t.label || t.srclang || "Subtítulos";
+          if (t.default) tr.default = true;
+          video.appendChild(tr);
+        }
+
+        // HLS
+        if (isHlsUrl(src)) {
+          if (window.Hls && window.Hls.isSupported()) {
+            const hls = new window.Hls({
+              enableWorker: true,
+              lowLatencyMode: false
+            });
+
+            window.__satvNativeHls = hls;
+
+            hls.on(window.Hls.Events.ERROR, function (_, data) {
+              console.error("[watch.html][native-hls] error", data);
+              setMeta(`HLS error: ${data?.type || ""} / ${data?.details || ""} / fatal=${!!data?.fatal}`);
+            });
+
+            hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
+              setMeta("Manifest parseado OK. Intentando reproducir...");
+              const playPromise = video.play();
+              if (playPromise && typeof playPromise.catch === "function") {
+                playPromise.catch((e) => {
+                  console.warn("[watch.html][native-hls] autoplay bloqueado:", e);
+                  setMeta("Manifest OK, autoplay bloqueado por navegador (click en Play).");
+                });
+              }
+            });
+
+            hls.loadSource(src);
+            hls.attachMedia(video);
+            return;
+          }
+
+          // Safari / iOS (HLS nativo)
+          if (video.canPlayType && video.canPlayType("application/vnd.apple.mpegurl")) {
+            video.src = src;
+            video.addEventListener("loadedmetadata", () => {
+              const p = video.play();
+              if (p && typeof p.catch === "function") {
+                p.catch(() => {
+                  setMeta("HLS nativo OK, autoplay bloqueado por navegador (click en Play).");
+                });
+              }
+            }, { once: true });
+            return;
+          }
+
+          setMeta("Este navegador no soporta HLS nativo y Hls.js no está disponible.");
+          return;
+        }
+
+        // MP4/u otro formato directo
+        video.src = src;
+        video.addEventListener("loadedmetadata", () => {
+          const p = video.play();
+          if (p && typeof p.catch === "function") {
+            p.catch(() => setMeta("Autoplay bloqueado por navegador (click en Play)."));
+          }
+        }, { once: true });
+      }
+
+      function tryAkiraMount(mergedProps) {
+        // 1) API UMD directa
+        if (window.AkiraPlayer && typeof window.AkiraPlayer.mount === "function") {
+          window.AkiraPlayer.mount(rootEl, mergedProps);
+          return true;
+        }
+
+        if (window.AkiraPlayer && typeof window.AkiraPlayer.render === "function") {
+          window.AkiraPlayer.render(rootEl, mergedProps);
+          return true;
+        }
+
+        // 2) Fallback React/ReactDOM (si el UMD expone componentes)
+        const ReactGlobal = window.React || window.AkiraPlayer?.React;
+        const ReactDOMGlobal = window.ReactDOM || window.AkiraPlayer?.ReactDOM;
+        const Component =
+          window.AkiraPlayer?.default ||
+          window.AkiraPlayer?.AkiraPlayer ||
+          window.AkiraPlayer;
+
+        if (ReactGlobal && ReactDOMGlobal && typeof Component === "function") {
+          if (typeof ReactDOMGlobal.createRoot === "function") {
+            if (!window.__akiraWatchRoot) {
+              window.__akiraWatchRoot = ReactDOMGlobal.createRoot(rootEl);
+            }
+            window.__akiraWatchRoot.render(ReactGlobal.createElement(Component, mergedProps));
+            return true;
+          }
+
+          if (typeof ReactDOMGlobal.render === "function") {
+            ReactDOMGlobal.render(ReactGlobal.createElement(Component, mergedProps), rootEl);
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      // logs globales útiles
+      window.addEventListener("error", (e) => {
+        console.error("[watch.html] window error:", e?.message || e, e?.error || null);
+      });
+
+      window.addEventListener("unhandledrejection", (e) => {
+        console.error("[watch.html] unhandledrejection:", e?.reason || e);
+      });
+
+      // Si el UMD no expone global, lo mostramos claro
       if (!window.AkiraPlayer) {
-        fail("No cargó AkiraPlayer UMD (window.AkiraPlayer undefined).");
-        console.error("[watch.html] window.AkiraPlayer undefined");
-        return;
+        console.warn("[watch.html] window.AkiraPlayer undefined");
+        // No hacemos fail definitivo todavía: dejamos bridge y usamos fallback si viene src
       }
 
       window.renderAkiraPlayer = function renderAkiraPlayer(props) {
@@ -75,56 +339,56 @@
           props || {}
         );
 
+        // guardo para debug manual desde consola
+        window.__SATV_LAST_PROPS__ = mergedProps;
+        console.log("[watch.html] renderAkiraPlayer(props)", {
+          hasAkira: !!window.AkiraPlayer,
+          akiraKeys: Object.keys(window.AkiraPlayer || {}),
+          hasHls: !!window.Hls,
+          src: mergedProps?.src,
+          source: mergedProps?.source,
+          sources: mergedProps?.sources,
+          thumbnailsVtt: mergedProps?.thumbnailsVtt,
+          subtitles: mergedProps?.subtitles
+        });
+
+        destroyPreviousMount();
+
         try {
-          // 1) API del UMD (si existe)
-          if (typeof window.AkiraPlayer.mount === "function") {
-            window.AkiraPlayer.mount(rootEl, mergedProps);
+          const mounted = tryAkiraMount(mergedProps);
+
+          if (!mounted) {
+            renderNativeFallback(mergedProps, "AkiraPlayer sin mount/render compatible");
             return;
           }
 
-          if (typeof window.AkiraPlayer.render === "function") {
-            window.AkiraPlayer.render(rootEl, mergedProps);
-            return;
-          }
-
-          // 2) Fallback React/ReactDOM (si el UMD expone componentes)
-          const ReactGlobal = window.React || window.AkiraPlayer.React;
-          const ReactDOMGlobal = window.ReactDOM || window.AkiraPlayer.ReactDOM;
-          const Component =
-            window.AkiraPlayer.default ||
-            window.AkiraPlayer.AkiraPlayer ||
-            window.AkiraPlayer;
-
-          if (ReactGlobal && ReactDOMGlobal && typeof Component === "function") {
-            if (typeof ReactDOMGlobal.createRoot === "function") {
-              if (!window.__akiraWatchRoot) {
-                window.__akiraWatchRoot = ReactDOMGlobal.createRoot(rootEl);
-              }
-              window.__akiraWatchRoot.render(ReactGlobal.createElement(Component, mergedProps));
+          // Inspección post-mount: si hay <video>, le agregamos logs.
+          // Si después de unos ms no aparece video, hacemos fallback nativo.
+          setTimeout(() => {
+            const video = rootEl.querySelector("video");
+            if (video) {
+              attachVideoDebug(video, "akira");
+              console.log("[watch.html] Video detectado dentro de Akira.", {
+                currentSrc: video.currentSrc,
+                readyState: video.readyState,
+                networkState: video.networkState
+              });
               return;
             }
 
-            if (typeof ReactDOMGlobal.render === "function") {
-              ReactDOMGlobal.render(ReactGlobal.createElement(Component, mergedProps), rootEl);
-              return;
-            }
-          }
-
-          fail("AkiraPlayer cargó pero no se pudo montar (sin mount/render ni ReactDOM compatible).");
-          console.error("[watch.html] No se pudo montar AkiraPlayer", {
-            akira: window.AkiraPlayer,
-            keys: Object.keys(window.AkiraPlayer || {})
-          });
+            // Si Akira montó UI pero nunca creó video, fallback
+            renderNativeFallback(mergedProps, "Akira montó pero no creó <video> (o no visible)");
+          }, 2200);
         } catch (e) {
-          fail("Error montando AkiraPlayer: " + (e?.message || e));
           console.error("[watch.html] renderAkiraPlayer error", e);
+          renderNativeFallback(mergedProps, "Excepción montando Akira: " + (e?.message || e));
         }
       };
     })();
   </script>
 
-  <!-- 4) Loader (lee query params + Supabase + arma props) -->
-  <script type="module" src="./js/watch.js"></script>
+  <!-- 5) Loader (lee query params + Supabase + arma props) -->
+  <script type="module" src="/js/watch.js"></script>
 </body>
 
 </html>
