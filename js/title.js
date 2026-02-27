@@ -68,13 +68,6 @@ function row(label, value, esc) {
    TE PODRÍA GUSTAR: helpers
    =========================== */
 
-/**
- * Recorte AUTOMÁTICO:
- * - Si NO hay separador: solo recorta por largo (40)
- * - Si hay separador " - / — / : / | ":
- *   - Recorta al lado izquierdo SOLO si el lado derecho "parece subtítulo" (>=3 palabras)
- *   - NO recorta si el lado izquierdo parece "marca/franquicia" (1 palabra o con números/%/siglas)
- */
 function shortenTitle(raw) {
     const s = String(raw || "").trim();
     if (!s) return "";
@@ -178,8 +171,9 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc }) {
     return `
     <article class="episode-card" tabindex="0" role="link" data-episode="${ep.id}">
       <img class="episode-thumb" src="${esc(thumb)}" alt="">
-      <div class="episode-body">
+      <div class="episode-body"> 
         <h4 class="episode-title">${epTitle}</h4>
+        <span class="episode-sub">${esc(ep.sinopsis || "")}</span>
       </div>
     </article>
   `;
@@ -249,38 +243,40 @@ function setWatchBtnReanudar(watchBtn, movie, p) {
     watchBtn.dataset.mode = "resume";
 }
 
-/**
- * Intenta crear cliente Supabase desde:
- * - ui.getSupabaseClient() (si existe)
- * - ui.SUPABASE_URL / ui.SUPABASE_ANON_KEY (si existen)
- * - window.SUPABASE_URL / window.SUPABASE_ANON_KEY (si existen)
- */
-function getSupabaseClient(ui) {
-    if (ui?.getSupabaseClient) {
-        try {
-            const c = ui.getSupabaseClient();
-            if (c) return c;
-        } catch (_) { }
-    }
+/* ===========================
+   Continue Watching (watch_progress)
+   ✅ Usa supabaseClient.js real (mismo cliente que el resto)
+   =========================== */
 
-    const url = ui?.SUPABASE_URL || window.SUPABASE_URL;
-    const key = ui?.SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY;
-
-    if (!url || !key) return null;
-    return window.supabase.createClient(url, key);
+async function getAppSupabaseClient() {
+    // Import dinámico para asegurarnos de que ya existe window.supabase (por ensureSupabaseGlobal)
+    const mod = await import("./supabaseClient.js");
+    return mod?.supabase || null;
 }
 
-async function fetchContinueWatchingForTitle({ ui, movieId }) {
-    const client = getSupabaseClient(ui);
-    if (!client || !movieId) return null;
-
-    const { data: userData, error: userErr } = await client.auth.getUser();
-    if (userErr) return null;
-    const userId = userData?.user?.id;
-    if (!userId) return null;
+async function fetchContinueWatchingForTitle({ movieId }) {
+    if (!movieId) return null;
 
     try {
-        let { data, error } = await client
+        const supabase = await getAppSupabaseClient();
+        if (!supabase) {
+            console.warn("[title] supabaseClient.js no devolvió supabase");
+            return null;
+        }
+
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        if (userErr) {
+            console.warn("[title] getUser error:", userErr);
+            return null;
+        }
+
+        const userId = userData?.user?.id;
+        if (!userId) {
+            console.log("[title] sin sesión activa");
+            return null;
+        }
+
+        let { data, error } = await supabase
             .from("watch_progress")
             .select(`
                 movie_id,
@@ -297,13 +293,14 @@ async function fetchContinueWatchingForTitle({ ui, movieId }) {
             `)
             .eq("user_id", userId)
             .eq("movie_id", movieId)
+            .gt("progress_seconds", 0)
             .order("updated_at", { ascending: false })
             .limit(1)
             .maybeSingle();
 
         // fallback si duration_seconds todavía no existe
         if (error && String(error.message || "").toLowerCase().includes("duration_seconds")) {
-            const retry = await client
+            const retry = await supabase
                 .from("watch_progress")
                 .select(`
                     movie_id,
@@ -319,6 +316,7 @@ async function fetchContinueWatchingForTitle({ ui, movieId }) {
                 `)
                 .eq("user_id", userId)
                 .eq("movie_id", movieId)
+                .gt("progress_seconds", 0)
                 .order("updated_at", { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -327,14 +325,25 @@ async function fetchContinueWatchingForTitle({ ui, movieId }) {
             error = retry.error;
         }
 
-        if (error || !data) return null;
+        if (error) {
+            console.warn("[title] watch_progress query error:", error);
+            return null;
+        }
+
+        if (!data) {
+            console.log("[title] sin progreso previo para este título:", movieId);
+            return null;
+        }
 
         const progressSeconds = Number(data.progress_seconds || 0);
-        if (!Number.isFinite(progressSeconds) || progressSeconds <= 0) return null;
+        if (!Number.isFinite(progressSeconds) || progressSeconds <= 0) {
+            console.log("[title] progreso inválido:", data);
+            return null;
+        }
 
         const ep = Array.isArray(data.episodes) ? (data.episodes[0] || null) : (data.episodes || null);
 
-        return {
+        const out = {
             ...data,
             episodes: ep,
             season: ep?.season ?? null,
@@ -342,8 +351,11 @@ async function fetchContinueWatchingForTitle({ ui, movieId }) {
             episode_title: ep?.title ?? null,
             elapsed_seconds: progressSeconds
         };
+
+        console.log("[title] progreso detectado:", out);
+        return out;
     } catch (e) {
-        console.warn("fetchContinueWatchingForTitle error:", e);
+        console.warn("[title] fetchContinueWatchingForTitle error:", e);
         return null;
     }
 }
@@ -475,7 +487,7 @@ async function main() {
     // WATCH BUTTON (Ver ahora / Reanudar)
     setWatchBtnVerAhora(watchBtn, movie);
     try {
-        const progress = await fetchContinueWatchingForTitle({ ui, movieId: movie.id });
+        const progress = await fetchContinueWatchingForTitle({ movieId: movie.id });
         if (progress) setWatchBtnReanudar(watchBtn, movie, progress);
     } catch (e) {
         console.warn("No se pudo leer watch_progress:", e);
