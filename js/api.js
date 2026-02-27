@@ -42,11 +42,11 @@ function normalizeMovieMeta(row) {
 }
 
 /* =========================================================
-   CONTINUE WATCHING
+   CONTINUE WATCHING (desde watch_progress)
 ========================================================= */
 
 /**
- * Devuelve filas de continue watching con embeds:
+ * Devuelve filas de watch_progress con embeds:
  * - movies
  * - episodes (si aplica)
  *
@@ -61,18 +61,39 @@ export async function fetchContinueWatching(userId, limit = 24) {
 
   const safeLimit = clampLimit(limit, 1, 100, 24);
 
-  // 👇 Query principal (usa relaciones inferidas por FK)
-  const selectCW = `
+  // Usamos aliases + FK explícitas para evitar ambigüedad.
+  const selectWPWithDuration = `
+    id,
+    user_id,
+    movie_id,
+    episode_id,
+    progress_seconds,
+    duration_seconds,
+    updated_at,
+    movies:movies!watch_progress_movie_id_fkey (
+      ${MOVIE_CARD_FIELDS}
+    ),
+    episodes:episodes!watch_progress_episode_id_fkey (
+      id,
+      series_id,
+      season,
+      episode_number,
+      title,
+      created_at
+    )
+  `;
+
+  const selectWPFallback = `
     id,
     user_id,
     movie_id,
     episode_id,
     progress_seconds,
     updated_at,
-    movies (
+    movies:movies!watch_progress_movie_id_fkey (
       ${MOVIE_CARD_FIELDS}
     ),
-    episodes (
+    episodes:episodes!watch_progress_episode_id_fkey (
       id,
       series_id,
       season,
@@ -83,19 +104,24 @@ export async function fetchContinueWatching(userId, limit = 24) {
   `;
 
   let { data, error } = await supabase
-    .from("continue_watching")
-    .select(selectCW)
+    .from("watch_progress")
+    .select(selectWPWithDuration)
     .eq("user_id", userId)
     .order("updated_at", { ascending: false })
     .limit(safeLimit);
 
-  // Si hay ambigüedad de relaciones (más de una FK al mismo destino),
-  // podés reemplazar el select de arriba por versión explícita con !fkey:
-  //
-  // movies:movies!continue_watching_movie_id_fkey ( ... )
-  // episodes:episodes!continue_watching_episode_id_fkey ( ... )
-  //
-  // (Los nombres exactos de las FK pueden variar en tu DB.)
+  // Fallback si duration_seconds aún no existe en la tabla
+  if (error && String(error.message || "").toLowerCase().includes("duration_seconds")) {
+    const retry = await supabase
+      .from("watch_progress")
+      .select(selectWPFallback)
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false })
+      .limit(safeLimit);
+
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) throw error;
 

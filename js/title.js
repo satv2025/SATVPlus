@@ -74,9 +74,6 @@ function row(label, value, esc) {
  * - Si hay separador " - / — / : / | ":
  *   - Recorta al lado izquierdo SOLO si el lado derecho "parece subtítulo" (>=3 palabras)
  *   - NO recorta si el lado izquierdo parece "marca/franquicia" (1 palabra o con números/%/siglas)
- *
- * Resultado: casos tipo "Mi Pobre Angelito 2 - Perdido En Nueva York" -> "Mi Pobre Angelito 2"
- * pero casos tipo "100%Lucha - La Película" NO se recorta (porque el left es brandish)
  */
 function shortenTitle(raw) {
     const s = String(raw || "").trim();
@@ -101,12 +98,10 @@ function shortenTitle(raw) {
 
     const rightLooksSubtitle = wordsRight.length >= 3;
 
-    // Si parece franquicia (100%Lucha / Marvel / etc) o el right NO parece subtítulo => NO recortamos por separador
     if (leftLooksBrandish || !rightLooksSubtitle) {
         return s.length > 40 ? s.slice(0, 40).trimEnd() + "…" : s;
     }
 
-    // Caso recortable: nos quedamos con el left
     const out = left;
     return out.length > 34 ? out.slice(0, 34).trimEnd() + "…" : out;
 }
@@ -134,7 +129,6 @@ function getMoreMetaLine(movie) {
     else if (movie.category === "series") right = formatSeriesMeta(movie);
     else right = formatDuration(movie.duration_minutes);
 
-    // ✅ Requisito: {year} * {duración/temporadas/episodios}
     return [year, right].filter(Boolean).join(" · ");
 }
 
@@ -196,7 +190,7 @@ function bindEpisodeCardNavigation(rootEl, movieId) {
     rootEl.querySelectorAll(".episode-card").forEach(card => {
         const go = () => {
             const epId = card.dataset.episode;
-            window.location.href = `/watch?movie=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(epId)}`;
+            window.location.href = `/watch?series=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(epId)}`;
         };
         card.addEventListener("click", go);
         card.addEventListener("keydown", (ev) => {
@@ -209,31 +203,45 @@ function bindEpisodeCardNavigation(rootEl, movieId) {
    WATCH BUTTON: Ver ahora / Reanudar
    =========================== */
 
-function setWatchBtnVerAhora(watchBtn, movieId) {
-    if (!watchBtn) return;
-    watchBtn.href = `/watch?movie=${encodeURIComponent(movieId)}`;
+function setWatchBtnVerAhora(watchBtn, movie) {
+    if (!watchBtn || !movie?.id) return;
+
+    const isSeries = movie.category === "series";
+    watchBtn.href = isSeries
+        ? `/watch?series=${encodeURIComponent(movie.id)}`
+        : `/watch?movie=${encodeURIComponent(movie.id)}`;
+
     watchBtn.setAttribute("aria-label", "Ver ahora");
     watchBtn.innerHTML = `Ver ahora <span aria-hidden="true">▶</span>`;
     watchBtn.dataset.mode = "now";
 }
 
-function setWatchBtnReanudar(watchBtn, movieId, p) {
-    if (!watchBtn) return;
+function setWatchBtnReanudar(watchBtn, movie, p) {
+    if (!watchBtn || !movie?.id || !p) return;
 
-    const season = p.season ?? "";
-    const epNum = p.episode_number ?? "";
-    const epTitle = p.episode_title ?? "";
-    const elapsed = formatElapsed(p.elapsed_seconds ?? p.elapsed ?? 0);
+    const isSeries = movie.category === "series";
+    const ep = Array.isArray(p.episodes) ? (p.episodes[0] || null) : (p.episodes || null);
 
-    const tag = (season && epNum) ? `T${season}E${epNum}` : "";
+    const season = p.season ?? ep?.season ?? "";
+    const epNum = p.episode_number ?? ep?.episode_number ?? "";
+    const epTitle = p.episode_title ?? ep?.title ?? "";
+    const elapsedSeconds = Number(p.progress_seconds ?? p.elapsed_seconds ?? p.elapsed ?? 0);
+    const elapsed = formatElapsed(elapsedSeconds);
+
+    const tag = (season && epNum)
+        ? `T${String(season).padStart(2, "0")}E${String(epNum).padStart(2, "0")}`
+        : "";
+
     const meta = [tag, epTitle].filter(Boolean).join(" ").trim();
 
-    const t = Number(p.elapsed_seconds ?? p.elapsed ?? 0);
-    const tParam = Number.isFinite(t) && t > 0 ? `&t=${encodeURIComponent(String(Math.floor(t)))}` : "";
+    if (isSeries) {
+        watchBtn.href = p.episode_id
+            ? `/watch?series=${encodeURIComponent(movie.id)}&episode=${encodeURIComponent(p.episode_id)}`
+            : `/watch?series=${encodeURIComponent(movie.id)}`;
+    } else {
+        watchBtn.href = `/watch?movie=${encodeURIComponent(movie.id)}`;
+    }
 
-    const epParam = p.episode_id ? `&episode=${encodeURIComponent(p.episode_id)}` : "";
-
-    watchBtn.href = `/watch?movie=${encodeURIComponent(movieId)}${epParam}${tParam}`;
     watchBtn.setAttribute("aria-label", "Reanudar");
     watchBtn.innerHTML =
         `Reanudar <span aria-hidden="true">▶</span>` +
@@ -262,63 +270,82 @@ function getSupabaseClient(ui) {
     return window.supabase.createClient(url, key);
 }
 
-const CONTINUE_WATCHING_SOURCES = [
-    {
-        table: "continue_watching",
-        select: "movie_id, episode_id, season, episode_number, episode_title, elapsed_seconds, updated_at",
-        whereUser: "user_id",
-        whereMovie: "movie_id",
-        order: "updated_at",
-    },
-    {
-        table: "watch_progress",
-        select: "movie_id, episode_id, season, episode_number, episode_title, elapsed_seconds, updated_at",
-        whereUser: "user_id",
-        whereMovie: "movie_id",
-        order: "updated_at",
-    },
-    {
-        table: "profiles_continue_watching",
-        select: "movie_id, episode_id, season, episode_number, episode_title, elapsed_seconds, updated_at",
-        whereUser: "profile_id",
-        whereMovie: "movie_id",
-        order: "updated_at",
-    }
-];
-
 async function fetchContinueWatchingForTitle({ ui, movieId }) {
     const client = getSupabaseClient(ui);
-    if (!client) return null;
+    if (!client || !movieId) return null;
 
     const { data: userData, error: userErr } = await client.auth.getUser();
     if (userErr) return null;
     const userId = userData?.user?.id;
     if (!userId) return null;
 
-    for (const src of CONTINUE_WATCHING_SOURCES) {
-        try {
-            const q = client
-                .from(src.table)
-                .select(src.select)
-                .eq(src.whereUser, userId)
-                .eq(src.whereMovie, movieId)
-                .order(src.order, { ascending: false })
-                .limit(1);
+    try {
+        let { data, error } = await client
+            .from("watch_progress")
+            .select(`
+                movie_id,
+                episode_id,
+                progress_seconds,
+                duration_seconds,
+                updated_at,
+                episodes:episodes!watch_progress_episode_id_fkey (
+                    id,
+                    season,
+                    episode_number,
+                    title
+                )
+            `)
+            .eq("user_id", userId)
+            .eq("movie_id", movieId)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-            const { data, error } = await q.maybeSingle();
-            if (error) continue;
-            if (!data) continue;
+        // fallback si duration_seconds todavía no existe
+        if (error && String(error.message || "").toLowerCase().includes("duration_seconds")) {
+            const retry = await client
+                .from("watch_progress")
+                .select(`
+                    movie_id,
+                    episode_id,
+                    progress_seconds,
+                    updated_at,
+                    episodes:episodes!watch_progress_episode_id_fkey (
+                        id,
+                        season,
+                        episode_number,
+                        title
+                    )
+                `)
+                .eq("user_id", userId)
+                .eq("movie_id", movieId)
+                .order("updated_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-            const t = Number(data.elapsed_seconds ?? data.elapsed ?? 0);
-            if (!Number.isFinite(t) || t <= 0) continue;
-
-            return data;
-        } catch (_) {
-            // si tabla no existe o permisos, seguimos probando
-            continue;
+            data = retry.data;
+            error = retry.error;
         }
+
+        if (error || !data) return null;
+
+        const progressSeconds = Number(data.progress_seconds || 0);
+        if (!Number.isFinite(progressSeconds) || progressSeconds <= 0) return null;
+
+        const ep = Array.isArray(data.episodes) ? (data.episodes[0] || null) : (data.episodes || null);
+
+        return {
+            ...data,
+            episodes: ep,
+            season: ep?.season ?? null,
+            episode_number: ep?.episode_number ?? null,
+            episode_title: ep?.title ?? null,
+            elapsed_seconds: progressSeconds
+        };
+    } catch (e) {
+        console.warn("fetchContinueWatchingForTitle error:", e);
+        return null;
     }
-    return null;
 }
 
 /* ===========================
@@ -345,7 +372,6 @@ function bindMoreCardNavigation(rootEl) {
     rootEl.querySelectorAll("[data-title]").forEach(card => {
         const go = () => {
             const id = card.dataset.title;
-            // ✅ pedido: title en lugar de movie
             window.location.href = `/title?title=${encodeURIComponent(id)}`;
         };
         card.addEventListener("click", go);
@@ -397,7 +423,6 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
    =========================== */
 
 async function main() {
-    // ✅ pedido: title=UUID (y compat con movie=UUID por si queda algún link viejo)
     const movieId = qs("title") || qs("movie");
     if (!movieId) return;
 
@@ -425,14 +450,13 @@ async function main() {
     const episodesSection = el("episodes-section");
     const episodesTitle = el("episodes-title");
     const seasonFilter = el("season-filter");
-    const episodesGrid = el("episodes-grid"); // grid original
+    const episodesGrid = el("episodes-grid");
 
     const extraEl = el("title-extra");
 
     const movie = await api.fetchMovie(movieId);
     if (!movie) return;
 
-    // ✅ <title>{título} · SATV+</title>
     document.title = `${movie.title || "Título"} · SATV+`;
 
     // Nivel X
@@ -449,12 +473,12 @@ async function main() {
     if (trailerBtn) trailerBtn.classList.add("hidden");
 
     // WATCH BUTTON (Ver ahora / Reanudar)
-    setWatchBtnVerAhora(watchBtn, movie.id);
+    setWatchBtnVerAhora(watchBtn, movie);
     try {
         const progress = await fetchContinueWatchingForTitle({ ui, movieId: movie.id });
-        if (progress) setWatchBtnReanudar(watchBtn, movie.id, progress);
+        if (progress) setWatchBtnReanudar(watchBtn, movie, progress);
     } catch (e) {
-        console.warn("No se pudo leer continue watching:", e);
+        console.warn("No se pudo leer watch_progress:", e);
     }
 
     // META
@@ -477,7 +501,7 @@ async function main() {
 
     if (metaEl) metaEl.textContent = [year, right].filter(Boolean).join(" · ");
 
-    // ✅ TE PODRÍA GUSTAR (antes de episodios, como querías)
+    // TE PODRÍA GUSTAR (antes de episodios)
     await renderMoreSection({ api, esc, currentMovieId: movie.id });
 
     // INFO FULL
@@ -543,7 +567,6 @@ async function main() {
     let currentSeason = clampSeason(seasons, seasons[0]); // number | "all"
     let dropdownOpen = false;
 
-    // ---- helpers para ALL: crear/remover títulos + grids hermanos ----
     function removeGeneratedAllNodes() {
         const parent = episodesGrid.parentElement;
         if (!parent) return;
@@ -691,22 +714,18 @@ async function main() {
         const parent = episodesGrid.parentElement;
         if (!parent) return;
 
-        // limpia títulos/grids extras del modo ALL
         removeGeneratedAllNodes();
 
-        // --- ALL: título + grid por temporada (hermanos) ---
         if (currentSeason === "all") {
             grouped.forEach(([s, list], idx) => {
                 const titleNode = createTitleNode(s, list.length);
                 const html = list.map(ep => renderEpisodeCardHtml({ ep, fallbackThumb, esc })).join("");
 
                 if (idx === 0) {
-                    // Primera temporada usa el grid original
                     setSeasonClassOnFirstGrid(s);
                     parent.insertBefore(titleNode, episodesGrid);
                     episodesGrid.innerHTML = html;
                 } else {
-                    // Temporadas siguientes: título + nuevo grid hermano
                     const gridNode = createSiblingGridForSeason(s);
                     gridNode.innerHTML = html;
                     parent.insertBefore(titleNode, null);
@@ -714,12 +733,10 @@ async function main() {
                 }
             });
 
-            // bind en todo el parent (incluye todos los grids)
             bindEpisodeCardNavigation(parent, movie.id);
             return;
         }
 
-        // --- SINGLE: solo grid original ---
         setSeasonClassOnFirstGrid(currentSeason);
 
         const list = grouped.find(([s]) => s === currentSeason)?.[1] || [];
@@ -728,7 +745,6 @@ async function main() {
         bindEpisodeCardNavigation(episodesGrid, movie.id);
     }
 
-    // close outside / ESC
     document.addEventListener("click", (ev) => {
         const dd = seasonFilter.querySelector(".dropdown");
         if (!dd) return;

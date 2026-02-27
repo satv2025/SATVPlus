@@ -244,10 +244,11 @@ async function init() {
   if (userId) {
     try {
       const rows = await fetchContinueWatching(userId, 24);
-      const filtered = rows.filter(r => (r.progress_seconds || 0) >= 5);
+      const filtered = rows.filter(r => (Number(r.progress_seconds) || 0) >= 5);
 
+      // 1 card por título (peli/serie), tomando la fila más reciente
       const grouped = filtered.reduce((acc, r) => {
-        const movieId = r.movies?.id;
+        const movieId = r.movies?.id || r.movie_id;
         if (!movieId) return acc;
 
         if (!acc[movieId] || new Date(r.updated_at) > new Date(acc[movieId].updated_at)) {
@@ -268,16 +269,29 @@ async function init() {
             if (!m) return "";
 
             const ep = r.episodes || null;
+            const isSeries = m.category === "series";
+            const progressSec = Number(r.progress_seconds || 0);
 
-            const href = ep
-              ? `/title?title=${encodeURIComponent(m.id)}&episode=${encodeURIComponent(ep.id)}`
-              : `/title?title=${encodeURIComponent(m.id)}`;
+            // ✅ Ir directo al reproductor (Netflix/HBO style)
+            const href = (isSeries && r.episode_id)
+              ? `/watch?series=${encodeURIComponent(m.id)}&episode=${encodeURIComponent(r.episode_id)}`
+              : (isSeries
+                ? `/watch?series=${encodeURIComponent(m.id)}`
+                : `/watch?movie=${encodeURIComponent(m.id)}`);
 
             const subtitle = ep
-              ? `T${ep.season}E${ep.episode_number} · ${ep.title || ""} · ${formatTime(r.progress_seconds)}`
-              : `Continuar · ${formatTime(r.progress_seconds)}`;
+              ? `T${String(ep.season ?? 0).padStart(2, "0")}E${String(ep.episode_number ?? 0).padStart(2, "0")} · ${ep.title || ""} · ${formatTime(progressSec)}`
+              : `Continuar · ${formatTime(progressSec)}`;
 
-            const pct = Math.min(98, Math.max(2, (r.progress_seconds % 3600) / 36));
+            // progreso real si existe duration_seconds; fallback para película con duration_minutes
+            let totalSec = Number(r.duration_seconds || 0);
+            if (!totalSec && m.category === "movie") {
+              totalSec = Number(m.duration_minutes || 0) * 60;
+            }
+
+            const pct = totalSec > 0
+              ? Math.min(98, Math.max(2, Math.round((progressSec / totalSec) * 100)))
+              : 8;
 
             return cardHtml(m, href, subtitle, pct);
           }).join("")
@@ -288,7 +302,7 @@ async function init() {
         contWrap.classList.add("hidden");
       }
     } catch (e) {
-      console.error(e);
+      console.error("[home] continue watching error:", e);
       contWrap.classList.add("hidden");
     }
   } else {
