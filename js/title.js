@@ -223,7 +223,7 @@ function setWatchBtnReanudar(watchBtn, movie, p) {
     const elapsed = formatElapsed(elapsedSeconds);
 
     const tag = (season && epNum)
-        ? `T${String(season).padStart(2, "0")}E${String(epNum).padStart(2, "0")}`
+        ? `T${String(season).padStart(2)}E${String(epNum).padStart(2)}`
         : "";
 
     const meta = [tag, epTitle].filter(Boolean).join(" ").trim();
