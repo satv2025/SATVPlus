@@ -95,8 +95,8 @@ function setLoading() {
         color:#2563eb;
       ">
         <div style="
-          width:126px;
-          height:126px;
+          width:84px;
+          height:84px;
           border-radius:999px;
           border:3px solid rgba(37,99,235,.22);
           border-top-color:#2563eb;
