@@ -512,7 +512,10 @@ function buildAkiraProps({
 
     recommendations: safeArray(recommendations),
     episodes: safeArray(episodes),
-    recommendationsLabel: "Te podría gustar"
+    recommendationsLabel: "Te podría gustar",
+
+    // opcional, pero explícito
+    playlistMode: true
   };
 
   return props;
@@ -846,6 +849,21 @@ async function boot() {
     if (root) root.innerHTML = "";
 
     window.renderAkiraPlayer(result.props);
+
+    // ✅ Espera a que Akira termine "Preparando reproducción..." y el video quede listo
+    // ✅ Reintenta autoplay al detectar READY (desde watch.html)
+    if (typeof window.waitForAkiraPlaybackReady === "function") {
+      try {
+        const readyInfo = await window.waitForAkiraPlaybackReady({
+          timeoutMs: 30000,
+          autoplayRetry: true
+        });
+        infoLog("[watch] Akira playback ready:", readyInfo);
+      } catch (e) {
+        warnLog("[watch] waitForAkiraPlaybackReady timeout/fallo:", e);
+      }
+    }
+
     inspectMountedVideoLater();
   } catch (err) {
     console.error("[watch] boot error:", err);
