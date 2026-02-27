@@ -389,9 +389,10 @@
         }
         window.__SATV_NATIVE_HLS__ = null;
 
-        // limpiar latches del mount anterior
+        // ✅ limpiar latches y promesa del mount anterior
         window.__SATV_AKIRA_LAST_PREPARING_EVENT__ = null;
         window.__SATV_AKIRA_LAST_READY_EVENT__ = null;
+        window.__SATV_AKIRA_READY_PROMISE__ = null;
 
         if (rootEl) rootEl.innerHTML = "";
       }
@@ -769,14 +770,18 @@
         });
       };
 
-      // Espera READY antes de diagnósticos/fallback
-      async function runDiagnosticsAfterMount(props) {
+      // ✅ Usa la misma promesa de READY del render (no duplica waits)
+      async function runDiagnosticsAfterMount(props, readyPromise) {
         try {
-          await window.waitForAkiraPlaybackReady({
-            timeoutMs: 30000,
-            autoplayRetry: true,
-            requireCustomReadyEvent: true
-          });
+          if (readyPromise && typeof readyPromise.then === "function") {
+            await readyPromise;
+          } else {
+            await window.waitForAkiraPlaybackReady({
+              timeoutMs: 30000,
+              autoplayRetry: true,
+              requireCustomReadyEvent: true
+            });
+          }
         } catch (e) {
           warn("[watch.html] waitForAkiraPlaybackReady timeout/fallo:", e);
         }
@@ -819,13 +824,14 @@
 
       patchNetworkDebug();
 
+      // ✅ AHORA devuelve Promise<readyInfo|null>
       window.renderAkiraPlayer = function renderAkiraPlayer(props) {
         try {
           const api = getAkiraApi();
           if (!api || typeof api.mount !== "function") {
             fail("No se encontró AkiraPlayer.mount en el UMD");
             err("[watch.html] Akira API inválida", window.AkiraPlayer);
-            return;
+            return Promise.resolve(null);
           }
 
           const mergedProps = Object.assign(
@@ -851,7 +857,22 @@
           const mountHandle = api.mount(rootEl, mergedProps);
           window.__SATV_AKIRA_MOUNT__ = mountHandle || null;
 
-          runDiagnosticsAfterMount(mergedProps);
+          const readyPromise =
+            (typeof window.waitForAkiraPlaybackReady === "function")
+              ? window.waitForAkiraPlaybackReady({
+                  timeoutMs: 30000,
+                  autoplayRetry: true,
+                  requireCustomReadyEvent: true
+                })
+              : Promise.resolve({ skipped: true });
+
+          window.__SATV_AKIRA_READY_PROMISE__ = readyPromise;
+
+          // Diagnóstico no bloqueante, pero reutilizando la MISMA promesa de ready
+          void runDiagnosticsAfterMount(mergedProps, readyPromise);
+
+          // ✅ Quien llame puede await renderAkiraPlayer(...)
+          return readyPromise;
         } catch (e) {
           err("[watch.html] renderAkiraPlayer error", e);
           try {
@@ -860,6 +881,9 @@
             err("[watch.html] fallback error", fallbackErr);
             fail("Error montando Akira: " + (e?.message || e));
           }
+
+          // ✅ no rompemos boot() si ya mostramos fallback
+          return Promise.resolve(null);
         }
       };
     })();

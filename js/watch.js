@@ -3,7 +3,7 @@
 // Lee m3u8_url y vtt_url DESDE SUPABASE y los pasa directos al AkiraPlayer.
 //
 // Requiere:
-// - watch.html con window.renderAkiraPlayer(props)
+// - watch.html con window.renderAkiraPlayer(props)  ✅ ahora devuelve Promise readyInfo|null
 // - watch.html con window.waitForAkiraPlaybackReady(opts)
 // - ./supabaseClient.js exportando `supabase`
 // - UMD de Akira cargado
@@ -95,8 +95,8 @@ function setLoading() {
         color:#2563eb;
       ">
         <div style="
-          width:42px;
-          height:42px;
+          width:126px;
+          height:126px;
           border-radius:999px;
           border:3px solid rgba(37,99,235,.22);
           border-top-color:#2563eb;
@@ -849,22 +849,40 @@ async function boot() {
     const root = getRootEl();
     if (root) root.innerHTML = "";
 
-    window.renderAkiraPlayer(result.props);
+    // ✅ render + wait encadenado (si watch.html devuelve Promise de ready)
+    let renderReturnedPromise = false;
+    let readyInfo = null;
 
-    // ✅ Espera READY real emitido por el TSX y reintenta autoplay
-    if (typeof window.waitForAkiraPlaybackReady === "function") {
+    try {
+      const renderResult = window.renderAkiraPlayer(result.props);
+
+      if (renderResult && typeof renderResult.then === "function") {
+        renderReturnedPromise = true;
+        readyInfo = await renderResult;
+      }
+    } catch (e) {
+      // NO cortamos boot acá: watch.html puede haber activado fallback nativo
+      warnLog("[watch] renderAkiraPlayer(wait) timeout/fallo:", e);
+    }
+
+    // Compat/fallback: si por alguna razón el bridge todavía es viejo y no retorna Promise
+    if (!renderReturnedPromise && typeof window.waitForAkiraPlaybackReady === "function") {
       try {
-        const readyInfo = await window.waitForAkiraPlaybackReady({
+        readyInfo = await window.waitForAkiraPlaybackReady({
           timeoutMs: 30000,
           autoplayRetry: true,
           requireCustomReadyEvent: true
         });
-        infoLog("[watch] Akira playback ready:", readyInfo);
       } catch (e) {
         warnLog("[watch] waitForAkiraPlaybackReady timeout/fallo:", e);
       }
     }
 
+    if (readyInfo) {
+      infoLog("[watch] Akira playback ready:", readyInfo);
+    }
+
+    // ✅ corre después del wait (o timeout controlado)
     inspectMountedVideoLater();
   } catch (err) {
     console.error("[watch] boot error:", err);
