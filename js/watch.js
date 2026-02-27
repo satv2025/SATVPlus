@@ -164,7 +164,7 @@ function setError(message, details = "") {
         <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Error al cargar reproducción</div>
         <div style="opacity:.95;margin-bottom:10px;">${escapeHtml(message)}</div>
         ${details
-          ? `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;padding:12px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);font-size:12px;line-height:1.35;opacity:.95;">${escapeHtml(details)}</pre>`
+          ? `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;padding:12px;border-radius:10px;background:rgba(0,0,0);border:1px solid rgba(255,255,255,.08);font-size:12px;line-height:1.35;opacity:.95;">${escapeHtml(details)}</pre>`
           : ""
         }
       </div>
