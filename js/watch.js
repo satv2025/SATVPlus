@@ -98,7 +98,7 @@ function setLoading() {
           width:84px;
           height:84px;
           border-radius:999px;
-          border:3px solid rgba(37,99,235,.22);
+          border:5px solid rgba(37,99,235,.22);
           border-top-color:#2563eb;
           animation:satv-spin .8s linear infinite;
         "></div>
