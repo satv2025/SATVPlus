@@ -74,7 +74,41 @@ function getRootEl() {
   return document.getElementById(ROOT_ID) || document.body;
 }
 
+function showWatchLoadingOverlay(text = "Cargando…") {
+  try {
+    if (typeof window.showWatchLoadingOverlay === "function") {
+      window.showWatchLoadingOverlay(text);
+      return true;
+    }
+  } catch {
+    // noop
+  }
+  return false;
+}
+
+function hideWatchLoadingOverlay() {
+  try {
+    if (typeof window.hideWatchLoadingOverlay === "function") {
+      window.hideWatchLoadingOverlay();
+      return true;
+    }
+  } catch {
+    // noop
+  }
+  return false;
+}
+
 function setLoading() {
+  // ✅ Preferimos overlay global de watch.html (se mantiene hasta "playing")
+  const usedGlobalOverlay = showWatchLoadingOverlay("Cargando…");
+
+  // Fallback por compat (si no existe el overlay global)
+  if (usedGlobalOverlay) {
+    const root = getRootEl();
+    if (root) root.innerHTML = "";
+    return;
+  }
+
   const root = getRootEl();
   root.innerHTML = `
     <div style="
@@ -112,6 +146,8 @@ function setLoading() {
 }
 
 function setError(message, details = "") {
+  hideWatchLoadingOverlay();
+
   const root = getRootEl();
   root.innerHTML = `
     <div style="
@@ -901,6 +937,7 @@ async function boot() {
     if (root) root.innerHTML = "";
 
     // ✅ render + esperar el READY del MISMO mount actual
+    // (y ahora el READY exige que el video esté PLAYING)
     const renderResult = window.renderAkiraPlayer(result.props);
 
     try {
@@ -912,7 +949,12 @@ async function boot() {
 
       window.__SATV_WATCH_LAST_READY_INFO__ = readyInfo;
       infoLog("[watch] Akira playback ready:", readyInfo);
+
+      // ✅ Se oculta cuando ya entró en playing (porque el bridge resuelve recién ahí)
+      hideWatchLoadingOverlay();
     } catch (e) {
+      // OJO: no ocultamos siempre acá, porque si autoplay está bloqueado
+      // el loader debe quedarse hasta que el usuario dé play (evento playing).
       warnLog("[watch] wait READY del player timeout/fallo:", e);
     }
 
@@ -925,16 +967,16 @@ async function boot() {
     const details =
       typeof err === "object" && err
         ? JSON.stringify(
-            {
-              message: err.message,
-              details: err.details || null,
-              hint: err.hint || null,
-              code: err.code || null,
-              stack: err.stack || null
-            },
-            null,
-            2
-          )
+          {
+            message: err.message,
+            details: err.details || null,
+            hint: err.hint || null,
+            code: err.code || null,
+            stack: err.stack || null
+          },
+          null,
+          2
+        )
         : "";
 
     setError(msg, details);
