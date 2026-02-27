@@ -13,7 +13,7 @@
     <main class="container">
         <div class="panel" style="max-width:520px;margin:18px auto;">
             <h2 style="margin:0 0 8px 0;">Confirmar cambio de correo</h2>
-            <p class="muted" style="margin:0 0 12px 0;">
+            <p class="muted" style="margin:0 0 12px 0;" id="status-text">
                 Estamos verificando tu acceso…
             </p>
             <div class="form-actions">
@@ -29,15 +29,25 @@
         import { toast } from "/js/ui.js";
         import { supabase } from "/js/supabaseClient.js";
 
+        const $status = document.getElementById("status-text");
+
+        function setStatus(text) {
+            if ($status) $status.textContent = text;
+        }
+
         function parseHashParams() {
-            const raw = window.location.hash?.startsWith("#") ? window.location.hash.slice(1) : "";
+            const raw = window.location.hash?.startsWith("#")
+                ? window.location.hash.slice(1)
+                : "";
             return new URLSearchParams(raw);
         }
 
         async function ensureSessionFromUrl() {
             const url = new URL(window.location.href);
             const code = url.searchParams.get("code");
+            const hash = parseHashParams();
 
+            // Caso 1: PKCE -> ?code=...
             if (code) {
                 const { error } = await supabase.auth.exchangeCodeForSession(code);
                 if (error) throw error;
@@ -45,47 +55,115 @@
                 url.searchParams.delete("code");
                 window.history.replaceState({}, "", url.toString());
             } else {
-                await supabase.auth.getSession();
+                // Caso 2: tokens en hash -> #access_token=...&refresh_token=...
+                const access_token = hash.get("access_token");
+                const refresh_token = hash.get("refresh_token");
+
+                if (access_token && refresh_token) {
+                    const { error } = await supabase.auth.setSession({
+                        access_token,
+                        refresh_token
+                    });
+                    if (error) throw error;
+
+                    const cleanUrl = new URL(window.location.href);
+                    cleanUrl.hash = "";
+                    window.history.replaceState({}, "", cleanUrl.toString());
+                }
             }
 
-            const { data } = await supabase.auth.getSession();
+            // Refresca/lee sesión final
+            const { data, error } = await supabase.auth.getSession();
+            if (error) throw error;
             return data.session;
         }
 
-        try {
-            const url = new URL(window.location.href);
-            const uid = url.searchParams.get("uid");          // uuid del profiles.id
-            const newEmail = url.searchParams.get("new");     // nuevo correo
+        async function syncProfileEmail(uid, newEmail) {
+            try {
+                const { error } = await supabase
+                    .from("profiles")
+                    .update({ email: newEmail })
+                    .eq("id", uid);
 
-            if (!uid || !newEmail) {
-                toast("Link inválido. Volvé a iniciar el proceso.", "error");
-                setTimeout(() => window.location.href = "/login.html", 1200);
-                throw new Error("Missing uid/new");
+                if (error) {
+                    console.warn("[emailchange-approve] No se pudo sync profiles.email:", error);
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                console.warn("[emailchange-approve] sync profiles.email exception:", e);
+                return false;
             }
-
-            const session = await ensureSessionFromUrl();
-            if (!session?.user?.id) {
-                toast("Link inválido o vencido. Volvé a iniciar el proceso.", "error");
-                setTimeout(() => window.location.href = "/login.html", 1200);
-                throw new Error("No session");
-            }
-
-            // ✅ Verificación fuerte: el uid del link debe ser el user logueado
-            if (session.user.id !== uid) {
-                toast("No coincide el usuario. Abrí el email correcto.", "error");
-                setTimeout(() => window.location.href = "/login.html", 1400);
-                throw new Error("UID mismatch");
-            }
-
-            const { error } = await supabase.auth.updateUser({ email: newEmail });
-            if (error) throw error;
-
-            toast("Te enviamos un email al correo nuevo para confirmar ✅", "success");
-            setTimeout(() => window.location.href = "/login.html", 1500);
-        } catch (err) {
-            console.error(err);
-            toast(err.message || "No se pudo completar el cambio", "error");
         }
+
+        async function main() {
+            try {
+                const url = new URL(window.location.href);
+                const uid = url.searchParams.get("uid");      // auth.users.id / profiles.id
+                const newEmail = url.searchParams.get("new"); // correo nuevo solicitado
+
+                if (!uid || !newEmail) {
+                    setStatus("Link inválido.");
+                    toast("Link inválido. Volvé a iniciar el proceso.", "error");
+                    setTimeout(() => window.location.href = "/login.html", 1200);
+                    throw new Error("Missing uid/new");
+                }
+
+                setStatus("Validando sesión del link…");
+                const session = await ensureSessionFromUrl();
+
+                if (!session?.user?.id) {
+                    setStatus("Link inválido o vencido.");
+                    toast("Link inválido o vencido. Volvé a iniciar el proceso.", "error");
+                    setTimeout(() => window.location.href = "/login.html", 1400);
+                    throw new Error("No session");
+                }
+
+                // Verificación fuerte: el link debe corresponder al usuario autenticado por el token del email
+                if (session.user.id !== uid) {
+                    setStatus("No coincide el usuario del link.");
+                    toast("No coincide el usuario. Abrí el email correcto.", "error");
+                    setTimeout(() => window.location.href = "/login.html", 1600);
+                    throw new Error("UID mismatch");
+                }
+
+                const currentAuthEmail = String(session.user.email || "").toLowerCase();
+                const requestedEmail = String(newEmail).toLowerCase();
+
+                // Si el email ya quedó aplicado en Auth, sincronizamos profiles.email y listo.
+                if (currentAuthEmail === requestedEmail) {
+                    setStatus("Correo confirmado. Sincronizando perfil…");
+                    await syncProfileEmail(uid, requestedEmail);
+
+                    toast("Correo actualizado ✅ Ya podés iniciar sesión con el nuevo correo.", "success");
+                    setStatus("Correo actualizado correctamente.");
+
+                    setTimeout(() => {
+                        window.location.href = `/profile?id=${encodeURIComponent(uid)}`;
+                    }, 1400);
+                    return;
+                }
+
+                // Todavía no quedó aplicado => falta el otro paso de confirmación
+                setStatus("Aprobación registrada. Falta confirmar en el correo nuevo.");
+                toast("✅ Aprobación registrada. Revisá el correo NUEVO para finalizar.", "success");
+
+                setTimeout(() => {
+                    toast("Hasta confirmar en el correo nuevo, seguís entrando con el correo anterior.", "success");
+                }, 500);
+
+                setTimeout(() => {
+                    window.location.href = "/login.html";
+                }, 1800);
+
+            } catch (err) {
+                console.error("[emailchange-approve]", err);
+                setStatus("No se pudo completar la verificación.");
+                toast(err.message || "No se pudo completar el cambio", "error");
+            }
+        }
+
+        await main();
     </script>
 </body>
 

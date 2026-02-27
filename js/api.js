@@ -292,6 +292,32 @@ export async function fetchMoreExcluding(movieId, limit = 24) {
 }
 
 /* =========================================================
+   CREATE MOVIE / EPISODE (UPLOAD ADMIN)
+========================================================= */
+
+export async function createMovie(payload) {
+  const { data, error } = await supabase
+    .from("movies")
+    .insert([payload])
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createEpisode(payload) {
+  const { data, error } = await supabase
+    .from("episodes")
+    .insert([payload])
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/* =========================================================
    EPISODES
    TU COLUMNA ES: "thumbnails-episode" (con guión)
 ========================================================= */

@@ -43,6 +43,16 @@
         .pw-toggle svg {
             display: block;
         }
+
+        .notice {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(37, 99, 235, .08);
+            border: 1px solid rgba(37, 99, 235, .22);
+            font-size: .95rem;
+            line-height: 1.35;
+        }
     </style>
 </head>
 
@@ -56,8 +66,15 @@
             <h2 style="margin:0 0 8px 0;">Recuperar correo</h2>
 
             <p class="muted" style="margin:0 0 12px 0;" id="subtitle">
-                Ingresá tu contraseña y el nuevo correo, se te enviará un email al correo nuevo.
+                Ingresá tu contraseña y el nuevo correo. Luego vas a confirmar el cambio por email.
             </p>
+
+            <div class="notice" id="flow-note">
+                <strong>Paso 1:</strong> aprobás desde tu correo actual. <br>
+                <strong>Paso 2:</strong> confirmás desde el correo nuevo. <br>
+                <strong>Importante:</strong> hasta completar ambos pasos, seguís iniciando sesión con el correo
+                anterior.
+            </div>
 
             <form id="form-emailchange">
                 <label>Nueva dirección de correo</label>
@@ -86,22 +103,21 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
-        // ===== DEBUG GLOBAL =====
+        import { renderNav, renderAuthButtons, toast, $ } from "/js/ui.js";
+        import { CONFIG } from "/js/config.js";
+
         console.log("[emailchange] module start", new Date().toISOString());
 
         window.addEventListener("error", (e) => {
             console.error("[emailchange] window error:", e.error || e.message, e);
         });
+
         window.addEventListener("unhandledrejection", (e) => {
             console.error("[emailchange] unhandledrejection:", e.reason);
         });
-        // ========================
-
-        import { renderNav, renderAuthButtons, toast, $ } from "/js/ui.js";
-        import { CONFIG } from "/js/config.js";
 
         renderNav({ active: "" });
-        renderAuthButtons();
+        await renderAuthButtons();
 
         // ====== GATE emailchange ======
         const url = new URL(window.location.href);
@@ -110,8 +126,16 @@
         const gateTs = Number(sessionStorage.getItem("emailchange_gate_ts") || "0");
         const maxAgeMs = 10 * 60 * 1000;
 
-        const okGate = Boolean(idFromUrl && gate && idFromUrl === gate && (Date.now() - gateTs) < maxAgeMs);
-        if (!okGate) window.location.replace("/login.html");
+        const okGate = Boolean(
+            idFromUrl &&
+            gate &&
+            idFromUrl === gate &&
+            (Date.now() - gateTs) < maxAgeMs
+        );
+
+        if (!okGate) {
+            window.location.replace("/login.html");
+        }
 
         // username desde recovery
         const username = sessionStorage.getItem("recovery_username");
@@ -123,7 +147,7 @@
             setTimeout(() => window.location.href = "/login.html", 1200);
         } else {
             document.getElementById("subtitle").textContent =
-                `Usuario: ${username} ingresá tu contraseña y el nuevo correo, se te enviará un email al correo nuevo.`;
+                `Usuario: ${username}. Ingresá tu contraseña y el correo nuevo para iniciar el cambio.`;
         }
 
         function invalidateEmailChangeGate() {
@@ -161,37 +185,48 @@
         }
         setupPasswordToggles();
 
-        // ✅ endpoint real (evita CORS del custom domain)
+        // Edge Function
         const FN_URL = "https://eksgaqgakzwvqctekkgj.supabase.co/functions/v1/request-email-change";
 
         async function callFn(payload) {
-            console.log("[emailchange] calling function:", payload);
+            console.log("[emailchange] calling function:", { ...payload, password: "***" });
+
+            const headers = {
+                "Content-Type": "application/json",
+                "apikey": CONFIG.SUPABASE_ANON_KEY,
+                "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+            };
+
+            // Debug opcional en local
+            if (
+                location.hostname === "localhost" ||
+                location.hostname === "127.0.0.1"
+            ) {
+                headers["x-debug"] = "1";
+            }
 
             const res = await fetch(FN_URL, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "apikey": CONFIG.SUPABASE_ANON_KEY,
-                    "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
-                    // ✅ debug opcional para que la function te devuelva detalles
-                },
+                headers,
                 body: JSON.stringify(payload),
             });
 
             const txt = await res.text();
             console.log("[emailchange] function http:", res.status, txt);
 
+            let parsed = null;
+            try { parsed = JSON.parse(txt); } catch { }
+
             if (!res.ok) {
-                console.error("Edge HTTP", res.status, txt);
-                throw new Error(`Edge Function error (${res.status})`);
+                const msg = parsed?.error || parsed?.message || `Edge Function error (${res.status})`;
+                throw new Error(msg);
             }
 
-            try { return JSON.parse(txt); } catch { return { ok: true, raw: txt }; }
+            return parsed ?? { ok: true, raw: txt };
         }
 
         document.getElementById("form-emailchange").addEventListener("submit", async (e) => {
             e.preventDefault();
-            console.log("[emailchange] submit");
 
             const e1 = $("#email").value.trim().toLowerCase();
             const e2 = $("#email2").value.trim().toLowerCase();
@@ -218,17 +253,22 @@
 
                 invalidateEmailChangeGate();
 
-                // neutro (anti-enumeración)
-                toast("Solicitud recibida ✅ Revisá tu correo actual y el nuevo.", "success");
+                toast("Solicitud iniciada ✅ Revisá tu correo ACTUAL para aprobar el cambio.", "success");
 
-                // ✅ Solo limpiamos si la función confirma que ejecutó updateUser (modo debug)
-                if (resp?.debug?.did_update_email === true) {
-                    $("#email").value = "";
-                    $("#email2").value = "";
-                    $("#password").value = "";
-                } else {
-                    console.warn("[emailchange] did_update_email is not true; keeping inputs for retry.");
+                const note = document.getElementById("flow-note");
+                if (note) {
+                    note.innerHTML = `
+            <strong>Solicitud enviada ✅</strong><br>
+            1) Abrí el email en tu <strong>correo actual</strong> y aprobá el cambio.<br>
+            2) Después revisá el <strong>correo nuevo</strong> para confirmar.<br>
+            <strong>Hasta completar ambos pasos, seguís entrando con el correo anterior.</strong>
+          `;
                 }
+
+                $("#email").value = "";
+                $("#email2").value = "";
+                $("#password").value = "";
+
             } catch (err) {
                 console.error("[emailchange] error:", err);
                 toast(err.message || "No se pudo iniciar el proceso", "error");

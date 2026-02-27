@@ -569,6 +569,7 @@ span.meta-dropitem {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
 
     color: rgba(255, 255, 255, .96);
@@ -583,6 +584,7 @@ span.meta-dropitem {
     display: block !important;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
     min-height: 0;
 }
@@ -672,6 +674,7 @@ body:not(.is-nivelx) .episode-sub {
 
     .episode-sub {
         -webkit-line-clamp: 3;
+        line-clamp: 3;
     }
 
     .section-title {
@@ -711,6 +714,7 @@ body:not(.is-nivelx) .episode-sub {
 
     .episode-sub {
         -webkit-line-clamp: 3;
+        line-clamp: 3;
     }
 
     .dropdown-menu {
@@ -736,6 +740,7 @@ body:not(.is-nivelx) .episode-sub {
 
     .episode-sub {
         -webkit-line-clamp: 4;
+        line-clamp: 4;
     }
 }
 
