@@ -74,7 +74,7 @@ function getRootEl() {
   return document.getElementById(ROOT_ID) || document.body;
 }
 
-function showWatchLoadingOverlay(text = "Cargando…") {
+function showWatchLoadingOverlay(text = "") {
   try {
     if (typeof window.showWatchLoadingOverlay === "function") {
       window.showWatchLoadingOverlay(text);
@@ -100,7 +100,7 @@ function hideWatchLoadingOverlay() {
 
 function setLoading() {
   // ✅ Preferimos overlay global de watch.html (se mantiene hasta "playing")
-  const usedGlobalOverlay = showWatchLoadingOverlay("Cargando…");
+  const usedGlobalOverlay = showWatchLoadingOverlay("");
 
   // Fallback por compat (si no existe el overlay global)
   if (usedGlobalOverlay) {
@@ -132,11 +132,11 @@ function setLoading() {
           width:84px;
           height:84px;
           border-radius:999px;
-          border:5px solid rgba(37,99,235,.22);
+          border:5px solid rgba(37, 100, 235, 0);
           border-top-color:#2563eb;
           animation:satv-spin .8s linear infinite;
         "></div>
-        <div style="font-size:12px;opacity:.9;">Cargando…</div>
+        <div style="font-size:12px;opacity:.9;"></div>
       </div>
     </div>
     <style>
