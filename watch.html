@@ -370,7 +370,22 @@
         }
       }
 
+      function nextMountSeq() {
+        const n = Number(window.__SATV_AKIRA_MOUNT_SEQ__ || 0) + 1;
+        window.__SATV_AKIRA_MOUNT_SEQ__ = n;
+        return n;
+      }
+
+      function isCurrentMountSeq(seq) {
+        return Number(window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ || 0) === Number(seq);
+      }
+
       function cleanupPrevious() {
+        // Invalida cualquier readyPromise previo (stale)
+        window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ = Number(window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ || 0) + 1;
+        window.__SATV_AKIRA_READY_PROMISE__ = null;
+        window.__SATV_AKIRA_LAST_READY_INFO__ = null;
+
         try {
           if (window.__SATV_AKIRA_MOUNT__ && typeof window.__SATV_AKIRA_MOUNT__.unmount === "function") {
             window.__SATV_AKIRA_MOUNT__.unmount();
@@ -389,10 +404,9 @@
         }
         window.__SATV_NATIVE_HLS__ = null;
 
-        // ✅ limpiar latches y promesa del mount anterior
+        // limpiar latches del mount anterior
         window.__SATV_AKIRA_LAST_PREPARING_EVENT__ = null;
         window.__SATV_AKIRA_LAST_READY_EVENT__ = null;
-        window.__SATV_AKIRA_READY_PROMISE__ = null;
 
         if (rootEl) rootEl.innerHTML = "";
       }
@@ -662,6 +676,9 @@
             const videoPrepared = isVideoPlaybackReady(video);
             if (!videoPrepared) return false;
 
+            // ✅ Nunca resolver si todavía está visible el overlay de "Preparando reproducción..."
+            if (isAkiraPreparingOverlayVisible()) return false;
+
             if (options.requireCustomReadyEvent) {
               if (!sawReadyEvent) return false;
 
@@ -671,7 +688,6 @@
               return true;
             }
 
-            if (isAkiraPreparingOverlayVisible()) return false;
             return true;
           }
 
@@ -770,33 +786,50 @@
         });
       };
 
-      // ✅ Usa la misma promesa de READY del render (no duplica waits)
-      async function runDiagnosticsAfterMount(props, readyPromise) {
+      // ✅ Helper: reutiliza la promesa del mount actual (si existe)
+      window.waitForCurrentAkiraPlaybackReady = function waitForCurrentAkiraPlaybackReady(opts) {
+        const p = window.__SATV_AKIRA_READY_PROMISE__;
+        if (p && typeof p.then === "function") return p;
+        return window.waitForAkiraPlaybackReady(opts);
+      };
+
+      // Espera READY antes de diagnósticos/fallback (usando la MISMA promesa del mount actual)
+      async function runDiagnosticsAfterMount(props, mountSeq, readyPromise) {
+        let readyOk = false;
+
         try {
-          if (readyPromise && typeof readyPromise.then === "function") {
-            await readyPromise;
-          } else {
-            await window.waitForAkiraPlaybackReady({
-              timeoutMs: 30000,
-              autoplayRetry: true,
-              requireCustomReadyEvent: true
-            });
-          }
+          const info = await (readyPromise && typeof readyPromise.then === "function"
+            ? readyPromise
+            : window.waitForAkiraPlaybackReady({
+                timeoutMs: 30000,
+                autoplayRetry: true,
+                requireCustomReadyEvent: true
+              })
+          );
+
+          if (!isCurrentMountSeq(mountSeq)) return;
+          readyOk = true;
+          log("[watch.html] runDiagnosticsAfterMount ready OK", info);
         } catch (e) {
+          if (!isCurrentMountSeq(mountSeq)) return;
           warn("[watch.html] waitForAkiraPlaybackReady timeout/fallo:", e);
         }
 
         setTimeout(() => {
+          if (!isCurrentMountSeq(mountSeq)) return;
+
           const video = rootEl.querySelector("video");
           if (!video) {
             warn("[watch.html] No apareció <video> tras mount (post-ready +2s)");
             return;
           }
           attachVideoDebug(video, "akira");
-          snapshotVideo(video, "akira-post-ready+t2s");
+          snapshotVideo(video, readyOk ? "akira-post-ready+t2s" : "akira-post-waitfail+t2s");
         }, 2000);
 
         setTimeout(() => {
+          if (!isCurrentMountSeq(mountSeq)) return;
+
           const video = rootEl.querySelector("video");
           if (!video) {
             warn("[watch.html] No apareció <video> tras mount (post-ready +6s). Fallback nativo.");
@@ -804,7 +837,7 @@
             return;
           }
 
-          const snap = snapshotVideo(video, "akira-post-ready+t6s");
+          const snap = snapshotVideo(video, readyOk ? "akira-post-ready+t6s" : "akira-post-waitfail+t6s");
           const stuckNoSource = snap.readyState === 0 && snap.networkState === 3 && !!(snap.currentSrc || snap.srcAttr);
 
           if (stuckNoSource) {
@@ -824,14 +857,13 @@
 
       patchNetworkDebug();
 
-      // ✅ AHORA devuelve Promise<readyInfo|null>
       window.renderAkiraPlayer = function renderAkiraPlayer(props) {
         try {
           const api = getAkiraApi();
           if (!api || typeof api.mount !== "function") {
             fail("No se encontró AkiraPlayer.mount en el UMD");
             err("[watch.html] Akira API inválida", window.AkiraPlayer);
-            return Promise.resolve(null);
+            return { mountHandle: null, readyPromise: Promise.reject(new Error("Akira API inválida")), mountSeq: null };
           }
 
           const mergedProps = Object.assign(
@@ -854,36 +886,52 @@
 
           cleanupPrevious();
 
+          const mountSeq = nextMountSeq();
+          window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ = mountSeq;
+
           const mountHandle = api.mount(rootEl, mergedProps);
           window.__SATV_AKIRA_MOUNT__ = mountHandle || null;
 
-          const readyPromise =
-            (typeof window.waitForAkiraPlaybackReady === "function")
-              ? window.waitForAkiraPlaybackReady({
-                  timeoutMs: 30000,
-                  autoplayRetry: true,
-                  requireCustomReadyEvent: true
-                })
-              : Promise.resolve({ skipped: true });
+          // ✅ Una sola promesa de ready por mount (reutilizable por watch.js)
+          const readyPromise = Promise.resolve().then(async () => {
+            const info = await window.waitForAkiraPlaybackReady({
+              timeoutMs: 30000,
+              autoplayRetry: true,
+              requireCustomReadyEvent: true
+            });
+
+            if (!isCurrentMountSeq(mountSeq)) {
+              throw new Error("READY de mount viejo ignorado (stale mount)");
+            }
+
+            window.__SATV_AKIRA_LAST_READY_INFO__ = info;
+            return info;
+          });
 
           window.__SATV_AKIRA_READY_PROMISE__ = readyPromise;
 
-          // Diagnóstico no bloqueante, pero reutilizando la MISMA promesa de ready
-          void runDiagnosticsAfterMount(mergedProps, readyPromise);
+          // Diagnóstico encadenado a la misma promesa
+          runDiagnosticsAfterMount(mergedProps, mountSeq, readyPromise);
 
-          // ✅ Quien llame puede await renderAkiraPlayer(...)
-          return readyPromise;
+          return {
+            mountHandle: window.__SATV_AKIRA_MOUNT__,
+            readyPromise,
+            mountSeq
+          };
         } catch (e) {
           err("[watch.html] renderAkiraPlayer error", e);
+          window.__SATV_AKIRA_READY_PROMISE__ = Promise.reject(e);
           try {
             renderNativeFallback(props || {}, "Excepción montando Akira: " + (e?.message || e));
           } catch (fallbackErr) {
             err("[watch.html] fallback error", fallbackErr);
             fail("Error montando Akira: " + (e?.message || e));
           }
-
-          // ✅ no rompemos boot() si ya mostramos fallback
-          return Promise.resolve(null);
+          return {
+            mountHandle: null,
+            readyPromise: window.__SATV_AKIRA_READY_PROMISE__,
+            mountSeq: null
+          };
         }
       };
     })();

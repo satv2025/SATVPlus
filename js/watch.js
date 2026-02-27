@@ -3,8 +3,8 @@
 // Lee m3u8_url y vtt_url DESDE SUPABASE y los pasa directos al AkiraPlayer.
 //
 // Requiere:
-// - watch.html con window.renderAkiraPlayer(props)  ✅ ahora devuelve Promise readyInfo|null
-// - watch.html con window.waitForAkiraPlaybackReady(opts)
+// - watch.html con window.renderAkiraPlayer(props)
+// - watch.html con window.waitForAkiraPlaybackReady(opts) o window.waitForCurrentAkiraPlaybackReady(opts)
 // - ./supabaseClient.js exportando `supabase`
 // - UMD de Akira cargado
 
@@ -253,6 +253,57 @@ function withTimeout(promise, ms, label = "Operación") {
     timer = setTimeout(() => reject(new Error(`${label} excedió ${ms}ms`)), ms);
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/* ============================================================
+ * Render/Ready bridge helpers
+ * ============================================================ */
+function isPromiseLike(v) {
+  return !!v && (typeof v === "object" || typeof v === "function") && typeof v.then === "function";
+}
+
+/**
+ * Espera el READY del player del mount actual.
+ * Prioridad:
+ * 1) renderAkiraPlayer(...).readyPromise (nuevo bridge)
+ * 2) renderAkiraPlayer(...) devuelve Promise (compat)
+ * 3) window.waitForCurrentAkiraPlaybackReady (nuevo bridge global)
+ * 4) window.waitForAkiraPlaybackReady (legacy)
+ */
+async function awaitAkiraReadyAfterRender(renderResult, opts = {}) {
+  const waitOpts = {
+    timeoutMs: 45000,
+    autoplayRetry: true,
+    requireCustomReadyEvent: true,
+    ...opts
+  };
+
+  let readyPromise = null;
+
+  // Nuevo bridge: objeto con readyPromise
+  if (renderResult && isPromiseLike(renderResult.readyPromise)) {
+    readyPromise = renderResult.readyPromise;
+  }
+  // Compat: renderAkiraPlayer devuelve Promise directa
+  else if (isPromiseLike(renderResult)) {
+    readyPromise = renderResult;
+  }
+  // Nuevo helper global del bridge
+  else if (typeof window.waitForCurrentAkiraPlaybackReady === "function") {
+    readyPromise = window.waitForCurrentAkiraPlaybackReady(waitOpts);
+  }
+  // Legacy helper
+  else if (typeof window.waitForAkiraPlaybackReady === "function") {
+    readyPromise = window.waitForAkiraPlaybackReady(waitOpts);
+  }
+
+  if (!readyPromise) {
+    warnLog("[watch] No hay helper de wait READY disponible en watch.html");
+    return null;
+  }
+
+  const info = await readyPromise;
+  return info || null;
 }
 
 /* ============================================================
@@ -849,40 +900,23 @@ async function boot() {
     const root = getRootEl();
     if (root) root.innerHTML = "";
 
-    // ✅ render + wait encadenado (si watch.html devuelve Promise de ready)
-    let renderReturnedPromise = false;
-    let readyInfo = null;
+    // ✅ render + esperar el READY del MISMO mount actual
+    const renderResult = window.renderAkiraPlayer(result.props);
 
     try {
-      const renderResult = window.renderAkiraPlayer(result.props);
+      const readyInfo = await awaitAkiraReadyAfterRender(renderResult, {
+        timeoutMs: 45000,
+        autoplayRetry: true,
+        requireCustomReadyEvent: true
+      });
 
-      if (renderResult && typeof renderResult.then === "function") {
-        renderReturnedPromise = true;
-        readyInfo = await renderResult;
-      }
-    } catch (e) {
-      // NO cortamos boot acá: watch.html puede haber activado fallback nativo
-      warnLog("[watch] renderAkiraPlayer(wait) timeout/fallo:", e);
-    }
-
-    // Compat/fallback: si por alguna razón el bridge todavía es viejo y no retorna Promise
-    if (!renderReturnedPromise && typeof window.waitForAkiraPlaybackReady === "function") {
-      try {
-        readyInfo = await window.waitForAkiraPlaybackReady({
-          timeoutMs: 30000,
-          autoplayRetry: true,
-          requireCustomReadyEvent: true
-        });
-      } catch (e) {
-        warnLog("[watch] waitForAkiraPlaybackReady timeout/fallo:", e);
-      }
-    }
-
-    if (readyInfo) {
+      window.__SATV_WATCH_LAST_READY_INFO__ = readyInfo;
       infoLog("[watch] Akira playback ready:", readyInfo);
+    } catch (e) {
+      warnLog("[watch] wait READY del player timeout/fallo:", e);
     }
 
-    // ✅ corre después del wait (o timeout controlado)
+    // corre después del intento de wait (éxito o fallo), para que el timing sea relativo al ready
     inspectMountedVideoLater();
   } catch (err) {
     console.error("[watch] boot error:", err);
