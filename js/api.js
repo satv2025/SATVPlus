@@ -42,6 +42,69 @@ function normalizeMovieMeta(row) {
 }
 
 /* =========================================================
+   PROFILES (tabla public.profiles)
+========================================================= */
+
+export async function fetchProfile(userId) {
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(`
+      id,
+      email,
+      full_name,
+      username,
+      phone,
+      avatar_url,
+      created_at
+    `)
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+// (Opcional) útil para editar perfil más adelante
+export async function updateMyProfile(userId, patch = {}) {
+  if (!userId) throw new Error("Falta userId");
+
+  const allowed = {
+    email: patch.email ?? undefined,
+    full_name: patch.full_name ?? undefined,
+    username: patch.username ?? undefined,
+    phone: patch.phone ?? undefined,
+    avatar_url: patch.avatar_url ?? undefined,
+  };
+
+  // Sacar undefined
+  const clean = Object.fromEntries(
+    Object.entries(allowed).filter(([, v]) => v !== undefined)
+  );
+
+  if (Object.keys(clean).length === 0) return null;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update(clean)
+    .eq("id", userId)
+    .select(`
+      id,
+      email,
+      full_name,
+      username,
+      phone,
+      avatar_url,
+      created_at
+    `)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+/* =========================================================
    CONTINUE WATCHING (desde watch_progress)
 ========================================================= */
 

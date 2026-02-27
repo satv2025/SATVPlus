@@ -185,7 +185,6 @@ img.brand-logo,
 
 .btn.ghost {
   background: rgba(255, 255, 255, .06);
-  border: 1px solid var(--line);
 }
 
 .btn:hover {

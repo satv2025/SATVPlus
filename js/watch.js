@@ -101,7 +101,7 @@ function setLoading() {
           border-top-color:#2563eb;
           animation:satv-spin .8s linear infinite;
         "></div>
-        <div style="font-size:12px;opacity:.9;">Cargando reproducción…</div>
+        <div style="font-size:12px;opacity:.9;">Cargando…</div>
       </div>
     </div>
     <style>

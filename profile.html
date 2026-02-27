@@ -12,15 +12,22 @@
 </head>
 
 <body>
-  <header class=" topnav">
+  <header class="topnav">
     <div class="nav-inner container" id="topnav"></div>
   </header>
 
   <main class="container">
     <div class="panel" style="max-width:720px;margin:18px auto;">
-      <h2 style="margin:0 0 12px 0;">Tu perfil</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <h2 style="margin:0;">Tu perfil</h2>
 
-      <div class="panel">
+        <!-- NUEVO: botón Editar datos -->
+        <a id="btn-edit-profile" href="#" class="btn" style="display:none;" aria-label="Editar datos del perfil">
+          Editar datos
+        </a>
+      </div>
+
+      <div class="panel" style="margin-top:12px;">
         <div class="muted">Email</div>
         <div id="p-email" style="font-weight:900"></div>
         <hr class="hr" />
@@ -47,11 +54,15 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module" src="/js/profile.js"></script>
+
+  <!-- OJO: este bloque lo podés quitar porque profile.js ya renderiza nav/auth -->
+  <!--
   <script type="module">
     import { renderNav, renderAuthButtons } from "/js/ui.js";
     renderNav({ active: "profile" });
     renderAuthButtons();
   </script>
+  -->
 </body>
 
 </html>
