@@ -1,5 +1,5 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import "@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "@supabase/supabase-js";
 
 const ALLOWED_ORIGINS = new Set<string>([
   "https://satvplus.com.ar",
@@ -15,7 +15,8 @@ function corsHeaders(origin: string | null): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-debug",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-debug",
     "Access-Control-Allow-Credentials": "true",
     "Vary": "Origin",
   };
@@ -127,7 +128,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 2) Email actual desde auth.users (source of truth del login)
-    const { data: userRes, error: userErr } = await admin.auth.admin.getUserById(String(profile.id));
+    const { data: userRes, error: userErr } = await admin.auth.admin.getUserById(
+      String(profile.id),
+    );
     const currentEmail = userRes?.user?.email?.toLowerCase?.() ?? null;
 
     debug.currentEmailFound = Boolean(currentEmail);
@@ -137,6 +140,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return debugOn ? ok({ debug }) : ok();
     }
 
+    // Evita pedir cambio al mismo correo
     if (currentEmail === newEmail) {
       debug.sameEmail = true;
       return debugOn ? ok({ debug }) : ok();
@@ -170,7 +174,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const { error: updErr } = await client.auth.updateUser(
       { email: newEmail },
-      { emailRedirectTo: approveUrl.toString() }
+      { emailRedirectTo: approveUrl.toString() },
     );
 
     debug.did_update_email_request = !updErr;
@@ -178,7 +182,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     debug.redirectTo = approveUrl.toString();
 
     return debugOn ? ok({ debug }) : ok();
-
   } catch (e) {
     debug.exception = String((e as Error)?.message || e);
     return debugOn ? ok({ debug }) : ok();
