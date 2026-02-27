@@ -1,3 +1,4 @@
+// /js/home.js
 import {
   renderNav,
   renderAuthButtons,
@@ -11,7 +12,6 @@ import {
 
 import { getSession, requireAuthOrRedirect } from "./auth.js";
 import { fetchContinueWatching, fetchLatest, fetchByCategory } from "./api.js";
-import { CONFIG } from "./config.js";
 
 /* =========================================================
    ENSURE CAROUSEL WRAPPER
@@ -203,8 +203,8 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     }, 450);
   }
 
-  btnRight.onclick = () => handleArrow(1);
-  btnLeft.onclick = () => handleArrow(-1);
+  if (btnRight) btnRight.onclick = () => handleArrow(1);
+  if (btnLeft) btnLeft.onclick = () => handleArrow(-1);
 }
 
 /* =========================================================
@@ -215,6 +215,52 @@ function setRow(el, html) {
   if (!el) return;
   resetCarouselState(el);
   el.innerHTML = html;
+}
+
+/* =========================================================
+   CONTINUE WATCHING HELPERS
+   ========================================================= */
+
+function buildContinueHref(row) {
+  const m = row?.movies;
+  if (!m?.id) return "#";
+
+  // ✅ Ir a la ficha del título (NO directo al reproductor)
+  const episodeId = row?.episode_id || row?.episodes?.id || null;
+
+  return episodeId
+    ? `/title?title=${encodeURIComponent(m.id)}&episode=${encodeURIComponent(episodeId)}`
+    : `/title?title=${encodeURIComponent(m.id)}`;
+}
+
+function buildContinueSubtitle(row) {
+  const ep = row?.episodes || null;
+  const progressSec = Number(row?.progress_seconds || 0);
+
+  if (ep) {
+    return `T${String(ep.season ?? 0).padStart(2, "0")}E${String(ep.episode_number ?? 0).padStart(2, "0")} · ${ep.title || ""} · ${formatTime(progressSec)}`;
+  }
+
+  return `Continuar · ${formatTime(progressSec)}`;
+}
+
+function buildContinuePct(row) {
+  const m = row?.movies || null;
+  const progressSec = Number(row?.progress_seconds || 0);
+
+  let totalSec = Number(row?.duration_seconds || 0);
+
+  // fallback razonable para películas si no existe duration_seconds
+  if (!totalSec && m?.category === "movie") {
+    totalSec = Number(m?.duration_minutes || 0) * 60;
+  }
+
+  if (totalSec > 0) {
+    return Math.min(98, Math.max(2, Math.round((progressSec / totalSec) * 100)));
+  }
+
+  // sin duración -> barra mínima visible
+  return 8;
 }
 
 /* =========================================================
@@ -246,7 +292,7 @@ async function init() {
       const rows = await fetchContinueWatching(userId, 24);
       const filtered = rows.filter(r => (Number(r.progress_seconds) || 0) >= 5);
 
-      // 1 card por título (peli/serie), tomando la fila más reciente
+      // ✅ 1 card por título (serie/peli), usando la fila más reciente
       const grouped = filtered.reduce((acc, r) => {
         const movieId = r.movies?.id || r.movie_id;
         if (!movieId) return acc;
@@ -268,30 +314,9 @@ async function init() {
             const m = r.movies;
             if (!m) return "";
 
-            const ep = r.episodes || null;
-            const isSeries = m.category === "series";
-            const progressSec = Number(r.progress_seconds || 0);
-
-            // ✅ Ir directo al reproductor (Netflix/HBO style)
-            const href = (isSeries && r.episode_id)
-              ? `/watch?series=${encodeURIComponent(m.id)}&episode=${encodeURIComponent(r.episode_id)}`
-              : (isSeries
-                ? `/watch?series=${encodeURIComponent(m.id)}`
-                : `/watch?movie=${encodeURIComponent(m.id)}`);
-
-            const subtitle = ep
-              ? `T${String(ep.season ?? 0).padStart(2, "0")}E${String(ep.episode_number ?? 0).padStart(2, "0")} · ${ep.title || ""} · ${formatTime(progressSec)}`
-              : `Continuar · ${formatTime(progressSec)}`;
-
-            // progreso real si existe duration_seconds; fallback para película con duration_minutes
-            let totalSec = Number(r.duration_seconds || 0);
-            if (!totalSec && m.category === "movie") {
-              totalSec = Number(m.duration_minutes || 0) * 60;
-            }
-
-            const pct = totalSec > 0
-              ? Math.min(98, Math.max(2, Math.round((progressSec / totalSec) * 100)))
-              : 8;
+            const href = buildContinueHref(r);
+            const subtitle = buildContinueSubtitle(r);
+            const pct = buildContinuePct(r);
 
             return cardHtml(m, href, subtitle, pct);
           }).join("")
