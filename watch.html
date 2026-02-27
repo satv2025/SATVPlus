@@ -225,7 +225,7 @@
       function setWatchLoadingOverlayVisible(visible, text) {
         if (!watchLoadingOverlay) return;
         if (typeof text === "string" && watchLoadingOverlayText) {
-          watchLoadingOverlayText.textContent = text || "Cargando…";
+          watchLoadingOverlayText.textContent = text || "";
         }
         watchLoadingOverlay.classList.toggle("visible", !!visible);
         watchLoadingOverlay.setAttribute("aria-hidden", visible ? "false" : "true");
