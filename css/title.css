@@ -530,7 +530,7 @@ span.meta-dropitem {
 }
 
 .episode-body {
-    position: absolute;
+    position: relative;
     left: 0;
     right: 0;
     bottom: 0;
@@ -543,6 +543,7 @@ span.meta-dropitem {
     overflow: hidden;
     isolation: isolate;
     background: #00000000 !important;
+    margin-top: -0.34em;
 }
 
 .episode-body::before {
