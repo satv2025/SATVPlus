@@ -14,7 +14,7 @@
 :root {
     --ep-body-h: 92px;
     --ep-pad-x: 10px;
-    --ep-pad-y: 10px;
+    --ep-pad-y: 18px;
     --ep-gap: 12px;
     --ep-radius: .25em;
     --line: rgba(255, 255, 255, .12);
@@ -491,22 +491,19 @@ span.meta-dropitem {
 
 .episode-card {
     position: relative;
-    overflow: hidden;
-    background: #1A1D25;
+    overflow: visible;
+    background: #1A1D2500;
     border-radius: var(--ep-radius);
     border: none;
     outline: none;
     cursor: pointer;
     z-index: 0;
-
     transition: background .2s ease, scale .2s ease, transform .2s ease, border-color .2s ease;
     min-height: 0;
+    height: 15.5em;
 }
 
 .episode-card:hover {
-    background: #454d62;
-    scale: 1.04;
-    transform: scale(1.04);
     z-index: 2;
 }
 
@@ -517,6 +514,19 @@ span.meta-dropitem {
     object-fit: cover;
     height: auto;
     background: #0f1118;
+    transform: scale(1);
+    transform-origin: center;
+    /* crece hacia afuera (arriba + costados) */
+    transition: transform 220ms ease;
+    position: relative;
+    z-index: 1;
+    border-radius: .25em;
+}
+
+.episode-card:hover .episode-thumb,
+.episode-card:focus-visible .episode-thumb {
+    scale: 1.04;
+    transform: scale(1.04);
 }
 
 .episode-body {
@@ -526,24 +536,20 @@ span.meta-dropitem {
     bottom: 0;
     height: var(--ep-body-h);
     padding: var(--ep-pad-y) var(--ep-pad-x);
-
-    display: flex;
+    display: block;
     flex-direction: column;
     justify-content: flex-end;
     gap: 6px;
-
     overflow: hidden;
     isolation: isolate;
+    background: #00000000 !important;
 }
 
 .episode-body::before {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top,
-            rgba(9, 19, 58, .82) 0%,
-            rgba(9, 19, 58, .55) 55%,
-            rgba(9, 19, 58, 0) 100%);
+    background: #00000000;
     z-index: 0;
     pointer-events: none;
 }
@@ -574,12 +580,10 @@ span.meta-dropitem {
     color: rgba(243, 244, 246, .88);
     font-size: 12px;
     line-height: 1.2;
-
-    display: -webkit-box;
+    display: block !important;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     overflow: hidden;
-
     min-height: 0;
 }
 
