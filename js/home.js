@@ -238,7 +238,7 @@ function buildContinueSubtitle(row) {
   const progressSec = Number(row?.progress_seconds || 0);
 
   if (ep) {
-    return `T${String(ep.season ?? 0).padStart(2, "0")}E${String(ep.episode_number ?? 0).padStart(2, "0")} · ${ep.title || ""} · ${formatTime(progressSec)}`;
+    return `T${Number(ep.season ?? 0)}E${Number(ep.episode_number ?? 0)} · ${ep.title || ""} · ${formatTime(progressSec)}`;
   }
 
   return `Continuar · ${formatTime(progressSec)}`;

@@ -222,8 +222,11 @@ function setWatchBtnReanudar(watchBtn, movie, p) {
     const elapsedSeconds = Number(p.progress_seconds ?? p.elapsed_seconds ?? p.elapsed ?? 0);
     const elapsed = formatElapsed(elapsedSeconds);
 
-    const tag = (season && epNum)
-        ? `T${String(season).padStart(2)}E${String(epNum).padStart(2)}`
+    const hasSeason = season !== "" && season != null;
+    const hasEpisode = epNum !== "" && epNum != null;
+
+    const tag = (hasSeason && hasEpisode)
+        ? `T${Number(season)}E${Number(epNum)}`
         : "";
 
     const meta = [tag, epTitle].filter(Boolean).join(" ").trim();
