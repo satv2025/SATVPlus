@@ -6,6 +6,7 @@
 // ✅ Recorte automático inteligente (sin listas manuales)
 // ✅ Mi Lista REAL en Supabase (my_list: profile_id + content_id + added_at)
 // ✅ Fallback localStorage si no hay sesión / falla Supabase
+// ✅ Topnav agrega "Mi Lista" a la derecha de "Inicio" con /mylist?list=<user>&user=<user>
 
 function qs(key) { return new URLSearchParams(window.location.search).get(key); }
 function el(id) { return document.getElementById(id); }
@@ -486,6 +487,54 @@ async function getMyListAuthContext() {
     }
 }
 
+// ✅ URL Mi Lista (igual criterio que home.js)
+function buildMyListUrl(userId) {
+    if (!userId) return "/mylist";
+    const q = new URLSearchParams({
+        list: String(userId), // asumimos 1 lista por usuario
+        user: String(userId)
+    });
+    return `/mylist?${q.toString()}`;
+}
+
+// ✅ Inserta "Mi Lista" a la derecha de "Inicio" en topnav
+function ensureMyListNavLink(userId) {
+    const topnav = document.getElementById("topnav");
+    if (!topnav) return;
+
+    const navLeft = topnav.querySelector(".nav-left");
+    if (!navLeft) return;
+
+    let link = topnav.querySelector("[data-mylist-nav='1']");
+    if (!link) {
+        link = document.createElement("a");
+        link.className = "navlink";
+        link.dataset.mylistNav = "1";
+        link.textContent = "Mi Lista";
+    }
+
+    link.href = buildMyListUrl(userId);
+
+    // Buscar "Inicio" para insertar justo a la derecha
+    const navItems = [...navLeft.querySelectorAll("a, button")];
+    const inicio = navItems.find((n) => {
+        if (n === link) return false;
+        const t = (n.textContent || "").trim().toLowerCase();
+        return t === "inicio";
+    });
+
+    if (inicio && inicio.parentElement === navLeft) {
+        if (inicio.nextSibling !== link) {
+            navLeft.insertBefore(link, inicio.nextSibling);
+        } else if (link.parentElement !== navLeft) {
+            navLeft.insertBefore(link, inicio.nextSibling);
+        }
+    } else {
+        // fallback: primer lugar lógico en nav-left
+        if (link.parentElement !== navLeft) navLeft.appendChild(link);
+    }
+}
+
 async function isInMyListSupabase({ supabase, profileId, contentId }) {
     if (!supabase || !profileId || !contentId) return false;
 
@@ -795,9 +844,18 @@ async function main() {
 
     ui.setAppName?.();
     ui.renderNav?.({ active: "home" });
-    ui.renderAuthButtons?.();
+    await ui.renderAuthButtons?.();
     ui.enableDataHrefNavigation?.();
     ui.applyDisguisedCssFromMovieId?.();
+
+    // ✅ Topnav: agregar "Mi Lista" a la derecha de "Inicio" con URL dinámica
+    try {
+        const navCtx = await getMyListAuthContext();
+        ensureMyListNavLink(navCtx?.profileId || null);
+    } catch (e) {
+        console.warn("[title] no se pudo preparar link Mi Lista en topnav:", e);
+        ensureMyListNavLink(null); // fallback => /mylist
+    }
 
     const esc = ui.escapeHtml;
 

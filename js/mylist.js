@@ -4,6 +4,8 @@
 // ✅ content_id apunta a movies.id
 // ✅ Lee detalles desde public.movies
 // ✅ Sync localStorage -> Supabase (puente con botón "Mi Lista")
+// ✅ Topnav: agrega "Mi Lista" a la derecha de "Inicio"
+// ✅ En /mylist: "Mi Lista" queda active e inclicable
 
 import { supabase } from "./supabaseClient.js";
 import * as ui from "./ui.js";
@@ -156,6 +158,72 @@ async function getCurrentUserId() {
         return null;
     }
     return data?.user?.id || null;
+}
+
+/* =========================================================
+   TOPNAV "Mi Lista"
+   - /mylist?list=<userId>&user=<userId>
+   - En esta página va active + inclicable
+========================================================= */
+
+function buildMyListUrl(userId) {
+    if (!userId) return "/mylist";
+
+    const q = new URLSearchParams({
+        list: String(userId),
+        user: String(userId)
+    });
+
+    return `/mylist?${q.toString()}`;
+}
+
+function ensureMyListNavLink(userId, { active = false, disabled = false } = {}) {
+    const topnav = document.getElementById("topnav");
+    if (!topnav) return;
+
+    const navLeft = topnav.querySelector(".nav-left");
+    if (!navLeft) return;
+
+    let link = topnav.querySelector("[data-mylist-nav='1']");
+    if (!link) {
+        link = document.createElement("a");
+        link.className = "navlink";
+        link.dataset.mylistNav = "1";
+        link.textContent = "Mi Lista";
+    }
+
+    link.href = buildMyListUrl(userId);
+
+    // estado activo visual
+    link.classList.toggle("active", !!active);
+    if (active) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+
+    // inclicable en la propia página
+    if (disabled) {
+        link.setAttribute("tabindex", "-1");
+        link.setAttribute("aria-disabled", "true");
+        link.style.pointerEvents = "none";
+        link.style.cursor = "default";
+    } else {
+        link.removeAttribute("tabindex");
+        link.removeAttribute("aria-disabled");
+        link.style.pointerEvents = "";
+        link.style.cursor = "";
+    }
+
+    // Insertar a la derecha de "Inicio"
+    const inicioLink = [...navLeft.querySelectorAll("a.navlink")].find((a) => {
+        if (a === link) return false;
+        return (a.textContent || "").trim().toLowerCase() === "inicio";
+    });
+
+    if (inicioLink && inicioLink.parentElement === navLeft) {
+        // mover/insertar justo después de Inicio
+        navLeft.insertBefore(link, inicioLink.nextSibling);
+    } else if (link.parentElement !== navLeft) {
+        navLeft.appendChild(link);
+    }
 }
 
 /* =========================================================
@@ -314,11 +382,14 @@ async function showMyList(profileId) {
 async function init() {
     try {
         ui.setAppName?.();
-        ui.renderNav?.({ active: "mylist" });
-        ui.renderAuthButtons?.();
+        ui.renderNav?.({ active: "mylist" }); // ui.js no soporta mylist nativo
+        await ui.renderAuthButtons?.();
         ui.enableDataHrefNavigation?.();
 
         const profileId = await getCurrentUserId();
+
+        // ✅ Topnav: "Mi Lista" a la derecha de "Inicio", active e inclicable
+        ensureMyListNavLink(profileId, { active: true, disabled: true });
 
         if (!profileId) {
             setSubtitle("Iniciá sesión para ver tu lista.");

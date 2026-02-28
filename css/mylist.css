@@ -415,7 +415,7 @@ body {
 }
 
 #mylist-row:empty::before {
-    content: "Tu lista está vacía… todavía 🍿";
+    content: "Tu lista está vacía… todavía";
     font-size: 14px;
     letter-spacing: .01em;
 }
