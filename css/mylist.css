@@ -200,3 +200,123 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================
+   Mi Lista - Cards más grandes (16:9)
+   ========================= */
+
+#mylist-row {
+    display: grid !important;
+    /* Más grandes: menos columnas, más ancho mínimo */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+    gap: 18px !important;
+    row-gap: 18px !important;
+    column-gap: 18px !important;
+    align-items: stretch;
+    margin-top: 18px;
+}
+
+/* wrappers que meta ui.cardHtml */
+#mylist-row>* {
+    min-width: 0 !important;
+    width: auto !important;
+    margin: 0 !important;
+    display: block;
+}
+
+#mylist-row a {
+    text-decoration: none;
+    color: inherit;
+    min-width: 0;
+    display: block;
+}
+
+/* Card */
+#mylist-row .card {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+/* Imagen/thumb MÁS grande y 16:9 */
+#mylist-row .card img,
+#mylist-row .thumb {
+    width: 100%;
+    display: block;
+    aspect-ratio: 16 / 9 !important;
+    object-fit: cover;
+    background: #0f1118;
+    flex: 0 0 auto;
+
+    /* hace que se sienta más grande */
+    height: auto;
+    background-size: cover;
+}
+
+/* Contenido */
+#mylist-row .card-body {
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    min-height: 84px;
+}
+
+#mylist-row .card-title {
+    font-size: 17px;
+    line-height: 1.2;
+    font-weight: 800;
+}
+
+#mylist-row .card-subtitle {
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+/* Hover más suave para que no "choquen" */
+#mylist-row .card:hover,
+#mylist-row .card:focus-visible {
+    transform: translateY(-2px) scale(1.012);
+    z-index: 2;
+    position: relative;
+}
+
+/* Breakpoints más grandes (menos columnas = cards más grandes) */
+@media (max-width: 1400px) {
+    #mylist-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 1100px) {
+    #mylist-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #mylist-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+    }
+
+    #mylist-row .card img,
+    #mylist-row .thumb {
+        min-height: 150px;
+    }
+}
+
+@media (max-width: 520px) {
+    #mylist-row {
+        grid-template-columns: 1fr !important;
+    }
+
+    #mylist-row .card img,
+    #mylist-row .thumb {
+        min-height: 170px;
+    }
+}
