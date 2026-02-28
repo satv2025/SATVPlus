@@ -14,59 +14,118 @@ import { getSession, requireAuthOrRedirect } from "./auth.js";
 import { fetchContinueWatching, fetchLatest, fetchByCategory } from "./api.js";
 
 /* =========================================================
-   AGREGAR A "MI LISTA"
+   HOME HERO RANDOM + NAV "MI LISTA"
 ========================================================= */
-async function addToMyList(profileId, contentId) {
-    try {
-        const { data, error } = await supabase
-            .from('my_list')
-            .insert([ 
-                { profile_id: profileId, content_id: contentId }
-            ]);
 
-        if (error) {
-            console.error('Error al agregar a Mi Lista:', error);
-            return;
-        }
+let __homeHeroRotationTimer = null;
+let __homeHeroLastId = null;
 
-        // Mostrar confirmación
-        toast("Agregado a Mi Lista!");
-    } catch (error) {
-        console.error("Error al agregar a Mi Lista:", error);
-    }
+function buildMyListUrl(userId) {
+  if (!userId) return "/mylist";
+  const q = new URLSearchParams({
+    list: String(userId), // asumimos 1 lista por usuario
+    user: String(userId)
+  });
+  return `/mylist?${q.toString()}`;
 }
 
-/* =========================================================
-   MI LISTA BUTTON REDIRECCION
-========================================================= */
-async function setMyListBtn() {
-    const myListBtn = document.getElementById("mylist-btn");
-    if (!myListBtn) return;
+function ensureMyListNavLink(userId) {
+  const topnav = document.getElementById("topnav");
+  if (!topnav) return;
 
-    // Obtener el perfil ID desde Supabase (actualmente ya lo tienes en la sesión)
-    const session = await getSession();
-    const userId = session?.user?.id || null;
+  const navLeft = topnav.querySelector(".nav-left");
+  if (!navLeft) return;
 
-    // Verificar si se obtiene el userId
-    if (!userId) {
-        toast("No se pudo obtener el ID de usuario.");
-        return;
+  let link = topnav.querySelector("[data-mylist-nav='1']");
+  if (!link) {
+    link = document.createElement("a");
+    link.className = "navlink";
+    link.dataset.mylistNav = "1";
+    link.textContent = "Mi Lista";
+    navLeft.appendChild(link);
+  }
+
+  link.href = buildMyListUrl(userId);
+}
+
+function homeHeroMeta(movie) {
+  const year = movie?.release_year ? String(movie.release_year) : "";
+  let right = "";
+
+  if (movie?.category === "series") {
+    const mm = movie?.movie_meta || null;
+    const sc = Number(mm?.seasons_count || 0);
+    const ec = Number(mm?.episodes_count || 0);
+    if (sc > 0) right = `${sc} ${sc === 1 ? "temporada" : "temporadas"}`;
+    else if (ec > 0) right = `${ec} ${ec === 1 ? "episodio" : "episodios"}`;
+    else right = "Serie";
+  } else {
+    const mins = Number(movie?.duration_minutes || 0);
+    if (mins > 0) {
+      if (mins < 60) right = `${mins} min`;
+      else {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        right = m ? `${h} h ${m} min` : `${h} h`;
+      }
     }
+  }
 
-    // Obtener el ID del contenido al que se le añade a la lista
-    const contentId = "content-id"; // Aquí deberías obtener el contenido dinámicamente según el contexto
+  return [year, right].filter(Boolean).join(" · ");
+}
 
-    // Definir la URL para redirigir a "Mi Lista"
-    const url = `/mylist?user=${userId}`;
+function renderHomeHeroItem(movie, { userId } = {}) {
+  const hero = document.querySelector("main .hero");
+  if (!hero || !movie?.id) return;
 
-    // Configurar el evento de clic del botón "Mi Lista"
-    myListBtn.onclick = () => {
-        if (userId) {
-            window.location.href = url; // Redirigir a "Mi Lista" con el ID de usuario
-        } else {
-            toast("No se pudo agregar a Mi Lista. Datos faltantes.");
-        }
-    };
+  const banner = movie.banner_url || movie.thumbnail_url || "";
+  if (banner) hero.style.backgroundImage = `url("${banner}")`;
+
+  const meta = homeHeroMeta(movie);
+  const synopsis = movie.description || movie.sinopsis || "";
+  const title = movie.title || "Destacado";
+  const titleHref = `/title?title=${encodeURIComponent(movie.id)}`;
+  const myListHref = buildMyListUrl(userId);
+
+  hero.innerHTML = `
+    <div class="home-hero-inner">
+      <h1 class="home-hero-title">${title}</h1>
+      ${meta ? `<div class="home-hero-meta">${meta}</div>` : ""}
+      ${synopsis ? `<p class="home-hero-synopsis">${synopsis}</p>` : ""}
+      <div class="home-hero-actions">
+        <a class="btn" href="${titleHref}">Ver ficha</a>
+        <a class="btn ghost" href="${myListHref}">Mi Lista</a>
+      </div>
+    </div>
+  `;
+}
+
+function startHomeHeroRotation(items, { userId } = {}) {
+  const pool = (items || []).filter(x => x?.id);
+  if (!pool.length) return;
+
+  const pick = () => {
+    if (pool.length === 1) return pool[0];
+    let next = pool[Math.floor(Math.random() * pool.length)];
+    let guard = 0;
+    while (next?.id === __homeHeroLastId && guard < 8) {
+      next = pool[Math.floor(Math.random() * pool.length)];
+      guard++;
+    }
+    return next;
+  };
+
+  const paint = () => {
+    const chosen = pick();
+    if (!chosen) return;
+    __homeHeroLastId = chosen.id;
+    renderHomeHeroItem(chosen, { userId });
+  };
+
+  paint();
+
+  if (__homeHeroRotationTimer) clearInterval(__homeHeroRotationTimer);
+  __homeHeroRotationTimer = setInterval(paint, 20000); // rota "cada tanto"
 }
 
 /* =========================================================
@@ -329,6 +388,7 @@ async function init() {
 
   const session = await getSession();
   const userId = session?.user?.id || null;
+  ensureMyListNavLink(userId);
 
   const contWrap = $("#continue-wrap");
   const contRow = $("#continue-row");
@@ -397,12 +457,17 @@ async function init() {
     setRow(seriesRow, series.map(m => cardHtml(m)).join(""));
     buildCarousel(seriesRow, { cloneRounds: 2 });
 
+    const heroPoolMap = new Map();
+    [...latest, ...movies, ...series].forEach(item => {
+      if (item?.id && !heroPoolMap.has(item.id)) heroPoolMap.set(item.id, item);
+    });
+    startHomeHeroRotation([...heroPoolMap.values()], { userId });
+
   } catch (e) {
     console.error(e);
     toast("Error cargando catálogo.", "error");
   }
 
-  setMyListBtn(); // Llamar a la función que maneja el botón "Mi Lista"
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
