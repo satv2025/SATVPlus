@@ -3,17 +3,18 @@
 
 /* SATV base UI (Vidstack themed by your external 1.css + 2.css) */
 :root {
-  --bg: #0b0c10;
-  --panel: #12131a;
-  --panel2: #171926;
-  --text: #f3f4f6;
-  --muted: #a0a3b1;
+  --bg: #07090d;
+  --panel: #0e1420;
+  --panel2: #111724;
+  --text: #f5f7fb;
+  --muted: #b6bfd1;
   --satvblue: #2563eb;
-  --line: rgba(255, 255, 255, .10);
-  --shadow: 0 18px 55px rgba(0, 0, 0, 0);
+  --line: rgba(255, 255, 255, .08);
+  --shadow: 0 18px 55px rgba(0, 0, 0, .34);
   --radius: 16px;
   --radius2: 22px;
-  --hero-overlay: #0b0c10;
+  --hero-overlay: #07090d;
+
   /* carousel tuning */
   --edge-fade: 120px;
   /* cuánto “se pierde” por los bordes */

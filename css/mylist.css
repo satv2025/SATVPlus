@@ -1,15 +1,49 @@
-/* =========================
-   ESTILOS PARA "MI LISTA"
-   ========================= */
+/* =========================================
+   SATV+ · Mi Lista
+   CSS DESDE CERO (Streaming / Premium UI)
+   ========================================= */
 
+/* -----------------------------
+   Tokens
+----------------------------- */
 :root {
-    --list-bg: #0b0c10;
-    --text-color: #f3f4f6;
-    --title-color: #2563eb;
-    --card-bg: rgba(255, 255, 255, 0.10);
-    --muted: rgba(243, 244, 246, .75);
+    --satv-bg: #07090d;
+    --satv-bg-2: #0c1018;
+    --satv-surface: #111724;
+    --satv-surface-2: #0e1420;
+
+    --satv-text: #f5f7fb;
+    --satv-text-soft: rgba(245, 247, 251, 0.78);
+    --satv-text-faint: rgba(245, 247, 251, 0.52);
+
+    --satv-line: rgba(255, 255, 255, 0.08);
+    --satv-line-strong: rgba(255, 255, 255, 0.14);
+
+    --satv-accent: #2563eb;
+    --satv-accent-2: #60a5fa;
+    --satv-accent-glow: rgba(37, 99, 235, 0.25);
+
+    --satv-card-bg:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.02) 100%);
+    --satv-card-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+    --satv-card-shadow-hover: 0 20px 38px rgba(0, 0, 0, 0);
+
+    --satv-radius-sm: 10px;
+    --satv-radius-md: 14px;
+    --satv-radius-lg: 18px;
+    --satv-radius-xl: 22px;
+
+    --satv-gap: clamp(12px, 1.4vw, 18px);
+    --satv-grid-min: 270px;
+
+    --satv-hero-height: clamp(220px, 34vh, 380px);
+    --satv-fast: 200ms cubic-bezier(.2, .8, .2, 1);
+    --satv-slow: 320ms cubic-bezier(.2, .8, .2, 1);
 }
 
+/* -----------------------------
+   Base
+----------------------------- */
 *,
 *::before,
 *::after {
@@ -17,307 +51,493 @@
 }
 
 body {
-    background-color: var(--list-bg);
-    color: var(--text-color);
+    background:
+        radial-gradient(900px 420px at 8% -8%, rgba(37, 99, 235, 0.09), transparent 60%),
+        radial-gradient(1000px 540px at 100% 0%, rgba(96, 165, 250, 0.07), transparent 64%),
+        var(--satv-bg);
+    color: var(--satv-text);
 }
 
 .hidden {
     display: none !important;
 }
 
-/* Hero */
+/* -----------------------------
+   Hero
+----------------------------- */
 #mylist-hero {
     position: relative;
-    background-color: var(--list-bg);
-    background-size: cover;
-    background-position: center;
-    height: 30vh;
+    isolation: isolate;
+    min-height: 220px;
+    height: var(--satv-hero-height);
     overflow: hidden;
+
+    /* respetando tu layout actual con topnav */
     margin-top: -9em;
-    margin-bottom: -3.6em;
+    margin-bottom: -3.1em;
+
+    background:
+        radial-gradient(70% 80% at 80% 20%, rgba(37, 99, 235, .16), transparent 70%),
+        linear-gradient(180deg, #0b0f17 0%, #090c12 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .title-hero {
     position: absolute;
     inset: 0;
-    background-color: #12131a;
+    display: none;
+    /* se activa por JS */
+    background-color: #10141d;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    height: 100%;
-    display: none;
+    transform: scale(1.02);
+    filter: saturate(1.06) contrast(1.04);
+}
+
+.title-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to bottom,
+            rgba(7, 9, 13, 0.25) 0%,
+            rgba(7, 9, 13, 0.58) 48%,
+            rgba(7, 9, 13, 0.96) 100%);
 }
 
 .title-hero::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: #0b0c10;
+    background:
+        linear-gradient(to right, rgba(7, 9, 13, 0.76) 0%, rgba(7, 9, 13, 0.38) 42%, rgba(7, 9, 13, 0.12) 100%);
+    pointer-events: none;
 }
 
 .title-hero-inner {
     position: absolute;
-    bottom: 10px;
-    left: 20px;
-    right: 20px;
+    left: 0;
+    right: 0;
+    bottom: 14px;
     z-index: 2;
 }
 
 #title-heading {
-    font-size: clamp(24px, 4vw, 36px);
-    color: var(--title-color);
-    text-align: left;
     margin: 0;
+    color: var(--satv-text);
     font-weight: 900;
-    line-height: 1.1;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    font-size: clamp(28px, 4vw, 44px);
+    text-shadow: 0 8px 26px rgba(0, 0, 0, .34);
+}
+
+#title-heading::after {
+    content: "";
+    display: block;
+    width: min(130px, 24vw);
+    height: 4px;
+    margin-top: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--satv-accent), var(--satv-accent-2));
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .04), 0 8px 22px var(--satv-accent-glow);
 }
 
 .mylist-subtitle {
-    margin: 8px 0 0;
-    color: var(--muted);
+    margin: 10px 0 0;
+    max-width: 72ch;
+    color: var(--satv-text-soft);
     font-size: 14px;
+    line-height: 1.35;
+    text-shadow: 0 4px 14px rgba(0, 0, 0, .24);
 }
 
+/* -----------------------------
+   Content / State
+----------------------------- */
 #mylist-content {
-    padding: 18px 0 28px;
+    position: relative;
+    z-index: 3;
+    padding: 18px 0 30px;
+    overflow: visible;
+    /* clave para hover */
 }
 
 .mylist-state {
-    margin: 8px 0 14px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, .04);
-    border: 1px solid rgba(255, 255, 255, .08);
-    color: var(--muted);
+    margin: 10px 0 14px;
+    padding: 12px 14px;
+    border-radius: var(--satv-radius-md);
+    border: 1px solid var(--satv-line);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .02));
+    color: var(--satv-text-soft);
     font-size: 14px;
+    line-height: 1.35;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .16);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
-/* Grid */
-#mylist-row {
-    margin-top: 18px;
-    display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-}
-
-/* Cards */
-#mylist-row .card {
-    background-color: var(--card-bg);
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, .08);
-    transition: transform 0.2s ease, box-shadow .2s ease, border-color .2s ease;
-    overflow: hidden;
-    cursor: pointer;
-    min-width: 0;
-}
-
-#mylist-row .card:hover,
-#mylist-row .card:focus-visible {
-    transform: scale(1.03);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, .28);
-    border-color: rgba(37, 99, 235, .35);
-    outline: none;
-}
-
-.card .thumb {
-    background-color: #0f1118;
-    background-size: cover;
-    background-position: center;
+/* -----------------------------
+   Grid (robusto con wrappers)
+----------------------------- */
+#mylist-row,
+#mylist-row.row {
+    position: relative;
+    isolation: isolate;
     width: 100%;
-    aspect-ratio: 16 / 9;
+    margin-top: 47px;
+    padding: 2px;
+    /* aire para hover */
+    margin-left: -2px;
+    margin-right: -2px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--satv-grid-min)), 1fr));
+    gap: var(--satv-gap);
+    align-items: stretch;
+    overflow: visible;
+    /* clave para hover */
 }
 
-.card .card-body {
-    padding: 10px;
-}
-
-.card .card-title {
-    font-size: 16px;
-    color: var(--text-color);
+/* cualquier wrapper que meta ui.cardHtml */
+#mylist-row>* {
+    min-width: 0;
     margin: 0;
-    line-height: 1.2;
-    font-weight: 800;
-
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
+    display: block;
+    height: 100%;
+    overflow: visible;
+    /* clave */
+    position: relative;
 }
 
-.card .card-subtitle {
-    font-size: 14px;
-    color: var(--muted);
-    margin: 6px 0 0;
-    line-height: 1.25;
-
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
+/* links wrappers */
+#mylist-row a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+    min-width: 0;
+    height: 100%;
+    overflow: visible;
+    /* clave */
 }
 
-/* Si ui.cardHtml usa img */
+/* -----------------------------
+   Card (nuevo diseño)
+----------------------------- */
+#mylist-row .card {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--satv-radius-lg);
+    background: var(--satv-card-bg);
+    box-shadow: var(--satv-card-shadow);
+
+    /* importante: hidden para recortar imagen, pero hover ring va por pseudo INSET */
+    overflow: hidden;
+
+    /* No usar border físico en hover para evitar glitches visuales */
+    border: none;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition:
+        transform var(--satv-fast),
+        box-shadow var(--satv-fast),
+        background-color var(--satv-fast);
+    will-change: transform;
+    cursor: pointer;
+}
+
+/* Anillo interno (el borde que sí se ve en hover sin "cortarse") */
+#mylist-row .card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+
+    /* doble borde premium interno */
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+    transition: box-shadow var(--satv-fast), opacity var(--satv-fast);
+    opacity: 1;
+}
+
+/* brillo superior sutil */
+#mylist-row .card::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 46%;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.04), transparent);
+    opacity: .65;
+}
+
+/* Hover/focus robusto:
+   - cubre hover directo en .card
+   - hover en <a> wrapper
+   - hover en cualquier wrapper del grid
+*/
+@media (hover: hover) and (pointer: fine) {
+
+    #mylist-row .card:hover,
+    #mylist-row a:hover .card,
+    #mylist-row>*:hover .card {
+        transform: scale(1.1);
+        z-index: 3;
+    }
+
+}
+
+/* Focus accesible (keyboard) */
+#mylist-row .card:focus-within,
+#mylist-row a:focus-visible .card {
+    transform: translateY(-3px);
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.18),
+        var(--satv-card-shadow-hover);
+}
+
+#mylist-row .card:focus-within::before,
+#mylist-row a:focus-visible .card::before {
+    box-shadow:
+        inset 0 0 0 1px rgba(96, 165, 250, 0.6),
+        inset 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+/* -----------------------------
+   Thumb / Poster / Cover (16:9)
+----------------------------- */
+#mylist-row .thumb,
 #mylist-row .card img {
     width: 100%;
-    display: block;
-    object-fit: cover;
     aspect-ratio: 16 / 9;
-    background: #0f1118;
+    display: block;
+    flex: 0 0 auto;
+
+    background: #0d111a;
+    object-fit: cover;
+
+    transition:
+        transform var(--satv-slow),
+        filter var(--satv-fast);
+    backface-visibility: hidden;
+    transform: translateZ(0);
 }
 
-/* Responsive */
-@media (max-width: 1200px) {
-    #mylist-row {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+/* thumb basado en background-image */
+#mylist-row .thumb {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* overlay cinematográfico de imagen */
+#mylist-row .thumb::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to top, rgba(7, 9, 13, 0.42), rgba(7, 9, 13, 0.12) 46%, transparent 76%);
+    pointer-events: none;
+}
+
+/* separación visual imagen/body */
+#mylist-row .thumb,
+#mylist-row .card img {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* -----------------------------
+   Body / Textos
+----------------------------- */
+#mylist-row .card-body {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    padding: 12px 12px 13px;
+    min-height: 92px;
+}
+
+#mylist-row .card-title {
+    margin: 0;
+    color: var(--satv-text);
+    font-weight: 800;
+    font-size: clamp(15px, 1.1vw, 17px);
+    line-height: 1.22;
+    letter-spacing: -0.01em;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+#mylist-row .card-subtitle {
+    margin: 0;
+    color: var(--satv-text-soft);
+    font-size: 13px;
+    line-height: 1.32;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+#mylist-row .card-subtitle:empty {
+    display: none;
+}
+
+/* -----------------------------
+   Empty state visual (si el JS no mete texto)
+----------------------------- */
+#mylist-row:empty {
+    min-height: 170px;
+    border-radius: var(--satv-radius-xl);
+    border: 1px dashed rgba(255, 255, 255, 0.10);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+    display: grid;
+    place-items: center;
+    color: var(--satv-text-faint);
+}
+
+#mylist-row:empty::before {
+    content: "Tu lista está vacía… todavía 🍿";
+    font-size: 14px;
+    letter-spacing: .01em;
+}
+
+/* -----------------------------
+   Responsive
+----------------------------- */
+@media (min-width: 1600px) {
+    :root {
+        --satv-grid-min: 300px;
+        --satv-gap: 20px;
     }
 }
 
-@media (max-width: 992px) {
-    #mylist-row {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+@media (max-width: 1280px) {
+    :root {
+        --satv-grid-min: 245px;
+    }
+}
+
+@media (max-width: 1024px) {
+    :root {
+        --satv-grid-min: 220px;
+        --satv-hero-height: clamp(210px, 30vh, 300px);
+    }
+
+    #mylist-hero {
+        margin-bottom: -2.6em;
+    }
+
+    .title-hero-inner {
+        bottom: 12px;
+    }
+
+    #title-heading::after {
+        height: 3px;
+        margin-top: 8px;
     }
 }
 
 @media (max-width: 768px) {
-    #mylist-row {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    :root {
+        --satv-grid-min: 190px;
+        --satv-gap: 14px;
     }
 
     #mylist-hero {
         min-height: 190px;
         height: 26vh;
+        margin-top: -7.8em;
+        margin-bottom: -2.1em;
     }
 
     .title-hero-inner {
-        left: 16px;
-        right: 16px;
-    }
-}
-
-@media (max-width: 480px) {
-    #mylist-row {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* =========================
-   Mi Lista - Cards más grandes (16:9)
-   ========================= */
-
-#mylist-row {
-    display: grid !important;
-    /* Más grandes: menos columnas, más ancho mínimo */
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
-    gap: 18px !important;
-    row-gap: 18px !important;
-    column-gap: 18px !important;
-    align-items: stretch;
-    margin-top: 18px;
-}
-
-/* wrappers que meta ui.cardHtml */
-#mylist-row>* {
-    min-width: 0 !important;
-    width: auto !important;
-    margin: 0 !important;
-    display: block;
-}
-
-#mylist-row a {
-    text-decoration: none;
-    color: inherit;
-    min-width: 0;
-    display: block;
-}
-
-/* Card */
-#mylist-row .card {
-    width: 100% !important;
-    min-width: 0 !important;
-    margin: 0 !important;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-    border-radius: 12px;
-}
-
-/* Imagen/thumb MÁS grande y 16:9 */
-#mylist-row .card img,
-#mylist-row .thumb {
-    width: 100%;
-    display: block;
-    aspect-ratio: 16 / 9 !important;
-    object-fit: cover;
-    background: #0f1118;
-    flex: 0 0 auto;
-
-    /* hace que se sienta más grande */
-    height: auto;
-    background-size: cover;
-}
-
-/* Contenido */
-#mylist-row .card-body {
-    display: grid;
-    gap: 6px;
-    padding: 12px;
-    min-height: 84px;
-}
-
-#mylist-row .card-title {
-    font-size: 17px;
-    line-height: 1.2;
-    font-weight: 800;
-}
-
-#mylist-row .card-subtitle {
-    font-size: 14px;
-    line-height: 1.3;
-}
-
-/* Hover más suave para que no "choquen" */
-#mylist-row .card:hover,
-#mylist-row .card:focus-visible {
-    transform: translateY(-2px) scale(1.012);
-    z-index: 2;
-    position: relative;
-}
-
-/* Breakpoints más grandes (menos columnas = cards más grandes) */
-@media (max-width: 1400px) {
-    #mylist-row {
-        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    }
-}
-
-@media (max-width: 1100px) {
-    #mylist-row {
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    }
-}
-
-@media (max-width: 768px) {
-    #mylist-row {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 14px !important;
+        bottom: 10px;
     }
 
-    #mylist-row .card img,
-    #mylist-row .thumb {
-        min-height: 150px;
+    #title-heading {
+        font-size: clamp(24px, 7vw, 32px);
+    }
+
+    .mylist-subtitle {
+        margin-top: 8px;
+        font-size: 13px;
+    }
+
+    #mylist-content {
+        padding-top: 16px;
+        padding-bottom: 24px;
+    }
+
+    #mylist-row .card-body {
+        padding: 10px 10px 12px;
+        min-height: 84px;
+    }
+
+    #mylist-row .card-title {
+        font-size: 15px;
+    }
+
+    #mylist-row .card-subtitle {
+        font-size: 12.5px;
     }
 }
 
 @media (max-width: 520px) {
-    #mylist-row {
-        grid-template-columns: 1fr !important;
+    :root {
+        --satv-gap: 12px;
     }
 
-    #mylist-row .card img,
-    #mylist-row .thumb {
-        min-height: 170px;
+    #mylist-row,
+    #mylist-row.row {
+        grid-template-columns: 1fr;
+    }
+
+    #mylist-row .thumb,
+    #mylist-row .card img {
+        min-height: 180px;
+    }
+
+    .mylist-state {
+        font-size: 13px;
+        padding: 11px 12px;
+    }
+}
+
+/* -----------------------------
+   Motion preferences
+----------------------------- */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+
+    #mylist-row .card:hover,
+    #mylist-row a:hover .card,
+    #mylist-row>*:hover .card {
+        transform: none !important;
     }
 }
