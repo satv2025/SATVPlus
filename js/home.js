@@ -37,6 +37,26 @@ async function addToMyList(profileId, contentId) {
 }
 
 /* =========================================================
+   MI LISTA BUTTON REDIRECCION
+========================================================= */
+function setMyListBtn() {
+    const myListBtn = document.getElementById("mylist-btn");
+    if (!myListBtn) return;
+
+    // Suponiendo que ya tienes el perfil ID
+    const profileId = "perfil-id-aqui"; // Obtener el perfil de usuario
+    const contentId = "content-id"; // Obtener el ID del contenido al que se le añade a la lista
+
+    myListBtn.onclick = () => {
+        if (profileId && contentId) {
+            window.location.href = `/mylist?id=${contentId}&user=${profileId}`; // Redirige a "Mi Lista"
+        } else {
+            toast("No se pudo agregar a Mi Lista. Datos faltantes.");
+        }
+    };
+}
+
+/* =========================================================
    ENSURE CAROUSEL WRAPPER
    ========================================================= */
 
@@ -378,6 +398,8 @@ async function init() {
     console.error(e);
     toast("Error cargando catálogo.", "error");
   }
+
+  setMyListBtn(); // Llamar a la función que maneja el botón "Mi Lista"
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
