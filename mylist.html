@@ -6,13 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mi Lista · SATV+</title>
 
+    <link rel="icon" href="/images/satvpluslogo.png" />
     <link rel="stylesheet" href="/css/styles.css" />
     <link rel="stylesheet" href="/css/mylist.css" />
-    <link rel="icon" href="/images/satvpluslogo.png" />
 </head>
 
 <body>
-    <!-- Nav consistente con el resto del sitio -->
+    <!-- Navegación -->
     <header class="topnav">
         <div class="nav-inner container" id="topnav"></div>
     </header>
@@ -22,17 +22,22 @@
         <div class="title-hero" id="hero-image"></div>
         <div class="title-hero-inner container">
             <h1 id="title-heading">Mi Lista</h1>
-            <p id="mylist-subtitle" class="muted" style="margin-top:8px;"></p>
+            <p id="mylist-subtitle" class="mylist-subtitle"></p>
         </div>
     </section>
 
-    <!-- Lista -->
-    <main id="mylist-content" class="container" style="padding: 18px 0 10px;">
-        <div id="mylist-state" class="muted" style="display:none; margin: 8px 0 14px;"></div>
-        <div id="mylist-row" class="row"></div>
+    <!-- Estado -->
+    <main id="mylist-content" class="container">
+        <div id="mylist-state" class="mylist-state hidden" aria-live="polite"></div>
+
+        <!-- Grilla -->
+        <div id="mylist-row" class="row" aria-live="polite"></div>
     </main>
 
-    <!-- Solo módulo (NO cargar api.js aparte si mylist.js ya importa) -->
+    <!-- SDK global (NECESARIO para tu supabaseClient.js actual) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Página -->
     <script type="module" src="/js/mylist.js"></script>
 </body>
 
