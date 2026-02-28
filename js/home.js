@@ -14,11 +14,47 @@ import { getSession, requireAuthOrRedirect } from "./auth.js";
 import { fetchContinueWatching, fetchLatest, fetchByCategory } from "./api.js";
 
 /* =========================================================
-   HOME HERO RANDOM + NAV "MI LISTA"
+   HOME HERO DESTACADO ESTABLE (tipo Netflix)
+   - Elige 1 hero y lo mantiene por X tiempo (TTL)
+   - Persistido en localStorage por usuario/dispositivo
 ========================================================= */
 
 let __homeHeroRotationTimer = null;
-let __homeHeroLastId = null;
+
+// ✅ Configurable: 3 días (cambiá a 2 si querés)
+const HOME_HERO_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+
+// Versionar key por si cambiás criterio en el futuro
+const HOME_HERO_STORAGE_PREFIX = "homeHeroSelection:v1";
+
+function getHomeHeroStorageKey(userId) {
+  return `${HOME_HERO_STORAGE_PREFIX}:${userId || "guest"}`;
+}
+
+function readHomeHeroSelection(userId) {
+  try {
+    const raw = localStorage.getItem(getHomeHeroStorageKey(userId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeHomeHeroSelection(userId, data) {
+  try {
+    localStorage.setItem(getHomeHeroStorageKey(userId), JSON.stringify(data));
+  } catch {
+    // localStorage puede fallar (modo privado, quota, etc)
+  }
+}
+
+function clearHomeHeroSelection(userId) {
+  try {
+    localStorage.removeItem(getHomeHeroStorageKey(userId));
+  } catch {
+    // ignore
+  }
+}
 
 function buildMyListUrl(userId) {
   if (!userId) return "/mylist";
@@ -93,39 +129,78 @@ function renderHomeHeroItem(movie, { userId } = {}) {
       ${meta ? `<div class="home-hero-meta">${meta}</div>` : ""}
       ${synopsis ? `<p class="home-hero-synopsis">${synopsis}</p>` : ""}
       <div class="home-hero-actions">
-        <a class="btn" href="${titleHref}">Ver ahora<span aria-hidden="true">▶</span></a>
+        <a class="btn" href="${titleHref}">Ver ahora <span aria-hidden="true"> ▶</span></a>
         <a class="btn ghost" href="${myListHref}">Mi Lista</a>
       </div>
     </div>
   `;
 }
 
-function startHomeHeroRotation(items, { userId } = {}) {
+function pickStableHomeHero(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
   const pool = (items || []).filter(x => x?.id);
-  if (!pool.length) return;
+  if (!pool.length) return null;
 
-  const pick = () => {
-    if (pool.length === 1) return pool[0];
-    let next = pool[Math.floor(Math.random() * pool.length)];
+  const now = Date.now();
+  const saved = readHomeHeroSelection(userId);
+
+  // ✅ Si existe uno guardado y no venció, usarlo
+  if (saved?.id && Number(saved.expiresAt) > now) {
+    const existing = pool.find(x => String(x.id) === String(saved.id));
+    if (existing) return existing;
+  }
+
+  // ✅ Si venció o no existe, elegir uno nuevo
+  let next = pool[Math.floor(Math.random() * pool.length)];
+
+  // Evitar repetir el mismo si hay más de 1 opción
+  if (pool.length > 1 && saved?.id) {
     let guard = 0;
-    while (next?.id === __homeHeroLastId && guard < 8) {
+    while (String(next?.id) === String(saved.id) && guard < 12) {
       next = pool[Math.floor(Math.random() * pool.length)];
       guard++;
     }
-    return next;
-  };
+  }
 
-  const paint = () => {
-    const chosen = pick();
-    if (!chosen) return;
-    __homeHeroLastId = chosen.id;
-    renderHomeHeroItem(chosen, { userId });
-  };
+  writeHomeHeroSelection(userId, {
+    id: next.id,
+    chosenAt: now,
+    expiresAt: now + ttlMs
+  });
 
-  paint();
+  return next;
+}
 
-  if (__homeHeroRotationTimer) clearInterval(__homeHeroRotationTimer);
-  __homeHeroRotationTimer = setInterval(paint, 20000); // rota "cada tanto"
+function scheduleHomeHeroRefresh(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
+  if (__homeHeroRotationTimer) {
+    clearTimeout(__homeHeroRotationTimer);
+    __homeHeroRotationTimer = null;
+  }
+
+  const saved = readHomeHeroSelection(userId);
+  const expiresAt = Number(saved?.expiresAt || 0);
+  const delay = Math.max(0, expiresAt - Date.now());
+
+  // Si no hay expiración válida, no programar nada.
+  if (!delay) return;
+
+  // ✅ Si la pestaña queda abierta días, al vencer cambia solo
+  __homeHeroRotationTimer = setTimeout(() => {
+    clearHomeHeroSelection(userId);
+    startHomeHeroRotation(items, { userId, ttlMs });
+  }, delay);
+}
+
+// Mantengo el nombre para no tocar el resto del flujo.
+// Ahora NO rota cada 20s; pinta 1 hero estable por TTL.
+function startHomeHeroRotation(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
+  const pool = (items || []).filter(x => x?.id);
+  if (!pool.length) return;
+
+  const chosen = pickStableHomeHero(pool, { userId, ttlMs });
+  if (!chosen) return;
+
+  renderHomeHeroItem(chosen, { userId });
+  scheduleHomeHeroRefresh(pool, { userId, ttlMs });
 }
 
 /* =========================================================
@@ -461,13 +536,20 @@ async function init() {
     [...latest, ...movies, ...series].forEach(item => {
       if (item?.id && !heroPoolMap.has(item.id)) heroPoolMap.set(item.id, item);
     });
+
+    // ✅ Hero estable por TTL (default 3 días)
     startHomeHeroRotation([...heroPoolMap.values()], { userId });
+
+    // Si querés 2 días exactos:
+    // startHomeHeroRotation([...heroPoolMap.values()], {
+    //   userId,
+    //   ttlMs: 2 * 24 * 60 * 60 * 1000
+    // });
 
   } catch (e) {
     console.error(e);
     toast("Error cargando catálogo.", "error");
   }
-
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
