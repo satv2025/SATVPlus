@@ -14,6 +14,29 @@ import { getSession, requireAuthOrRedirect } from "./auth.js";
 import { fetchContinueWatching, fetchLatest, fetchByCategory } from "./api.js";
 
 /* =========================================================
+   AGREGAR A "MI LISTA"
+========================================================= */
+async function addToMyList(profileId, contentId) {
+    try {
+        const { data, error } = await supabase
+            .from('my_list')
+            .insert([
+                { profile_id: profileId, content_id: contentId }
+            ]);
+
+        if (error) {
+            console.error('Error al agregar a Mi Lista:', error);
+            return;
+        }
+        
+        // Mostrar confirmación
+        toast("Agregado a Mi Lista!");
+    } catch (error) {
+        console.error("Error al agregar a Mi Lista:", error);
+    }
+}
+
+/* =========================================================
    ENSURE CAROUSEL WRAPPER
    ========================================================= */
 

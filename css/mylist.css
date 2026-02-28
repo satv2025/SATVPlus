@@ -1,0 +1,70 @@
+/* =========================
+   ESTILOS PARA "MI LISTA" 
+   ========================= */
+
+:root {
+    --list-bg: #1f2025;
+    --text-color: #f3f4f6;
+    --title-color: #2563eb;
+}
+
+body {
+    background-color: var(--list-bg);
+    color: var(--text-color);
+}
+
+#mylist-hero {
+    position: relative;
+    background-color: var(--list-bg);
+    background-size: cover;
+    height: 30vh;
+}
+
+#mylist-row {
+    margin-top: 30px;
+}
+
+#mylist-row .card {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: transform 0.2s ease;
+}
+
+#mylist-row .card:hover {
+    transform: scale(1.05);
+}
+
+#title-heading {
+    font-size: clamp(24px, 4vw, 36px);
+    color: var(--title-color);
+    text-align: center;
+    margin-top: 40px;
+}
+
+.title-hero {
+    background-color: #12131a;
+    background-size: cover;
+    height: 220px;
+}
+
+.title-hero-inner {
+    position: absolute;
+    bottom: 10px;
+    left: 20px;
+}
+
+.card .card-title {
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.card .card-subtitle {
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.card .thumb {
+    background-color: #0f1118;
+    background-size: cover;
+    background-position: center;
+}
