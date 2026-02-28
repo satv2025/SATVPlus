@@ -793,3 +793,39 @@ textarea,
     -moz-user-select: text;
     user-select: text;
 }
+
+/* Icono SVG dentro del botón "Mi Lista" */
+#episodes-jump {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Tamaño del SVG y color heredado del botón */
+#episodes-jump .btn-icon {
+    width: 18px;
+    height: 18px;
+    display: block;
+    flex: 0 0 18px;
+    fill: currentColor;
+}
+
+/* Fuerza el path a usar el color del texto (blanco en btn-ghost) */
+#episodes-jump .btn-icon path {
+    fill: currentColor;
+}
+
+/* Opcional: un pelín más grande en mobile si querés */
+@media (max-width: 480px) {
+    #episodes-jump .btn-icon {
+        width: 17px;
+        height: 17px;
+        flex-basis: 17px;
+    }
+}
+
+#episodes-jump.is-active {
+    background: rgba(37, 99, 235, .18);
+    border-color: rgba(37, 99, 235, .65);
+    color: #fff;
+}

@@ -63,10 +63,15 @@ body {
 .topnav {
   position: relative;
   top: 0;
-  z-index: 50;
+  z-index: 9999; /* mayor que el hero */
   background: #171924;
   border-bottom: 1px solid var(--line);
   width: 100%;
+}
+
+/* si el hero está dentro del primer .container después del nav */
+.topnav + .container {
+  padding-top: 0 !important;
 }
 
 /* ✅ CLAVE: si nav-inner tiene "container", NO lo dejes al 85% nunca */
@@ -208,26 +213,68 @@ a.pill.profile-link:hover {
   opacity: 1;
 }
 
-/* ================= HERO ================= */
+/* ================= HERO (REHECHO) ================= */
 
 .hero {
-  margin-top: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
-  border: 1px solid var(--line);
-  border-radius: var(--radius2);
-  box-shadow: var(--shadow);
+  /* pegado al nav / techo */
+  margin-top: 0 !important;
+
+  /* sin bordes ni radios (evita líneas/blancos/bugs) */
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+
+  /* full width aunque esté dentro de .container */
+  width: 100dvw;
+  max-width: 100dvw;
+  margin-left: calc(50% - 50dvw);
+  margin-right: calc(50% - 50dvw);
+
+  /* proporción */
+  aspect-ratio: 16 / 9;
+
+  /* imagen de fondo */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #0b0c10;
+
+  /* overlay + contenido */
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+
+  /* padding interno del contenido */
   padding: 18px;
+
+  /* evita glitches de composición */
+  isolation: isolate;
 }
 
-.hero h1 {
-  margin: 0 0 6px 0;
-  font-size: 28px;
+/* overlay sin seams / gradient TO TOP con #0b0c10 */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -1px; /* evita líneas finas en bordes */
+  z-index: 0;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to top,
+    #0b0c10 0%,
+    rgba(11, 12, 16, 0.94) 28%,
+    rgba(11, 12, 16, 0.66) 55%,
+    rgba(11, 12, 16, 0.22) 78%,
+    rgba(11, 12, 16, 0) 100%
+  );
 }
 
-.hero p {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.4;
+/* contenido arriba del overlay */
+.home-hero-inner {
+  position: relative;
+  z-index: 1;
+  max-width: min(700px, 95%);
 }
 
 /* ================= SECTIONS ================= */

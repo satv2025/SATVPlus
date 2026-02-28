@@ -363,126 +363,96 @@ async function fetchContinueWatchingForTitle({ movieId }) {
 }
 
 /* ===========================
-   MI LISTA (my_list)
+   MI LISTA (localStorage simple)
+   - Reutiliza #episodes-jump como botón "Mi Lista"
 =========================== */
 
-async function getCurrentUserIdForMyList() {
+const MY_LIST_KEY = "satv_my_list_ids";
+
+function getMyListIds() {
     try {
-        const supabase = await getAppSupabaseClient();
-        if (!supabase) return null;
-        const { data, error } = await supabase.auth.getUser();
-        if (error) {
-            console.warn("[title] getUser (my_list) error:", error);
-            return null;
-        }
-        return data?.user?.id || null;
-    } catch (e) {
-        console.warn("[title] getCurrentUserIdForMyList error:", e);
-        return null;
+        const raw = localStorage.getItem(MY_LIST_KEY);
+        const arr = JSON.parse(raw || "[]");
+        return Array.isArray(arr) ? arr.filter(Boolean) : [];
+    } catch {
+        return [];
     }
 }
 
-function setMyListButtonUi(btn, { loading = false, inList = false } = {}) {
-    if (!btn) return;
-    btn.disabled = !!loading;
-    btn.classList.remove("hidden");
+function saveMyListIds(ids) {
+    try {
+        localStorage.setItem(MY_LIST_KEY, JSON.stringify([...new Set(ids)]));
+    } catch (e) {
+        console.warn("[title] no se pudo guardar Mi Lista:", e);
+    }
+}
 
-    if (loading) {
-        btn.textContent = "Guardando…";
+function isInMyList(movieId) {
+    return getMyListIds().includes(movieId);
+}
+
+function toggleMyList(movieId) {
+    const ids = getMyListIds();
+    const exists = ids.includes(movieId);
+
+    const next = exists
+        ? ids.filter(id => id !== movieId)
+        : [...ids, movieId];
+
+    saveMyListIds(next);
+    return !exists; // true si quedó agregado
+}
+
+function setMyListBtnState(btn, movieId) {
+    if (!btn || !movieId) return;
+
+    const added = isInMyList(movieId);
+
+    // aseguramos visibilidad (el HTML arranca con .hidden)
+    btn.classList.remove("hidden");
+    btn.setAttribute("type", "button");
+    btn.setAttribute("aria-pressed", String(added));
+    btn.setAttribute("aria-label", added ? "Quitar de Mi Lista" : "Agregar a Mi Lista");
+    btn.classList.toggle("is-active", added);
+
+    // Actualiza el texto, manteniendo el SVG intacto
+    const labelSpan = btn.querySelector("span");
+    if (labelSpan) {
+        labelSpan.textContent = added ? "En Mi Lista" : "Mi Lista";
+    } else {
+        // fallback por si cambia el HTML
+        btn.textContent = added ? "En Mi Lista" : "Mi Lista";
+    }
+}
+
+function bindMyListButton(btn, movie) {
+    if (!btn || !movie?.id) return;
+
+    // limpia cualquier handler previo (antes era scroll episodios)
+    btn.onclick = null;
+
+    setMyListBtnState(btn, movie.id);
+
+    // evitar rebind accidental si main() se dispara de nuevo
+    if (btn.dataset.myListBound === "1") {
+        btn.dataset.myListMovieId = movie.id;
         return;
     }
 
-    btn.textContent = inList ? "✓ Mi Lista" : "＋ Mi Lista";
-    btn.setAttribute("aria-label", inList ? "Ya está en Mi Lista" : "Agregar a Mi Lista");
-    btn.dataset.inList = inList ? "1" : "0";
+    btn.dataset.myListBound = "1";
+    btn.dataset.myListMovieId = movie.id;
+
+    btn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+
+        const currentMovieId = btn.dataset.myListMovieId || movie.id;
+        const added = toggleMyList(currentMovieId);
+        setMyListBtnState(btn, currentMovieId);
+
+        // Si tenés toasts, acá podés enchufarlos
+        console.log(added ? "[title] agregado a Mi Lista" : "[title] quitado de Mi Lista");
+    });
 }
-
-async function checkTitleInMyList(contentId) {
-    if (!contentId) return false;
-    try {
-        const supabase = await getAppSupabaseClient();
-        if (!supabase) return false;
-
-        const userId = await getCurrentUserIdForMyList();
-        if (!userId) return false;
-
-        const { data, error } = await supabase
-            .from("my_list")
-            .select("id")
-            .eq("profile_id", userId)
-            .eq("content_id", contentId)
-            .limit(1)
-            .maybeSingle();
-
-        if (error) {
-            console.warn("[title] check my_list error:", error);
-            return false;
-        }
-
-        return !!data;
-    } catch (e) {
-        console.warn("[title] checkTitleInMyList error:", e);
-        return false;
-    }
-}
-
-async function addTitleToMyList(contentId) {
-    if (!contentId) return { ok: false, reason: "missing-content" };
-
-    try {
-        const supabase = await getAppSupabaseClient();
-        if (!supabase) return { ok: false, reason: "no-client" };
-
-        const userId = await getCurrentUserIdForMyList();
-        if (!userId) return { ok: false, reason: "no-user" };
-
-        const { error } = await supabase
-            .from("my_list")
-            .upsert(
-                { profile_id: userId, content_id: contentId },
-                { onConflict: "profile_id,content_id", ignoreDuplicates: true }
-            );
-
-        if (error) {
-            console.warn("[title] upsert my_list error:", error);
-            return { ok: false, reason: "db", error };
-        }
-
-        return { ok: true, userId };
-    } catch (e) {
-        console.warn("[title] addTitleToMyList error:", e);
-        return { ok: false, reason: "exception", error: e };
-    }
-}
-
-async function setupMyListButton({ btn, movie, toastFn }) {
-    if (!btn || !movie?.id) return;
-
-    setMyListButtonUi(btn, { loading: false, inList: false });
-
-    const inList = await checkTitleInMyList(movie.id);
-    setMyListButtonUi(btn, { loading: false, inList });
-
-    btn.onclick = async () => {
-        setMyListButtonUi(btn, { loading: true, inList: btn.dataset.inList === "1" });
-
-        const result = await addTitleToMyList(movie.id);
-
-        if (!result.ok) {
-            if (result.reason === "no-user") {
-                toastFn?.("Iniciá sesión para guardar en Mi Lista.", "info");
-            } else {
-                toastFn?.("No se pudo guardar en Mi Lista.", "error");
-            }
-            setMyListButtonUi(btn, { loading: false, inList: btn.dataset.inList === "1" });
-            return;
-        }
-
-        setMyListButtonUi(btn, { loading: false, inList: true });
-        toastFn?.("Agregado a Mi Lista.", "success");
-    };
-}
-
 
 /* ===========================
    TE PODRÍA GUSTAR (cards)
@@ -581,8 +551,7 @@ async function main() {
     const sinopsisEl = el("t-sinopsis");
     const watchBtn = el("watch-btn");
     const trailerBtn = el("trailer-btn");
-    const episodesJump = el("episodes-jump");
-    const myListBtn = episodesJump; // reutilizamos el botón secundario (antes: Episodios)
+    const myListBtn = el("episodes-jump"); // mismo id, ahora se usa como "Mi Lista"
 
     const episodesSection = el("episodes-section");
     const episodesTitle = el("episodes-title");
@@ -594,9 +563,10 @@ async function main() {
     const movie = await api.fetchMovie(movieId);
     if (!movie) return;
 
-    await setupMyListButton({ btn: myListBtn, movie, toastFn: ui.toast });
-
     document.title = `${movie.title || "Título"} · SATV+`;
+
+    // MI LISTA (siempre visible para películas y series)
+    bindMyListButton(myListBtn, movie);
 
     // Nivel X
     const NIVELX_ID = "0acf7d27-5a80-4682-873a-760dd1ffdb51";
@@ -688,6 +658,8 @@ async function main() {
     seasonFilter.classList.remove("hidden");
     episodesGrid.classList.remove("hidden");
 
+    // ⛔ Ya no usamos #episodes-jump para scroll a episodios
+    // (ahora es "Mi Lista", bindMyListButton ya lo configuró)
 
     const episodes = await api.fetchEpisodes(movie.id);
     if (!episodes?.length) {
