@@ -1,16 +1,21 @@
 // /js/mylist.js
-// ✅ Importa supabaseClient.js (NO se modifica)
-// ✅ Requiere que mylist.html cargue antes el SDK global de Supabase
-// ✅ Carga lista desde Supabase
-// ✅ Sincroniza localStorage -> Supabase (puente con el botón "Mi Lista" actual)
-// ✅ Render con ui.cardHtml si existe, fallback si no
+// ✅ NO toca supabaseClient.js
+// ✅ Usa tu schema real: my_list(profile_id, content_id, added_at)
+// ✅ Lee de tabla content
+// ✅ Ordena por added_at
+// ✅ Intenta sync localStorage -> Supabase usando profile_id/content_id
 
 import { supabase } from "./supabaseClient.js";
 import * as ui from "./ui.js";
-import * as api from "./api.js";
+
+const LOCAL_MY_LIST_KEY = "satv_my_list_ids";
 
 function el(id) {
     return document.getElementById(id);
+}
+
+function uniq(arr) {
+    return [...new Set((arr || []).filter(Boolean))];
 }
 
 function plural(n, one, many) {
@@ -22,54 +27,6 @@ function esc(value) {
     const d = document.createElement("div");
     d.textContent = String(value ?? "");
     return d.innerHTML;
-}
-
-function uniq(arr) {
-    return [...new Set((arr || []).filter(Boolean))];
-}
-
-function formatDuration(minutes) {
-    const m = Number(minutes);
-    if (!Number.isFinite(m) || m <= 0) return "";
-    if (m < 60) return `${m} min`;
-    const h = Math.floor(m / 60);
-    const rem = m % 60;
-    return rem ? `${h} h ${rem} min` : `${h} h`;
-}
-
-function formatSeriesMeta(item) {
-    const mm = item.movie_meta || null;
-    const sc = Number(mm?.seasons_count);
-    const ec = Number(mm?.episodes_count);
-
-    if (Number.isFinite(sc) && sc > 0) return `${sc} ${plural(sc, "temporada", "temporadas")}`;
-    if (Number.isFinite(ec) && ec > 0) return `${ec} ${plural(ec, "episodio", "episodios")}`;
-    return item.category === "series" ? "Serie" : "";
-}
-
-function getMetaLine(item) {
-    const year = item.release_year ? String(item.release_year) : "";
-    let right = "";
-
-    if (item.category === "movie") right = formatDuration(item.duration_minutes);
-    else if (item.category === "series") right = formatSeriesMeta(item);
-    else right = formatDuration(item.duration_minutes);
-
-    return [year, right].filter(Boolean).join(" · ");
-}
-
-function normalizeMovieRow(row) {
-    return {
-        id: row.id,
-        title: row.title || "Sin título",
-        description: row.description || "",
-        thumbnail_url: row.thumbnail_url || "",
-        banner_url: row.banner_url || "",
-        release_year: row.release_year ?? null,
-        category: row.category || null,
-        duration_minutes: row.duration_minutes ?? null,
-        movie_meta: row.movie_meta || null,
-    };
 }
 
 function setState(message = "", show = true) {
@@ -85,15 +42,48 @@ function setSubtitle(message = "") {
     node.textContent = message;
 }
 
-function setHeroBackground(items) {
-    const hero = el("hero-image");
-    if (!hero) return;
+function formatDuration(minutes) {
+    const m = Number(minutes);
+    if (!Number.isFinite(m) || m <= 0) return "";
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60);
+    const rem = m % 60;
+    return rem ? `${h} h ${rem} min` : `${h} h`;
+}
 
-    const candidate = (items || []).find(x => x.banner_url || x.thumbnail_url);
-    const img = candidate?.banner_url || candidate?.thumbnail_url || "";
-    if (!img) return;
+function getMetaLine(item) {
+    const year = item?.release_year ? String(item.release_year) : "";
+    let right = "";
 
-    hero.style.backgroundImage = `url("${img}")`;
+    if (item?.category === "movie") {
+        right = formatDuration(item.duration_minutes);
+    } else if (item?.category === "series") {
+        const sc = Number(item?.seasons_count ?? item?.movie_meta?.seasons_count);
+        const ec = Number(item?.episodes_count ?? item?.movie_meta?.episodes_count);
+        if (Number.isFinite(sc) && sc > 0) right = `${sc} ${plural(sc, "temporada", "temporadas")}`;
+        else if (Number.isFinite(ec) && ec > 0) right = `${ec} ${plural(ec, "episodio", "episodios")}`;
+        else right = "Serie";
+    } else {
+        right = formatDuration(item?.duration_minutes);
+    }
+
+    return [year, right].filter(Boolean).join(" · ");
+}
+
+function normalizeContentRow(row) {
+    return {
+        id: row.id,
+        title: row.title || row.name || "Sin título",
+        description: row.description || row.sinopsis || "",
+        thumbnail_url: row.thumbnail_url || row.thumb || row.poster_url || "",
+        banner_url: row.banner_url || row.cover_url || "",
+        release_year: row.release_year ?? row.year ?? null,
+        category: row.category || row.type || null,
+        duration_minutes: row.duration_minutes ?? row.duration ?? null,
+        seasons_count: row.seasons_count ?? null,
+        episodes_count: row.episodes_count ?? null,
+        movie_meta: row.movie_meta || null
+    };
 }
 
 function renderFallbackCard(item) {
@@ -115,11 +105,12 @@ function renderFallbackCard(item) {
 function renderCard(item) {
     const href = `/title?title=${encodeURIComponent(item.id)}`;
 
+    // Si tu ui.js expone cardHtml, lo usamos
     if (typeof ui.cardHtml === "function") {
         try {
             return ui.cardHtml(item, href);
         } catch (e) {
-            console.warn("[mylist] ui.cardHtml falló, uso fallback", e);
+            console.warn("[mylist] ui.cardHtml falló, uso fallback:", e);
         }
     }
 
@@ -134,6 +125,7 @@ function bindCardNavigation(root) {
             const href = card.dataset.href;
             if (href) window.location.href = href;
         };
+
         card.addEventListener("click", go);
         card.addEventListener("keydown", (ev) => {
             if (ev.key === "Enter" || ev.key === " ") {
@@ -142,6 +134,20 @@ function bindCardNavigation(root) {
             }
         });
     });
+}
+
+function setHeroBackground(items) {
+    const hero = el("hero-image");
+    if (!hero) return;
+
+    const first = (items || []).find(x => x.banner_url || x.thumbnail_url);
+    const img = first?.banner_url || first?.thumbnail_url || "";
+    if (!img) return;
+
+    hero.style.backgroundImage = `url("${img}")`;
+    hero.style.backgroundSize = "cover";
+    hero.style.backgroundPosition = "center";
+    hero.style.backgroundRepeat = "no-repeat";
 }
 
 async function getCurrentUserId() {
@@ -154,12 +160,8 @@ async function getCurrentUserId() {
 }
 
 /* =========================================================
-   Puente de integración: localStorage -> Supabase
-   (para títulos guardados por el botón "Mi Lista" local)
+   Puente localStorage -> Supabase (usa TU schema real)
 ========================================================= */
-
-const LOCAL_MY_LIST_KEY = "satv_my_list_ids";
-
 function getLocalMyListIds() {
     try {
         const raw = localStorage.getItem(LOCAL_MY_LIST_KEY);
@@ -170,23 +172,22 @@ function getLocalMyListIds() {
     }
 }
 
-async function syncLocalMyListToSupabase(userId) {
+async function syncLocalMyListToSupabase(profileId) {
     const ids = getLocalMyListIds();
-    if (!userId || !ids.length) return { synced: 0, skipped: true };
+    if (!profileId || !ids.length) return { synced: 0, skipped: true };
 
-    // insert por lote con upsert (requiere unique(user_id, movie_id))
-    const payload = ids.map(movieId => ({
-        user_id: userId,
-        movie_id: movieId,
-        // aliases (por compatibilidad, el trigger igual normaliza)
-        profile_id: userId,
-        content_id: movieId,
-        title_id: movieId
+    // TU tabla usa profile_id + content_id
+    const payload = ids.map(contentId => ({
+        profile_id: profileId,
+        content_id: contentId
     }));
 
     const { error } = await supabase
         .from("my_list")
-        .upsert(payload, { onConflict: "user_id,movie_id", ignoreDuplicates: false });
+        .upsert(payload, {
+            onConflict: "profile_id,content_id",
+            ignoreDuplicates: false
+        });
 
     if (error) {
         console.warn("[mylist] sync local->supabase error:", error);
@@ -197,50 +198,32 @@ async function syncLocalMyListToSupabase(userId) {
 }
 
 /* =========================================================
-   Carga de my_list (con compat de columnas)
+   Lectura de my_list (TU schema)
 ========================================================= */
-
-async function fetchMyListRows(userId) {
-    if (!userId) return [];
-
-    // Intento 1: user_id
-    let res = await supabase
+async function fetchMyListRows(profileId) {
+    const { data, error } = await supabase
         .from("my_list")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+        .select("id, profile_id, content_id, added_at")
+        .eq("profile_id", profileId)
+        .order("added_at", { ascending: false });
 
-    // Fallback: profile_id
-    if (res.error) {
-        console.warn("[mylist] query user_id falló, pruebo profile_id:", res.error.message);
-        res = await supabase
-            .from("my_list")
-            .select("*")
-            .eq("profile_id", userId)
-            .order("created_at", { ascending: false });
-    }
-
-    if (res.error) throw res.error;
-    return res.data || [];
+    if (error) throw error;
+    return data || [];
 }
 
-function extractMovieIdsFromMyListRows(rows) {
-    return uniq(
-        (rows || []).map(r =>
-            r.movie_id ??
-            r.content_id ??
-            r.title_id ??
-            null
-        )
-    );
+function extractContentIds(rows) {
+    return uniq((rows || []).map(r => r.content_id).filter(Boolean));
 }
 
-async function fetchMoviesByIds(ids) {
+/* =========================================================
+   Lectura de content
+   (primero intento select amplio, si falla hago uno mínimo)
+========================================================= */
+async function fetchContentByIds(ids) {
     if (!ids.length) return [];
 
-    // Intento con relation movie_meta
     let res = await supabase
-        .from("movies")
+        .from("content")
         .select(`
       id,
       title,
@@ -249,95 +232,64 @@ async function fetchMoviesByIds(ids) {
       banner_url,
       release_year,
       category,
-      duration_minutes,
-      movie_meta (
-        seasons_count,
-        episodes_count
-      )
+      duration_minutes
     `)
         .in("id", ids);
 
-    // Fallback sin relation expandida
+    // Fallback mínimo por si alguna columna no existe en tu tabla content
     if (res.error) {
-        console.warn("[mylist] select con movie_meta falló, reintento simple:", res.error.message);
+        console.warn("[mylist] select amplio en content falló, reintento mínimo:", res.error.message);
+
         res = await supabase
-            .from("movies")
-            .select(`
-        id,
-        title,
-        description,
-        thumbnail_url,
-        banner_url,
-        release_year,
-        category,
-        duration_minutes
-      `)
+            .from("content")
+            .select("id, title, thumbnail_url, description")
             .in("id", ids);
     }
 
-    if (res.error) {
-        console.warn("[mylist] lectura movies falló, uso fallback api.fetchMovie:", res.error);
-
-        // Fallback final: API helper
-        if (typeof api.fetchMovie === "function") {
-            const out = [];
-            for (const id of ids) {
-                try {
-                    const item = await api.fetchMovie(id);
-                    if (item) out.push(normalizeMovieRow(item));
-                } catch (e) {
-                    console.warn("[mylist] fetchMovie fallback falló:", id, e);
-                }
-            }
-            return out;
-        }
-
-        throw res.error;
-    }
-
-    return (res.data || []).map(normalizeMovieRow);
+    if (res.error) throw res.error;
+    return (res.data || []).map(normalizeContentRow);
 }
 
-function sortItemsBySavedOrder(items, savedIds) {
+function sortBySavedOrder(items, savedIds) {
     const pos = new Map(savedIds.map((id, i) => [String(id), i]));
     return [...items].sort((a, b) => (pos.get(String(a.id)) ?? 999999) - (pos.get(String(b.id)) ?? 999999));
 }
 
-async function showMyList(userId) {
+async function showMyList(profileId) {
     const row = el("mylist-row");
     if (!row) return;
 
     row.innerHTML = "";
     setState("Cargando tu lista…", true);
 
-    // 1) puente desde localStorage (si existe)
-    await syncLocalMyListToSupabase(userId);
+    // Opcional: sincroniza lo que haya quedado guardado en localStorage
+    await syncLocalMyListToSupabase(profileId);
 
-    // 2) leer tabla
-    const myRows = await fetchMyListRows(userId);
+    const listRows = await fetchMyListRows(profileId);
 
-    if (!myRows.length) {
+    if (!listRows.length) {
         setSubtitle("Todavía no agregaste títulos.");
         setState("Tu lista está vacía.", true);
         return;
     }
 
-    const savedIds = extractMovieIdsFromMyListRows(myRows);
+    const contentIds = extractContentIds(listRows);
 
-    if (!savedIds.length) {
-        setSubtitle(`${myRows.length} filas encontradas, pero sin IDs de contenido válidos.`);
-        setState("Revisá columnas movie_id / content_id / title_id en my_list.", true);
-        console.warn("[mylist] filas sin IDs detectables:", myRows);
+    if (!contentIds.length) {
+        setSubtitle(`${listRows.length} filas encontradas, pero sin content_id.`);
+        setState("Revisá los datos guardados en my_list.", true);
         return;
     }
 
-    const items = sortItemsBySavedOrder(await fetchMoviesByIds(savedIds), savedIds);
+    let items = await fetchContentByIds(contentIds);
 
     if (!items.length) {
-        setSubtitle(`${savedIds.length} títulos guardados, pero no se encontraron en movies.`);
-        setState("Revisá la FK my_list.movie_id -> movies.id o que los IDs existan.", true);
+        setSubtitle(`${contentIds.length} IDs guardados, pero no se encontraron en content.`);
+        setState("Revisá que my_list.content_id exista en public.content(id).", true);
         return;
     }
+
+    items = sortBySavedOrder(items, contentIds);
 
     setSubtitle(`${items.length} ${plural(items.length, "título guardado", "títulos guardados")}`);
     setState("", false);
@@ -349,21 +301,21 @@ async function showMyList(userId) {
 
 async function init() {
     try {
-        // UI general del sitio
+        // UI general (si tu ui.js lo tiene)
         ui.setAppName?.();
         ui.renderNav?.({ active: "mylist" });
         ui.renderAuthButtons?.();
         ui.enableDataHrefNavigation?.();
 
-        const userId = await getCurrentUserId();
+        const profileId = await getCurrentUserId();
 
-        if (!userId) {
+        if (!profileId) {
             setSubtitle("Iniciá sesión para ver tu lista.");
             setState("No hay sesión activa.", true);
             return;
         }
 
-        await showMyList(userId);
+        await showMyList(profileId);
     } catch (e) {
         console.error("[mylist] init error:", e);
         setSubtitle("No se pudo cargar tu lista.");
