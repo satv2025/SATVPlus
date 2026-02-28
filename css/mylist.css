@@ -3,7 +3,7 @@
    ========================= */
 
 :root {
-    --list-bg: #1f2025;
+    --list-bg: #0b0c10;
     --text-color: #f3f4f6;
     --title-color: #2563eb;
     --card-bg: rgba(255, 255, 255, 0.10);
@@ -32,9 +32,9 @@ body {
     background-size: cover;
     background-position: center;
     height: 30vh;
-    min-height: 220px;
-    max-height: 340px;
     overflow: hidden;
+    margin-top: -9em;
+    margin-bottom: -3.6em;
 }
 
 .title-hero {
@@ -45,13 +45,14 @@ body {
     background-position: center;
     background-repeat: no-repeat;
     height: 100%;
+    display: none;
 }
 
 .title-hero::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgba(31, 32, 37, 1) 0%, rgba(31, 32, 37, .85) 28%, rgba(31, 32, 37, .15) 100%);
+    background: #0b0c10;
 }
 
 .title-hero-inner {

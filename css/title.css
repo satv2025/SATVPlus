@@ -506,7 +506,6 @@ span.meta-dropitem {
     z-index: 0;
     transition: background .2s ease, scale .2s ease, transform .2s ease, border-color .2s ease;
     min-height: 0;
-    height: 15.5em;
 }
 
 .episode-card:hover {
@@ -572,15 +571,15 @@ span.meta-dropitem {
     letter-spacing: .1px;
     font-size: 13px;
     line-height: 1.15;
-
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     line-clamp: 2;
     overflow: hidden;
-
     color: rgba(255, 255, 255, .96);
     text-shadow: 0 2px 14px rgba(0, 0, 0, .55);
+    margin-bottom: 0.3em;
+    margin-top: -0.5em;
 }
 
 .episode-sub {
@@ -654,7 +653,7 @@ body.is-nivelx .episode-sub {
 }
 
 body.is-nivelx {
-    --ep-body-h: 62px;
+    --ep-body-h: auto;
 }
 
 body:not(.is-nivelx) .episode-sub {
