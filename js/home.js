@@ -93,7 +93,7 @@ function renderHomeHeroItem(movie, { userId } = {}) {
       ${meta ? `<div class="home-hero-meta">${meta}</div>` : ""}
       ${synopsis ? `<p class="home-hero-synopsis">${synopsis}</p>` : ""}
       <div class="home-hero-actions">
-        <a class="btn" href="${titleHref}">Ver ficha</a>
+        <a class="btn" href="${titleHref}">Ver ahora<span aria-hidden="true">▶</span></a>
         <a class="btn ghost" href="${myListHref}">Mi Lista</a>
       </div>
     </div>

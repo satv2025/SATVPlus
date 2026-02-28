@@ -12,8 +12,8 @@
   --line: rgba(255, 255, 255, .10);
   --shadow: 0 18px 55px rgba(0, 0, 0, 0);
   --radius: 16px;
-  --radius2: 22px;
-
+ --radius2: 22px;
+ --hero-overlay: #0b0c10;
   /* carousel tuning */
   --edge-fade: 120px;
   /* cuánto “se pierde” por los bordes */
@@ -39,6 +39,7 @@
 html,
 body {
   height: 100%;
+  overflow-x: clip; /* mejor que hidden */
 }
 
 body {
@@ -63,8 +64,8 @@ body {
 .topnav {
   position: relative;
   top: 0;
-  z-index: 9999; /* mayor que el hero */
-  background: #171924;
+  z-index: 9999;
+  background: #1719245c;
   border-bottom: 1px solid var(--line);
   width: 100%;
 }
@@ -216,57 +217,51 @@ a.pill.profile-link:hover {
 /* ================= HERO (REHECHO) ================= */
 
 .hero {
-  /* pegado al nav / techo */
-  margin-top: 0 !important;
-
-  /* sin bordes ni radios (evita líneas/blancos/bugs) */
+  margin-top: -68px !important; /* si querés mantener superposición con nav */
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 
-  /* full width aunque esté dentro de .container */
+  /* FULL WIDTH sin overflow por scrollbar */
   width: 100dvw;
   max-width: 100dvw;
   margin-left: calc(50% - 50dvw);
   margin-right: calc(50% - 50dvw);
 
-  /* proporción */
+  /* IMPORTANTE: no uses left/right con este método */
+  position: relative;
   aspect-ratio: 16 / 9;
-
-  /* imagen de fondo */
+  /* Si querés altura fija, quitá aspect-ratio. Si querés ratio, quitá height */
+  min-height: clamp(420px, 62vw, 58em);
+  height: 400px;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   background-color: #0b0c10;
-
-  /* overlay + contenido */
-  position: relative;
   overflow: hidden;
   display: flex;
   align-items: flex-end;
-
-  /* padding interno del contenido */
-  padding: 18px;
-
-  /* evita glitches de composición */
   isolation: isolate;
+  padding: 18px;
+  padding-left: 5em !important;
+  padding-right: 5em !important;
 }
 
 /* overlay sin seams / gradient TO TOP con #0b0c10 */
 .hero::before {
   content: "";
   position: absolute;
-  inset: -1px; /* evita líneas finas en bordes */
+  inset: -1px;
   z-index: 0;
   pointer-events: none;
 
   background: linear-gradient(
     to top,
-    #0b0c10 0%,
-    rgba(11, 12, 16, 0.94) 28%,
-    rgba(11, 12, 16, 0.66) 55%,
-    rgba(11, 12, 16, 0.22) 78%,
-    rgba(11, 12, 16, 0) 100%
+    color-mix(in srgb, var(--hero-overlay) 100%, transparent) 0%,
+    color-mix(in srgb, var(--hero-overlay) 94%, transparent) 28%,
+    color-mix(in srgb, var(--hero-overlay) 66%, transparent) 55%,
+    color-mix(in srgb, var(--hero-overlay) 22%, transparent) 78%,
+    color-mix(in srgb, var(--hero-overlay) 0%, transparent) 100%
   );
 }
 
