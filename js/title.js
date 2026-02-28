@@ -408,20 +408,33 @@ function setMyListBtnState(btn, movieId) {
 
     const added = isInMyList(movieId);
 
-    // aseguramos visibilidad (el HTML arranca con .hidden)
+    // aseguramos visibilidad
     btn.classList.remove("hidden");
     btn.setAttribute("type", "button");
     btn.setAttribute("aria-pressed", String(added));
     btn.setAttribute("aria-label", added ? "Quitar de Mi Lista" : "Agregar a Mi Lista");
     btn.classList.toggle("is-active", added);
 
-    // Actualiza el texto, manteniendo el SVG intacto
+    const nextLabel = added ? "En Mi Lista" : "Mi Lista";
+
+    // 1) Si existe <span>, lo seguimos usando
     const labelSpan = btn.querySelector("span");
     if (labelSpan) {
-        labelSpan.textContent = added ? "En Mi Lista" : "Mi Lista";
+        labelSpan.textContent = nextLabel;
+        return;
+    }
+
+    // 2) Soporte para tu HTML exacto: <svg>...</svg>Mi Lista
+    //    Buscamos un text node después del SVG y lo actualizamos sin romper el ícono
+    const textNode = [...btn.childNodes].find(
+        (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0
+    );
+
+    if (textNode) {
+        textNode.textContent = ` ${nextLabel}`;
     } else {
-        // fallback por si cambia el HTML
-        btn.textContent = added ? "En Mi Lista" : "Mi Lista";
+        // fallback seguro: agrega texto al final y conserva el SVG
+        btn.appendChild(document.createTextNode(` ${nextLabel}`));
     }
 }
 
