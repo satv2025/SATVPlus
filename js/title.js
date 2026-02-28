@@ -4,6 +4,8 @@
 // ✅ <title>{título} · SATV+</title> vía document.title
 // ✅ Meta “Te podría gustar”: {año} * {duración/temporadas/episodios}
 // ✅ Recorte automático inteligente (sin listas manuales)
+// ✅ Mi Lista REAL en Supabase (my_list: profile_id + content_id + added_at)
+// ✅ Fallback localStorage si no hay sesión / falla Supabase
 
 function qs(key) { return new URLSearchParams(window.location.search).get(key); }
 function el(id) { return document.getElementById(id); }
@@ -363,8 +365,9 @@ async function fetchContinueWatchingForTitle({ movieId }) {
 }
 
 /* ===========================
-   MI LISTA (localStorage simple)
+   MI LISTA (Supabase REAL + fallback localStorage)
    - Reutiliza #episodes-jump como botón "Mi Lista"
+   - Tabla real: my_list(profile_id, content_id, added_at)
 =========================== */
 
 const MY_LIST_KEY = "satv_my_list_ids";
@@ -383,15 +386,27 @@ function saveMyListIds(ids) {
     try {
         localStorage.setItem(MY_LIST_KEY, JSON.stringify([...new Set(ids)]));
     } catch (e) {
-        console.warn("[title] no se pudo guardar Mi Lista:", e);
+        console.warn("[title] no se pudo guardar Mi Lista local:", e);
     }
 }
 
-function isInMyList(movieId) {
+function isInMyListLocal(movieId) {
     return getMyListIds().includes(movieId);
 }
 
-function toggleMyList(movieId) {
+function setLocalMyListMembership(movieId, added) {
+    const ids = getMyListIds();
+    const exists = ids.includes(movieId);
+
+    let next = ids;
+    if (added && !exists) next = [...ids, movieId];
+    if (!added && exists) next = ids.filter(id => id !== movieId);
+
+    saveMyListIds(next);
+    return added;
+}
+
+function toggleMyListLocal(movieId) {
     const ids = getMyListIds();
     const exists = ids.includes(movieId);
 
@@ -403,19 +418,33 @@ function toggleMyList(movieId) {
     return !exists; // true si quedó agregado
 }
 
-function setMyListBtnState(btn, movieId) {
+function setMyListBtnState(btn, movieId, opts = {}) {
     if (!btn || !movieId) return;
 
-    const added = isInMyList(movieId);
+    const {
+        added = false,
+        pending = false,
+        source = "unknown" // "supabase" | "local" | "unknown"
+    } = opts;
 
     // aseguramos visibilidad
     btn.classList.remove("hidden");
     btn.setAttribute("type", "button");
     btn.setAttribute("aria-pressed", String(added));
     btn.setAttribute("aria-label", added ? "Quitar de Mi Lista" : "Agregar a Mi Lista");
-    btn.classList.toggle("is-active", added);
+    btn.classList.toggle("is-active", !!added);
 
-    const nextLabel = added ? "En Mi Lista" : "Mi Lista";
+    // data attrs útiles para debug / CSS
+    btn.dataset.myListState = added ? "in" : "out";
+    btn.dataset.myListSource = source;
+    btn.dataset.myListPending = pending ? "1" : "0";
+
+    // Disable real para evitar doble click mientras hace request
+    try { btn.disabled = !!pending; } catch { }
+
+    const nextLabel = pending
+        ? (added ? "Actualizando…" : "Actualizando…")
+        : (added ? "En Mi Lista" : "Mi Lista");
 
     // 1) Si existe <span>, lo seguimos usando
     const labelSpan = btn.querySelector("span");
@@ -438,32 +467,246 @@ function setMyListBtnState(btn, movieId) {
     }
 }
 
-function bindMyListButton(btn, movie) {
+async function getMyListAuthContext() {
+    try {
+        const supabase = await getAppSupabaseClient();
+        if (!supabase) return { supabase: null, profileId: null, isLoggedIn: false };
+
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+            console.warn("[title] getUser (Mi Lista) error:", error);
+            return { supabase, profileId: null, isLoggedIn: false, error };
+        }
+
+        const profileId = data?.user?.id || null;
+        return { supabase, profileId, isLoggedIn: !!profileId };
+    } catch (e) {
+        console.warn("[title] getMyListAuthContext error:", e);
+        return { supabase: null, profileId: null, isLoggedIn: false, error: e };
+    }
+}
+
+async function isInMyListSupabase({ supabase, profileId, contentId }) {
+    if (!supabase || !profileId || !contentId) return false;
+
+    const { data, error } = await supabase
+        .from("my_list")
+        .select("id")
+        .eq("profile_id", profileId)
+        .eq("content_id", contentId)
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        // maybeSingle normalmente no tira error cuando no hay filas,
+        // pero si pasa otra cosa la propagamos.
+        throw error;
+    }
+
+    return !!data;
+}
+
+async function addToMyListSupabase({ supabase, profileId, contentId }) {
+    if (!supabase || !profileId || !contentId) {
+        throw new Error("Faltan supabase/profileId/contentId para addToMyListSupabase");
+    }
+
+    const payload = {
+        profile_id: profileId,
+        content_id: contentId,
+        added_at: new Date().toISOString()
+    };
+
+    // Usa tu unique(profile_id, content_id)
+    const { error } = await supabase
+        .from("my_list")
+        .upsert(payload, {
+            onConflict: "profile_id,content_id",
+            ignoreDuplicates: false
+        });
+
+    if (error) throw error;
+    return true;
+}
+
+async function removeFromMyListSupabase({ supabase, profileId, contentId }) {
+    if (!supabase || !profileId || !contentId) {
+        throw new Error("Faltan supabase/profileId/contentId para removeFromMyListSupabase");
+    }
+
+    const { error } = await supabase
+        .from("my_list")
+        .delete()
+        .eq("profile_id", profileId)
+        .eq("content_id", contentId);
+
+    if (error) throw error;
+    return true;
+}
+
+async function resolveMyListState(contentId) {
+    const localAdded = isInMyListLocal(contentId);
+
+    const ctx = await getMyListAuthContext();
+    if (!ctx.supabase || !ctx.isLoggedIn || !ctx.profileId) {
+        return {
+            added: localAdded,
+            source: "local",
+            supabase: ctx.supabase || null,
+            profileId: null,
+            isLoggedIn: false
+        };
+    }
+
+    try {
+        const remoteAdded = await isInMyListSupabase({
+            supabase: ctx.supabase,
+            profileId: ctx.profileId,
+            contentId
+        });
+
+        // espejo local para consistencia con /mylist si usa sync
+        setLocalMyListMembership(contentId, remoteAdded);
+
+        return {
+            added: remoteAdded,
+            source: "supabase",
+            supabase: ctx.supabase,
+            profileId: ctx.profileId,
+            isLoggedIn: true
+        };
+    } catch (e) {
+        console.warn("[title] resolveMyListState remote error; uso local:", e);
+        return {
+            added: localAdded,
+            source: "local",
+            supabase: ctx.supabase,
+            profileId: ctx.profileId,
+            isLoggedIn: !!ctx.profileId,
+            error: e
+        };
+    }
+}
+
+async function refreshMyListButtonState(btn, contentId) {
+    if (!btn || !contentId) return;
+
+    setMyListBtnState(btn, contentId, {
+        added: isInMyListLocal(contentId), // estado rápido inicial
+        pending: true,
+        source: "unknown"
+    });
+
+    const state = await resolveMyListState(contentId);
+
+    setMyListBtnState(btn, contentId, {
+        added: state.added,
+        pending: false,
+        source: state.source
+    });
+
+    return state;
+}
+
+async function bindMyListButton(btn, movie) {
     if (!btn || !movie?.id) return;
 
     // limpia cualquier handler previo (antes era scroll episodios)
     btn.onclick = null;
 
-    setMyListBtnState(btn, movie.id);
-
-    // evitar rebind accidental si main() se dispara de nuevo
-    if (btn.dataset.myListBound === "1") {
-        btn.dataset.myListMovieId = movie.id;
-        return;
-    }
-
-    btn.dataset.myListBound = "1";
     btn.dataset.myListMovieId = movie.id;
 
-    btn.addEventListener("click", (ev) => {
+    // estado inicial (real)
+    await refreshMyListButtonState(btn, movie.id);
+
+    // evitar rebind accidental si main() se dispara de nuevo
+    if (btn.dataset.myListBound === "1") return;
+
+    btn.dataset.myListBound = "1";
+
+    btn.addEventListener("click", async (ev) => {
         ev.preventDefault();
 
-        const currentMovieId = btn.dataset.myListMovieId || movie.id;
-        const added = toggleMyList(currentMovieId);
-        setMyListBtnState(btn, currentMovieId);
+        if (btn.dataset.myListPending === "1") return;
 
-        // Si tenés toasts, acá podés enchufarlos
-        console.log(added ? "[title] agregado a Mi Lista" : "[title] quitado de Mi Lista");
+        const currentMovieId = btn.dataset.myListMovieId || movie.id;
+        const currentVisualAdded = btn.dataset.myListState === "in";
+
+        // UI pending inmediata
+        setMyListBtnState(btn, currentMovieId, {
+            added: currentVisualAdded,
+            pending: true,
+            source: btn.dataset.myListSource || "unknown"
+        });
+
+        try {
+            // Resolvemos estado/auth "real" al momento del click
+            const state = await resolveMyListState(currentMovieId);
+
+            if (state.source === "supabase" && state.supabase && state.profileId) {
+                // Toggle real en Supabase
+                if (state.added) {
+                    await removeFromMyListSupabase({
+                        supabase: state.supabase,
+                        profileId: state.profileId,
+                        contentId: currentMovieId
+                    });
+
+                    setLocalMyListMembership(currentMovieId, false);
+
+                    setMyListBtnState(btn, currentMovieId, {
+                        added: false,
+                        pending: false,
+                        source: "supabase"
+                    });
+
+                    console.log("[title] quitado de Mi Lista (Supabase)");
+                } else {
+                    await addToMyListSupabase({
+                        supabase: state.supabase,
+                        profileId: state.profileId,
+                        contentId: currentMovieId
+                    });
+
+                    setLocalMyListMembership(currentMovieId, true);
+
+                    setMyListBtnState(btn, currentMovieId, {
+                        added: true,
+                        pending: false,
+                        source: "supabase"
+                    });
+
+                    console.log("[title] agregado a Mi Lista (Supabase)");
+                }
+
+                return;
+            }
+
+            // Fallback local si no hay sesión o falla Supabase/RLS
+            const added = toggleMyListLocal(currentMovieId);
+            setMyListBtnState(btn, currentMovieId, {
+                added,
+                pending: false,
+                source: "local"
+            });
+
+            console.log(added
+                ? "[title] agregado a Mi Lista (local fallback)"
+                : "[title] quitado de Mi Lista (local fallback)");
+        } catch (e) {
+            console.warn("[title] toggle Mi Lista error:", e);
+
+            // Rehidrata estado (intenta remoto y/o local)
+            try {
+                await refreshMyListButtonState(btn, currentMovieId);
+            } catch {
+                setMyListBtnState(btn, currentMovieId, {
+                    added: isInMyListLocal(currentMovieId),
+                    pending: false,
+                    source: "local"
+                });
+            }
+        }
     });
 }
 
@@ -578,8 +821,8 @@ async function main() {
 
     document.title = `${movie.title || "Título"} · SATV+`;
 
-    // MI LISTA (siempre visible para películas y series)
-    bindMyListButton(myListBtn, movie);
+    // MI LISTA (siempre visible para películas y series) - REAL en Supabase
+    await bindMyListButton(myListBtn, movie);
 
     // Nivel X
     const NIVELX_ID = "0acf7d27-5a80-4682-873a-760dd1ffdb51";

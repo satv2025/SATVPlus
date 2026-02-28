@@ -1293,3 +1293,38 @@ media-player {
     padding: 8px 10px;
   }
 }
+
+.btn.ghost svg {
+  width: 19px;
+  height: auto;
+  fill: #fff;
+}
+
+.btn.ghost.is-active {
+  background: rgba(37, 99, 235, .18);
+  border-color: rgba(37, 99, 235, .65);
+  color: #fff;
+}
+
+.home-hero-mylist {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-hero-mylist-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex: 0 0 18px;
+  fill: currentColor;
+}
+
+.home-hero-mylist-icon path {
+  fill: currentColor;
+}
+
+.home-hero-mylist.is-active {
+  border-color: rgba(37, 99, 235, .65);
+  background: rgba(37, 99, 235, .18);
+}

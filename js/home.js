@@ -12,6 +12,7 @@ import {
 
 import { getSession, requireAuthOrRedirect } from "./auth.js";
 import { fetchContinueWatching, fetchLatest, fetchByCategory } from "./api.js";
+import { supabase } from "./supabaseClient.js";
 
 /* =========================================================
    HOME HERO DESTACADO ESTABLE (tipo Netflix)
@@ -54,6 +55,292 @@ function clearHomeHeroSelection(userId) {
   } catch {
     // ignore
   }
+}
+
+/* =========================================================
+   MI LISTA (HOME HERO) - Supabase real + fallback local
+   Tabla real: my_list(profile_id, content_id, added_at)
+========================================================= */
+
+const MY_LIST_KEY = "satv_my_list_ids";
+
+function getMyListIdsLocal() {
+  try {
+    const raw = localStorage.getItem(MY_LIST_KEY);
+    const arr = JSON.parse(raw || "[]");
+    return Array.isArray(arr) ? [...new Set(arr.filter(Boolean).map(String))] : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMyListIdsLocal(ids) {
+  try {
+    localStorage.setItem(MY_LIST_KEY, JSON.stringify([...new Set((ids || []).filter(Boolean).map(String))]));
+  } catch (e) {
+    console.warn("[home] no se pudo guardar Mi Lista local:", e);
+  }
+}
+
+function isInMyListLocal(contentId) {
+  return getMyListIdsLocal().includes(String(contentId));
+}
+
+function setLocalMyListMembership(contentId, added) {
+  const id = String(contentId);
+  const ids = getMyListIdsLocal();
+  const exists = ids.includes(id);
+
+  let next = ids;
+  if (added && !exists) next = [...ids, id];
+  if (!added && exists) next = ids.filter(x => x !== id);
+
+  saveMyListIdsLocal(next);
+  return added;
+}
+
+function toggleLocalMyList(contentId) {
+  const id = String(contentId);
+  const ids = getMyListIdsLocal();
+  const exists = ids.includes(id);
+  const next = exists ? ids.filter(x => x !== id) : [...ids, id];
+  saveMyListIdsLocal(next);
+  return !exists; // true => quedó agregado
+}
+
+async function isInMyListRemote(profileId, contentId) {
+  if (!profileId || !contentId) return false;
+
+  const { data, error } = await supabase
+    .from("my_list")
+    .select("id")
+    .eq("profile_id", profileId)
+    .eq("content_id", contentId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data;
+}
+
+async function addToMyListRemote(profileId, contentId) {
+  const payload = {
+    profile_id: profileId,
+    content_id: contentId,
+    added_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase
+    .from("my_list")
+    .upsert(payload, {
+      onConflict: "profile_id,content_id",
+      ignoreDuplicates: false
+    });
+
+  if (error) throw error;
+  return true;
+}
+
+async function removeFromMyListRemote(profileId, contentId) {
+  const { error } = await supabase
+    .from("my_list")
+    .delete()
+    .eq("profile_id", profileId)
+    .eq("content_id", contentId);
+
+  if (error) throw error;
+  return true;
+}
+
+async function resolveHeroMyListState({ userId, contentId }) {
+  const localAdded = isInMyListLocal(contentId);
+
+  if (!userId) {
+    return {
+      added: localAdded,
+      source: "local",
+      isLoggedIn: false
+    };
+  }
+
+  try {
+    const remoteAdded = await isInMyListRemote(userId, contentId);
+    // espejo local para consistencia con /mylist
+    setLocalMyListMembership(contentId, remoteAdded);
+
+    return {
+      added: remoteAdded,
+      source: "supabase",
+      isLoggedIn: true
+    };
+  } catch (e) {
+    console.warn("[home] resolveHeroMyListState remote error; uso local:", e);
+    return {
+      added: localAdded,
+      source: "local",
+      isLoggedIn: true,
+      error: e
+    };
+  }
+}
+
+function setHeroMyListBtnState(btn, { contentId, added = false, pending = false, source = "unknown" } = {}) {
+  if (!btn || !contentId) return;
+
+  btn.dataset.myListContentId = String(contentId);
+  btn.dataset.myListState = added ? "in" : "out";
+  btn.dataset.myListPending = pending ? "1" : "0";
+  btn.dataset.myListSource = source;
+
+  btn.setAttribute("aria-pressed", String(!!added));
+  btn.setAttribute("aria-label", added ? "Quitar de Mi Lista" : "Agregar a Mi Lista");
+  btn.classList.toggle("is-active", !!added);
+
+  try { btn.disabled = !!pending; } catch { }
+
+  const label = pending ? "Actualizando…" : (added ? "En Mi Lista" : "Mi Lista");
+  const labelNode = btn.querySelector(".home-hero-mylist-label");
+
+  if (labelNode) {
+    labelNode.textContent = label;
+  } else {
+    const textNode = [...btn.childNodes].find(
+      (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0
+    );
+    if (textNode) textNode.textContent = ` ${label}`;
+    else btn.appendChild(document.createTextNode(` ${label}`));
+  }
+}
+
+async function refreshHeroMyListButton(btn, { userId, contentId }) {
+  if (!btn || !contentId) return null;
+
+  setHeroMyListBtnState(btn, {
+    contentId,
+    added: isInMyListLocal(contentId),
+    pending: true,
+    source: "unknown"
+  });
+
+  const state = await resolveHeroMyListState({ userId, contentId });
+
+  setHeroMyListBtnState(btn, {
+    contentId,
+    added: state.added,
+    pending: false,
+    source: state.source
+  });
+
+  return state;
+}
+
+function bindHeroMyListButton({ movie, userId }) {
+  const btn = document.querySelector(".home-hero-mylist");
+  if (!btn || !movie?.id) return;
+
+  const contentId = String(movie.id);
+
+  // Si el hero se re-renderiza, es un botón nuevo => bind limpio
+  btn.dataset.myListContentId = contentId;
+
+  // estado real (async)
+  refreshHeroMyListButton(btn, { userId, contentId }).catch((e) => {
+    console.warn("[home] refreshHeroMyListButton error:", e);
+    setHeroMyListBtnState(btn, {
+      contentId,
+      added: isInMyListLocal(contentId),
+      pending: false,
+      source: "local"
+    });
+  });
+
+  btn.addEventListener("click", async (ev) => {
+    ev.preventDefault();
+
+    const currentId = btn.dataset.myListContentId || contentId;
+    if (!currentId) return;
+    if (btn.dataset.myListPending === "1") return;
+
+    const visualAdded = btn.dataset.myListState === "in";
+
+    setHeroMyListBtnState(btn, {
+      contentId: currentId,
+      added: visualAdded,
+      pending: true,
+      source: btn.dataset.myListSource || "unknown"
+    });
+
+    try {
+      const state = await resolveHeroMyListState({ userId, contentId: currentId });
+
+      if (state.source === "supabase" && userId) {
+        if (state.added) {
+          await removeFromMyListRemote(userId, currentId);
+          setLocalMyListMembership(currentId, false);
+
+          setHeroMyListBtnState(btn, {
+            contentId: currentId,
+            added: false,
+            pending: false,
+            source: "supabase"
+          });
+
+          toast?.("Quitado de Mi Lista.", "success");
+          console.log("[home] quitado de Mi Lista (Supabase)");
+        } else {
+          await addToMyListRemote(userId, currentId);
+          setLocalMyListMembership(currentId, true);
+
+          setHeroMyListBtnState(btn, {
+            contentId: currentId,
+            added: true,
+            pending: false,
+            source: "supabase"
+          });
+
+          toast?.("Agregado a Mi Lista.", "success");
+          console.log("[home] agregado a Mi Lista (Supabase)");
+        }
+        return;
+      }
+
+      // Fallback local (si no hay sesión o falló Supabase)
+      const added = toggleLocalMyList(currentId);
+      setHeroMyListBtnState(btn, {
+        contentId: currentId,
+        added,
+        pending: false,
+        source: "local"
+      });
+
+      toast?.(
+        added ? "Agregado a Mi Lista (local)." : "Quitado de Mi Lista (local).",
+        "success"
+      );
+
+      console.log(
+        added
+          ? "[home] agregado a Mi Lista (local fallback)"
+          : "[home] quitado de Mi Lista (local fallback)"
+      );
+    } catch (e) {
+      console.warn("[home] toggle hero Mi Lista error:", e);
+
+      // Rehidratar estado
+      try {
+        await refreshHeroMyListButton(btn, { userId, contentId: currentId });
+      } catch {
+        setHeroMyListBtnState(btn, {
+          contentId: currentId,
+          added: isInMyListLocal(currentId),
+          pending: false,
+          source: "local"
+        });
+      }
+
+      toast?.("No se pudo actualizar Mi Lista.", "error");
+    }
+  }, { passive: false });
 }
 
 function buildMyListUrl(userId) {
@@ -121,7 +408,6 @@ function renderHomeHeroItem(movie, { userId } = {}) {
   const synopsis = movie.description || movie.sinopsis || "";
   const title = movie.title || "Destacado";
   const titleHref = `/title?title=${encodeURIComponent(movie.id)}`;
-  const myListHref = buildMyListUrl(userId);
 
   hero.innerHTML = `
     <div class="home-hero-inner">
@@ -130,10 +416,24 @@ function renderHomeHeroItem(movie, { userId } = {}) {
       ${synopsis ? `<p class="home-hero-synopsis">${synopsis}</p>` : ""}
       <div class="home-hero-actions">
         <a class="btn" href="${titleHref}">Ver ahora <span aria-hidden="true"> ▶</span></a>
-        <a class="btn ghost" href="${myListHref}">Mi Lista</a>
+
+        <button
+          class="btn ghost home-hero-mylist"
+          type="button"
+          aria-label="Agregar a Mi Lista"
+          aria-pressed="false"
+        >
+          <svg class="home-hero-mylist-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1920" aria-hidden="true" focusable="false">
+            <path d="M866.332 213v653.332H213v186.666h653.332v653.332h186.666v-653.332h653.332V866.332h-653.332V213z" fill-rule="evenodd"/>
+          </svg>
+          <span class="home-hero-mylist-label">Mi Lista</span>
+        </button>
       </div>
     </div>
   `;
+
+  // Bind toggle real (Supabase + fallback local)
+  bindHeroMyListButton({ movie, userId });
 }
 
 function pickStableHomeHero(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
