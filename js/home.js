@@ -20,7 +20,7 @@ async function addToMyList(profileId, contentId) {
     try {
         const { data, error } = await supabase
             .from('my_list')
-            .insert([
+            .insert([ 
                 { profile_id: profileId, content_id: contentId }
             ]);
 
@@ -28,7 +28,7 @@ async function addToMyList(profileId, contentId) {
             console.error('Error al agregar a Mi Lista:', error);
             return;
         }
-        
+
         // Mostrar confirmación
         toast("Agregado a Mi Lista!");
     } catch (error) {
@@ -39,17 +39,30 @@ async function addToMyList(profileId, contentId) {
 /* =========================================================
    MI LISTA BUTTON REDIRECCION
 ========================================================= */
-function setMyListBtn() {
+async function setMyListBtn() {
     const myListBtn = document.getElementById("mylist-btn");
     if (!myListBtn) return;
 
-    // Suponiendo que ya tienes el perfil ID
-    const profileId = "perfil-id-aqui"; // Obtener el perfil de usuario
-    const contentId = "content-id"; // Obtener el ID del contenido al que se le añade a la lista
+    // Obtener el perfil ID desde Supabase (actualmente ya lo tienes en la sesión)
+    const session = await getSession();
+    const userId = session?.user?.id || null;
 
+    // Verificar si se obtiene el userId
+    if (!userId) {
+        toast("No se pudo obtener el ID de usuario.");
+        return;
+    }
+
+    // Obtener el ID del contenido al que se le añade a la lista
+    const contentId = "content-id"; // Aquí deberías obtener el contenido dinámicamente según el contexto
+
+    // Definir la URL para redirigir a "Mi Lista"
+    const url = `/mylist?user=${userId}`;
+
+    // Configurar el evento de clic del botón "Mi Lista"
     myListBtn.onclick = () => {
-        if (profileId && contentId) {
-            window.location.href = `/mylist?id=${contentId}&user=${profileId}`; // Redirige a "Mi Lista"
+        if (userId) {
+            window.location.href = url; // Redirigir a "Mi Lista" con el ID de usuario
         } else {
             toast("No se pudo agregar a Mi Lista. Datos faltantes.");
         }
@@ -58,8 +71,7 @@ function setMyListBtn() {
 
 /* =========================================================
    ENSURE CAROUSEL WRAPPER
-   ========================================================= */
-
+========================================================= */
 function ensureCarouselWrapper(row) {
   if (!row) return null;
 
@@ -105,8 +117,7 @@ function ensureCarouselWrapper(row) {
 
 /* =========================================================
    RESET STATE
-   ========================================================= */
-
+========================================================= */
 function resetCarouselState(row) {
   delete row.dataset.carouselReady;
   delete row.dataset.carouselBlock;
@@ -114,8 +125,7 @@ function resetCarouselState(row) {
 
 /* =========================================================
    BUILD CAROUSEL
-   ========================================================= */
-
+========================================================= */
 function buildCarousel(row, { cloneRounds = 2 } = {}) {
   if (!row) return;
   if (row.dataset.carouselReady === "1") return;
@@ -159,7 +169,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   /* =========================
      CLONES
      ========================= */
-
   const leftFrag = document.createDocumentFragment();
   const rightFrag = document.createDocumentFragment();
 
@@ -177,7 +186,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   /* =========================
      CENTRAR SIN GLITCH
      ========================= */
-
   const oldVis = row.style.visibility;
   const oldBehavior = row.style.scrollBehavior;
 
@@ -200,7 +208,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   /* =========================
      WRAP ESTABLE
      ========================= */
-
   let wrapping = false;
   let isManualScrolling = false;
 
@@ -232,7 +239,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   /* =========================
      FLECHAS
      ========================= */
-
   const moveAmount = () => Math.max(260, row.clientWidth * 0.9);
 
   function handleArrow(direction) {
@@ -252,8 +258,7 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
 
 /* =========================================================
    SET ROW
-   ========================================================= */
-
+========================================================= */
 function setRow(el, html) {
   if (!el) return;
   resetCarouselState(el);
@@ -262,8 +267,7 @@ function setRow(el, html) {
 
 /* =========================================================
    CONTINUE WATCHING HELPERS
-   ========================================================= */
-
+========================================================= */
 function buildContinueHref(row) {
   const m = row?.movies;
   if (!m?.id) return "#";
@@ -308,8 +312,7 @@ function buildContinuePct(row) {
 
 /* =========================================================
    INIT
-   ========================================================= */
-
+========================================================= */
 async function init() {
   // ✅ HOME SIEMPRE usa satvplusClient.0.css (disfrazado)
   // Requisito: <link id="app-style" ...> en index.html
