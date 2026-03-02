@@ -68,8 +68,8 @@ body {
   position: relative;
   top: 0;
   z-index: 9999;
-  background: #1719245c;
-  border-bottom: 1px solid var(--line);
+  background: #17192400;
+  border-bottom: 1px solid rgb(255 255 255 / 0%);
   width: 100%;
 }
 
@@ -201,20 +201,23 @@ img.brand-logo,
   background: #fff;
 }
 
+button#btn-logout:hover {
+  background: #fff;
+}
+
 .pill {
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, .04);
+  background: #2563eb;
   padding: 8px 10px;
   border-radius: var(--ep-radius);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 15px;
   text-decoration: none;
-  outline: 1px solid #fff;
-  opacity: 0.4;
+  opacity: 1;
 }
 
 a.pill.profile-link:hover {
-  opacity: 1;
+  background: #fff;
+  color: #2563eb;
 }
 
 /* ================= HERO (REHECHO) ================= */
@@ -1441,11 +1444,13 @@ button,
   touch-action: manipulation;
 }
 
+button#btn-logout {
+  background: #2563eb;
+}
+
 .btn,
 .navlink,
-.pill {
-  min-height: 40px;
-}
+.pill {}
 
 /* Tipografía fluida para contenido del hero (si existen esos nodos) */
 .home-hero-inner h1,

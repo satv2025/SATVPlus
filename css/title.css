@@ -1,11 +1,12 @@
 /* =========================================================
-   SATV+ â€” TITLE PAGE (RESPONSIVE + FIXES + ALL SEASONS)
+   SATV+ — TITLE PAGE (RESPONSIVE + FIXES + ALL SEASONS)
    - FIX 1: --ep-body-h ahora se usa (altura fija del overlay)
-   - FIX 2: se eliminan empujes raros del tÃ­tulo
-   - FIX 3: .episode-sub NO va con !important (rompÃ­a el toggle)
+   - FIX 2: se eliminan empujes raros del título
+   - FIX 3: .episode-sub NO va con !important (rompía el toggle)
    - FIX 4: overlay consistente, thumb no tapado, hover sin pisarse
    - + DROPDOWN DIV-BASED para temporadas
    - + ALL: mostrar todas las temporadas con header "Temporada X"
+   - + FIX BOTONES: alturas consistentes + Mi Lista (SVG/texto) centrado
    ========================================================= */
 
 /* =========================
@@ -27,12 +28,6 @@
 *::before,
 *::after {
     box-sizing: border-box;
-}
-
-#episodes-jump svg {
-    width: 19px;
-    height: auto;
-    fill: #fff;
 }
 
 .season-title {
@@ -61,7 +56,8 @@ span.meta-dropitem {
     background-position: center;
     aspect-ratio: 16 / 9;
     min-height: 420px;
-    max-height: 670px;
+    max-height: 55em;
+    margin-top: -4.8em;
 }
 
 .title-hero::after {
@@ -72,108 +68,7 @@ span.meta-dropitem {
     z-index: 1;
 
     /* Gradiente eased + micro-grain (2 capas) */
-    background: linear-gradient(to top,
-            rgba(11, 12, 16, 1.00) 0%,
-            rgba(11, 12, 16, 0.99) 1%,
-            rgba(11, 12, 16, 0.98) 2%,
-            rgba(11, 12, 16, 0.97) 3%,
-            rgba(11, 12, 16, 0.96) 4%,
-            rgba(11, 12, 16, 0.95) 5%,
-            rgba(11, 12, 16, 0.94) 6%,
-            rgba(11, 12, 16, 0.93) 7%,
-            rgba(11, 12, 16, 0.92) 8%,
-            rgba(11, 12, 16, 0.91) 9%,
-            rgba(11, 12, 16, 0.90) 10%,
-            rgba(11, 12, 16, 0.89) 11%,
-            rgba(11, 12, 16, 0.88) 12%,
-            rgba(11, 12, 16, 0.87) 13%,
-            rgba(11, 12, 16, 0.86) 14%,
-            rgba(11, 12, 16, 0.85) 15%,
-            rgba(11, 12, 16, 0.84) 16%,
-            rgba(11, 12, 16, 0.83) 17%,
-            rgba(11, 12, 16, 0.82) 18%,
-            rgba(11, 12, 16, 0.81) 19%,
-            rgba(11, 12, 16, 0.80) 20%,
-            rgba(11, 12, 16, 0.79) 21%,
-            rgba(11, 12, 16, 0.78) 22%,
-            rgba(11, 12, 16, 0.77) 23%,
-            rgba(11, 12, 16, 0.76) 24%,
-            rgba(11, 12, 16, 0.75) 25%,
-            rgba(11, 12, 16, 0.74) 26%,
-            rgba(11, 12, 16, 0.73) 27%,
-            rgba(11, 12, 16, 0.72) 28%,
-            rgba(11, 12, 16, 0.71) 29%,
-            rgba(11, 12, 16, 0.70) 30%,
-            rgba(11, 12, 16, 0.69) 31%,
-            rgba(11, 12, 16, 0.68) 32%,
-            rgba(11, 12, 16, 0.67) 33%,
-            rgba(11, 12, 16, 0.66) 34%,
-            rgba(11, 12, 16, 0.65) 35%,
-            rgba(11, 12, 16, 0.64) 36%,
-            rgba(11, 12, 16, 0.63) 37%,
-            rgba(11, 12, 16, 0.62) 38%,
-            rgba(11, 12, 16, 0.61) 39%,
-            rgba(11, 12, 16, 0.60) 40%,
-            rgba(11, 12, 16, 0.59) 41%,
-            rgba(11, 12, 16, 0.58) 42%,
-            rgba(11, 12, 16, 0.57) 43%,
-            rgba(11, 12, 16, 0.56) 44%,
-            rgba(11, 12, 16, 0.55) 45%,
-            rgba(11, 12, 16, 0.54) 46%,
-            rgba(11, 12, 16, 0.53) 47%,
-            rgba(11, 12, 16, 0.52) 48%,
-            rgba(11, 12, 16, 0.51) 49%,
-            rgba(11, 12, 16, 0.50) 50%,
-            rgba(11, 12, 16, 0.49) 51%,
-            rgba(11, 12, 16, 0.48) 52%,
-            rgba(11, 12, 16, 0.47) 53%,
-            rgba(11, 12, 16, 0.46) 54%,
-            rgba(11, 12, 16, 0.45) 55%,
-            rgba(11, 12, 16, 0.44) 56%,
-            rgba(11, 12, 16, 0.43) 57%,
-            rgba(11, 12, 16, 0.42) 58%,
-            rgba(11, 12, 16, 0.41) 59%,
-            rgba(11, 12, 16, 0.40) 60%,
-            rgba(11, 12, 16, 0.39) 61%,
-            rgba(11, 12, 16, 0.38) 62%,
-            rgba(11, 12, 16, 0.37) 63%,
-            rgba(11, 12, 16, 0.36) 64%,
-            rgba(11, 12, 16, 0.35) 65%,
-            rgba(11, 12, 16, 0.34) 66%,
-            rgba(11, 12, 16, 0.33) 67%,
-            rgba(11, 12, 16, 0.32) 68%,
-            rgba(11, 12, 16, 0.31) 69%,
-            rgba(11, 12, 16, 0.30) 70%,
-            rgba(11, 12, 16, 0.29) 71%,
-            rgba(11, 12, 16, 0.28) 72%,
-            rgba(11, 12, 16, 0.27) 73%,
-            rgba(11, 12, 16, 0.26) 74%,
-            rgba(11, 12, 16, 0.25) 75%,
-            rgba(11, 12, 16, 0.24) 76%,
-            rgba(11, 12, 16, 0.23) 77%,
-            rgba(11, 12, 16, 0.22) 78%,
-            rgba(11, 12, 16, 0.21) 79%,
-            rgba(11, 12, 16, 0.20) 80%,
-            rgba(11, 12, 16, 0.19) 81%,
-            rgba(11, 12, 16, 0.18) 82%,
-            rgba(11, 12, 16, 0.17) 83%,
-            rgba(11, 12, 16, 0.16) 84%,
-            rgba(11, 12, 16, 0.15) 85%,
-            rgba(11, 12, 16, 0.14) 86%,
-            rgba(11, 12, 16, 0.13) 87%,
-            rgba(11, 12, 16, 0.12) 88%,
-            rgba(11, 12, 16, 0.11) 89%,
-            rgba(11, 12, 16, 0.10) 90%,
-            rgba(11, 12, 16, 0.09) 91%,
-            rgba(11, 12, 16, 0.08) 92%,
-            rgba(11, 12, 16, 0.07) 93%,
-            rgba(11, 12, 16, 0.06) 94%,
-            rgba(11, 12, 16, 0.05) 95%,
-            rgba(11, 12, 16, 0.04) 96%,
-            rgba(11, 12, 16, 0.03) 97%,
-            rgba(11, 12, 16, 0.02) 98%,
-            rgba(11, 12, 16, 0.01) 99%,
-            rgba(11, 12, 16, 0.00) 100%);
+    background: linear-gradient(to top, rgb(7 9 13 / 1) 0%, rgb(7 9 13 / 0.96) 8%, rgb(7 9 13 / 0.88) 16%, rgb(7 9 13 / 0.72) 28%, rgb(7 9 13 / 0.50) 42%, rgb(7 9 13 / 0.28) 58%, rgb(7 9 13 / 0.12) 74%, rgb(7 9 13 / 0.03) 88%, rgb(7 9 13 / 0) 100%);
 }
 
 .title-hero-inner {
@@ -235,16 +130,17 @@ span.meta-dropitem {
     justify-content: center;
     gap: 8px;
 
-    /* clave para que se vean iguales */
+    /* mismo alto visual real */
     min-height: 44px;
     line-height: 1;
     box-sizing: border-box;
 
-    /* podés mantener el padding si querés */
     padding: 11px 14px;
     text-decoration: none;
     font-weight: 900;
+    font-size: 16px;
     border-radius: var(--ep-radius);
+    border: 1px solid transparent;
     cursor: pointer;
     transition: scale .2s ease, transform .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
     user-select: none;
@@ -258,9 +154,18 @@ a#watch-btn[data-mode="countdown"] {
     pointer-events: none;
 }
 
+/* Countdown secundario */
+#watch-btn .watch-meta {
+    font-size: .9em;
+    font-weight: 700;
+    opacity: .95;
+}
+
 .btn-primary {
     background: #2563eb;
     color: #fff;
+    border-color: transparent;
+    /* iguala “masa” visual con ghost */
 }
 
 .btn-primary:hover {
@@ -270,7 +175,7 @@ a#watch-btn[data-mode="countdown"] {
 
 .btn-ghost {
     background: rgba(255, 255, 255, .06);
-    border: 1px solid var(--line);
+    border-color: var(--line);
     color: var(--text);
 }
 
@@ -280,7 +185,7 @@ a#watch-btn[data-mode="countdown"] {
 }
 
 /* =========================
-   EPISODES â€” SEASON FILTER
+   EPISODES — SEASON FILTER
    ========================= */
 .season-filter {
     margin: 12px 0 14px;
@@ -398,11 +303,11 @@ a#watch-btn[data-mode="countdown"] {
     /* SIN padding lateral */
     padding: 12px 0;
     margin: 0;
-    /* sin mÃ¡rgenes */
+    /* sin márgenes */
     border: 0;
     /* menos borde */
     border-radius: 0;
-    /* lista compacta sin â€œpastillitasâ€ */
+    /* lista compacta sin “pastillitas” */
     background: transparent;
     color: rgba(243, 244, 246, .92);
     font-weight: 800;
@@ -413,22 +318,22 @@ a#watch-btn[data-mode="countdown"] {
     -webkit-tap-highlight-color: transparent;
     outline: none;
 
-    /* para que sea clickeable fÃ¡cil, alineado lindo */
+    /* para que sea clickeable fácil, alineado lindo */
     display: block;
     width: 100%;
     text-align: left;
 
-    /* texto con margen interno â€œvisualâ€ pero sin padding real lateral:
+    /* texto con margen interno “visual” pero sin padding real lateral:
        usamos indent con pseudo-elemento */
     position: relative;
 }
 
-/* â€œindentâ€ sin padding: pseudo */
+/* “indent” sin padding: pseudo */
 .dropdown-item::before {
     content: "";
     display: inline-block;
     width: 12px;
-    /* â€œaireâ€ visual sin padding */
+    /* “aire” visual sin padding */
     height: 1px;
 }
 
@@ -444,7 +349,7 @@ a#watch-btn[data-mode="countdown"] {
     background: rgba(37, 99, 235, .18);
 }
 
-/* Separador Ãºnico */
+/* Separador único */
 .separator {
     height: 1px;
     margin: 1rem 0.8em;
@@ -487,14 +392,14 @@ a#watch-btn[data-mode="countdown"] {
     opacity: .98;
 }
 
-/* Separador opcional debajo del tÃ­tulo */
+/* Separador opcional debajo del título */
 .season-block {
     padding-top: 6px;
     border-top: 1px solid rgba(255, 255, 255, .06);
 }
 
 /* =========================
-   EPISODES GRID â€” 6 por lÃ­nea
+   EPISODES GRID — 6 por línea
    ========================= */
 .episodes-grid {
     display: grid;
@@ -811,33 +716,62 @@ textarea,
     user-select: text;
 }
 
-/* Icono SVG dentro del botón "Mi Lista" */
+/* =========================
+   BOTÓN "MI LISTA" (texto + SVG centrados)
+   - Compatible con tu HTML actual (svg suelto + texto suelto)
+   - También compatible si luego usás .btn-icon / .btn-label
+   ========================= */
 #episodes-jump {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 7px;
+    line-height: 1;
+    white-space: nowrap;
+
+    /* SOLO el texto del botón (el icono se fija aparte) */
+    font-size: 14px;
 }
 
-/* Tamaño del SVG y color heredado del botón */
+/* SVG actual (sin clase) + versión futura con .btn-icon */
+#episodes-jump>svg,
 #episodes-jump .btn-icon {
-    width: 18px;
-    height: 18px;
+    width: 17px;
+    height: 17px;
+    flex: 0 0 17px;
     display: block;
-    flex: 0 0 18px;
     fill: currentColor;
 }
 
-/* Fuerza el path a usar el color del texto (blanco en btn-ghost) */
+/* Fuerza el path a usar el color del texto/botón */
+#episodes-jump>svg path,
 #episodes-jump .btn-icon path {
     fill: currentColor;
 }
 
-/* Opcional: un pelín más grande en mobile si querés */
+/* Si más adelante envolvés el texto en span.btn-label */
+#episodes-jump .btn-label {
+    font-size: 14px;
+    line-height: 1;
+    display: inline-block;
+    transform: translateY(0.5px);
+}
+
 @media (max-width: 480px) {
+    #episodes-jump {
+        gap: 7px;
+        font-size: 14px;
+    }
+
+    #episodes-jump>svg,
     #episodes-jump .btn-icon {
-        width: 17px;
-        height: 17px;
-        flex-basis: 17px;
+        width: 16px;
+        height: 16px;
+        flex-basis: 16px;
+    }
+
+    #episodes-jump .btn-label {
+        transform: translateY(0.25px);
     }
 }
 
