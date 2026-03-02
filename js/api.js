@@ -16,7 +16,9 @@ const MOVIE_CARD_FIELDS = `
   category,
   created_at,
   release_year,
-  duration_minutes
+  duration_minutes,
+  live_mode,
+  live_starts_at
 `;
 
 function clampLimit(limit, min = 1, max = 100, fallback = 24) {
@@ -277,6 +279,8 @@ export async function fetchMoreExcluding(movieId, limit = 24) {
       created_at,
       release_year,
       duration_minutes,
+      live_mode,
+      live_starts_at,
       movie_meta!movie_id (
         seasons_count,
         episodes_count
