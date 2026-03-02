@@ -12,6 +12,12 @@
 // - movies.live_mode (boolean)
 // - movies.live_starts_at (timestamptz)
 // Si el contenido live todavía no empezó, muestra countdown y recién renderiza el player al llegar la hora.
+//
+// ✅ NUEVO COMPORTAMIENTO LIVE:
+// - Si live_mode=true y el m3u8 YA responde con playlist válida => entra directo (sin gate)
+// - Si live_mode=true y el m3u8 NO responde / no hay señal => muestra gate
+//   (countdown si hay live_starts_at futuro, o "esperando señal" si no hay hora)
+// - El gate hace polling del m3u8 y abre automáticamente cuando haya señal
 
 import { supabase } from "./supabaseClient.js";
 
@@ -21,7 +27,9 @@ import { supabase } from "./supabaseClient.js";
 const ROOT_ID = "akira-player-root";
 const DEFAULT_ASSET_BASE = "https://akira.satvplus.com.ar/assets";
 const NOW_URL = new URL(window.location.href);
-const DEBUG = NOW_URL.searchParams.get("debug") === "1" || NOW_URL.searchParams.get("debug") === "true";
+const DEBUG =
+  NOW_URL.searchParams.get("debug") === "1" ||
+  NOW_URL.searchParams.get("debug") === "true";
 const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
 
 /* ============================================================
@@ -211,11 +219,19 @@ function getAssetBaseUrl() {
  * LIVE mode helpers (gate/countdown antes de renderizar)
  * ============================================================ */
 let __watchLiveCountdownTimer = null;
+let __watchLiveStreamProbeTimer = null;
 
 function clearWatchLiveCountdownTimer() {
   if (__watchLiveCountdownTimer) {
     clearInterval(__watchLiveCountdownTimer);
     __watchLiveCountdownTimer = null;
+  }
+}
+
+function clearWatchLiveStreamProbeTimer() {
+  if (__watchLiveStreamProbeTimer) {
+    clearInterval(__watchLiveStreamProbeTimer);
+    __watchLiveStreamProbeTimer = null;
   }
 }
 
@@ -234,7 +250,10 @@ function getLiveStartDateFromRow(row, keyName = "live_starts_at") {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function isUpcomingLiveFromRow(row, { liveModeKey = "live_mode", liveStartsAtKey = "live_starts_at" } = {}) {
+function isUpcomingLiveFromRow(
+  row,
+  { liveModeKey = "live_mode", liveStartsAtKey = "live_starts_at" } = {}
+) {
   const isLive = Boolean(row?.[liveModeKey] ?? row?.live_mode);
   if (!isLive) return false;
   const d = getLiveStartDateFromRow(row, liveStartsAtKey);
@@ -380,48 +399,122 @@ function ensureLiveGateOverlay() {
 
 function hideLiveGate() {
   clearWatchLiveCountdownTimer();
+  clearWatchLiveStreamProbeTimer();
   const gate = document.getElementById("watch-live-gate");
   if (gate) gate.style.display = "none";
 }
 
-function showLiveGate({ title = "", startsAt, onStart } = {}) {
+/**
+ * Muestra gate live y hace:
+ * - countdown si startsAt es válido y futuro
+ * - "esperando señal" si no hay hora o ya pasó
+ * - polling del m3u8 para arrancar apenas haya stream
+ */
+function showLiveGate({ title = "", startsAt, onStart, streamProbeUrl } = {}) {
   const gate = ensureLiveGateOverlay();
   const titleEl = document.getElementById("watch-live-gate-title");
   const dateEl = document.getElementById("watch-live-gate-datetime");
   const countdownEl = document.getElementById("watch-live-gate-countdown");
 
-  if (!gate || !startsAt) return;
+  if (!gate) return;
 
   clearWatchLiveCountdownTimer();
+  clearWatchLiveStreamProbeTimer();
   gate.style.display = "flex";
 
   if (titleEl) titleEl.textContent = title || "";
+
+  let started = false;
+  let probing = false;
+
+  const startNow = () => {
+    if (started) return;
+    started = true;
+
+    clearWatchLiveCountdownTimer();
+    clearWatchLiveStreamProbeTimer();
+    gate.style.display = "none";
+
+    try {
+      onStart?.();
+    } catch (e) {
+      console.error("[watch] live gate onStart error:", e);
+    }
+  };
+
+  const hasValidStartsAt =
+    startsAt instanceof Date && !Number.isNaN(startsAt.getTime());
+
   if (dateEl) {
-    dateEl.textContent = `${formatLiveDateEs(startsAt)} - ${formatLiveTimeEs(startsAt)} (${LIVE_DISPLAY_TIMEZONE})`;
+    if (hasValidStartsAt) {
+      dateEl.textContent = `${formatLiveDateEs(startsAt)} - ${formatLiveTimeEs(
+        startsAt
+      )} (${LIVE_DISPLAY_TIMEZONE})`;
+    } else {
+      dateEl.textContent = `Esperando señal de transmisión (${LIVE_DISPLAY_TIMEZONE})`;
+    }
   }
 
   const tick = () => {
-    const diff = startsAt.getTime() - Date.now();
+    if (!countdownEl) return;
 
-    if (diff <= 0) {
-      clearWatchLiveCountdownTimer();
-      gate.style.display = "none";
-      try {
-        onStart?.();
-      } catch (e) {
-        console.error("[watch] live gate onStart error:", e);
-      }
+    if (!hasValidStartsAt) {
+      countdownEl.textContent = "Esperando señal en vivo…";
       return;
     }
 
-    if (countdownEl) countdownEl.textContent = `Empieza en ${formatCountdown(diff)}`;
+    const diff = startsAt.getTime() - Date.now();
+
+    // Si ya llegó la hora, NO arrancamos a ciegas:
+    // dejamos el gate y esperamos que el m3u8 realmente responda.
+    if (diff <= 0) {
+      countdownEl.textContent = "Esperando señal en vivo…";
+      // Compat: si no hay URL para probe, arrancamos
+      if (!streamProbeUrl) startNow();
+      return;
+    }
+
+    countdownEl.textContent = `Empieza en ${formatCountdown(diff)}`;
   };
 
+  const probeAndStartIfOnline = async () => {
+    if (!streamProbeUrl || started || probing) return;
+    probing = true;
+
+    try {
+      const probe = await probeLiveStreamAvailability(streamProbeUrl, {
+        timeoutMs: 4000
+      });
+
+      infoLog("[watch] live gate probe:", probe);
+
+      if (probe.online) {
+        startNow();
+      }
+    } catch (e) {
+      warnLog("[watch] live gate probe error:", e);
+    } finally {
+      probing = false;
+    }
+  };
+
+  // Render inicial de texto/countdown
   tick();
+
+  // Countdown (si aplica o para refrescar "esperando señal")
   __watchLiveCountdownTimer = setInterval(tick, 1000);
+
+  // Poll real del m3u8 (arranca apenas haya señal, incluso antes de live_starts_at)
+  if (streamProbeUrl) {
+    probeAndStartIfOnline(); // intento inmediato
+    __watchLiveStreamProbeTimer = setInterval(probeAndStartIfOnline, 8000);
+  }
 }
 
-window.addEventListener("beforeunload", clearWatchLiveCountdownTimer);
+window.addEventListener("beforeunload", () => {
+  clearWatchLiveCountdownTimer();
+  clearWatchLiveStreamProbeTimer();
+});
 
 /* ============================================================
  * Params / helpers
@@ -448,7 +541,9 @@ function buildWatchUrl(params) {
 }
 
 function isUuid(v) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ""));
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(v || "")
+  );
 }
 
 function safeArray(v) {
@@ -471,7 +566,9 @@ function proxifyRemoteUrl(url) {
 
 function isThumbsVtt(url) {
   const s = String(url || "").toLowerCase();
-  return s.includes("thumbs.vtt") || s.includes("thumbnail") || s.includes("thumbnails");
+  return (
+    s.includes("thumbs.vtt") || s.includes("thumbnail") || s.includes("thumbnails")
+  );
 }
 
 function isLocalhostPage() {
@@ -519,7 +616,11 @@ function withTimeout(promise, ms, label = "Operación") {
  * Render/Ready bridge helpers
  * ============================================================ */
 function isPromiseLike(v) {
-  return !!v && (typeof v === "object" || typeof v === "function") && typeof v.then === "function";
+  return (
+    !!v &&
+    (typeof v === "object" || typeof v === "function") &&
+    typeof v.then === "function"
+  );
 }
 
 /**
@@ -634,6 +735,65 @@ async function probeVtt(url) {
 }
 
 /* ============================================================
+ * Live stream availability probe (bloqueante para gate)
+ * ============================================================ */
+function looksLikePlayableHlsPlaylist(text) {
+  const s = String(text || "");
+  if (!s.includes("#EXTM3U")) return false;
+
+  // Master playlist o media playlist
+  const hasMaster = /#EXT-X-STREAM-INF:/i.test(s);
+  const hasMedia = /#EXTINF:/i.test(s);
+
+  // Algunos backends devuelven muy minimal al principio, pero igual con #EXTM3U ya suele alcanzar.
+  return hasMaster || hasMedia || s.trim().startsWith("#EXTM3U");
+}
+
+async function probeLiveStreamAvailability(url, { timeoutMs = 4500 } = {}) {
+  if (!url || !isLikelyAbsoluteUrl(url) || !isHlsUrl(url)) {
+    return {
+      online: false,
+      reason: "invalid_url",
+      status: null
+    };
+  }
+
+  try {
+    const res = await withTimeout(
+      fetch(url, {
+        method: "GET",
+        mode: "cors",
+        cache: "no-store"
+      }),
+      timeoutMs,
+      "probeLiveStreamAvailability"
+    );
+
+    const text = await res.text();
+    const playlistOk = res.ok && looksLikePlayableHlsPlaylist(text);
+
+    return {
+      online: !!playlistOk,
+      reason: playlistOk
+        ? "playlist_ok"
+        : res.ok
+          ? "invalid_playlist"
+          : "http_error",
+      status: res.status,
+      contentType: res.headers.get("content-type") || null,
+      firstLines: text.split("\n").slice(0, 8).join("\n")
+    };
+  } catch (e) {
+    return {
+      online: false,
+      reason: "fetch_error",
+      status: null,
+      error: e?.message || String(e)
+    };
+  }
+}
+
+/* ============================================================
  * Supabase queries
  * ============================================================ */
 async function fetchMovieById(movieId) {
@@ -641,21 +801,23 @@ async function fetchMovieById(movieId) {
   const { data, error } = await withTimeout(
     supabase
       .from(DB.movies.table)
-      .select([
-        m.id,
-        m.title,
-        m.description,
-        m.thumbnail,
-        m.banner,
-        m.m3u8,
-        m.category,
-        m.createdAt,
-        m.vtt,
-        m.durationMinutes,
-        m.releaseYear,
-        m.liveMode,
-        m.liveStartsAt
-      ].join(","))
+      .select(
+        [
+          m.id,
+          m.title,
+          m.description,
+          m.thumbnail,
+          m.banner,
+          m.m3u8,
+          m.category,
+          m.createdAt,
+          m.vtt,
+          m.durationMinutes,
+          m.releaseYear,
+          m.liveMode,
+          m.liveStartsAt
+        ].join(",")
+      )
       .eq(m.id, movieId)
       .single(),
     15000,
@@ -671,17 +833,19 @@ async function fetchSeriesById(seriesId) {
   const { data, error } = await withTimeout(
     supabase
       .from(DB.movies.table)
-      .select([
-        m.id,
-        m.title,
-        m.description,
-        m.thumbnail,
-        m.banner,
-        m.category,
-        m.vtt,
-        m.liveMode,
-        m.liveStartsAt
-      ].join(","))
+      .select(
+        [
+          m.id,
+          m.title,
+          m.description,
+          m.thumbnail,
+          m.banner,
+          m.category,
+          m.vtt,
+          m.liveMode,
+          m.liveStartsAt
+        ].join(",")
+      )
       .eq(m.id, seriesId)
       .eq(m.category, "series")
       .single(),
@@ -698,17 +862,19 @@ async function fetchEpisodeById(episodeId) {
   const { data, error } = await withTimeout(
     supabase
       .from(DB.episodes.table)
-      .select([
-        e.id,
-        e.seriesId,
-        e.season,
-        e.episodeNumber,
-        e.title,
-        e.m3u8,
-        e.createdAt,
-        e.vtt,
-        e.sinopsis
-      ].join(","))
+      .select(
+        [
+          e.id,
+          e.seriesId,
+          e.season,
+          e.episodeNumber,
+          e.title,
+          e.m3u8,
+          e.createdAt,
+          e.vtt,
+          e.sinopsis
+        ].join(",")
+      )
       .eq(e.id, episodeId)
       .single(),
     15000,
@@ -724,16 +890,9 @@ async function fetchEpisodesForSeries(seriesId) {
   const { data, error } = await withTimeout(
     supabase
       .from(DB.episodes.table)
-      .select([
-        e.id,
-        e.seriesId,
-        e.season,
-        e.episodeNumber,
-        e.title,
-        e.m3u8,
-        e.vtt,
-        e.sinopsis
-      ].join(","))
+      .select(
+        [e.id, e.seriesId, e.season, e.episodeNumber, e.title, e.m3u8, e.vtt, e.sinopsis].join(",")
+      )
       .eq(e.seriesId, seriesId)
       .order(e.season, { ascending: true })
       .order(e.episodeNumber, { ascending: true })
@@ -760,15 +919,9 @@ async function fetchRecommendations(currentContentId = null) {
 
   let q = supabase
     .from(DB.movies.table)
-    .select([
-      m.id,
-      m.title,
-      m.description,
-      m.thumbnail,
-      m.banner,
-      m.category,
-      m.createdAt
-    ].join(","))
+    .select(
+      [m.id, m.title, m.description, m.thumbnail, m.banner, m.category, m.createdAt].join(",")
+    )
     .order(m.createdAt, { ascending: false })
     .limit(12);
 
@@ -810,7 +963,9 @@ function buildAkiraProps({
 }) {
   const src = proxifyRemoteUrl(srcUrl);
   const subtitles = normalizeSubtitlesFromVtt(vttUrlFromSupabase);
-  const thumbnailsVtt = computeThumbnailsVtt(vttUrlFromSupabase, { allowOnLocal: allowThumbsOnLocal });
+  const thumbnailsVtt = computeThumbnailsVtt(vttUrlFromSupabase, {
+    allowOnLocal: allowThumbsOnLocal
+  });
 
   const props = {
     // === Props reales que espera AkiraPlayer.tsx ===
@@ -845,7 +1000,10 @@ function buildAkiraProps({
   return props;
 }
 
-function movieToPlayerProps(movie, { autoplay = true, recommendations = [], forceThumbsLocal = false } = {}) {
+function movieToPlayerProps(
+  movie,
+  { autoplay = true, recommendations = [], forceThumbsLocal = false } = {}
+) {
   const m = DB.movies.cols;
 
   const m3u8FromSupabase = movie[m.m3u8];
@@ -887,13 +1045,7 @@ function movieToPlayerProps(movie, { autoplay = true, recommendations = [], forc
 
 function episodeToPlayerProps(
   episode,
-  {
-    series,
-    episodes,
-    recommendations = [],
-    autoplay = true,
-    forceThumbsLocal = false
-  } = {}
+  { series, episodes, recommendations = [], autoplay = true, forceThumbsLocal = false } = {}
 ) {
   const e = DB.episodes.cols;
   const m = DB.movies.cols;
@@ -906,7 +1058,11 @@ function episodeToPlayerProps(
 
   debugLog("[watch] episode m3u8 desde Supabase:", m3u8FromSupabase);
   debugLog("[watch] episode vtt desde Supabase:", vttFromSupabase);
-  debugLog("[watch] episode live (desde serie):", { isLiveMode, liveStartsAt, seriesId });
+  debugLog("[watch] episode live (desde serie):", {
+    isLiveMode,
+    liveStartsAt,
+    seriesId
+  });
 
   const props = buildAkiraProps({
     srcUrl: m3u8FromSupabase,
@@ -981,14 +1137,21 @@ async function resolveRouteAndBuildProps() {
     const liveStartsAtDate = getLiveStartDateFromRow(movie, m.liveStartsAt);
     const liveGate = {
       enabled: Boolean(movie[m.liveMode]),
-      isUpcoming: isUpcomingLiveFromRow(movie, { liveModeKey: m.liveMode, liveStartsAtKey: m.liveStartsAt }),
+      isUpcoming: isUpcomingLiveFromRow(movie, {
+        liveModeKey: m.liveMode,
+        liveStartsAtKey: m.liveStartsAt
+      }),
       startsAt: liveStartsAtDate,
       title: movie[m.title] || "Contenido en vivo"
     };
 
     return {
       title: movie[m.title] || "Película",
-      props: movieToPlayerProps(movie, { autoplay, recommendations, forceThumbsLocal }),
+      props: movieToPlayerProps(movie, {
+        autoplay,
+        recommendations,
+        forceThumbsLocal
+      }),
       liveGate
     };
   }
@@ -1032,15 +1195,20 @@ async function resolveRouteAndBuildProps() {
 
     const title = series?.[m.title]
       ? `${series[m.title]} · ${episode[e.title] || `E${episode[e.episodeNumber] ?? ""}`}`
-      : (episode[e.title] || "Episodio");
+      : episode[e.title] || "Episodio";
 
     const liveStartsAtDate = series ? getLiveStartDateFromRow(series, m.liveStartsAt) : null;
-    const liveGate = series ? {
-      enabled: Boolean(series[m.liveMode]),
-      isUpcoming: isUpcomingLiveFromRow(series, { liveModeKey: m.liveMode, liveStartsAtKey: m.liveStartsAt }),
-      startsAt: liveStartsAtDate,
-      title: series[m.title] || title
-    } : null;
+    const liveGate = series
+      ? {
+        enabled: Boolean(series[m.liveMode]),
+        isUpcoming: isUpcomingLiveFromRow(series, {
+          liveModeKey: m.liveMode,
+          liveStartsAtKey: m.liveStartsAt
+        }),
+        startsAt: liveStartsAtDate,
+        title: series[m.title] || title
+      }
+      : null;
 
     return {
       title,
@@ -1085,31 +1253,37 @@ async function resolveRouteAndBuildProps() {
  * Post-render debug del <video> (por fuera de Akira)
  * ============================================================ */
 function mediaErrorName(code) {
-  return ({
-    1: "MEDIA_ERR_ABORTED",
-    2: "MEDIA_ERR_NETWORK",
-    3: "MEDIA_ERR_DECODE",
-    4: "MEDIA_ERR_SRC_NOT_SUPPORTED"
-  })[code] || "UNKNOWN_MEDIA_ERROR";
+  return (
+    {
+      1: "MEDIA_ERR_ABORTED",
+      2: "MEDIA_ERR_NETWORK",
+      3: "MEDIA_ERR_DECODE",
+      4: "MEDIA_ERR_SRC_NOT_SUPPORTED"
+    }[code] || "UNKNOWN_MEDIA_ERROR"
+  );
 }
 
 function networkStateName(v) {
-  return ({
-    0: "NETWORK_EMPTY",
-    1: "NETWORK_IDLE",
-    2: "NETWORK_LOADING",
-    3: "NETWORK_NO_SOURCE"
-  })[v] || "UNKNOWN_NETWORK_STATE";
+  return (
+    {
+      0: "NETWORK_EMPTY",
+      1: "NETWORK_IDLE",
+      2: "NETWORK_LOADING",
+      3: "NETWORK_NO_SOURCE"
+    }[v] || "UNKNOWN_NETWORK_STATE"
+  );
 }
 
 function readyStateName(v) {
-  return ({
-    0: "HAVE_NOTHING",
-    1: "HAVE_METADATA",
-    2: "HAVE_CURRENT_DATA",
-    3: "HAVE_FUTURE_DATA",
-    4: "HAVE_ENOUGH_DATA"
-  })[v] || "UNKNOWN_READY_STATE";
+  return (
+    {
+      0: "HAVE_NOTHING",
+      1: "HAVE_METADATA",
+      2: "HAVE_CURRENT_DATA",
+      3: "HAVE_FUTURE_DATA",
+      4: "HAVE_ENOUGH_DATA"
+    }[v] || "UNKNOWN_READY_STATE"
+  );
 }
 
 function getMediaErrorInfo(video) {
@@ -1232,27 +1406,51 @@ async function boot() {
     const result = await resolveRouteAndBuildProps();
     if (!result) return; // redirect
 
-    // ✅ Gate live: si es live y todavía no empezó, no renderizamos el player todavía
-    if (result.liveGate?.enabled && result.liveGate?.isUpcoming && result.liveGate?.startsAt) {
+    // ✅ Gate live basado en disponibilidad REAL del m3u8 (solo si live_mode=true)
+    const isLiveTitle = Boolean(result.liveGate?.enabled || result.props?.isLiveMode);
+    const liveSrc = result?.props?.src || null;
+
+    if (isLiveTitle) {
+      const startupProbe = await probeLiveStreamAvailability(liveSrc, {
+        timeoutMs: 3500
+      });
+      infoLog("[watch] live startup probe:", startupProbe);
+
+      // Si el stream YA está online, render directo (sin countdown)
+      if (startupProbe.online) {
+        hideLiveGate();
+        await renderAndWaitPlayer(result);
+        return;
+      }
+
+      // Si NO está online, mostramos gate.
+      // - si hay live_starts_at futuro => countdown
+      // - si no => "esperando señal"
       hideWatchLoadingOverlay();
 
       const root = getRootEl();
       if (root) root.innerHTML = "";
 
-      infoLog("[watch] live upcoming gate activo:", {
-        title: result.liveGate.title,
-        startsAt: result.liveGate.startsAt?.toISOString?.() || result.liveGate.startsAt
+      infoLog("[watch] live gate activo (stream offline):", {
+        title: result.liveGate?.title || result.title,
+        startsAt:
+          result.liveGate?.startsAt?.toISOString?.() ||
+          result.liveGate?.startsAt ||
+          null,
+        probeReason: startupProbe.reason,
+        probeStatus: startupProbe.status
       });
 
       showLiveGate({
-        title: result.liveGate.title || result.title || "Transmisión en vivo",
-        startsAt: result.liveGate.startsAt,
+        title: result.liveGate?.title || result.title || "Transmisión en vivo",
+        startsAt: result.liveGate?.startsAt || null,
+        streamProbeUrl: liveSrc,
         onStart: async () => {
           try {
             setLoading();
             await renderAndWaitPlayer(result);
           } catch (err) {
-            console.error("[watch] render tras countdown falló:", err);
+            console.error("[watch] render tras live gate falló:", err);
 
             const msg = err?.message || "No se pudo iniciar la transmisión en vivo";
             const details =
