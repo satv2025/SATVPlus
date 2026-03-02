@@ -7,6 +7,11 @@
 // - watch.html con window.waitForAkiraPlaybackReady(opts) o window.waitForCurrentAkiraPlaybackReady(opts)
 // - ./supabaseClient.js exportando `supabase`
 // - UMD de Akira cargado
+//
+// ✅ LIVE MODE soportado:
+// - movies.live_mode (boolean)
+// - movies.live_starts_at (timestamptz)
+// Si el contenido live todavía no empezó, muestra countdown y recién renderiza el player al llegar la hora.
 
 import { supabase } from "./supabaseClient.js";
 
@@ -17,6 +22,7 @@ const ROOT_ID = "akira-player-root";
 const DEFAULT_ASSET_BASE = "https://akira.satvplus.com.ar/assets";
 const NOW_URL = new URL(window.location.href);
 const DEBUG = NOW_URL.searchParams.get("debug") === "1" || NOW_URL.searchParams.get("debug") === "true";
+const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
 
 /* ============================================================
  * Esquema DB
@@ -35,7 +41,9 @@ const DB = {
       createdAt: "created_at",
       vtt: "vtt_url",
       durationMinutes: "duration_minutes",
-      releaseYear: "release_year"
+      releaseYear: "release_year",
+      liveMode: "live_mode",
+      liveStartsAt: "live_starts_at"
     }
   },
   episodes: {
@@ -164,9 +172,9 @@ function setError(message, details = "") {
         <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Error al cargar reproducción</div>
         <div style="opacity:.95;margin-bottom:10px;">${escapeHtml(message)}</div>
         ${details
-          ? `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;padding:12px;border-radius:10px;background:rgba(0,0,0);border:1px solid rgba(255,255,255,.08);font-size:12px;line-height:1.35;opacity:.95;">${escapeHtml(details)}</pre>`
-          : ""
-        }
+      ? `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;padding:12px;border-radius:10px;background:rgba(0,0,0);border:1px solid rgba(255,255,255,.08);font-size:12px;line-height:1.35;opacity:.95;">${escapeHtml(details)}</pre>`
+      : ""
+    }
       </div>
     </div>
   `;
@@ -198,6 +206,222 @@ function getAssetBaseUrl() {
     DEFAULT_ASSET_BASE
   );
 }
+
+/* ============================================================
+ * LIVE mode helpers (gate/countdown antes de renderizar)
+ * ============================================================ */
+let __watchLiveCountdownTimer = null;
+
+function clearWatchLiveCountdownTimer() {
+  if (__watchLiveCountdownTimer) {
+    clearInterval(__watchLiveCountdownTimer);
+    __watchLiveCountdownTimer = null;
+  }
+}
+
+function getLiveStartDateFromRow(row, keyName = "live_starts_at") {
+  if (!row) return null;
+  const raw =
+    row[keyName] ??
+    row.live_starts_at ??
+    row.live_start_at ??
+    row.live_datetime ??
+    row.live_at ??
+    null;
+
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function isUpcomingLiveFromRow(row, { liveModeKey = "live_mode", liveStartsAtKey = "live_starts_at" } = {}) {
+  const isLive = Boolean(row?.[liveModeKey] ?? row?.live_mode);
+  if (!isLive) return false;
+  const d = getLiveStartDateFromRow(row, liveStartsAtKey);
+  if (!d) return false;
+  return d.getTime() > Date.now();
+}
+
+function formatLiveDateEs(date) {
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone: LIVE_DISPLAY_TIMEZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(date);
+}
+
+function formatLiveTimeEs(date) {
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone: LIVE_DISPLAY_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(date);
+}
+
+function formatCountdown(diffMs) {
+  const total = Math.max(0, Math.floor(diffMs / 1000));
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const mins = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+
+  const hh = String(hours).padStart(2, "0");
+  const mm = String(mins).padStart(2, "0");
+  const ss = String(secs).padStart(2, "0");
+
+  return days > 0 ? `${days}d ${hh}:${mm}:${ss}` : `${hh}:${mm}:${ss}`;
+}
+
+function ensureLiveGateStyles() {
+  if (document.getElementById("watch-live-gate-styles")) return;
+
+  const style = document.createElement("style");
+  style.id = "watch-live-gate-styles";
+  style.textContent = `
+    #watch-live-gate {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(0,0,0,.86);
+      color: #fff;
+      z-index: 2147483000;
+      backdrop-filter: blur(8px);
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    #watch-live-gate .watch-live-gate-card {
+      width: min(760px, 100%);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(16,22,36,.92), rgba(8,12,22,.94));
+      box-shadow: 0 25px 60px rgba(0,0,0,.45);
+      padding: 22px;
+      text-align: center;
+    }
+    #watch-live-gate .watch-live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(37,99,235,.18);
+      border: 1px solid rgba(37,99,235,.45);
+      color: #dbeafe;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    #watch-live-gate .watch-live-badge::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 0 4px rgba(239,68,68,.18);
+    }
+    #watch-live-gate h2 {
+      margin: 0 0 8px;
+      font-size: clamp(22px, 2vw + 12px, 34px);
+      line-height: 1.1;
+    }
+    #watch-live-gate .watch-live-title {
+      opacity: .95;
+      margin: 0 0 14px;
+      font-size: clamp(14px, .7vw + 10px, 18px);
+    }
+    #watch-live-gate .watch-live-datetime {
+      opacity: .92;
+      margin: 0 0 12px;
+      font-size: 15px;
+    }
+    #watch-live-gate .watch-live-countdown {
+      margin: 0;
+      font-size: clamp(20px, 1.6vw + 10px, 28px);
+      font-weight: 800;
+      color: #93c5fd;
+      letter-spacing: .01em;
+    }
+    #watch-live-gate .watch-live-help {
+      margin: 12px 0 0;
+      opacity: .72;
+      font-size: 12px;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function ensureLiveGateOverlay() {
+  ensureLiveGateStyles();
+
+  let gate = document.getElementById("watch-live-gate");
+  if (gate) return gate;
+
+  gate = document.createElement("div");
+  gate.id = "watch-live-gate";
+  gate.innerHTML = `
+    <div class="watch-live-gate-card">
+      <div class="watch-live-badge">Próxima transmisión</div>
+      <h2 id="watch-live-gate-heading">Próximo estreno en vivo</h2>
+      <p id="watch-live-gate-title" class="watch-live-title"></p>
+      <p id="watch-live-gate-datetime" class="watch-live-datetime"></p>
+      <p id="watch-live-gate-countdown" class="watch-live-countdown">Cargando…</p>
+      <p class="watch-live-help">El reproductor se abrirá automáticamente al llegar la hora.</p>
+    </div>
+  `;
+  document.body.appendChild(gate);
+  return gate;
+}
+
+function hideLiveGate() {
+  clearWatchLiveCountdownTimer();
+  const gate = document.getElementById("watch-live-gate");
+  if (gate) gate.style.display = "none";
+}
+
+function showLiveGate({ title = "", startsAt, onStart } = {}) {
+  const gate = ensureLiveGateOverlay();
+  const titleEl = document.getElementById("watch-live-gate-title");
+  const dateEl = document.getElementById("watch-live-gate-datetime");
+  const countdownEl = document.getElementById("watch-live-gate-countdown");
+
+  if (!gate || !startsAt) return;
+
+  clearWatchLiveCountdownTimer();
+  gate.style.display = "flex";
+
+  if (titleEl) titleEl.textContent = title || "";
+  if (dateEl) {
+    dateEl.textContent = `${formatLiveDateEs(startsAt)} - ${formatLiveTimeEs(startsAt)} (${LIVE_DISPLAY_TIMEZONE})`;
+  }
+
+  const tick = () => {
+    const diff = startsAt.getTime() - Date.now();
+
+    if (diff <= 0) {
+      clearWatchLiveCountdownTimer();
+      gate.style.display = "none";
+      try {
+        onStart?.();
+      } catch (e) {
+        console.error("[watch] live gate onStart error:", e);
+      }
+      return;
+    }
+
+    if (countdownEl) countdownEl.textContent = `Empieza en ${formatCountdown(diff)}`;
+  };
+
+  tick();
+  __watchLiveCountdownTimer = setInterval(tick, 1000);
+}
+
+window.addEventListener("beforeunload", clearWatchLiveCountdownTimer);
 
 /* ============================================================
  * Params / helpers
@@ -428,7 +652,9 @@ async function fetchMovieById(movieId) {
         m.createdAt,
         m.vtt,
         m.durationMinutes,
-        m.releaseYear
+        m.releaseYear,
+        m.liveMode,
+        m.liveStartsAt
       ].join(","))
       .eq(m.id, movieId)
       .single(),
@@ -452,7 +678,9 @@ async function fetchSeriesById(seriesId) {
         m.thumbnail,
         m.banner,
         m.category,
-        m.vtt
+        m.vtt,
+        m.liveMode,
+        m.liveStartsAt
       ].join(","))
       .eq(m.id, seriesId)
       .eq(m.category, "series")
@@ -576,7 +804,9 @@ function buildAkiraProps({
   recommendations = [],
   episodes = [],
   vttUrlFromSupabase,
-  allowThumbsOnLocal = false
+  allowThumbsOnLocal = false,
+  isLiveMode = false,
+  liveStartsAt = null
 }) {
   const src = proxifyRemoteUrl(srcUrl);
   const subtitles = normalizeSubtitlesFromVtt(vttUrlFromSupabase);
@@ -588,7 +818,7 @@ function buildAkiraProps({
     poster: poster || undefined,
     autoplay: !!autoplay,
     title: title || "SATV+",
-    channelLabel: "SATVPlus",
+    channelLabel: isLiveMode ? "SATVPlus · EN VIVO" : "SATVPlus",
     assetBaseUrl: getAssetBaseUrl(),
 
     contentId: contentId ?? "",
@@ -603,7 +833,13 @@ function buildAkiraProps({
     recommendationsLabel: "Te podría gustar",
 
     // explícito
-    playlistMode: true
+    playlistMode: true,
+
+    // ✅ extras live (si el bridge/TSX quiere aprovecharlos)
+    isLiveMode: !!isLiveMode,
+    liveStartsAt: liveStartsAt || null,
+    streamType: isLiveMode ? "live" : "on-demand",
+    disableResumeForLive: !!isLiveMode
   };
 
   return props;
@@ -614,9 +850,12 @@ function movieToPlayerProps(movie, { autoplay = true, recommendations = [], forc
 
   const m3u8FromSupabase = movie[m.m3u8];
   const vttFromSupabase = movie[m.vtt];
+  const isLiveMode = Boolean(movie[m.liveMode]);
+  const liveStartsAt = movie[m.liveStartsAt] || null;
 
   debugLog("[watch] movie m3u8 desde Supabase:", m3u8FromSupabase);
   debugLog("[watch] movie vtt desde Supabase:", vttFromSupabase);
+  debugLog("[watch] movie live:", { isLiveMode, liveStartsAt });
 
   const props = buildAkiraProps({
     srcUrl: m3u8FromSupabase,
@@ -629,7 +868,9 @@ function movieToPlayerProps(movie, { autoplay = true, recommendations = [], forc
     recommendations,
     episodes: [],
     vttUrlFromSupabase: vttFromSupabase,
-    allowThumbsOnLocal: forceThumbsLocal
+    allowThumbsOnLocal: forceThumbsLocal,
+    isLiveMode,
+    liveStartsAt
   });
 
   props.onBack = () => window.history.back();
@@ -660,9 +901,12 @@ function episodeToPlayerProps(
   const seriesId = series?.[m.id] || episode[e.seriesId] || null;
   const m3u8FromSupabase = episode[e.m3u8];
   const vttFromSupabase = episode[e.vtt];
+  const isLiveMode = Boolean(series?.[m.liveMode]); // live flag vive en movies (la serie)
+  const liveStartsAt = series?.[m.liveStartsAt] || null;
 
   debugLog("[watch] episode m3u8 desde Supabase:", m3u8FromSupabase);
   debugLog("[watch] episode vtt desde Supabase:", vttFromSupabase);
+  debugLog("[watch] episode live (desde serie):", { isLiveMode, liveStartsAt, seriesId });
 
   const props = buildAkiraProps({
     srcUrl: m3u8FromSupabase,
@@ -675,7 +919,9 @@ function episodeToPlayerProps(
     recommendations,
     episodes,
     vttUrlFromSupabase: vttFromSupabase,
-    allowThumbsOnLocal: forceThumbsLocal
+    allowThumbsOnLocal: forceThumbsLocal,
+    isLiveMode,
+    liveStartsAt
   });
 
   props.onBack = () => window.history.back();
@@ -732,9 +978,18 @@ async function resolveRouteAndBuildProps() {
       if (movie[m.vtt]) probeVtt(movie[m.vtt]);
     }
 
+    const liveStartsAtDate = getLiveStartDateFromRow(movie, m.liveStartsAt);
+    const liveGate = {
+      enabled: Boolean(movie[m.liveMode]),
+      isUpcoming: isUpcomingLiveFromRow(movie, { liveModeKey: m.liveMode, liveStartsAtKey: m.liveStartsAt }),
+      startsAt: liveStartsAtDate,
+      title: movie[m.title] || "Contenido en vivo"
+    };
+
     return {
       title: movie[m.title] || "Película",
-      props: movieToPlayerProps(movie, { autoplay, recommendations, forceThumbsLocal })
+      props: movieToPlayerProps(movie, { autoplay, recommendations, forceThumbsLocal }),
+      liveGate
     };
   }
 
@@ -779,6 +1034,14 @@ async function resolveRouteAndBuildProps() {
       ? `${series[m.title]} · ${episode[e.title] || `E${episode[e.episodeNumber] ?? ""}`}`
       : (episode[e.title] || "Episodio");
 
+    const liveStartsAtDate = series ? getLiveStartDateFromRow(series, m.liveStartsAt) : null;
+    const liveGate = series ? {
+      enabled: Boolean(series[m.liveMode]),
+      isUpcoming: isUpcomingLiveFromRow(series, { liveModeKey: m.liveMode, liveStartsAtKey: m.liveStartsAt }),
+      startsAt: liveStartsAtDate,
+      title: series[m.title] || title
+    } : null;
+
     return {
       title,
       props: episodeToPlayerProps(episode, {
@@ -787,7 +1050,8 @@ async function resolveRouteAndBuildProps() {
         recommendations,
         autoplay,
         forceThumbsLocal
-      })
+      }),
+      liveGate
     };
   }
 
@@ -797,6 +1061,7 @@ async function resolveRouteAndBuildProps() {
       throw new Error("Parámetro ?series inválido (UUID esperado)");
     }
 
+    // Valida serie (y permite que otras pantallas la usen)
     await fetchSeriesById(seriesId);
 
     const episodesList = await fetchEpisodesForSeries(seriesId);
@@ -908,6 +1173,50 @@ function inspectMountedVideoLater() {
 }
 
 /* ============================================================
+ * Render pipeline (extraído para reutilizar desde live gate)
+ * ============================================================ */
+async function renderAndWaitPlayer(result) {
+  window.__SATV_WATCH_LAST_RESULT__ = result;
+  window.__SATV_WATCH_LAST_PROPS__ = result.props;
+
+  debugLog("[watch] props finales:", result.props);
+  debugLog("[watch] src final (Supabase):", result.props?.src);
+  debugLog("[watch] thumbnailsVtt:", result.props?.thumbnailsVtt);
+  debugLog("[watch] subtitles:", result.props?.subtitles);
+  debugLog("[watch] liveGate:", result?.liveGate || null);
+
+  setDocumentTitle(result.title);
+
+  const root = getRootEl();
+  if (root) root.innerHTML = "";
+
+  // ✅ render + esperar el READY del MISMO mount actual
+  // (y ahora el READY exige que el video esté PLAYING)
+  const renderResult = window.renderAkiraPlayer(result.props);
+
+  try {
+    const readyInfo = await awaitAkiraReadyAfterRender(renderResult, {
+      timeoutMs: 45000,
+      autoplayRetry: true,
+      requireCustomReadyEvent: true
+    });
+
+    window.__SATV_WATCH_LAST_READY_INFO__ = readyInfo;
+    infoLog("[watch] Akira playback ready:", readyInfo);
+
+    // ✅ Se oculta cuando ya entró en playing (porque el bridge resuelve recién ahí)
+    hideWatchLoadingOverlay();
+  } catch (e) {
+    // OJO: no ocultamos siempre acá, porque si autoplay está bloqueado
+    // el loader debe quedarse hasta que el usuario dé play (evento playing).
+    warnLog("[watch] wait READY del player timeout/fallo:", e);
+  }
+
+  // corre después del intento de wait (éxito o fallo), para que el timing sea relativo al ready
+  inspectMountedVideoLater();
+}
+
+/* ============================================================
  * Boot
  * ============================================================ */
 async function boot() {
@@ -923,43 +1232,53 @@ async function boot() {
     const result = await resolveRouteAndBuildProps();
     if (!result) return; // redirect
 
-    window.__SATV_WATCH_LAST_RESULT__ = result;
-    window.__SATV_WATCH_LAST_PROPS__ = result.props;
+    // ✅ Gate live: si es live y todavía no empezó, no renderizamos el player todavía
+    if (result.liveGate?.enabled && result.liveGate?.isUpcoming && result.liveGate?.startsAt) {
+      hideWatchLoadingOverlay();
 
-    debugLog("[watch] props finales:", result.props);
-    debugLog("[watch] src final (Supabase):", result.props?.src);
-    debugLog("[watch] thumbnailsVtt:", result.props?.thumbnailsVtt);
-    debugLog("[watch] subtitles:", result.props?.subtitles);
+      const root = getRootEl();
+      if (root) root.innerHTML = "";
 
-    setDocumentTitle(result.title);
-
-    const root = getRootEl();
-    if (root) root.innerHTML = "";
-
-    // ✅ render + esperar el READY del MISMO mount actual
-    // (y ahora el READY exige que el video esté PLAYING)
-    const renderResult = window.renderAkiraPlayer(result.props);
-
-    try {
-      const readyInfo = await awaitAkiraReadyAfterRender(renderResult, {
-        timeoutMs: 45000,
-        autoplayRetry: true,
-        requireCustomReadyEvent: true
+      infoLog("[watch] live upcoming gate activo:", {
+        title: result.liveGate.title,
+        startsAt: result.liveGate.startsAt?.toISOString?.() || result.liveGate.startsAt
       });
 
-      window.__SATV_WATCH_LAST_READY_INFO__ = readyInfo;
-      infoLog("[watch] Akira playback ready:", readyInfo);
+      showLiveGate({
+        title: result.liveGate.title || result.title || "Transmisión en vivo",
+        startsAt: result.liveGate.startsAt,
+        onStart: async () => {
+          try {
+            setLoading();
+            await renderAndWaitPlayer(result);
+          } catch (err) {
+            console.error("[watch] render tras countdown falló:", err);
 
-      // ✅ Se oculta cuando ya entró en playing (porque el bridge resuelve recién ahí)
-      hideWatchLoadingOverlay();
-    } catch (e) {
-      // OJO: no ocultamos siempre acá, porque si autoplay está bloqueado
-      // el loader debe quedarse hasta que el usuario dé play (evento playing).
-      warnLog("[watch] wait READY del player timeout/fallo:", e);
+            const msg = err?.message || "No se pudo iniciar la transmisión en vivo";
+            const details =
+              typeof err === "object" && err
+                ? JSON.stringify(
+                  {
+                    message: err.message,
+                    details: err.details || null,
+                    hint: err.hint || null,
+                    code: err.code || null,
+                    stack: err.stack || null
+                  },
+                  null,
+                  2
+                )
+                : "";
+            setError(msg, details);
+          }
+        }
+      });
+
+      return;
     }
 
-    // corre después del intento de wait (éxito o fallo), para que el timing sea relativo al ready
-    inspectMountedVideoLater();
+    hideLiveGate();
+    await renderAndWaitPlayer(result);
   } catch (err) {
     console.error("[watch] boot error:", err);
 
