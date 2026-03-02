@@ -246,8 +246,13 @@ span.meta-dropitem {
     -webkit-tap-highlight-color: transparent;
 }
 
+a#watch-btn[data-mode="countdown"] {
+    background: #3a455f;
+    pointer-events: none;
+}
+
 .btn-primary {
-    background: var(--satvblue);
+    background: #2563eb;
     color: #fff;
 }
 
