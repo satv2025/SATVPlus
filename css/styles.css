@@ -1448,10 +1448,6 @@ button#btn-logout {
   background: #2563eb;
 }
 
-.btn,
-.navlink,
-.pill {}
-
 /* Tipografía fluida para contenido del hero (si existen esos nodos) */
 .home-hero-inner h1,
 .hero h1 {
