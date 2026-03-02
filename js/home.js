@@ -371,6 +371,59 @@ function ensureMyListNavLink(userId) {
   link.href = buildMyListUrl(userId);
 }
 
+/* =========================================================
+   LIVE MODE (cards del home)
+   - Si live_mode=true y hay live_starts_at, muestra "dd/mm/aaaa - hh:mm"
+========================================================= */
+
+const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
+
+function getMovieLiveStartDate(movie) {
+  if (!movie) return null;
+
+  // Compat por si probaste otros nombres antes
+  const raw =
+    movie.live_starts_at ??
+    movie.live_start_at ??
+    movie.live_datetime ??
+    movie.live_at ??
+    null;
+
+  if (!raw) return null;
+
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatMovieLiveDateTime(movie, { timeZone = LIVE_DISPLAY_TIMEZONE } = {}) {
+  const d = getMovieLiveStartDate(movie);
+  if (!d) return "";
+
+  const fecha = new Intl.DateTimeFormat("es-AR", {
+    timeZone,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(d);
+
+  const hora = new Intl.DateTimeFormat("es-AR", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(d);
+
+  return `${fecha} - ${hora}`;
+}
+
+function homeCatalogCardHtml(movie) {
+  const liveLabel = Boolean(movie?.live_mode) ? formatMovieLiveDateTime(movie) : "";
+
+  // cardHtml(m, href?, subtitle?, progressPct?)
+  if (liveLabel) return cardHtml(movie, undefined, liveLabel);
+  return cardHtml(movie);
+}
+
 function homeHeroMeta(movie) {
   const year = movie?.release_year ? String(movie.release_year) : "";
   let right = "";
@@ -821,15 +874,15 @@ async function init() {
     const seriesRow = $("#series-row");
 
     const latest = await fetchLatest(24);
-    setRow(latestRow, latest.map(m => cardHtml(m)).join(""));
+    setRow(latestRow, latest.map(m => homeCatalogCardHtml(m)).join(""));
     buildCarousel(latestRow, { cloneRounds: 2 });
 
     const movies = await fetchByCategory("movie", 24);
-    setRow(moviesRow, movies.map(m => cardHtml(m)).join(""));
+    setRow(moviesRow, movies.map(m => homeCatalogCardHtml(m)).join(""));
     buildCarousel(moviesRow, { cloneRounds: 2 });
 
     const series = await fetchByCategory("series", 24);
-    setRow(seriesRow, series.map(m => cardHtml(m)).join(""));
+    setRow(seriesRow, series.map(m => homeCatalogCardHtml(m)).join(""));
     buildCarousel(seriesRow, { cloneRounds: 2 });
 
     const heroPoolMap = new Map();

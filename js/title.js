@@ -7,6 +7,7 @@
 // ✅ Mi Lista REAL en Supabase (my_list: profile_id + content_id + added_at)
 // ✅ Fallback localStorage si no hay sesión / falla Supabase
 // ✅ Topnav agrega "Mi Lista" a la derecha de "Inicio" con /mylist?list=<user>&user=<user>
+// ✅ LIVE MODE: si live_mode=true y live_starts_at está en el futuro, el botón muestra countdown
 
 function qs(key) { return new URLSearchParams(window.location.search).get(key); }
 function el(id) { return document.getElementById(id); }
@@ -196,11 +197,89 @@ function bindEpisodeCardNavigation(rootEl, movieId) {
 }
 
 /* ===========================
-   WATCH BUTTON: Ver ahora / Reanudar
+   WATCH BUTTON: Ver ahora / Reanudar / Countdown Live
 =========================== */
+
+let __liveCountdownTimer = null;
+const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
+
+function clearLiveCountdownTimer() {
+    if (__liveCountdownTimer) {
+        clearInterval(__liveCountdownTimer);
+        __liveCountdownTimer = null;
+    }
+}
+
+function getLiveStartDate(movie) {
+    if (!movie) return null;
+
+    const raw =
+        movie.live_starts_at ??
+        movie.live_start_at ??
+        movie.live_datetime ??
+        movie.live_at ??
+        null;
+
+    if (!raw) return null;
+
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatLiveDateEs(d) {
+    return new Intl.DateTimeFormat("es-AR", {
+        timeZone: LIVE_DISPLAY_TIMEZONE,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+    }).format(d);
+}
+
+function formatLiveTimeEs(d) {
+    return new Intl.DateTimeFormat("es-AR", {
+        timeZone: LIVE_DISPLAY_TIMEZONE,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    }).format(d);
+}
+
+function formatCountdown(diffMs) {
+    const total = Math.max(0, Math.floor(diffMs / 1000));
+    const days = Math.floor(total / 86400);
+    const hours = Math.floor((total % 86400) / 3600);
+    const mins = Math.floor((total % 3600) / 60);
+    const secs = total % 60;
+
+    const hh = String(hours).padStart(2, "0");
+    const mm = String(mins).padStart(2, "0");
+    const ss = String(secs).padStart(2, "0");
+
+    return days > 0 ? `${days}d ${hh}:${mm}:${ss}` : `${hh}:${mm}:${ss}`;
+}
+
+function ensureWatchBtnCountdownBlocker(watchBtn) {
+    if (!watchBtn || watchBtn.dataset.liveCountdownBlockerBound === "1") return;
+
+    watchBtn.dataset.liveCountdownBlockerBound = "1";
+    watchBtn.addEventListener("click", (ev) => {
+        if (watchBtn.dataset.mode === "countdown") {
+            ev.preventDefault();
+            ev.stopPropagation();
+        }
+    }, { passive: false });
+}
+
+function clearWatchBtnCountdownUI(watchBtn) {
+    if (!watchBtn) return;
+    watchBtn.removeAttribute("aria-disabled");
+}
 
 function setWatchBtnVerAhora(watchBtn, movie) {
     if (!watchBtn || !movie?.id) return;
+
+    clearLiveCountdownTimer();
+    clearWatchBtnCountdownUI(watchBtn);
 
     const isSeries = movie.category === "series";
     watchBtn.href = isSeries
@@ -214,6 +293,9 @@ function setWatchBtnVerAhora(watchBtn, movie) {
 
 function setWatchBtnReanudar(watchBtn, movie, p) {
     if (!watchBtn || !movie?.id || !p) return;
+
+    clearLiveCountdownTimer();
+    clearWatchBtnCountdownUI(watchBtn);
 
     const isSeries = movie.category === "series";
     const ep = Array.isArray(p.episodes) ? (p.episodes[0] || null) : (p.episodes || null);
@@ -247,6 +329,54 @@ function setWatchBtnReanudar(watchBtn, movie, p) {
         (meta || elapsed ? ` <span class="watch-meta">${meta}${elapsed ? ` · ${elapsed}` : ""}</span>` : "");
     watchBtn.dataset.mode = "resume";
 }
+
+/**
+ * Si es live_mode y todavía no empezó => reemplaza botón por countdown.
+ * Devuelve true si aplicó countdown; false si no.
+ */
+function setWatchBtnLiveCountdown(watchBtn, movie) {
+    clearLiveCountdownTimer();
+
+    if (!watchBtn || !movie?.id || !Boolean(movie?.live_mode)) return false;
+
+    const liveStart = getLiveStartDate(movie);
+    if (!liveStart) return false;
+
+    const targetMs = liveStart.getTime();
+    ensureWatchBtnCountdownBlocker(watchBtn);
+
+    const render = () => {
+        const nowMs = Date.now();
+        const diff = targetMs - nowMs;
+
+        // Cuando llega la hora, vuelve a "Ver ahora"
+        if (diff <= 0) {
+            clearLiveCountdownTimer();
+            setWatchBtnVerAhora(watchBtn, movie);
+            return;
+        }
+
+        const fecha = formatLiveDateEs(liveStart);
+        const hora = formatLiveTimeEs(liveStart);
+        const countdown = formatCountdown(diff);
+
+        watchBtn.href = "#";
+        watchBtn.dataset.mode = "countdown";
+        watchBtn.setAttribute("aria-disabled", "true");
+        watchBtn.setAttribute("aria-label", `Disponible el ${fecha} a las ${hora}`);
+
+        watchBtn.innerHTML = `
+      ${fecha} - ${hora}
+      <span class="watch-meta"> · Empieza en ${countdown}</span>
+    `;
+    };
+
+    render();
+    __liveCountdownTimer = setInterval(render, 1000);
+    return true;
+}
+
+window.addEventListener("beforeunload", clearLiveCountdownTimer);
 
 /* ===========================
    Continue Watching (watch_progress)
@@ -895,13 +1025,18 @@ async function main() {
 
     if (trailerBtn) trailerBtn.classList.add("hidden");
 
-    // WATCH BUTTON (Ver ahora / Reanudar)
-    setWatchBtnVerAhora(watchBtn, movie);
-    try {
-        const progress = await fetchContinueWatchingForTitle({ movieId: movie.id });
-        if (progress) setWatchBtnReanudar(watchBtn, movie, progress);
-    } catch (e) {
-        console.warn("No se pudo leer watch_progress:", e);
+    // WATCH BUTTON (Countdown live upcoming / Ver ahora / Reanudar)
+    const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
+
+    if (!isUpcomingLiveCountdown) {
+        setWatchBtnVerAhora(watchBtn, movie);
+
+        try {
+            const progress = await fetchContinueWatchingForTitle({ movieId: movie.id });
+            if (progress) setWatchBtnReanudar(watchBtn, movie, progress);
+        } catch (e) {
+            console.warn("No se pudo leer watch_progress:", e);
+        }
     }
 
     // META
