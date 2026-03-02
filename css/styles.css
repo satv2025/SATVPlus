@@ -11,8 +11,9 @@
   --satvblue: #2563eb;
   --line: rgba(255, 255, 255, .08);
   --shadow: 0 18px 55px rgba(0, 0, 0, .34);
-  --radius: 16px;
-  --radius2: 22px;
+  --radius: .25em;
+  --radius2: .25em;
+  --ep-radius: .25em;
   --hero-overlay: #07090d;
 
   /* carousel tuning */
@@ -34,7 +35,7 @@
 /* ================= BASE ================= */
 
 #continue-row .card {
-  height: 15.6em !important;
+  height: auto !important;
 }
 
 html,
@@ -346,7 +347,7 @@ a.pill.profile-link:hover {
   transform: translateY(-50%);
   width: var(--arrow-w);
   height: var(--arrow-h);
-  border-radius: 14px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   background: rgba(0, 0, 0, .55);
   backdrop-filter: blur(8px);
@@ -494,7 +495,7 @@ a.pill.profile-link:hover {
   bottom: -3.6em;
   height: 0.25em;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 0.3em;
+  border-radius: var(--radius2);
   overflow: hidden;
 }
 
@@ -545,7 +546,7 @@ select,
 textarea {
   width: 100%;
   padding: 12px;
-  border-radius: 14px;
+  border-radius: var(--radius2);
   border: 1px solid var(--line);
   outline: none;
   background: rgba(0, 0, 0, .25);
@@ -625,7 +626,7 @@ media-player {
   aspect-ratio: 16 / 9;
   background-size: cover;
   background-position: center;
-  border-radius: 8px;
+  border-radius: var(--radius2);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -675,7 +676,7 @@ media-player {
   background: var(--satvblue);
   color: white;
   border: none;
-  border-radius: 20px;
+  border-radius: var(--radius2);
   transition: background 0.3s ease, transform 0.2s ease;
 }
 
@@ -726,7 +727,7 @@ media-player {
   opacity: 0;
   transition: all .18s ease;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius2);
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, .06);
   backdrop-filter: blur(8px);
@@ -1331,4 +1332,1176 @@ media-player {
 .home-hero-mylist.is-active {
   border-color: rgba(37, 99, 235, .65);
   background: rgba(37, 99, 235, .18);
+}
+
+/* =========================================================
+   ✅ FIX FINAL: .btn ghost y su contenedor alineados al lado del .btn
+   (sin sacar nada de tu CSS original)
+   ========================================================= */
+
+/* Contenedor recomendado para acciones del hero (Play + My List/Ghost) */
+.home-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* El contenedor del mylist se comporta como botón inline y no descuadra */
+.home-hero-mylist {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  vertical-align: middle;
+}
+
+/* Igualar altura/alineación visual entre botones del hero */
+.home-hero-actions .btn,
+.home-hero-actions .btn.ghost,
+.home-hero-actions .home-hero-mylist,
+.home-hero-actions .home-hero-mylist.btn,
+.home-hero-actions .home-hero-mylist .btn,
+.home-hero-actions .home-hero-mylist .btn.ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  min-height: 42px;
+  line-height: 1;
+  padding-top: 0;
+  padding-bottom: 0;
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+
+/* Ghost base consistente con el primary */
+.home-hero-actions .btn.ghost {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .06);
+}
+
+/* 🔥 neutraliza el desalineado del estado activo */
+.home-hero-actions .btn.ghost.is-active,
+.btn.ghost.is-active {
+  top: 0 !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ícono y texto perfectamente centrados dentro del ghost */
+.home-hero-actions .btn.ghost,
+.home-hero-actions .home-hero-mylist {
+  gap: 8px;
+}
+
+/* Si el contenedor activo también recibe .is-active */
+.home-hero-actions .home-hero-mylist.is-active {
+  border-color: rgba(37, 99, 235, .65);
+  background: rgba(37, 99, 235, .18);
+}
+
+/* =========================================================
+   🚀 RESPONSIVE OVERDRIVE (UX/UI style preserved)
+   TODO: ultra responsive sin romper estética SATV/HBO
+   Pegar al final (ya está integrado acá)
+   ========================================================= */
+
+/* Base fluid spacing/typography helpers */
+:root {
+  --ui-pad-x: clamp(12px, 2vw, 24px);
+  --ui-pad-y: clamp(10px, 1.6vw, 18px);
+  --section-x: clamp(10px, 2.4vw, 28px);
+  --hero-pad-x: clamp(16px, 5vw, 80px);
+  --hero-pad-y: clamp(14px, 3vw, 28px);
+}
+
+/* Mejoras globales sin cambiar look */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+button,
+.btn,
+.navlink,
+.pill,
+.dropdown-selected,
+.dropdown-option {
+  touch-action: manipulation;
+}
+
+.btn,
+.navlink,
+.pill {
+  min-height: 40px;
+}
+
+/* Tipografía fluida para contenido del hero (si existen esos nodos) */
+.home-hero-inner h1,
+.hero h1 {
+  font-size: clamp(1.35rem, 2.2vw + .6rem, 2.4rem);
+  line-height: 1.08;
+  margin-top: 0;
+  margin-bottom: clamp(8px, 1.2vw, 14px);
+  text-wrap: balance;
+}
+
+.home-hero-inner p,
+.hero p {
+  font-size: clamp(.84rem, .7vw + .55rem, 1rem);
+  line-height: 1.45;
+  margin-top: 0;
+  max-width: 65ch;
+  text-wrap: pretty;
+}
+
+/* Containers y secciones: márgenes fluidos */
+.container {
+  padding: var(--ui-pad-y) var(--ui-pad-x);
+}
+
+.section {
+  margin-top: clamp(12px, 2vw, 20px);
+  margin-bottom: clamp(2.2rem, 6vw, 5rem);
+}
+
+.section-head {
+  margin-left: clamp(12px, 6vw, 78px);
+  margin-right: clamp(8px, 2vw, 18px);
+}
+
+.section-title {
+  font-size: clamp(18px, 1.3vw + 12px, 24px);
+  margin-left: clamp(-1.25em, -2vw, -0.45em);
+}
+
+/* Hero más robusto en cualquier tamaño */
+.hero {
+  min-height: clamp(320px, 56vw, 58em);
+  height: clamp(320px, 38vw, 520px);
+  padding: var(--hero-pad-y) var(--hero-pad-x) !important;
+  align-items: flex-end;
+  background-position: center center;
+}
+
+.home-hero-inner {
+  width: min(720px, 100%);
+  max-width: min(720px, 100%);
+}
+
+/* Botonera del hero más resistente */
+.home-hero-actions {
+  gap: clamp(8px, 1vw, 12px);
+}
+
+.home-hero-actions .btn,
+.home-hero-actions .btn.ghost,
+.home-hero-actions .home-hero-mylist,
+.home-hero-actions .home-hero-mylist.btn,
+.home-hero-actions .home-hero-mylist .btn,
+.home-hero-actions .home-hero-mylist .btn.ghost {
+  min-width: fit-content;
+  padding-left: 14px;
+  padding-right: 14px;
+  white-space: nowrap;
+}
+
+/* Carousel: fade y flechas fluidas */
+.carousel {
+  --edge-fade: clamp(18px, 8vw, 120px);
+  --arrow-w: clamp(34px, 4vw, 56px);
+  --arrow-h: clamp(58px, 10vw, 112px);
+}
+
+.carousel-btn {
+  border-radius: clamp(10px, 1vw, 14px);
+}
+
+.carousel-btn svg {
+  width: clamp(16px, 1.7vw, 22px);
+  height: clamp(16px, 1.7vw, 22px);
+}
+
+/* Rows más suaves para touch / trackpad */
+.row {
+  gap: clamp(8px, 1.2vw, 14px);
+  padding-top: 6px;
+  padding-bottom: 8px;
+  overscroll-behavior-x: contain;
+  scroll-padding-left: calc(var(--arrow-w) + clamp(14px, 2vw, 28px));
+  scroll-padding-right: calc(var(--arrow-w) + clamp(14px, 2vw, 28px));
+}
+
+.row .card:first-child {
+  margin-left: calc(var(--arrow-w) + clamp(14px, 2vw, 28px));
+}
+
+.row .card:last-child {
+  margin-right: calc(var(--arrow-w) + clamp(14px, 2vw, 28px));
+}
+
+/* Cards fluidas manteniendo el look */
+.card {
+  width: clamp(220px, 25vw, 320px);
+  border-radius: clamp(8px, .5vw, 10px);
+  max-height: none !important;
+}
+
+.card-title {
+  font-size: clamp(12px, .55vw + 10px, 14px);
+}
+
+.card-subtitle {
+  font-size: clamp(11px, .45vw + 9px, 13px);
+}
+
+/* Continue row un poco más flexible */
+#continue-row .card {
+  height: auto;
+  min-height: 14em;
+}
+
+/* Progressbar no se desborde visualmente en cards bajas */
+.progressbar {
+  bottom: max(-3.6em, -29%);
+}
+
+/* Forms y dropdowns */
+.grid {
+  gap: clamp(10px, 1.2vw, 14px);
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
+  /* evita zoom iOS */
+  padding: clamp(10px, 1vw, 12px);
+}
+
+.dropdown {
+  width: min(100%, 18em);
+}
+
+.dropdown-selected,
+.dropdown-option {
+  min-height: 42px;
+}
+
+.dropdown-options {
+  max-height: min(40vh, 320px);
+}
+
+/* Player/episodes wrapper más elástico */
+#episodes-wrap {
+  max-width: min(88em, 100%);
+  padding-left: clamp(10px, 2vw, 24px);
+  padding-right: clamp(10px, 2vw, 24px);
+  gap: clamp(16px, 3vw, 36px);
+}
+
+.video-wrap {
+  width: 100%;
+  max-width: 100%;
+  border-radius: clamp(10px, 1.2vw, 18px);
+  overflow: hidden;
+}
+
+/* Episodes desktop/tablet: evita textos rotos y CTA fuera */
+.ep {
+  gap: clamp(12px, 1.4vw, 20px);
+  padding: clamp(14px, 2vw, 24px);
+  min-height: 0;
+}
+
+.ep-number {
+  font-size: clamp(24px, 2.5vw, 35px);
+  width: 1.15em;
+}
+
+.ep-thumbnail {
+  width: clamp(132px, 18vw, 177px);
+  height: auto;
+  min-width: clamp(132px, 18vw, 177px);
+  aspect-ratio: 16 / 9;
+}
+
+.ep-title {
+  width: clamp(160px, 18vw, 260px);
+  min-width: 0;
+  font-size: clamp(14px, .7vw + 10px, 18px);
+}
+
+.ep-synopsis {
+  font-size: clamp(12px, .5vw + 10px, 14px);
+  line-height: 1.45;
+  min-width: 0;
+  padding-right: clamp(0px, 12vw, 180px);
+}
+
+.ep-action {
+  right: clamp(12px, 2vw, 24px);
+  bottom: clamp(12px, 2vw, 24px);
+  gap: clamp(8px, 1vw, 16px);
+}
+
+.ep-action .btn {
+  min-height: 38px;
+  white-space: nowrap;
+  border-radius: 999px;
+}
+
+/* Toasts en mobile y notch-safe */
+.toast-host {
+  right: max(12px, env(safe-area-inset-right));
+  left: auto;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  width: min(360px, calc(100vw - 24px));
+}
+
+.toast {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ================= BREAKPOINTS EXTRA ================= */
+
+/* XXL / ultrawide */
+@media (min-width: 1440px) {
+  .container {
+    width: min(88%, 1600px);
+    padding-left: clamp(18px, 1.6vw, 28px);
+    padding-right: clamp(18px, 1.6vw, 28px);
+  }
+
+  .hero {
+    height: clamp(420px, 34vw, 620px);
+    min-height: clamp(420px, 34vw, 620px);
+  }
+
+  .home-hero-inner {
+    max-width: 780px;
+  }
+
+  .card {
+    width: clamp(260px, 20vw, 340px);
+  }
+
+  .section-head {
+    margin-left: clamp(24px, 5vw, 120px);
+  }
+
+  .video-wrap {
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    max-height: min(82vh, 900px);
+  }
+}
+
+/* Laptop/tablet landscape */
+@media (max-width: 1200px) {
+  .container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .hero {
+    padding-left: clamp(16px, 4vw, 48px) !important;
+    padding-right: clamp(16px, 4vw, 48px) !important;
+    min-height: clamp(320px, 50vw, 500px);
+    height: clamp(320px, 42vw, 500px);
+  }
+
+  .section-head {
+    margin-left: clamp(10px, 3vw, 44px);
+  }
+
+  .section-title {
+    margin-left: 0;
+  }
+
+  .ep {
+    display: grid;
+    grid-template-columns: auto auto minmax(160px, 220px) 1fr;
+    align-items: center;
+  }
+
+  .ep-title {
+    width: auto;
+  }
+
+  .ep-synopsis {
+    padding-right: 130px;
+  }
+
+  .ep-action {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .video-wrap {
+    height: auto !important;
+    max-height: min(70vh, 760px);
+  }
+}
+
+/* Tablet portrait / phablet */
+@media (max-width: 992px) {
+  .nav-inner {
+    gap: 10px;
+    padding-right: 12px;
+  }
+
+  .nav-left {
+    gap: 10px;
+  }
+
+  .nav-right {
+    gap: 8px;
+  }
+
+  .hero {
+    margin-top: -60px !important;
+    height: clamp(300px, 54vw, 440px);
+    min-height: clamp(300px, 54vw, 440px);
+    aspect-ratio: auto;
+  }
+
+  .home-hero-inner {
+    max-width: min(92vw, 680px);
+  }
+
+  .home-hero-actions {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .home-hero-actions .btn,
+  .home-hero-actions .btn.ghost,
+  .home-hero-actions .home-hero-mylist,
+  .home-hero-actions .home-hero-mylist.btn,
+  .home-hero-actions .home-hero-mylist .btn,
+  .home-hero-actions .home-hero-mylist .btn.ghost {
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+
+  .carousel::before,
+  .carousel::after {
+    width: clamp(14px, 5vw, 60px);
+  }
+
+  .carousel-btn {
+    opacity: 1;
+    /* en touch conviene visibles */
+    background: rgba(0, 0, 0, .45);
+  }
+
+  .row .card:first-child,
+  .row .card:last-child {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .row {
+    scroll-padding-left: 8px;
+    scroll-padding-right: 8px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .card {
+    width: clamp(220px, 42vw, 300px);
+  }
+
+  .panel {
+    border-radius: 18px;
+    padding: clamp(12px, 2vw, 16px);
+  }
+
+  .ep-list {
+    gap: 12px;
+  }
+
+  .ep {
+    grid-template-columns: auto auto minmax(140px, 190px) 1fr;
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .ep-number {
+    width: auto;
+    min-width: 1.1em;
+    text-align: left;
+  }
+
+  .ep-thumbnail {
+    width: 150px;
+    min-width: 150px;
+  }
+
+  .ep-title {
+    font-size: 15px;
+  }
+
+  .ep-synopsis {
+    max-height: 4.8em;
+    padding-right: 110px;
+  }
+
+  .ep-action {
+    bottom: 12px;
+    right: 12px;
+  }
+
+  #episodes-wrap {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .video-wrap {
+    max-height: min(62vh, 560px);
+  }
+}
+
+/* Mobile general */
+@media (max-width: 768px) {
+
+  /* notch safe spacing */
+  .topnav {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .container {
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+  }
+
+  .nav-inner {
+    width: 100%;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .nav-left,
+  .nav-right {
+    width: 100%;
+  }
+
+  .nav-right {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .navlink,
+  .btn,
+  .pill {
+    min-height: 38px;
+  }
+
+  .hero {
+    margin-top: -52px !important;
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    height: clamp(280px, 68vw, 420px);
+    min-height: clamp(280px, 68vw, 420px);
+    padding-left: clamp(12px, 4vw, 24px) !important;
+    padding-right: clamp(12px, 4vw, 24px) !important;
+    padding-top: clamp(12px, 2vh, 16px) !important;
+    padding-bottom: clamp(12px, 2.4vh, 20px) !important;
+    align-items: flex-end;
+  }
+
+  .hero::before {
+    background: linear-gradient(to top,
+        color-mix(in srgb, var(--hero-overlay) 100%, transparent) 0%,
+        color-mix(in srgb, var(--hero-overlay) 96%, transparent) 38%,
+        color-mix(in srgb, var(--hero-overlay) 70%, transparent) 62%,
+        color-mix(in srgb, var(--hero-overlay) 20%, transparent) 84%,
+        color-mix(in srgb, var(--hero-overlay) 0%, transparent) 100%);
+  }
+
+  .home-hero-inner {
+    max-width: 100%;
+  }
+
+  .home-hero-actions {
+    gap: 8px;
+  }
+
+  .home-hero-actions .btn,
+  .home-hero-actions .btn.ghost,
+  .home-hero-actions .home-hero-mylist,
+  .home-hero-actions .home-hero-mylist.btn,
+  .home-hero-actions .home-hero-mylist .btn,
+  .home-hero-actions .home-hero-mylist .btn.ghost {
+    height: 38px !important;
+    min-height: 38px !important;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+
+  .section {
+    margin-bottom: 2.4rem;
+  }
+
+  .section-head {
+    margin: 0 0 10px 0;
+    padding: 0 2px;
+  }
+
+  .section-title {
+    margin-left: 0;
+  }
+
+  /* CARDS EN ROW móvil: evitar width:100% que rompe el carrusel */
+  .row .card,
+  .carousel .row .card {
+    width: min(86vw, 320px) !important;
+    max-width: min(86vw, 320px) !important;
+    margin-bottom: 0;
+    scroll-snap-align: start;
+  }
+
+  .row {
+    gap: 10px;
+    padding: 6px 0 8px;
+  }
+
+  .carousel::before,
+  .carousel::after {
+    width: clamp(10px, 4vw, 20px);
+  }
+
+  .carousel-btn {
+    width: 34px;
+    height: 60px;
+    border-radius: 10px;
+    top: 44%;
+  }
+
+  .carousel-btn.left {
+    left: 4px;
+  }
+
+  .carousel-btn.right {
+    right: 4px;
+  }
+
+  .thumb {
+    aspect-ratio: 16 / 9;
+  }
+
+  .card-title {
+    padding: 9px 10px 2px;
+    font-size: 13px;
+  }
+
+  .card-subtitle {
+    padding: 0 10px 9px;
+    font-size: 12px;
+  }
+
+  .progressbar {
+    left: 8px;
+    right: 8px;
+    bottom: -2.7em;
+  }
+
+  /* Episodes mobile: UX tipo carrusel de cards */
+  #episodes-wrap {
+    padding: 0 10px;
+    gap: 14px;
+  }
+
+  .ep-list {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    padding-bottom: 2px;
+  }
+
+  .ep {
+    width: min(88vw, 360px);
+    max-width: min(88vw, 360px);
+    min-width: min(88vw, 360px);
+    padding: 12px;
+    border-radius: 16px;
+    scroll-snap-align: start;
+  }
+
+  .ep-number {
+    display: none;
+  }
+
+  .ep-thumbnail {
+    width: 100%;
+    min-width: 0;
+    max-height: none;
+    border-radius: 10px;
+  }
+
+  .ep-title {
+    width: 100%;
+    text-align: left;
+    margin-top: 8px;
+    font-size: 15px;
+  }
+
+  .ep-synopsis {
+    width: 100%;
+    padding-right: 0;
+    max-height: 4.8em;
+    margin-top: 2px;
+  }
+
+  .ep-action {
+    position: relative;
+    inset: auto;
+    justify-content: flex-start;
+    margin-top: 10px;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .ep-action .btn {
+    width: auto;
+    min-width: 0;
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .ep-synopsis-expander {
+    padding: 8px 0 0;
+  }
+
+  .form-actions {
+    gap: 8px;
+  }
+
+  .form-actions .btn,
+  .form-actions .pill {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dropdown {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dropdown-selected {
+    min-height: 44px;
+    border-radius: 12px;
+  }
+
+  .dropdown-options {
+    border-radius: 12px;
+  }
+
+  .video-wrap {
+    border-radius: 14px;
+    max-height: none;
+    aspect-ratio: 16 / 9;
+  }
+
+  .toast-host {
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    width: auto;
+  }
+
+  .toast {
+    border-radius: 12px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  :root {
+    --logo-gap: 10px;
+  }
+
+  .topnav {
+    border-bottom-color: rgba(255, 255, 255, .06);
+  }
+
+  .nav-inner {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-right: 10px;
+  }
+
+  .brand-logo {
+    width: clamp(104px, 48vw, 180px);
+  }
+
+  .nav-left {
+    gap: 8px;
+  }
+
+  .nav-right {
+    gap: 6px;
+  }
+
+  .navlink {
+    padding: 6px 10px;
+    font-size: 13px;
+    border-radius: 12px;
+  }
+
+  .pill {
+    font-size: 12px;
+    padding: 7px 9px;
+  }
+
+  .btn {
+    padding: 9px 11px;
+    font-size: 13px;
+  }
+
+  .btn.ghost svg {
+    width: 17px;
+  }
+
+  .hero {
+    margin-top: -46px !important;
+    height: clamp(250px, 76vw, 340px);
+    min-height: clamp(250px, 76vw, 340px);
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: 12px !important;
+  }
+
+  .home-hero-inner h1,
+  .hero h1 {
+    font-size: clamp(1.1rem, 4.7vw, 1.45rem);
+    margin-bottom: 8px;
+  }
+
+  .home-hero-inner p,
+  .hero p {
+    font-size: 12px;
+    line-height: 1.35;
+    max-width: 100%;
+  }
+
+  .home-hero-actions {
+    gap: 6px;
+  }
+
+  .home-hero-actions .btn,
+  .home-hero-actions .btn.ghost,
+  .home-hero-actions .home-hero-mylist,
+  .home-hero-actions .home-hero-mylist.btn,
+  .home-hero-actions .home-hero-mylist .btn,
+  .home-hero-actions .home-hero-mylist .btn.ghost {
+    height: 36px !important;
+    min-height: 36px !important;
+    font-size: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 10px;
+    gap: 6px;
+  }
+
+  .home-hero-mylist-icon {
+    width: 16px;
+    height: 16px;
+    flex-basis: 16px;
+  }
+
+  .section-head {
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  .section-title {
+    font-size: 18px;
+  }
+
+  .muted {
+    font-size: 12px;
+  }
+
+  .carousel::before,
+  .carousel::after {
+    display: none;
+    /* en pantallas muy chicas el fade come espacio útil */
+  }
+
+  .carousel-btn {
+    width: 30px;
+    height: 52px;
+    opacity: 1;
+    background: rgba(0, 0, 0, .5);
+    border-radius: 9px;
+  }
+
+  .carousel-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .row {
+    gap: 8px;
+  }
+
+  .row .card,
+  .carousel .row .card {
+    width: min(90vw, 310px) !important;
+    max-width: min(90vw, 310px) !important;
+    border-radius: 10px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .card-subtitle {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .progressbar {
+    bottom: -2.35em;
+    height: .22em;
+  }
+
+  .grid {
+    gap: 10px;
+  }
+
+  label {
+    font-size: 12px;
+    margin: 8px 0 5px;
+  }
+
+  input,
+  select,
+  textarea {
+    border-radius: 12px;
+    padding: 10px;
+  }
+
+  textarea {
+    min-height: 80px;
+  }
+
+  .dropdown-selected {
+    padding: 10px;
+  }
+
+  .dropdown-text,
+  .dropdown-option {
+    font-size: 13px;
+  }
+
+  .dropdown-options {
+    max-height: 38vh;
+  }
+
+  .video-wrap {
+    border-radius: 12px;
+  }
+
+  #episodes-wrap {
+    padding: 0 8px;
+    gap: 12px;
+  }
+
+  .ep-list {
+    gap: 8px;
+  }
+
+  .ep {
+    width: min(92vw, 340px);
+    max-width: min(92vw, 340px);
+    min-width: min(92vw, 340px);
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .ep-title {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .ep-synopsis {
+    font-size: 12px;
+    line-height: 1.35;
+    max-height: 4.4em;
+  }
+
+  .ep-action {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .ep-action .btn {
+    font-size: 12px;
+    padding: 8px 10px;
+    min-height: 34px;
+  }
+
+  .toast {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
+
+/* Tiny phones / fallback extremo */
+@media (max-width: 360px) {
+
+  .nav-left,
+  .nav-right {
+    gap: 6px;
+  }
+
+  .navlink,
+  .pill,
+  .btn {
+    font-size: 12px;
+  }
+
+  .hero {
+    height: 240px;
+    min-height: 240px;
+  }
+
+  .home-hero-inner h1,
+  .hero h1 {
+    font-size: 1rem;
+  }
+
+  .home-hero-inner p,
+  .hero p {
+    font-size: 11px;
+  }
+
+  .home-hero-actions .btn,
+  .home-hero-actions .btn.ghost,
+  .home-hero-actions .home-hero-mylist,
+  .home-hero-actions .home-hero-mylist.btn,
+  .home-hero-actions .home-hero-mylist .btn,
+  .home-hero-actions .home-hero-mylist .btn.ghost {
+    font-size: 11px;
+    padding-left: 8px;
+    padding-right: 8px;
+    min-height: 34px !important;
+    height: 34px !important;
+  }
+
+  .row .card,
+  .carousel .row .card {
+    width: 92vw !important;
+    max-width: 92vw !important;
+  }
+
+  .ep {
+    width: 94vw;
+    max-width: 94vw;
+    min-width: 94vw;
+  }
+}
+
+/* Reduced motion (mejora UX accesible sin cambiar look) */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+
+  .card,
+  .ep,
+  .btn,
+  .carousel-btn,
+  .dropdown-options,
+  .dropdown-arrow,
+  .progressfill {
+    transition: none !important;
+  }
+}
+
+/* Hover real vs touch (mejora UX en táctil) */
+@media (hover: none) and (pointer: coarse) {
+  .carousel-btn {
+    opacity: 1;
+  }
+
+  .card:hover,
+  .ep:hover,
+  .btn:hover,
+  .navlink:hover {
+    transform: none;
+    outline: none;
+  }
+
+  .btn:hover {
+    color: white;
+    background: var(--satvblue);
+  }
+
+  .ep-action .btn:hover {
+    transform: none;
+    background: var(--satvblue);
+  }
+}
+
+/* Pantallas bajas (landscape phones) */
+@media (max-height: 500px) and (orientation: landscape) {
+  .topnav {
+    position: sticky;
+    top: 0;
+  }
+
+  .hero {
+    height: 78vh;
+    min-height: 220px;
+    margin-top: 0 !important;
+  }
+
+  .home-hero-inner h1,
+  .hero h1 {
+    font-size: clamp(1rem, 2vw, 1.4rem);
+    margin-bottom: 6px;
+  }
+
+  .home-hero-inner p,
+  .hero p {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .home-hero-actions .btn,
+  .home-hero-actions .btn.ghost,
+  .home-hero-actions .home-hero-mylist,
+  .home-hero-actions .home-hero-mylist.btn,
+  .home-hero-actions .home-hero-mylist .btn,
+  .home-hero-actions .home-hero-mylist .btn.ghost {
+    height: 34px !important;
+    min-height: 34px !important;
+  }
+
+  .video-wrap {
+    max-height: 78vh;
+  }
 }
