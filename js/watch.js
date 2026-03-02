@@ -8,16 +8,15 @@
 // - ./supabaseClient.js exportando `supabase`
 // - UMD de Akira cargado
 //
-// ✅ LIVE MODE soportado:
+// ✅ LIVE MODE soportado (sin countdown/gate):
 // - movies.live_mode (boolean)
 // - movies.live_starts_at (timestamptz)
-// Si el contenido live todavía no empezó, muestra countdown y recién renderiza el player al llegar la hora.
+// Si live_mode=true, se renderiza DIRECTO el player (sin "esperando transmisión").
 //
-// ✅ NUEVO COMPORTAMIENTO LIVE:
-// - Si live_mode=true y el m3u8 YA responde con playlist válida => entra directo (sin gate)
-// - Si live_mode=true y el m3u8 NO responde / no hay señal => muestra gate
-//   (countdown si hay live_starts_at futuro, o "esperando señal" si no hay hora)
-// - El gate hace polling del m3u8 y abre automáticamente cuando haya señal
+// ✅ Mantiene compat con metadata live:
+// - props.isLiveMode
+// - props.liveStartsAt
+// - props.streamType = "live"
 
 import { supabase } from "./supabaseClient.js";
 
@@ -30,7 +29,6 @@ const NOW_URL = new URL(window.location.href);
 const DEBUG =
   NOW_URL.searchParams.get("debug") === "1" ||
   NOW_URL.searchParams.get("debug") === "true";
-const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
 
 /* ============================================================
  * Esquema DB
@@ -216,25 +214,8 @@ function getAssetBaseUrl() {
 }
 
 /* ============================================================
- * LIVE mode helpers (gate/countdown antes de renderizar)
+ * LIVE mode helpers (solo metadata, SIN gate/countdown)
  * ============================================================ */
-let __watchLiveCountdownTimer = null;
-let __watchLiveStreamProbeTimer = null;
-
-function clearWatchLiveCountdownTimer() {
-  if (__watchLiveCountdownTimer) {
-    clearInterval(__watchLiveCountdownTimer);
-    __watchLiveCountdownTimer = null;
-  }
-}
-
-function clearWatchLiveStreamProbeTimer() {
-  if (__watchLiveStreamProbeTimer) {
-    clearInterval(__watchLiveStreamProbeTimer);
-    __watchLiveStreamProbeTimer = null;
-  }
-}
-
 function getLiveStartDateFromRow(row, keyName = "live_starts_at") {
   if (!row) return null;
   const raw =
@@ -260,261 +241,6 @@ function isUpcomingLiveFromRow(
   if (!d) return false;
   return d.getTime() > Date.now();
 }
-
-function formatLiveDateEs(date) {
-  return new Intl.DateTimeFormat("es-AR", {
-    timeZone: LIVE_DISPLAY_TIMEZONE,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  }).format(date);
-}
-
-function formatLiveTimeEs(date) {
-  return new Intl.DateTimeFormat("es-AR", {
-    timeZone: LIVE_DISPLAY_TIMEZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(date);
-}
-
-function formatCountdown(diffMs) {
-  const total = Math.max(0, Math.floor(diffMs / 1000));
-  const days = Math.floor(total / 86400);
-  const hours = Math.floor((total % 86400) / 3600);
-  const mins = Math.floor((total % 3600) / 60);
-  const secs = total % 60;
-
-  const hh = String(hours).padStart(2, "0");
-  const mm = String(mins).padStart(2, "0");
-  const ss = String(secs).padStart(2, "0");
-
-  return days > 0 ? `${days}d ${hh}:${mm}:${ss}` : `${hh}:${mm}:${ss}`;
-}
-
-function ensureLiveGateStyles() {
-  if (document.getElementById("watch-live-gate-styles")) return;
-
-  const style = document.createElement("style");
-  style.id = "watch-live-gate-styles";
-  style.textContent = `
-    #watch-live-gate {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: rgba(0,0,0,.86);
-      color: #fff;
-      z-index: 2147483000;
-      backdrop-filter: blur(8px);
-      box-sizing: border-box;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    }
-    #watch-live-gate .watch-live-gate-card {
-      width: min(760px, 100%);
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: linear-gradient(180deg, rgba(16,22,36,.92), rgba(8,12,22,.94));
-      box-shadow: 0 25px 60px rgba(0,0,0,.45);
-      padding: 22px;
-      text-align: center;
-    }
-    #watch-live-gate .watch-live-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 14px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(37,99,235,.18);
-      border: 1px solid rgba(37,99,235,.45);
-      color: #dbeafe;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .02em;
-    }
-    #watch-live-gate .watch-live-badge::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #ef4444;
-      box-shadow: 0 0 0 4px rgba(239,68,68,.18);
-    }
-    #watch-live-gate h2 {
-      margin: 0 0 8px;
-      font-size: clamp(22px, 2vw + 12px, 34px);
-      line-height: 1.1;
-    }
-    #watch-live-gate .watch-live-title {
-      opacity: .95;
-      margin: 0 0 14px;
-      font-size: clamp(14px, .7vw + 10px, 18px);
-    }
-    #watch-live-gate .watch-live-datetime {
-      opacity: .92;
-      margin: 0 0 12px;
-      font-size: 15px;
-    }
-    #watch-live-gate .watch-live-countdown {
-      margin: 0;
-      font-size: clamp(20px, 1.6vw + 10px, 28px);
-      font-weight: 800;
-      color: #93c5fd;
-      letter-spacing: .01em;
-    }
-    #watch-live-gate .watch-live-help {
-      margin: 12px 0 0;
-      opacity: .72;
-      font-size: 12px;
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-function ensureLiveGateOverlay() {
-  ensureLiveGateStyles();
-
-  let gate = document.getElementById("watch-live-gate");
-  if (gate) return gate;
-
-  gate = document.createElement("div");
-  gate.id = "watch-live-gate";
-  gate.innerHTML = `
-    <div class="watch-live-gate-card">
-      <div class="watch-live-badge">Próxima transmisión</div>
-      <h2 id="watch-live-gate-heading">Próximo estreno en vivo</h2>
-      <p id="watch-live-gate-title" class="watch-live-title"></p>
-      <p id="watch-live-gate-datetime" class="watch-live-datetime"></p>
-      <p id="watch-live-gate-countdown" class="watch-live-countdown">Cargando…</p>
-      <p class="watch-live-help">El reproductor se abrirá automáticamente al llegar la hora.</p>
-    </div>
-  `;
-  document.body.appendChild(gate);
-  return gate;
-}
-
-function hideLiveGate() {
-  clearWatchLiveCountdownTimer();
-  clearWatchLiveStreamProbeTimer();
-  const gate = document.getElementById("watch-live-gate");
-  if (gate) gate.style.display = "none";
-}
-
-/**
- * Muestra gate live y hace:
- * - countdown si startsAt es válido y futuro
- * - "esperando señal" si no hay hora o ya pasó
- * - polling del m3u8 para arrancar apenas haya stream
- */
-function showLiveGate({ title = "", startsAt, onStart, streamProbeUrl } = {}) {
-  const gate = ensureLiveGateOverlay();
-  const titleEl = document.getElementById("watch-live-gate-title");
-  const dateEl = document.getElementById("watch-live-gate-datetime");
-  const countdownEl = document.getElementById("watch-live-gate-countdown");
-
-  if (!gate) return;
-
-  clearWatchLiveCountdownTimer();
-  clearWatchLiveStreamProbeTimer();
-  gate.style.display = "flex";
-
-  if (titleEl) titleEl.textContent = title || "";
-
-  let started = false;
-  let probing = false;
-
-  const startNow = () => {
-    if (started) return;
-    started = true;
-
-    clearWatchLiveCountdownTimer();
-    clearWatchLiveStreamProbeTimer();
-    gate.style.display = "none";
-
-    try {
-      onStart?.();
-    } catch (e) {
-      console.error("[watch] live gate onStart error:", e);
-    }
-  };
-
-  const hasValidStartsAt =
-    startsAt instanceof Date && !Number.isNaN(startsAt.getTime());
-
-  if (dateEl) {
-    if (hasValidStartsAt) {
-      dateEl.textContent = `${formatLiveDateEs(startsAt)} - ${formatLiveTimeEs(
-        startsAt
-      )} (${LIVE_DISPLAY_TIMEZONE})`;
-    } else {
-      dateEl.textContent = `Esperando señal de transmisión (${LIVE_DISPLAY_TIMEZONE})`;
-    }
-  }
-
-  const tick = () => {
-    if (!countdownEl) return;
-
-    if (!hasValidStartsAt) {
-      countdownEl.textContent = "Esperando señal en vivo…";
-      return;
-    }
-
-    const diff = startsAt.getTime() - Date.now();
-
-    // Si ya llegó la hora, NO arrancamos a ciegas:
-    // dejamos el gate y esperamos que el m3u8 realmente responda.
-    if (diff <= 0) {
-      countdownEl.textContent = "Esperando señal en vivo…";
-      // Compat: si no hay URL para probe, arrancamos
-      if (!streamProbeUrl) startNow();
-      return;
-    }
-
-    countdownEl.textContent = `Empieza en ${formatCountdown(diff)}`;
-  };
-
-  const probeAndStartIfOnline = async () => {
-    if (!streamProbeUrl || started || probing) return;
-    probing = true;
-
-    try {
-      const probe = await probeLiveStreamAvailability(streamProbeUrl, {
-        timeoutMs: 4000
-      });
-
-      infoLog("[watch] live gate probe:", probe);
-
-      if (probe.online) {
-        startNow();
-      }
-    } catch (e) {
-      warnLog("[watch] live gate probe error:", e);
-    } finally {
-      probing = false;
-    }
-  };
-
-  // Render inicial de texto/countdown
-  tick();
-
-  // Countdown (si aplica o para refrescar "esperando señal")
-  __watchLiveCountdownTimer = setInterval(tick, 1000);
-
-  // Poll real del m3u8 (arranca apenas haya señal, incluso antes de live_starts_at)
-  if (streamProbeUrl) {
-    probeAndStartIfOnline(); // intento inmediato
-    __watchLiveStreamProbeTimer = setInterval(probeAndStartIfOnline, 8000);
-  }
-}
-
-window.addEventListener("beforeunload", () => {
-  clearWatchLiveCountdownTimer();
-  clearWatchLiveStreamProbeTimer();
-});
 
 /* ============================================================
  * Params / helpers
@@ -735,7 +461,7 @@ async function probeVtt(url) {
 }
 
 /* ============================================================
- * Live stream availability probe (bloqueante para gate)
+ * Live stream availability probe (se deja por compat/debug; ya no gatea)
  * ============================================================ */
 function looksLikePlayableHlsPlaylist(text) {
   const s = String(text || "");
@@ -745,7 +471,6 @@ function looksLikePlayableHlsPlaylist(text) {
   const hasMaster = /#EXT-X-STREAM-INF:/i.test(s);
   const hasMedia = /#EXTINF:/i.test(s);
 
-  // Algunos backends devuelven muy minimal al principio, pero igual con #EXTM3U ya suele alcanzar.
   return hasMaster || hasMedia || s.trim().startsWith("#EXTM3U");
 }
 
@@ -1347,7 +1072,7 @@ function inspectMountedVideoLater() {
 }
 
 /* ============================================================
- * Render pipeline (extraído para reutilizar desde live gate)
+ * Render pipeline (extraído para reutilizar)
  * ============================================================ */
 async function renderAndWaitPlayer(result) {
   window.__SATV_WATCH_LAST_RESULT__ = result;
@@ -1365,7 +1090,7 @@ async function renderAndWaitPlayer(result) {
   if (root) root.innerHTML = "";
 
   // ✅ render + esperar el READY del MISMO mount actual
-  // (y ahora el READY exige que el video esté PLAYING)
+  // (el READY exige que el video esté PLAYING)
   const renderResult = window.renderAkiraPlayer(result.props);
 
   try {
@@ -1406,76 +1131,8 @@ async function boot() {
     const result = await resolveRouteAndBuildProps();
     if (!result) return; // redirect
 
-    // ✅ Gate live basado en disponibilidad REAL del m3u8 (solo si live_mode=true)
-    const isLiveTitle = Boolean(result.liveGate?.enabled || result.props?.isLiveMode);
-    const liveSrc = result?.props?.src || null;
-
-    if (isLiveTitle) {
-      const startupProbe = await probeLiveStreamAvailability(liveSrc, {
-        timeoutMs: 3500
-      });
-      infoLog("[watch] live startup probe:", startupProbe);
-
-      // Si el stream YA está online, render directo (sin countdown)
-      if (startupProbe.online) {
-        hideLiveGate();
-        await renderAndWaitPlayer(result);
-        return;
-      }
-
-      // Si NO está online, mostramos gate.
-      // - si hay live_starts_at futuro => countdown
-      // - si no => "esperando señal"
-      hideWatchLoadingOverlay();
-
-      const root = getRootEl();
-      if (root) root.innerHTML = "";
-
-      infoLog("[watch] live gate activo (stream offline):", {
-        title: result.liveGate?.title || result.title,
-        startsAt:
-          result.liveGate?.startsAt?.toISOString?.() ||
-          result.liveGate?.startsAt ||
-          null,
-        probeReason: startupProbe.reason,
-        probeStatus: startupProbe.status
-      });
-
-      showLiveGate({
-        title: result.liveGate?.title || result.title || "Transmisión en vivo",
-        startsAt: result.liveGate?.startsAt || null,
-        streamProbeUrl: liveSrc,
-        onStart: async () => {
-          try {
-            setLoading();
-            await renderAndWaitPlayer(result);
-          } catch (err) {
-            console.error("[watch] render tras live gate falló:", err);
-
-            const msg = err?.message || "No se pudo iniciar la transmisión en vivo";
-            const details =
-              typeof err === "object" && err
-                ? JSON.stringify(
-                  {
-                    message: err.message,
-                    details: err.details || null,
-                    hint: err.hint || null,
-                    code: err.code || null,
-                    stack: err.stack || null
-                  },
-                  null,
-                  2
-                )
-                : "";
-            setError(msg, details);
-          }
-        }
-      });
-
-      return;
-    }
-
-    hideLiveGate();
+    // ✅ SIN countdown / gate live:
+    // siempre renderiza directo (incluyendo contenidos live)
     await renderAndWaitPlayer(result);
   } catch (err) {
     console.error("[watch] boot error:", err);
