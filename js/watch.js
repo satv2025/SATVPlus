@@ -551,7 +551,7 @@ function safeArray(v) {
 }
 
 function isHlsUrl(url) {
-  return /\.m3u8(\?|#|$)/i.test(String(url || ""));
+  return /\.mpd(\?|#|$)/i.test(String(url || ""));
 }
 
 function isLikelyAbsoluteUrl(url) {
