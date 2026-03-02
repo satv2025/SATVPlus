@@ -59,7 +59,6 @@ span.meta-dropitem {
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
-
     aspect-ratio: 16 / 9;
     min-height: 420px;
     max-height: 670px;
@@ -235,19 +234,27 @@ span.meta-dropitem {
     align-items: center;
     justify-content: center;
     gap: 8px;
+
+    /* clave para que se vean iguales */
+    min-height: 44px;
+    line-height: 1;
+    box-sizing: border-box;
+
+    /* podés mantener el padding si querés */
+    padding: 11px 14px;
     text-decoration: none;
     font-weight: 900;
     border-radius: var(--ep-radius);
-    padding: 11px 14px;
     cursor: pointer;
-
     transition: scale .2s ease, transform .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
 
 a#watch-btn[data-mode="countdown"] {
-    background: #3a455f;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--line);
+    color: var(--text);
     pointer-events: none;
 }
 
