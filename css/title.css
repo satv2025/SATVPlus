@@ -13,7 +13,7 @@
    ROOT / TOKENS
    ========================= */
 :root {
-    --ep-body-h: 92px;
+    --ep-body-h: auto;
     --ep-pad-x: 10px;
     --ep-pad-y: 18px;
     --ep-gap: 12px;
