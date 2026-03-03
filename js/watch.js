@@ -196,7 +196,7 @@ function escapeHtml(str) {
 }
 
 function setDocumentTitle(name) {
-  document.title = name ? `${name} · SATV+ Watch` : "SATV+ Watch";
+  document.title = name ? `${name} · SATV+` : "SATV+";
 }
 
 function requireRenderBridge() {
