@@ -307,6 +307,33 @@ export function enableDataHrefNavigation() {
 }
 
 /* =========================
+   MOVIE CARD BADGE (publish_state)
+========================= */
+
+function getMoviePublishState(movie) {
+  const state = String(movie?.publish_state || "public").toLowerCase();
+  if (["public", "upcoming", "live", "other"].includes(state)) return state;
+  return "public";
+}
+
+function getMovieBadgeLabel(movie) {
+  const state = getMoviePublishState(movie);
+
+  if (state === "public") return "";
+  if (state === "upcoming") return "Próximamente";
+  if (state === "live") return "En Vivo";
+
+  // other
+  const custom = String(movie?.publish_state_text || "").trim();
+  return custom || "Otro";
+}
+
+function getMovieBadgeClass(movie) {
+  const state = getMoviePublishState(movie);
+  return `card-badge-${state}`;
+}
+
+/* =========================
    MOVIE CARD
 ========================= */
 
@@ -328,9 +355,15 @@ export function cardHtml(movie, hrefOverride = null, subtitle = null, progressPe
        </div>`
     : "";
 
+  const badgeLabel = getMovieBadgeLabel(movie);
+  const badge = badgeLabel
+    ? `<div class="card-badge ${getMovieBadgeClass(movie)}">${escapeHtml(badgeLabel)}</div>`
+    : "";
+
   return `
     <div class="card no-select" role="link" tabindex="0" data-href="${href}">
       <div class="thumb" style="background-image:url('${thumb}')">
+        ${badge}
         ${pb}
       </div>
       <div class="card-title">${title}</div>

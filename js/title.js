@@ -8,6 +8,7 @@
 // ✅ Fallback localStorage si no hay sesión / falla Supabase
 // ✅ Topnav agrega "Mi Lista" a la derecha de "Inicio" con /mylist?list=<user>&user=<user>
 // ✅ LIVE MODE: si live_mode=true y live_starts_at está en el futuro, el botón muestra countdown
+// ✅ PUBLISH STATE: Público / Próximamente / En Vivo / Otro (movies.publish_state + publish_state_text)
 
 function qs(key) { return new URLSearchParams(window.location.search).get(key); }
 function el(id) { return document.getElementById(id); }
@@ -65,6 +66,27 @@ function row(label, value, esc) {
       <div class="title-extra-label">${esc(label)}</div>
       <div class="title-extra-value">${esc(value)}</div>
     </div>`;
+}
+
+/* ===========================
+   PUBLISH STATE (movies.publish_state)
+=========================== */
+
+function getMoviePublishState(movie) {
+    const raw = String(movie?.publish_state || "public").toLowerCase();
+    if (["public", "upcoming", "live", "other"].includes(raw)) return raw;
+    return "public";
+}
+
+function getMoviePublishStateLabel(movie) {
+    const state = getMoviePublishState(movie);
+
+    if (state === "public") return "Público";
+    if (state === "upcoming") return "Próximamente";
+    if (state === "live") return "En Vivo";
+
+    const custom = String(movie?.publish_state_text || "").trim();
+    return custom || "Otro";
 }
 
 /* ===========================
@@ -197,7 +219,7 @@ function bindEpisodeCardNavigation(rootEl, movieId) {
 }
 
 /* ===========================
-   WATCH BUTTON: Ver ahora / Reanudar / Countdown Live
+   WATCH BUTTON: Ver ahora / Reanudar / Countdown Live / Status
 =========================== */
 
 let __liveCountdownTimer = null;
@@ -263,7 +285,8 @@ function ensureWatchBtnCountdownBlocker(watchBtn) {
 
     watchBtn.dataset.liveCountdownBlockerBound = "1";
     watchBtn.addEventListener("click", (ev) => {
-        if (watchBtn.dataset.mode === "countdown") {
+        const mode = watchBtn.dataset.mode;
+        if (mode === "countdown" || mode === "status-disabled") {
             ev.preventDefault();
             ev.stopPropagation();
         }
@@ -273,6 +296,7 @@ function ensureWatchBtnCountdownBlocker(watchBtn) {
 function clearWatchBtnCountdownUI(watchBtn) {
     if (!watchBtn) return;
     watchBtn.removeAttribute("aria-disabled");
+    try { watchBtn.disabled = false; } catch { }
 }
 
 function setWatchBtnVerAhora(watchBtn, movie) {
@@ -328,6 +352,35 @@ function setWatchBtnReanudar(watchBtn, movie, p) {
         `Reanudar <span aria-hidden="true">▶</span>` +
         (meta || elapsed ? ` <span class="watch-meta">${meta}${elapsed ? ` · ${elapsed}` : ""}</span>` : "");
     watchBtn.dataset.mode = "resume";
+}
+
+function setWatchBtnDisabledStatus(watchBtn, label) {
+    if (!watchBtn) return;
+
+    clearLiveCountdownTimer();
+    ensureWatchBtnCountdownBlocker(watchBtn);
+
+    watchBtn.href = "#";
+    watchBtn.dataset.mode = "status-disabled";
+    watchBtn.setAttribute("aria-disabled", "true");
+    watchBtn.setAttribute("aria-label", label || "No disponible");
+    watchBtn.innerHTML = `${label || "No disponible"}`;
+}
+
+function setWatchBtnStatusClickable(watchBtn, movie, label) {
+    if (!watchBtn || !movie?.id) return;
+
+    clearLiveCountdownTimer();
+    clearWatchBtnCountdownUI(watchBtn);
+
+    const isSeries = movie.category === "series";
+    watchBtn.href = isSeries
+        ? `/watch?series=${encodeURIComponent(movie.id)}`
+        : `/watch?movie=${encodeURIComponent(movie.id)}`;
+
+    watchBtn.dataset.mode = "status-clickable";
+    watchBtn.setAttribute("aria-label", label || "Ver ahora");
+    watchBtn.innerHTML = `${label || "Ver ahora"} <span aria-hidden="true">▶</span>`;
 }
 
 /**
@@ -1025,17 +1078,29 @@ async function main() {
 
     if (trailerBtn) trailerBtn.classList.add("hidden");
 
-    // WATCH BUTTON (Countdown live upcoming / Ver ahora / Reanudar)
-    const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
+    // WATCH BUTTON según estado público cargado en Supabase
+    const publishState = getMoviePublishState(movie);
+    const publishStateLabel = getMoviePublishStateLabel(movie);
 
-    if (!isUpcomingLiveCountdown) {
-        setWatchBtnVerAhora(watchBtn, movie);
+    if (publishState === "upcoming") {
+        // Próximamente => no clicable
+        setWatchBtnDisabledStatus(watchBtn, publishStateLabel);
+    } else if (publishState === "live" || publishState === "other") {
+        // En Vivo / Otro => clicable y muestra estado
+        setWatchBtnStatusClickable(watchBtn, movie, publishStateLabel);
+    } else {
+        // Público => comportamiento actual (live countdown / ver ahora / reanudar)
+        const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
 
-        try {
-            const progress = await fetchContinueWatchingForTitle({ movieId: movie.id });
-            if (progress) setWatchBtnReanudar(watchBtn, movie, progress);
-        } catch (e) {
-            console.warn("No se pudo leer watch_progress:", e);
+        if (!isUpcomingLiveCountdown) {
+            setWatchBtnVerAhora(watchBtn, movie);
+
+            try {
+                const progress = await fetchContinueWatchingForTitle({ movieId: movie.id });
+                if (progress) setWatchBtnReanudar(watchBtn, movie, progress);
+            } catch (e) {
+                console.warn("No se pudo leer watch_progress:", e);
+            }
         }
     }
 
