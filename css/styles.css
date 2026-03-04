@@ -2551,3 +2551,68 @@ textarea {
   /* blue */
   border-color: rgba(255, 255, 255, .18);
 }
+
+/* =========================================================
+   BADGE DE ESTADO EN CARDS (Público/Próximamente/En Vivo/Otro)
+   - Requiere ui.js con .card-badge + .card-badge-{state}
+   ========================================================= */
+
+.card .thumb {
+  position: relative;
+}
+
+.card-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  /* arriba de imagen/progress */
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, .6);
+  border: 1px solid rgba(255, 255, 255, .16);
+  backdrop-filter: blur(4px);
+  max-width: calc(100% - 16px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  /* no bloquea click del card */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .22);
+}
+
+/* Próximamente */
+.card-badge-upcoming {
+  background: rgba(245, 158, 11, .92);
+  /* amber */
+  border-color: rgba(255, 255, 255, .18);
+}
+
+/* En Vivo */
+.card-badge-live {
+  background: rgba(220, 38, 38, .94);
+  /* red */
+  border-color: rgba(255, 255, 255, .18);
+}
+
+/* Otro (texto custom) */
+.card-badge-other {
+  background: rgba(59, 130, 246, .92);
+  /* blue */
+  border-color: rgba(255, 255, 255, .18);
+}
+
+/* Mobile compacto */
+@media (max-width: 480px) {
+  .card-badge {
+    top: 6px;
+    right: 6px;
+    padding: 4px 7px;
+    font-size: 10px;
+    max-width: calc(100% - 12px);
+  }
+}

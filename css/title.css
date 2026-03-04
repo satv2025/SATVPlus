@@ -780,3 +780,75 @@ textarea,
     border-color: rgba(37, 99, 235, .65);
     color: #fff;
 }
+
+/* =========================================================
+   WATCH BTN — ESTADOS EDITORIALES (publish_state)
+   Requiere title.js:
+   - data-mode="status-disabled"   (Próximamente)
+   - data-mode="status-clickable"  (En Vivo / Otro)
+   - data-mode="countdown"         (live_mode countdown)
+   ========================================================= */
+
+/* Base segura para estados NO clicables */
+a#watch-btn[data-mode="status-disabled"],
+a#watch-btn[data-mode="countdown"] {
+    background: rgba(255, 255, 255, .06) !important;
+    border: 1px solid var(--line) !important;
+    color: var(--text) !important;
+    pointer-events: none;
+    cursor: default;
+    opacity: .95;
+    box-shadow: none;
+    transform: none !important;
+    scale: 1 !important;
+}
+
+/* Evitar hover visual cuando está bloqueado */
+a#watch-btn[data-mode="status-disabled"]:hover,
+a#watch-btn[data-mode="countdown"]:hover,
+a#watch-btn[aria-disabled="true"]:hover {
+    background: rgba(255, 255, 255, .06) !important;
+    border-color: var(--line) !important;
+    color: var(--text) !important;
+    transform: none !important;
+    scale: 1 !important;
+}
+
+/* Estado clicable (En Vivo / Otro) */
+a#watch-btn[data-mode="status-clickable"] {
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+/* Si querés que "En Vivo / Otro" mantenga look primary, esto ya alcanza.
+   (La clase .btn-primary lo pinta azul)
+   Podés descomentar esto si querés reforzarlo:
+
+a#watch-btn[data-mode="status-clickable"] {
+    background: #2563eb;
+    color: #fff;
+    border-color: transparent;
+}
+a#watch-btn[data-mode="status-clickable"]:hover {
+    background: #fff;
+    color: var(--satvblue);
+}
+*/
+
+/* Texto largo en "Otro" (ej: Estreno exclusivo) no rompe el botón */
+#watch-btn[data-mode="status-clickable"],
+#watch-btn[data-mode="status-disabled"] {
+    max-width: min(100%, 100%);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Mobile: que no se vea apretado con textos custom */
+@media (max-width: 480px) {
+
+    #watch-btn[data-mode="status-clickable"],
+    #watch-btn[data-mode="status-disabled"] {
+        font-size: 14px;
+    }
+}
