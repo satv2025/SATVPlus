@@ -66,9 +66,9 @@ body {
 
 .topnav {
   position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 9999;
   background: #17192400;
   border-bottom: 1px solid rgb(255 255 255 / 0%);
@@ -241,8 +241,8 @@ a.pill.profile-link:hover {
   position: relative;
   aspect-ratio: 16 / 9;
   /* Si querés altura fija, quitá aspect-ratio. Si querés ratio, quitá height */
-  min-height: clamp(420px, 62vw, 58em);
-  height: 400px;
+  min-height: clamp(420px, 62vw, 62em) !important;
+  height: 400px !important;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
