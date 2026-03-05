@@ -121,24 +121,6 @@ function mountHomeHeroTrailerVideo(hero, movie) {
     volBtn.setAttribute("aria-label", "Activar sonido");
     volBtn.setAttribute("aria-pressed", "false");
 
-    Object.assign(volBtn.style, {
-      position: "absolute",
-      right: "18px",
-      bottom: "18px",
-      zIndex: "3",
-      width: "42px",
-      height: "42px",
-      borderRadius: "999px",
-      border: "1px solid rgba(255,255,255,.28)",
-      background: "rgba(0,0,0,.45)",
-      backdropFilter: "blur(4px)",
-      WebkitBackdropFilter: "blur(4px)",
-      display: "grid",
-      placeItems: "center",
-      padding: "0",
-      cursor: "pointer"
-    });
-
     const volIcon = document.createElement("img");
     volIcon.alt = "";
     volIcon.decoding = "async";

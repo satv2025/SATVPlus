@@ -2618,28 +2618,30 @@ textarea {
 }
 
 .home-hero-volue-btn {
-    position: relative;     right: -130em;
-    bottom: 26px;
-    z-index: 3;
-   width: 64px;
-   height: auto;
-   border-radius: 999px;
-    border: none;
-   background: #ffffff00;
-    backdrop-filter: none !important;
-    display: grid;
-   place-items: center;
-   padding: 0px;
-   cursor: pointer;
+  position: relative !important;
+  right: -130em !important;
+  bottom: 26px !important;
+  z-index: 3 !important;
+  width: 64px !important;
+  height: auto !important;
+  border-radius: 999px !important;
+  border: none !important;
+  background: #ffffff00 !important;
+  backdrop-filter: none !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0px !important;
+  cursor: pointer !important;
 }
 
 .home-hero-volue-btn img {
-width: 64px !important;
-height: auto !important;
-display: block !important;
-filter: brightness(0) invert(1) !important;
+  width: 64px !important;
+  height: auto !important;
+  display: block !important;
+  filter: brightness(0) invert(1) !important;
 }
 
 .home-hero-inner {
-  height: 20% !important;    min-height: auto !important;
+  height: 20% !important;
+  min-height: auto !important;
 }
