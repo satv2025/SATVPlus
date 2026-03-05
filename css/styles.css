@@ -499,7 +499,7 @@ a.pill.profile-link:hover {
   bottom: -3.6em;
   height: 0.25em;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius2);
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -1572,7 +1572,7 @@ button#btn-logout {
 /* Continue row un poco más flexible */
 #continue-row .card {
   height: auto;
-  min-height: 14em;
+  min-height: 16.03em;
 }
 
 /* Progressbar no se desborde visualmente en cards bajas */
@@ -2566,7 +2566,7 @@ textarea {
   z-index: 3;
   /* arriba de imagen/progress */
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
   line-height: 1;
   color: #fff;
