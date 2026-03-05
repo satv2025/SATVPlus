@@ -46,30 +46,14 @@ function mountHomeHeroTrailerVideo(hero, movie) {
 
   const banner = movie.banner_url || movie.thumbnail_url || "";
 
-  // Asegurar stacking para video + contenido
-  const heroComputed = getComputedStyle(hero);
-  if (heroComputed.position === "static") hero.style.position = "relative";
-  hero.style.overflow = "hidden";
-
-  const inner = hero.querySelector(".home-hero-inner");
-  if (inner) {
-    inner.style.position = "relative";
-    inner.style.zIndex = "2";
-    inner.style.height = "100%";
-    inner.style.minHeight = "100%";
-    inner.style.boxSizing = "border-box";
-  }
+  // Limpieza si el hero se re-renderiza
+  hero.classList.remove("hero-video-ready");
+  hero.querySelectorAll(".home-hero-media").forEach((n) => n.remove());
+  hero.querySelectorAll(".home-hero-volume-btn").forEach((n) => n.remove());
 
   // Capa de video (fondo)
   const media = document.createElement("div");
   media.className = "home-hero-media";
-  Object.assign(media.style, {
-    position: "absolute",
-    inset: "0",
-    zIndex: "0",
-    overflow: "hidden",
-    pointerEvents: "none"
-  });
 
   const video = document.createElement("video");
   video.className = "home-hero-video";
@@ -81,95 +65,68 @@ function mountHomeHeroTrailerVideo(hero, movie) {
   video.loop = true;
   video.playsInline = true;
   video.preload = "metadata";
-
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
 
-  Object.assign(video.style, {
-    position: "absolute",
-    inset: "0",
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    background: "#000",
-    opacity: "0",
-    transition: "opacity .35s ease"
-  });
-
-  // Sombra/gradiente para mantener legibilidad del texto
+  // Overlay / shade
   const shade = document.createElement("div");
   shade.className = "home-hero-video-shade";
-  Object.assign(shade.style, {
-    position: "absolute",
-    inset: "0",
-    background:
-      "linear-gradient(to right, rgba(0,0,0,.72) 0%, rgba(0,0,0,.48) 38%, rgba(0,0,0,.26) 66%, rgba(0,0,0,.44) 100%)",
-    pointerEvents: "none"
-  });
 
   media.appendChild(video);
   media.appendChild(shade);
 
-  // Insertar video detrás del contenido
+  // Insertar detrás del contenido
   hero.prepend(media);
 
-  // Botón de volumen dentro del inner (abajo a la derecha)
-  if (inner) {
-    const volBtn = document.createElement("button");
-    volBtn.type = "button";
-    volBtn.className = "home-hero-volume-btn";
-    volBtn.setAttribute("aria-label", "Activar sonido");
-    volBtn.setAttribute("aria-pressed", "false");
+  // Botón volumen
+  const volBtn = document.createElement("button");
+  volBtn.type = "button";
+  volBtn.className = "home-hero-volume-btn";
+  volBtn.setAttribute("aria-label", "Activar sonido");
+  volBtn.setAttribute("aria-pressed", "false");
 
-    const volIcon = document.createElement("img");
-    volIcon.alt = "";
-    volIcon.decoding = "async";
-    volIcon.src = HERO_VOLUME_ICON_MUTE; // inicia muteado
+  const volIcon = document.createElement("img");
+  volIcon.alt = "";
+  volIcon.decoding = "async";
+  volIcon.src = HERO_VOLUME_ICON_MUTE; // inicia muteado
+  volBtn.appendChild(volIcon);
 
-    Object.assign(volIcon.style, {
-      width: "19px",
-      height: "19px",
-      display: "block",
-      filter: "brightness(0) invert(1)"
-    });
-
-    volBtn.appendChild(volIcon);
-
-    function syncVolumeUi() {
-      const isMuted = !!video.muted;
-      volIcon.src = isMuted ? HERO_VOLUME_ICON_MUTE : HERO_VOLUME_ICON_UNMUTE;
-      volBtn.setAttribute("aria-label", isMuted ? "Activar sonido" : "Silenciar");
-      volBtn.setAttribute("aria-pressed", String(!isMuted));
-      volBtn.title = isMuted ? "Activar sonido" : "Silenciar";
-    }
-
-    volBtn.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-
-      video.muted = !video.muted;
-      syncVolumeUi();
-
-      // Reintento suave si el navegador pausó al tocar audio
-      const p = video.play?.();
-      if (p && typeof p.catch === "function") p.catch(() => { });
-    });
-
-    // Si falla el video, se remueve el botón y queda el bg imagen
-    video.addEventListener("error", () => {
-      volBtn.remove();
-      media.remove();
-      hero.classList.remove("hero-video-ready");
-      console.warn("[home] trailer hero error:", trailerUrl);
-    }, { once: true });
-
-    inner.appendChild(volBtn);
-    syncVolumeUi();
+  function syncVolumeUi() {
+    const isMuted = !!video.muted;
+    volIcon.src = isMuted ? HERO_VOLUME_ICON_MUTE : HERO_VOLUME_ICON_UNMUTE;
+    volBtn.setAttribute("aria-label", isMuted ? "Activar sonido" : "Silenciar");
+    volBtn.setAttribute("aria-pressed", String(!isMuted));
+    volBtn.title = isMuted ? "Activar sonido" : "Silenciar";
   }
 
-  // Mostrar video cuando ya tenga data (hasta entonces se ve background-image)
+  volBtn.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    video.muted = !video.muted;
+    syncVolumeUi();
+
+    const p = video.play?.();
+    if (p && typeof p.catch === "function") p.catch(() => { });
+  });
+
+  // ✅ Ahora va dentro del RIGHT del layout si existe
+  const rightSlot = hero.querySelector(".home-hero-right");
+  if (rightSlot) rightSlot.appendChild(volBtn);
+  else hero.appendChild(volBtn);
+
+  syncVolumeUi();
+
+  // Si falla el video: limpieza y fallback al banner
+  video.addEventListener("error", () => {
+    volBtn.remove();
+    media.remove();
+    hero.classList.remove("hero-video-ready");
+    console.warn("[home] trailer hero error:", trailerUrl);
+  }, { once: true });
+
+  // Cuando está listo -> habilitamos clase
   const showVideo = () => {
-    video.style.opacity = "1";
     hero.classList.add("hero-video-ready");
   };
 
@@ -182,7 +139,7 @@ function mountHomeHeroTrailerVideo(hero, movie) {
     if (p && typeof p.catch === "function") {
       p.catch((err) => {
         console.warn("[home] autoplay trailer bloqueado:", err);
-        // No rompemos nada: queda el poster/background
+        // queda poster/background, no rompe nada
       });
     }
   });
@@ -616,6 +573,7 @@ function renderHomeHeroItem(movie, { userId } = {}) {
 
   const banner = movie.banner_url || movie.thumbnail_url || "";
   if (banner) hero.style.backgroundImage = `url("${banner}")`;
+  else hero.style.backgroundImage = "";
 
   const meta = homeHeroMeta(movie);
   const synopsis = movie.description || movie.sinopsis || "";
@@ -625,27 +583,35 @@ function renderHomeHeroItem(movie, { userId } = {}) {
   hero.innerHTML = `
     <div class="home-hero-inner">
       <h1 class="home-hero-title">${title}</h1>
-      ${meta ? `<div class="home-hero-meta">${meta}</div>` : ""}
-      ${synopsis ? `<p class="home-hero-synopsis">${synopsis}</p>` : ""}
-      <div class="home-hero-actions">
-        <a class="btn" href="${titleHref}">Ver ahora <span aria-hidden="true"> ▶</span></a>
 
-        <button
-          class="btn ghost home-hero-mylist"
-          type="button"
-          aria-label="Agregar a Mi Lista"
-          aria-pressed="false"
-        >
-          <svg class="home-hero-mylist-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1920" aria-hidden="true" focusable="false">
-            <path d="M866.332 213v653.332H213v186.666h653.332v653.332h186.666v-653.332h653.332V866.332h-653.332V213z" fill-rule="evenodd"/>
-          </svg>
-          <span class="home-hero-mylist-label">Mi Lista</span>
-        </button>
+      <div class="home-hero-layout">
+        <div class="home-hero-left">
+          ${meta ? `<div class="home-hero-meta">${meta}</div>` : ""}
+          ${synopsis ? `<p class="home-hero-synopsis">${synopsis}</p>` : ""}
+
+          <div class="home-hero-actions">
+            <a class="btn" href="${titleHref}">Ver ahora <span aria-hidden="true"> ▶</span></a>
+
+            <button
+              class="btn ghost home-hero-mylist"
+              type="button"
+              aria-label="Agregar a Mi Lista"
+              aria-pressed="false"
+            >
+              <svg class="home-hero-mylist-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1920" aria-hidden="true" focusable="false">
+                <path d="M866.332 213v653.332H213v186.666h653.332v653.332h186.666v-653.332h653.332V866.332h-653.332V213z" fill-rule="evenodd"/>
+              </svg>
+              <span class="home-hero-mylist-label">Mi Lista</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="home-hero-right"></div>
       </div>
     </div>
   `;
 
-  // ✅ Montar trailer de fondo (si existe trailer_url) + botón de audio dentro del inner
+  // ✅ Trailer de fondo + volumen en RIGHT
   mountHomeHeroTrailerVideo(hero, movie);
 
   // Bind toggle real (Supabase + fallback local)
