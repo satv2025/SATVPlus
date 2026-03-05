@@ -4,6 +4,7 @@
 /* =========================================================
    SATV / HBO-ish UI — FULL RESPONSIVE REWRITE
    (MISMAS FEATURES / SELECTORES, SIN SACAR NADA)
+   + HERO NUEVO: LEFT / RIGHT / VIDEO / VOLUME SLOT
    ========================================================= */
 
 /* ================= TOKENS ================= */
@@ -63,6 +64,17 @@
 
   /* ✅ VOLUME BTN */
   --hero-vol-size: 64px;
+  --hero-vol-pad: clamp(10px, 2.2vw, 24px);
+
+  /* ✅ NUEVO HERO LAYOUT */
+  --hero-title-max: min(720px, 96%);
+  --hero-left-max: min(760px, 100%);
+  --hero-layout-gap: clamp(12px, 2vw, 28px);
+  --hero-actions-gap: clamp(6px, 1vw, 10px);
+  --hero-meta-size: clamp(12px, .45vw + 10px, 14px);
+  --hero-synopsis-size: clamp(13px, .5vw + 11px, 17px);
+  --hero-synopsis-maxw: min(720px, 96%);
+  --hero-right-min: clamp(48px, 7vw, 84px);
 }
 
 /* ================= RESET / BASE ================= */
@@ -388,8 +400,7 @@ a.pill.profile-link:hover {
 .home-hero-inner {
   position: relative;
   z-index: 1;
-  max-width: min(700px, 95%);
-
+  max-width: 100%;
 
   /* (tu bloque original existía) */
   height: 20% !important;
@@ -398,10 +409,79 @@ a.pill.profile-link:hover {
   /* ✅ robustez: no depende de altura fija del hero */
   height: auto !important;
   left: 1.7%;
+  width: 100%;
 }
 
-.home-hero-inner {
+/* ✅ NUEVO TÍTULO HERO */
+.home-hero-title,
+.home-hero-inner h1,
+.hero h1 {
+  margin: 0 0 clamp(8px, 1vw, 14px) 0;
+  max-width: var(--hero-title-max);
+  font-size: clamp(28px, 2.6vw, 54px);
+  line-height: .98;
+  font-weight: 900;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+
+/* ✅ NUEVO LAYOUT LEFT/RIGHT */
+.home-hero-layout {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--hero-layout-gap);
   width: 100%;
+  max-width: 100%;
+}
+
+.home-hero-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: clamp(8px, 1vw, 14px);
+  width: 100%;
+  max-width: var(--hero-left-max);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.home-hero-right {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  align-self: flex-end;
+  flex: 0 0 auto;
+  min-width: var(--hero-right-min);
+  min-height: var(--hero-vol-size);
+  position: relative;
+  z-index: 3;
+  margin-right: 2em;
+}
+
+.home-hero-meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--hero-meta-size);
+  line-height: 1.25;
+  color: rgba(255, 255, 255, .86);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, .26);
+}
+
+.home-hero-synopsis,
+.home-hero-inner p,
+.hero p {
+  margin: 0;
+  max-width: var(--hero-synopsis-maxw);
+  font-size: var(--hero-synopsis-size);
+  line-height: 1.45;
+  color: rgba(255, 255, 255, .92);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, .3);
+  word-break: break-word;
 }
 
 /* ================= SECTIONS ================= */
@@ -1055,8 +1135,10 @@ media-player {
 .home-hero-actions {
   display: flex;
   align-items: center;
-  gap: clamp(6px, 1vw, 10px);
+  gap: var(--hero-actions-gap);
   flex-wrap: wrap;
+  width: 100%;
+  max-width: 100%;
 }
 
 .home-hero-mylist {
@@ -1192,6 +1274,8 @@ media-player {
 /* =========================================================
    🔊 HERO VOLUME BUTTON (mantengo TUS 2 CLASES)
    - No saco nada: hago que ambas funcionen y sean responsivas.
+   - ✅ NUEVO: si está en .home-hero-right se posiciona normal.
+   - ✅ FALLBACK: si cuelga directo del .hero, queda absoluto.
    ========================================================= */
 
 /* Alias base para ambas (no elimina nada) */
@@ -1201,15 +1285,14 @@ media-player {
   cursor: pointer;
 }
 
-/* ✅ Tu versión volume (misma UI, sin hack -130em) */
+/* Base común */
 .home-hero-volume-btn {
-  position: absolute !important;
-  right: var(--hero-vol-pad) !important;
-  bottom: var(--hero-vol-pad) !important;
   z-index: 3 !important;
 
   width: var(--hero-vol-size) !important;
   height: var(--hero-vol-size) !important;
+  min-width: var(--hero-vol-size) !important;
+  min-height: var(--hero-vol-size) !important;
 
   border-radius: 999px !important;
   border: none !important;
@@ -1218,8 +1301,11 @@ media-player {
 
   display: grid !important;
   place-items: center !important;
-  padding: 0px !important;
+  padding: 0 !important;
   cursor: pointer !important;
+  margin: 0 !important;
+  align-self: flex-end;
+  justify-self: end;
 }
 
 .home-hero-volume-btn img {
@@ -1227,6 +1313,24 @@ media-player {
   height: auto !important;
   display: block !important;
   filter: brightness(0) invert(1) !important;
+}
+
+/* ✅ NUEVO COMPORTAMIENTO: dentro del RIGHT */
+.home-hero-right>.home-hero-volume-btn {
+  position: relative !important;
+  right: auto !important;
+  bottom: auto !important;
+  top: auto !important;
+  left: auto !important;
+}
+
+/* ✅ FALLBACK LEGACY: si por alguna razón queda directo dentro del hero */
+.hero>.home-hero-volume-btn {
+  position: absolute !important;
+  right: var(--hero-vol-pad) !important;
+  bottom: var(--hero-vol-pad) !important;
+  top: auto !important;
+  left: auto !important;
 }
 
 /* =========================================================
@@ -1385,6 +1489,18 @@ media-player {
     height: auto !important;
     max-height: min(82vh, 900px);
   }
+
+  .home-hero-inner {
+    max-width: 100%;
+  }
+
+  .home-hero-title {
+    max-width: min(720px, 75%);
+  }
+
+  .home-hero-left {
+    max-width: min(760px, 76%);
+  }
 }
 
 /* ≤1200px (tu bloque) */
@@ -1433,6 +1549,14 @@ media-player {
     height: auto !important;
     max-height: min(70vh, 760px);
   }
+
+  .home-hero-layout {
+    gap: clamp(10px, 1.6vw, 18px);
+  }
+
+  .home-hero-left {
+    max-width: min(700px, 84%);
+  }
 }
 
 /* ≤992px (tu bloque) */
@@ -1458,7 +1582,20 @@ media-player {
   }
 
   .home-hero-inner {
-    max-width: min(92vw, 680px);
+    max-width: min(92vw, 860px);
+  }
+
+  .home-hero-layout {
+    width: 100%;
+    align-items: flex-end;
+  }
+
+  .home-hero-left {
+    max-width: min(82vw, 700px);
+  }
+
+  .home-hero-right {
+    min-width: clamp(44px, 8vw, 64px);
   }
 
   .home-hero-actions {
@@ -1632,6 +1769,43 @@ media-player {
 
   .hero p {
     font-size: 14px;
+  }
+
+  .home-hero-inner {
+    left: 0;
+    max-width: 100%;
+  }
+
+  .home-hero-title {
+    max-width: 100%;
+  }
+
+  .home-hero-layout {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .home-hero-left {
+    max-width: min(100%, calc(100% - 52px));
+    gap: 10px;
+  }
+
+  .home-hero-right {
+    min-width: 40px;
+    min-height: 40px;
+    padding-bottom: 2px;
+  }
+
+  .home-hero-meta {
+    font-size: 12px;
+  }
+
+  .home-hero-synopsis {
+    max-width: 100%;
+    line-height: 1.4;
   }
 
   .section-head {
@@ -1862,6 +2036,29 @@ media-player {
     font-size: 12px;
   }
 
+  .home-hero-layout {
+    gap: 10px;
+  }
+
+  .home-hero-left {
+    max-width: min(100%, calc(100% - 42px));
+    gap: 8px;
+  }
+
+  .home-hero-meta {
+    font-size: 11px;
+  }
+
+  .home-hero-synopsis {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .home-hero-right {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
   .section-head {
     gap: 6px;
   }
@@ -1985,6 +2182,9 @@ media-player {
   .hero .home-hero-volume-btn {
     width: var(--hero-vol-size) !important;
     height: var(--hero-vol-size) !important;
+  }
+
+  .hero>.home-hero-volume-btn {
     right: 10px !important;
     bottom: 10px !important;
   }
@@ -2021,6 +2221,28 @@ media-player {
   .home-hero-inner p,
   .hero p {
     font-size: 11px;
+  }
+
+  .home-hero-layout {
+    gap: 8px;
+  }
+
+  .home-hero-left {
+    max-width: calc(100% - 38px);
+  }
+
+  .home-hero-meta {
+    font-size: 10px;
+  }
+
+  .home-hero-synopsis {
+    font-size: 11px;
+    line-height: 1.28;
+  }
+
+  .home-hero-right {
+    min-width: 34px;
+    min-height: 34px;
   }
 
   .home-hero-actions .btn,
@@ -2114,6 +2336,15 @@ media-player {
   .hero p {
     font-size: 12px;
     line-height: 1.3;
+  }
+
+  .home-hero-layout {
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .home-hero-left {
+    gap: 8px;
   }
 
   .home-hero-actions .btn,
