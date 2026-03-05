@@ -2616,3 +2616,30 @@ textarea {
     max-width: calc(100% - 12px);
   }
 }
+
+.home-hero-volue-btn {
+    position: relative;     right: -130em;
+    bottom: 26px;
+    z-index: 3;
+   width: 64px;
+   height: auto;
+   border-radius: 999px;
+    border: none;
+   background: #ffffff00;
+    backdrop-filter: none !important;
+    display: grid;
+   place-items: center;
+   padding: 0px;
+   cursor: pointer;
+}
+
+.home-hero-volue-btn img {
+width: 64px !important;
+height: auto !important;
+display: block !important;
+filter: brightness(0) invert(1) !important;
+}
+
+.home-hero-inner {
+  height: 20% !important;    min-height: auto !important;
+}
