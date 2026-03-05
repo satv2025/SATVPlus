@@ -1,15 +1,3 @@
-// ✅ COMPLETO (sin recortes)
-// ✅ Lee ?title=UUID (y soporta ?movie=UUID por compat)
-// ✅ “Te podría gustar” navega a /title?title=UUID (no movie)
-// ✅ <title>{título} · SATV+</title> vía document.title
-// ✅ Meta “Te podría gustar”: {año} * {duración/temporadas/episodios}
-// ✅ Recorte automático inteligente (sin listas manuales)
-// ✅ Mi Lista REAL en Supabase (my_list: profile_id + content_id + added_at)
-// ✅ Fallback localStorage si no hay sesión / falla Supabase
-// ✅ Topnav agrega "Mi Lista" a la derecha de "Inicio" con /mylist?list=<user>&user=<user>
-// ✅ LIVE MODE: si live_mode=true y live_starts_at está en el futuro, el botón muestra countdown
-// ✅ PUBLISH STATE: Público / Próximamente / En Vivo / Otro (movies.publish_state + publish_state_text)
-
 function qs(key) { return new URLSearchParams(window.location.search).get(key); }
 function el(id) { return document.getElementById(id); }
 
@@ -1078,18 +1066,16 @@ async function main() {
 
     if (trailerBtn) trailerBtn.classList.add("hidden");
 
-    // WATCH BUTTON según estado público cargado en Supabase
+    // WATCH BUTTON según publish_state (solo "upcoming" cambia comportamiento)
     const publishState = getMoviePublishState(movie);
     const publishStateLabel = getMoviePublishStateLabel(movie);
 
     if (publishState === "upcoming") {
         // Próximamente => no clicable
         setWatchBtnDisabledStatus(watchBtn, publishStateLabel);
-    } else if (publishState === "live" || publishState === "other") {
-        // En Vivo / Otro => clicable y muestra estado
-        setWatchBtnStatusClickable(watchBtn, movie, publishStateLabel);
     } else {
-        // Público => comportamiento actual (live countdown / ver ahora / reanudar)
+        // public / live / other => mismo comportamiento que "public"
+        // (live_mode + live_starts_at sigue mostrando countdown si corresponde)
         const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
 
         if (!isUpcomingLiveCountdown) {
