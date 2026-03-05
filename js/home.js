@@ -28,6 +28,184 @@ const HOME_HERO_TTL_MS = 3 * 24 * 60 * 60 * 1000;
 // Versionar key por si cambiás criterio en el futuro
 const HOME_HERO_STORAGE_PREFIX = "homeHeroSelection:v1";
 
+/* =========================================================
+   HOME HERO TRAILER VIDEO (autoplay + mute/unmute)
+========================================================= */
+
+const HERO_VOLUME_ICON_MUTE =
+  "https://akira.satvplus.com.ar/assets/media/icons/svg/volume/mute.svg";
+
+const HERO_VOLUME_ICON_UNMUTE =
+  "https://akira.satvplus.com.ar/assets/media/icons/svg/volume/vol2.svg";
+
+function mountHomeHeroTrailerVideo(hero, movie) {
+  if (!hero || !movie?.id) return;
+
+  const trailerUrl = String(movie?.trailer_url || "").trim();
+  if (!trailerUrl) return; // fallback: queda solo imagen de fondo
+
+  const banner = movie.banner_url || movie.thumbnail_url || "";
+
+  // Asegurar stacking para video + contenido
+  const heroComputed = getComputedStyle(hero);
+  if (heroComputed.position === "static") hero.style.position = "relative";
+  hero.style.overflow = "hidden";
+
+  const inner = hero.querySelector(".home-hero-inner");
+  if (inner) {
+    inner.style.position = "relative";
+    inner.style.zIndex = "2";
+    inner.style.height = "100%";
+    inner.style.minHeight = "100%";
+    inner.style.boxSizing = "border-box";
+  }
+
+  // Capa de video (fondo)
+  const media = document.createElement("div");
+  media.className = "home-hero-media";
+  Object.assign(media.style, {
+    position: "absolute",
+    inset: "0",
+    zIndex: "0",
+    overflow: "hidden",
+    pointerEvents: "none"
+  });
+
+  const video = document.createElement("video");
+  video.className = "home-hero-video";
+  video.src = trailerUrl;
+  if (banner) video.poster = banner;
+
+  video.autoplay = true;
+  video.muted = true; // ✅ autoplay permitido
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+
+  Object.assign(video.style, {
+    position: "absolute",
+    inset: "0",
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    background: "#000",
+    opacity: "0",
+    transition: "opacity .35s ease"
+  });
+
+  // Sombra/gradiente para mantener legibilidad del texto
+  const shade = document.createElement("div");
+  shade.className = "home-hero-video-shade";
+  Object.assign(shade.style, {
+    position: "absolute",
+    inset: "0",
+    background:
+      "linear-gradient(to right, rgba(0,0,0,.72) 0%, rgba(0,0,0,.48) 38%, rgba(0,0,0,.26) 66%, rgba(0,0,0,.44) 100%)",
+    pointerEvents: "none"
+  });
+
+  media.appendChild(video);
+  media.appendChild(shade);
+
+  // Insertar video detrás del contenido
+  hero.prepend(media);
+
+  // Botón de volumen dentro del inner (abajo a la derecha)
+  if (inner) {
+    const volBtn = document.createElement("button");
+    volBtn.type = "button";
+    volBtn.className = "home-hero-volume-btn";
+    volBtn.setAttribute("aria-label", "Activar sonido");
+    volBtn.setAttribute("aria-pressed", "false");
+
+    Object.assign(volBtn.style, {
+      position: "absolute",
+      right: "18px",
+      bottom: "18px",
+      zIndex: "3",
+      width: "42px",
+      height: "42px",
+      borderRadius: "999px",
+      border: "1px solid rgba(255,255,255,.28)",
+      background: "rgba(0,0,0,.45)",
+      backdropFilter: "blur(4px)",
+      WebkitBackdropFilter: "blur(4px)",
+      display: "grid",
+      placeItems: "center",
+      padding: "0",
+      cursor: "pointer"
+    });
+
+    const volIcon = document.createElement("img");
+    volIcon.alt = "";
+    volIcon.decoding = "async";
+    volIcon.src = HERO_VOLUME_ICON_MUTE; // inicia muteado
+
+    Object.assign(volIcon.style, {
+      width: "19px",
+      height: "19px",
+      display: "block",
+      filter: "brightness(0) invert(1)"
+    });
+
+    volBtn.appendChild(volIcon);
+
+    function syncVolumeUi() {
+      const isMuted = !!video.muted;
+      volIcon.src = isMuted ? HERO_VOLUME_ICON_MUTE : HERO_VOLUME_ICON_UNMUTE;
+      volBtn.setAttribute("aria-label", isMuted ? "Activar sonido" : "Silenciar");
+      volBtn.setAttribute("aria-pressed", String(!isMuted));
+      volBtn.title = isMuted ? "Activar sonido" : "Silenciar";
+    }
+
+    volBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      video.muted = !video.muted;
+      syncVolumeUi();
+
+      // Reintento suave si el navegador pausó al tocar audio
+      const p = video.play?.();
+      if (p && typeof p.catch === "function") p.catch(() => { });
+    });
+
+    // Si falla el video, se remueve el botón y queda el bg imagen
+    video.addEventListener("error", () => {
+      volBtn.remove();
+      media.remove();
+      hero.classList.remove("hero-video-ready");
+      console.warn("[home] trailer hero error:", trailerUrl);
+    }, { once: true });
+
+    inner.appendChild(volBtn);
+    syncVolumeUi();
+  }
+
+  // Mostrar video cuando ya tenga data (hasta entonces se ve background-image)
+  const showVideo = () => {
+    video.style.opacity = "1";
+    hero.classList.add("hero-video-ready");
+  };
+
+  video.addEventListener("loadeddata", showVideo, { once: true });
+  video.addEventListener("canplay", showVideo, { once: true });
+
+  // Intento de autoplay (muted)
+  requestAnimationFrame(() => {
+    const p = video.play?.();
+    if (p && typeof p.catch === "function") {
+      p.catch((err) => {
+        console.warn("[home] autoplay trailer bloqueado:", err);
+        // No rompemos nada: queda el poster/background
+      });
+    }
+  });
+}
+
 function getHomeHeroStorageKey(userId) {
   return `${HOME_HERO_STORAGE_PREFIX}:${userId || "guest"}`;
 }
@@ -484,6 +662,9 @@ function renderHomeHeroItem(movie, { userId } = {}) {
       </div>
     </div>
   `;
+
+  // ✅ Montar trailer de fondo (si existe trailer_url) + botón de audio dentro del inner
+  mountHomeHeroTrailerVideo(hero, movie);
 
   // Bind toggle real (Supabase + fallback local)
   bindHeroMyListButton({ movie, userId });

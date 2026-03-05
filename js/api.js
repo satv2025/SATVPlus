@@ -13,6 +13,7 @@ const MOVIE_CARD_FIELDS = `
   banner_url,
   m3u8_url,
   vtt_url,
+  trailer_url,
   category,
   created_at,
   release_year,
