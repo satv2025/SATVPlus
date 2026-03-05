@@ -631,7 +631,7 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     row.id === "series-row" ||
     row.id === "continue-row";
 
-  if (isRestrictedRow && itemCount <= 6) {
+  if (isRestrictedRow && itemCount < 6) {
     if (btnLeft) btnLeft.remove();
     if (btnRight) btnRight.remove();
     carousel.classList.add("carousel-disabled");
