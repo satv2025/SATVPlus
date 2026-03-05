@@ -431,7 +431,7 @@ a.pill.profile-link:hover {
   flex: 0 0 auto;
   scroll-snap-align: start;
   background: rgba(255, 255, 255, .03);
-  border-radius: .25em;
+  border-radius: var(--radius) !important;
   overflow: hidden;
   transition: transform 0.4s ease;
   display: flex;
@@ -2535,9 +2535,8 @@ textarea {
 }
 
 .card-badge-upcoming {
-  background: rgba(245, 158, 11, .9);
-  /* amber */
-  border-color: rgba(255, 255, 255, .18);
+  background: #fff;
+  color: #000;
 }
 
 .card-badge-live {
@@ -2547,9 +2546,8 @@ textarea {
 }
 
 .card-badge-other {
-  background: rgba(59, 130, 246, .9);
-  /* blue */
-  border-color: rgba(255, 255, 255, .18);
+  background: #fff;
+  color: #000;
 }
 
 /* =========================================================
@@ -2563,12 +2561,11 @@ textarea {
 
 .card-badge {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 0;
+  right: 0;
   z-index: 3;
   /* arriba de imagen/progress */
   padding: 4px 8px;
-  border-radius: 999px;
   font-size: 11px;
   font-weight: 800;
   line-height: 1;
@@ -2583,13 +2580,13 @@ textarea {
   pointer-events: none;
   /* no bloquea click del card */
   box-shadow: 0 4px 16px rgba(0, 0, 0, .22);
+  border-radius: 0 0 0 0;
 }
 
 /* Próximamente */
 .card-badge-upcoming {
-  background: rgba(245, 158, 11, .92);
-  /* amber */
-  border-color: rgba(255, 255, 255, .18);
+  background: #fff;
+  color: #000;
 }
 
 /* En Vivo */
@@ -2601,9 +2598,9 @@ textarea {
 
 /* Otro (texto custom) */
 .card-badge-other {
-  background: rgba(59, 130, 246, .92);
+  background: #fff;
   /* blue */
-  border-color: rgba(255, 255, 255, .18);
+  color: #000;
 }
 
 /* Mobile compacto */
