@@ -76,9 +76,9 @@ span.meta-dropitem {
     left: 0;
     right: 0;
     bottom: 0;
-    padding: 22px 22px 26px;
+    padding: 22px 0 22px;
     z-index: 2;
-    width: 86.4%;
+    width: 87% !important;
 }
 
 #t-title {
@@ -488,15 +488,13 @@ a#watch-btn[data-mode="countdown"] {
     letter-spacing: .1px;
     font-size: 13px;
     line-height: 1.15;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    display: block;
     overflow: hidden;
     color: rgba(255, 255, 255, .96);
     text-shadow: 0 2px 14px rgba(0, 0, 0, .55);
     margin-bottom: 0.3em;
     margin-top: -0.5em;
+    height: auto;
 }
 
 .episode-sub {
