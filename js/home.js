@@ -16,13 +16,6 @@ import { supabase } from "./supabaseClient.js";
 
 /* =========================================================
    ✅ TIPOGRAFÍA INLINE SOLO PARA 2 LÍNEAS (ESTABLE)
-   - Inserta EXACTO:
-     style="font-family: HBOMaxSansCond !important; font-weight: 400;"
-     style="font-family: HBOMaxSansCond !important; font-weight: 700;"
-   - El bug que te lo “removía” al final era por feedback:
-     al poner condensed, el texto podía pasar a 1 línea y tu scan lo quitaba.
-   - Solución: SIEMPRE medimos “2 líneas” en la tipografía base (sin nuestro inline),
-     y recién ahí aplicamos el inline (y lo mantenemos aunque condensed lo deje en 1).
 ========================================================= */
 
 let __twoLinesRaf = 0;
@@ -37,7 +30,6 @@ function getLineHeightPx(el, cs = null) {
     const lh = parseFloat(st.lineHeight);
     if (Number.isFinite(lh) && lh > 0) return lh;
 
-    // line-height: normal => aprox
     const fs = parseFloat(st.fontSize) || 16;
     return fs * 1.25;
   } catch {
@@ -65,30 +57,24 @@ function lineRawFromMetrics(el) {
   return contentH / lh;
 }
 
-// ✅ mide “como si NO existiera nuestro inline”
 function measureBaseLineRaw(el) {
   if (!el) return 0;
 
   const style = el.style;
-
   const hadOur = el.dataset.twoLinesApplied === "1";
 
-  // guardo lo que haya inline hoy
   const famVal = style.getPropertyValue("font-family");
   const famPr = style.getPropertyPriority("font-family");
   const wVal = style.getPropertyValue("font-weight");
   const wPr = style.getPropertyPriority("font-weight");
 
-  // si lo pusimos nosotros, lo saco para medir base
   if (hadOur) {
     style.removeProperty("font-family");
     style.removeProperty("font-weight");
   }
 
-  // fuerza layout + mide
   const raw = lineRawFromMetrics(el);
 
-  // restauro (temporal) lo que había
   if (hadOur) {
     if (famVal) style.setProperty("font-family", famVal, famPr);
     if (wVal) style.setProperty("font-weight", wVal, wPr);
@@ -103,9 +89,8 @@ function isBaseExactlyTwoLines(el) {
 }
 
 function setCondensedInline(el, weight) {
-  // ✅ EXACTO como pediste en style=""
   el.style.setProperty("font-family", "HBOMaxSansCond", "important");
-  el.style.setProperty("font-weight", String(weight)); // sin !important
+  el.style.setProperty("font-weight", String(weight));
   el.dataset.twoLinesApplied = "1";
   el.dataset.twoLinesWeight = String(weight);
 }
@@ -121,7 +106,6 @@ function clearCondensedInlineIfOurs(el) {
 function applyInlineByTwoLinesRule(el, weight) {
   if (!el) return;
 
-  // limpieza por si quedó algo viejo
   if (el.classList.contains("is-2lines")) el.classList.remove("is-2lines");
 
   const should = isBaseExactlyTwoLines(el);
@@ -134,12 +118,10 @@ function applyInlineByTwoLinesRule(el, weight) {
 }
 
 function applyTwoLinesTypographyInline(scope = document) {
-  // TITLES: todos
   scope.querySelectorAll(".card-title").forEach((el) => {
     applyInlineByTwoLinesRule(el, 700);
   });
 
-  // SUBTITLE: solo continue-wrap
   document
     .querySelectorAll("#continue-wrap .carousel .card .card-subtitle")
     .forEach((el) => {
@@ -159,24 +141,18 @@ function installTwoLinesObservers() {
   if (__twoLinesInstalled) return;
   __twoLinesInstalled = true;
 
-  // cuando terminan de cargar las fuentes
   if (document.fonts?.ready?.then) {
     document.fonts.ready.then(() => scheduleTwoLinesScan()).catch(() => { });
   }
 
-  // cuando termina todo (imágenes, posters, etc.)
   window.addEventListener("load", () => scheduleTwoLinesScan(), { passive: true });
-
-  // resize
   window.addEventListener("resize", () => scheduleTwoLinesScan(), { passive: true });
 
-  // cambios de layout
   try {
     const ro = new ResizeObserver(() => scheduleTwoLinesScan());
     ro.observe(document.documentElement);
   } catch { }
 
-  // “por si” el CSS disfrazado entra tarde
   setTimeout(() => scheduleTwoLinesScan(), 150);
   setTimeout(() => scheduleTwoLinesScan(), 600);
 
@@ -656,9 +632,39 @@ function formatMovieLiveDateTime(movie, { timeZone = LIVE_DISPLAY_TIMEZONE } = {
   return `${fecha} - ${hora}`;
 }
 
+/* =========================================================
+   ESTADO PUBLICACIÓN (cards del home)
+========================================================= */
+
+function getMovieCardPublicLabel(movie) {
+  if (!movie) return "";
+
+  const publishState = String(movie.publish_state || "public").toLowerCase();
+  const customText = String(movie.publish_state_text || "").trim();
+
+  if (publishState === "upcoming") {
+    return customText || "Próximamente";
+  }
+
+  if (publishState === "other") {
+    return customText || "Otro";
+  }
+
+  if (Boolean(movie.live_mode)) {
+    const liveDate = formatMovieLiveDateTime(movie);
+    return liveDate || (publishState === "live" ? "En Vivo" : "");
+  }
+
+  if (publishState === "live") {
+    return "En Vivo";
+  }
+
+  return "";
+}
+
 function homeCatalogCardHtml(movie) {
-  const liveLabel = Boolean(movie?.live_mode) ? formatMovieLiveDateTime(movie) : "";
-  if (liveLabel) return cardHtml(movie, undefined, liveLabel);
+  const stateLabel = getMovieCardPublicLabel(movie);
+  if (stateLabel) return cardHtml(movie, undefined, stateLabel);
   return cardHtml(movie);
 }
 
@@ -971,7 +977,6 @@ async function init() {
   renderNav({ active: "home" });
   await renderAuthButtons();
 
-  // ✅ instala tipografía inline estable
   installTwoLinesObservers();
 
   const session = await getSession();
@@ -1051,7 +1056,6 @@ async function init() {
 
     startHomeHeroRotation([...heroPoolMap.values()], { userId });
 
-    // pasada final por seguridad
     scheduleTwoLinesScan();
   } catch (e) {
     console.error(e);
