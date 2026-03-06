@@ -15,18 +15,21 @@ import { fetchContinueWatching, fetchLatest, fetchByCategory } from "./api.js";
 import { supabase } from "./supabaseClient.js";
 
 /* =========================================================
-   ✅ TIPOGRAFÍA INLINE SOLO PARA 2 LÍNEAS EXACTAS
+   ✅ TIPOGRAFÍA INLINE SOLO PARA 2 LÍNEAS (ESTABLE)
    - Inserta EXACTO:
      style="font-family: HBOMaxSansCond !important; font-weight: 400;"
      style="font-family: HBOMaxSansCond !important; font-weight: 700;"
-   - SOLO cuando es EXACTAMENTE 2 líneas (no a todos)
-   - Limpia .is-2lines si quedó de pruebas anteriores
+   - El bug que te lo “removía” al final era por feedback:
+     al poner condensed, el texto podía pasar a 1 línea y tu scan lo quitaba.
+   - Solución: SIEMPRE medimos “2 líneas” en la tipografía base (sin nuestro inline),
+     y recién ahí aplicamos el inline (y lo mantenemos aunque condensed lo deje en 1).
 ========================================================= */
 
 let __twoLinesRaf = 0;
 let __twoLinesInstalled = false;
 
-const TWO_LINE_TOL = 0.35; // tolerancia por subpíxel / métricas
+// tolerancia por subpíxel / métricas
+const TWO_LINE_TOL = 0.35;
 
 function getLineHeightPx(el, cs = null) {
   try {
@@ -54,57 +57,93 @@ function getContentHeightPx(el, cs = null) {
   return Math.max(0, h - pt - pb - bt - bb);
 }
 
-function isExactlyTwoLines(el) {
-  if (!el) return false;
-
+function lineRawFromMetrics(el) {
   const cs = getComputedStyle(el);
   const lh = getLineHeightPx(el, cs);
   const contentH = getContentHeightPx(el, cs);
+  if (!lh || !contentH) return 0;
+  return contentH / lh;
+}
 
-  if (!lh || !contentH) return false;
+// ✅ mide “como si NO existiera nuestro inline”
+function measureBaseLineRaw(el) {
+  if (!el) return 0;
 
-  const raw = contentH / lh;
+  const style = el.style;
 
-  // EXACTAMENTE 2 (con tolerancia)
+  const hadOur = el.dataset.twoLinesApplied === "1";
+
+  // guardo lo que haya inline hoy
+  const famVal = style.getPropertyValue("font-family");
+  const famPr = style.getPropertyPriority("font-family");
+  const wVal = style.getPropertyValue("font-weight");
+  const wPr = style.getPropertyPriority("font-weight");
+
+  // si lo pusimos nosotros, lo saco para medir base
+  if (hadOur) {
+    style.removeProperty("font-family");
+    style.removeProperty("font-weight");
+  }
+
+  // fuerza layout + mide
+  const raw = lineRawFromMetrics(el);
+
+  // restauro (temporal) lo que había
+  if (hadOur) {
+    if (famVal) style.setProperty("font-family", famVal, famPr);
+    if (wVal) style.setProperty("font-weight", wVal, wPr);
+  }
+
+  return raw;
+}
+
+function isBaseExactlyTwoLines(el) {
+  const raw = measureBaseLineRaw(el);
   return raw > (2 - TWO_LINE_TOL) && raw < (2 + TWO_LINE_TOL);
 }
 
-function applyInlineCondensedIfTwoLines(el, weight) {
+function setCondensedInline(el, weight) {
+  // ✅ EXACTO como pediste en style=""
+  el.style.setProperty("font-family", "HBOMaxSansCond", "important");
+  el.style.setProperty("font-weight", String(weight)); // sin !important
+  el.dataset.twoLinesApplied = "1";
+  el.dataset.twoLinesWeight = String(weight);
+}
+
+function clearCondensedInlineIfOurs(el) {
+  if (el.dataset.twoLinesApplied !== "1") return;
+  el.style.removeProperty("font-family");
+  el.style.removeProperty("font-weight");
+  delete el.dataset.twoLinesApplied;
+  delete el.dataset.twoLinesWeight;
+}
+
+function applyInlineByTwoLinesRule(el, weight) {
   if (!el) return;
 
-  // Limpia clase vieja si quedó (para que no “ensucie” el DOM)
+  // limpieza por si quedó algo viejo
   if (el.classList.contains("is-2lines")) el.classList.remove("is-2lines");
 
-  const two = isExactlyTwoLines(el);
+  const should = isBaseExactlyTwoLines(el);
 
-  if (two) {
-    // ✅ EXACTO como pediste en style=""
-    el.style.setProperty("font-family", "HBOMaxSansCond", "important");
-    el.style.setProperty("font-weight", String(weight)); // sin !important
-    el.dataset.twoLinesApplied = "1";
-    el.dataset.twoLinesWeight = String(weight);
+  if (should) {
+    setCondensedInline(el, weight);
   } else {
-    // Solo limpiamos si lo pusimos nosotros
-    if (el.dataset.twoLinesApplied === "1") {
-      el.style.removeProperty("font-family");
-      el.style.removeProperty("font-weight");
-      delete el.dataset.twoLinesApplied;
-      delete el.dataset.twoLinesWeight;
-    }
+    clearCondensedInlineIfOurs(el);
   }
 }
 
 function applyTwoLinesTypographyInline(scope = document) {
-  // TITLE: 2 líneas => Cond 700
+  // TITLES: todos
   scope.querySelectorAll(".card-title").forEach((el) => {
-    applyInlineCondensedIfTwoLines(el, 700);
+    applyInlineByTwoLinesRule(el, 700);
   });
 
-  // SUBTITLE: SOLO continue-wrap, 2 líneas => Cond 400
+  // SUBTITLE: solo continue-wrap
   document
     .querySelectorAll("#continue-wrap .carousel .card .card-subtitle")
     .forEach((el) => {
-      applyInlineCondensedIfTwoLines(el, 400);
+      applyInlineByTwoLinesRule(el, 400);
     });
 }
 
@@ -120,59 +159,57 @@ function installTwoLinesObservers() {
   if (__twoLinesInstalled) return;
   __twoLinesInstalled = true;
 
-  // Fonts ready (cambia altura => cambia líneas)
+  // cuando terminan de cargar las fuentes
   if (document.fonts?.ready?.then) {
     document.fonts.ready.then(() => scheduleTwoLinesScan()).catch(() => { });
   }
 
+  // cuando termina todo (imágenes, posters, etc.)
+  window.addEventListener("load", () => scheduleTwoLinesScan(), { passive: true });
+
+  // resize
   window.addEventListener("resize", () => scheduleTwoLinesScan(), { passive: true });
 
+  // cambios de layout
   try {
     const ro = new ResizeObserver(() => scheduleTwoLinesScan());
     ro.observe(document.documentElement);
   } catch { }
+
+  // “por si” el CSS disfrazado entra tarde
+  setTimeout(() => scheduleTwoLinesScan(), 150);
+  setTimeout(() => scheduleTwoLinesScan(), 600);
 
   scheduleTwoLinesScan();
 }
 
 /* =========================================================
    HOME HERO DESTACADO ESTABLE (tipo Netflix)
-   - Elige 1 hero y lo mantiene por X tiempo (TTL)
-   - Persistido en localStorage por usuario/dispositivo
 ========================================================= */
 
 let __homeHeroRotationTimer = null;
-
-// ✅ Configurable: 3 días (cambiá a 2 si querés)
 const HOME_HERO_TTL_MS = 3 * 24 * 60 * 60 * 1000;
-
-// Versionar key por si cambiás criterio en el futuro
 const HOME_HERO_STORAGE_PREFIX = "homeHeroSelection:v1";
 
 /* =========================================================
    HOME HERO TRAILER VIDEO (autoplay + mute/unmute)
 ========================================================= */
 
-const HERO_VOLUME_ICON_MUTE =
-  "https://satvplus.com.ar/images/svg/heromute.svg";
-
-const HERO_VOLUME_ICON_UNMUTE =
-  "https://satvplus.com.ar/images/svg/heroon.svg";
+const HERO_VOLUME_ICON_MUTE = "https://satvplus.com.ar/images/svg/heromute.svg";
+const HERO_VOLUME_ICON_UNMUTE = "https://satvplus.com.ar/images/svg/heroon.svg";
 
 function mountHomeHeroTrailerVideo(hero, movie) {
   if (!hero || !movie?.id) return;
 
   const trailerUrl = String(movie?.trailer_url || "").trim();
-  if (!trailerUrl) return; // fallback: queda solo imagen de fondo
+  if (!trailerUrl) return;
 
   const banner = movie.banner_url || movie.thumbnail_url || "";
 
-  // Limpieza si el hero se re-renderiza
   hero.classList.remove("hero-video-ready");
   hero.querySelectorAll(".home-hero-media").forEach((n) => n.remove());
   hero.querySelectorAll(".home-hero-volume-btn").forEach((n) => n.remove());
 
-  // Capa de video (fondo)
   const media = document.createElement("div");
   media.className = "home-hero-media";
 
@@ -182,24 +219,20 @@ function mountHomeHeroTrailerVideo(hero, movie) {
   if (banner) video.poster = banner;
 
   video.autoplay = true;
-  video.muted = true; // ✅ autoplay permitido
+  video.muted = true;
   video.loop = true;
   video.playsInline = true;
   video.preload = "metadata";
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
 
-  // Overlay / shade
   const shade = document.createElement("div");
   shade.className = "home-hero-video-shade";
 
   media.appendChild(video);
   media.appendChild(shade);
-
-  // Insertar detrás del contenido
   hero.prepend(media);
 
-  // Botón volumen
   const volBtn = document.createElement("button");
   volBtn.type = "button";
   volBtn.className = "home-hero-volume-btn";
@@ -209,7 +242,7 @@ function mountHomeHeroTrailerVideo(hero, movie) {
   const volIcon = document.createElement("img");
   volIcon.alt = "";
   volIcon.decoding = "async";
-  volIcon.src = HERO_VOLUME_ICON_MUTE; // inicia muteado
+  volIcon.src = HERO_VOLUME_ICON_MUTE;
   volBtn.appendChild(volIcon);
 
   function syncVolumeUi() {
@@ -223,22 +256,18 @@ function mountHomeHeroTrailerVideo(hero, movie) {
   volBtn.addEventListener("click", (ev) => {
     ev.preventDefault();
     ev.stopPropagation();
-
     video.muted = !video.muted;
     syncVolumeUi();
-
     const p = video.play?.();
     if (p && typeof p.catch === "function") p.catch(() => { });
   });
 
-  // ✅ Ahora va dentro del RIGHT del layout si existe
   const rightSlot = hero.querySelector(".home-hero-right");
   if (rightSlot) rightSlot.appendChild(volBtn);
   else hero.appendChild(volBtn);
 
   syncVolumeUi();
 
-  // Si falla el video: limpieza y fallback al banner
   video.addEventListener(
     "error",
     () => {
@@ -250,21 +279,14 @@ function mountHomeHeroTrailerVideo(hero, movie) {
     { once: true }
   );
 
-  // Cuando está listo -> habilitamos clase
-  const showVideo = () => {
-    hero.classList.add("hero-video-ready");
-  };
-
+  const showVideo = () => hero.classList.add("hero-video-ready");
   video.addEventListener("loadeddata", showVideo, { once: true });
   video.addEventListener("canplay", showVideo, { once: true });
 
-  // Intento de autoplay (muted)
   requestAnimationFrame(() => {
     const p = video.play?.();
     if (p && typeof p.catch === "function") {
-      p.catch((err) => {
-        console.warn("[home] autoplay trailer bloqueado:", err);
-      });
+      p.catch((err) => console.warn("[home] autoplay trailer bloqueado:", err));
     }
   });
 }
@@ -294,9 +316,67 @@ function clearHomeHeroSelection(userId) {
   } catch { }
 }
 
+function pickStableHomeHero(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
+  const pool = (items || []).filter((x) => x?.id);
+  if (!pool.length) return null;
+
+  const now = Date.now();
+  const saved = readHomeHeroSelection(userId);
+
+  if (saved?.id && Number(saved.expiresAt) > now) {
+    const existing = pool.find((x) => String(x.id) === String(saved.id));
+    if (existing) return existing;
+  }
+
+  let next = pool[Math.floor(Math.random() * pool.length)];
+
+  if (pool.length > 1 && saved?.id) {
+    let guard = 0;
+    while (String(next?.id) === String(saved.id) && guard < 12) {
+      next = pool[Math.floor(Math.random() * pool.length)];
+      guard++;
+    }
+  }
+
+  writeHomeHeroSelection(userId, {
+    id: next.id,
+    chosenAt: now,
+    expiresAt: now + ttlMs
+  });
+
+  return next;
+}
+
+function scheduleHomeHeroRefresh(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
+  if (__homeHeroRotationTimer) {
+    clearTimeout(__homeHeroRotationTimer);
+    __homeHeroRotationTimer = null;
+  }
+
+  const saved = readHomeHeroSelection(userId);
+  const expiresAt = Number(saved?.expiresAt || 0);
+  const delay = Math.max(0, expiresAt - Date.now());
+  if (!delay) return;
+
+  __homeHeroRotationTimer = setTimeout(() => {
+    clearHomeHeroSelection(userId);
+    startHomeHeroRotation(items, { userId, ttlMs });
+  }, delay);
+}
+
+function startHomeHeroRotation(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
+  const pool = (items || []).filter((x) => x?.id);
+  if (!pool.length) return;
+
+  const chosen = pickStableHomeHero(pool, { userId, ttlMs });
+  if (!chosen) return;
+
+  renderHomeHeroItem(chosen, { userId });
+  scheduleHomeHeroRefresh(pool, { userId, ttlMs });
+}
+
 /* =========================================================
-   MI LISTA (HOME HERO) - Supabase real + fallback local
-   Tabla real: my_list(profile_id, content_id, added_at)
+   MI LISTA (HOME HERO) - Supabase + fallback local
 ========================================================= */
 
 const MY_LIST_KEY = "satv_my_list_ids";
@@ -394,37 +474,20 @@ async function resolveHeroMyListState({ userId, contentId }) {
   const localAdded = isInMyListLocal(contentId);
 
   if (!userId) {
-    return {
-      added: localAdded,
-      source: "local",
-      isLoggedIn: false
-    };
+    return { added: localAdded, source: "local", isLoggedIn: false };
   }
 
   try {
     const remoteAdded = await isInMyListRemote(userId, contentId);
     setLocalMyListMembership(contentId, remoteAdded);
-
-    return {
-      added: remoteAdded,
-      source: "supabase",
-      isLoggedIn: true
-    };
+    return { added: remoteAdded, source: "supabase", isLoggedIn: true };
   } catch (e) {
     console.warn("[home] resolveHeroMyListState remote error; uso local:", e);
-    return {
-      added: localAdded,
-      source: "local",
-      isLoggedIn: true,
-      error: e
-    };
+    return { added: localAdded, source: "local", isLoggedIn: true, error: e };
   }
 }
 
-function setHeroMyListBtnState(
-  btn,
-  { contentId, added = false, pending = false, source = "unknown" } = {}
-) {
+function setHeroMyListBtnState(btn, { contentId, added = false, pending = false, source = "unknown" } = {}) {
   if (!btn || !contentId) return;
 
   btn.dataset.myListContentId = String(contentId);
@@ -436,22 +499,11 @@ function setHeroMyListBtnState(
   btn.setAttribute("aria-label", added ? "Quitar de Mi Lista" : "Agregar a Mi Lista");
   btn.classList.toggle("is-active", !!added);
 
-  try {
-    btn.disabled = !!pending;
-  } catch { }
+  try { btn.disabled = !!pending; } catch { }
 
-  const label = pending ? "Actualizando…" : added ? "En Mi Lista" : "Mi Lista";
+  const label = pending ? "Actualizando…" : (added ? "En Mi Lista" : "Mi Lista");
   const labelNode = btn.querySelector(".home-hero-mylist-label");
-
-  if (labelNode) {
-    labelNode.textContent = label;
-  } else {
-    const textNode = [...btn.childNodes].find(
-      (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0
-    );
-    if (textNode) textNode.textContent = ` ${label}`;
-    else btn.appendChild(document.createTextNode(` ${label}`));
-  }
+  if (labelNode) labelNode.textContent = label;
 }
 
 async function refreshHeroMyListButton(btn, { userId, contentId }) {
@@ -483,8 +535,7 @@ function bindHeroMyListButton({ movie, userId }) {
   const contentId = String(movie.id);
   btn.dataset.myListContentId = contentId;
 
-  refreshHeroMyListButton(btn, { userId, contentId }).catch((e) => {
-    console.warn("[home] refreshHeroMyListButton error:", e);
+  refreshHeroMyListButton(btn, { userId, contentId }).catch(() => {
     setHeroMyListBtnState(btn, {
       contentId,
       added: isInMyListLocal(contentId),
@@ -493,92 +544,61 @@ function bindHeroMyListButton({ movie, userId }) {
     });
   });
 
-  btn.addEventListener(
-    "click",
-    async (ev) => {
-      ev.preventDefault();
+  btn.addEventListener("click", async (ev) => {
+    ev.preventDefault();
 
-      const currentId = btn.dataset.myListContentId || contentId;
-      if (!currentId) return;
-      if (btn.dataset.myListPending === "1") return;
+    const currentId = btn.dataset.myListContentId || contentId;
+    if (!currentId) return;
+    if (btn.dataset.myListPending === "1") return;
 
-      const visualAdded = btn.dataset.myListState === "in";
+    setHeroMyListBtnState(btn, {
+      contentId: currentId,
+      added: btn.dataset.myListState === "in",
+      pending: true,
+      source: btn.dataset.myListSource || "unknown"
+    });
 
-      setHeroMyListBtnState(btn, {
-        contentId: currentId,
-        added: visualAdded,
-        pending: true,
-        source: btn.dataset.myListSource || "unknown"
-      });
+    try {
+      const state = await resolveHeroMyListState({ userId, contentId: currentId });
 
-      try {
-        const state = await resolveHeroMyListState({ userId, contentId: currentId });
-
-        if (state.source === "supabase" && userId) {
-          if (state.added) {
-            await removeFromMyListRemote(userId, currentId);
-            setLocalMyListMembership(currentId, false);
-
-            setHeroMyListBtnState(btn, {
-              contentId: currentId,
-              added: false,
-              pending: false,
-              source: "supabase"
-            });
-
-            toast?.("Quitado de Mi Lista.", "success");
-          } else {
-            await addToMyListRemote(userId, currentId);
-            setLocalMyListMembership(currentId, true);
-
-            setHeroMyListBtnState(btn, {
-              contentId: currentId,
-              added: true,
-              pending: false,
-              source: "supabase"
-            });
-
-            toast?.("Agregado a Mi Lista.", "success");
-          }
-          return;
+      if (state.source === "supabase" && userId) {
+        if (state.added) {
+          await removeFromMyListRemote(userId, currentId);
+          setLocalMyListMembership(currentId, false);
+          setHeroMyListBtnState(btn, { contentId: currentId, added: false, pending: false, source: "supabase" });
+          toast?.("Quitado de Mi Lista.", "success");
+        } else {
+          await addToMyListRemote(userId, currentId);
+          setLocalMyListMembership(currentId, true);
+          setHeroMyListBtnState(btn, { contentId: currentId, added: true, pending: false, source: "supabase" });
+          toast?.("Agregado a Mi Lista.", "success");
         }
+        return;
+      }
 
-        const added = toggleLocalMyList(currentId);
+      const added = toggleLocalMyList(currentId);
+      setHeroMyListBtnState(btn, { contentId: currentId, added, pending: false, source: "local" });
+      toast?.(added ? "Agregado a Mi Lista (local)." : "Quitado de Mi Lista (local).", "success");
+    } catch (e) {
+      console.warn("[home] toggle hero Mi Lista error:", e);
+      try {
+        await refreshHeroMyListButton(btn, { userId, contentId: currentId });
+      } catch {
         setHeroMyListBtnState(btn, {
           contentId: currentId,
-          added,
+          added: isInMyListLocal(currentId),
           pending: false,
           source: "local"
         });
-
-        toast?.(added ? "Agregado a Mi Lista (local)." : "Quitado de Mi Lista (local).", "success");
-      } catch (e) {
-        console.warn("[home] toggle hero Mi Lista error:", e);
-
-        try {
-          await refreshHeroMyListButton(btn, { userId, contentId: currentId });
-        } catch {
-          setHeroMyListBtnState(btn, {
-            contentId: currentId,
-            added: isInMyListLocal(currentId),
-            pending: false,
-            source: "local"
-          });
-        }
-
-        toast?.("No se pudo actualizar Mi Lista.", "error");
       }
-    },
-    { passive: false }
-  );
+      toast?.("No se pudo actualizar Mi Lista.", "error");
+    }
+  }, { passive: false });
 }
 
 function buildMyListUrl(userId) {
   if (!userId) return "/mylist";
-  const q = new URLSearchParams({
-    list: String(userId),
-    user: String(userId)
-  });
+  const q = new URLSearchParams({ list: String(userId), user: String(userId) });
   return `/mylist?${q.toString()}`;
 }
 
@@ -609,16 +629,8 @@ const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
 
 function getMovieLiveStartDate(movie) {
   if (!movie) return null;
-
-  const raw =
-    movie.live_starts_at ??
-    movie.live_start_at ??
-    movie.live_datetime ??
-    movie.live_at ??
-    null;
-
+  const raw = movie.live_starts_at ?? movie.live_start_at ?? movie.live_datetime ?? movie.live_at ?? null;
   if (!raw) return null;
-
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -649,6 +661,10 @@ function homeCatalogCardHtml(movie) {
   if (liveLabel) return cardHtml(movie, undefined, liveLabel);
   return cardHtml(movie);
 }
+
+/* =========================================================
+   HERO RENDER
+========================================================= */
 
 function homeHeroMeta(movie) {
   const year = movie?.release_year ? String(movie.release_year) : "";
@@ -723,68 +739,10 @@ function renderHomeHeroItem(movie, { userId } = {}) {
   bindHeroMyListButton({ movie, userId });
 }
 
-function pickStableHomeHero(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
-  const pool = (items || []).filter((x) => x?.id);
-  if (!pool.length) return null;
-
-  const now = Date.now();
-  const saved = readHomeHeroSelection(userId);
-
-  if (saved?.id && Number(saved.expiresAt) > now) {
-    const existing = pool.find((x) => String(x.id) === String(saved.id));
-    if (existing) return existing;
-  }
-
-  let next = pool[Math.floor(Math.random() * pool.length)];
-
-  if (pool.length > 1 && saved?.id) {
-    let guard = 0;
-    while (String(next?.id) === String(saved.id) && guard < 12) {
-      next = pool[Math.floor(Math.random() * pool.length)];
-      guard++;
-    }
-  }
-
-  writeHomeHeroSelection(userId, {
-    id: next.id,
-    chosenAt: now,
-    expiresAt: now + ttlMs
-  });
-
-  return next;
-}
-
-function scheduleHomeHeroRefresh(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
-  if (__homeHeroRotationTimer) {
-    clearTimeout(__homeHeroRotationTimer);
-    __homeHeroRotationTimer = null;
-  }
-
-  const saved = readHomeHeroSelection(userId);
-  const expiresAt = Number(saved?.expiresAt || 0);
-  const delay = Math.max(0, expiresAt - Date.now());
-  if (!delay) return;
-
-  __homeHeroRotationTimer = setTimeout(() => {
-    clearHomeHeroSelection(userId);
-    startHomeHeroRotation(items, { userId, ttlMs });
-  }, delay);
-}
-
-function startHomeHeroRotation(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
-  const pool = (items || []).filter((x) => x?.id);
-  if (!pool.length) return;
-
-  const chosen = pickStableHomeHero(pool, { userId, ttlMs });
-  if (!chosen) return;
-
-  renderHomeHeroItem(chosen, { userId });
-  scheduleHomeHeroRefresh(pool, { userId, ttlMs });
-}
-
 /* =========================================================
-   ENSURE CAROUSEL WRAPPER
+   CAROUSEL
 ========================================================= */
+
 function ensureCarouselWrapper(row) {
   if (!row) return null;
 
@@ -828,17 +786,11 @@ function ensureCarouselWrapper(row) {
   return carousel;
 }
 
-/* =========================================================
-   RESET STATE
-========================================================= */
 function resetCarouselState(row) {
   delete row.dataset.carouselReady;
   delete row.dataset.carouselBlock;
 }
 
-/* =========================================================
-   BUILD CAROUSEL
-========================================================= */
 function buildCarousel(row, { cloneRounds = 2 } = {}) {
   if (!row) return;
   if (row.dataset.carouselReady === "1") return;
@@ -859,7 +811,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     if (btnLeft) btnLeft.remove();
     if (btnRight) btnRight.remove();
     carousel.classList.add("carousel-disabled");
-
     scheduleTwoLinesScan(carousel);
     return;
   }
@@ -867,7 +818,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   if (itemCount === 1) {
     if (btnLeft) btnLeft.style.display = "none";
     if (btnRight) btnRight.style.display = "none";
-
     scheduleTwoLinesScan(carousel);
     return;
   }
@@ -876,13 +826,10 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   const firstCard = row.querySelector(".card");
   const cardW = firstCard ? firstCard.getBoundingClientRect().width : 0;
   const blockWidth = (cardW + gap) * itemCount;
-
   if (!blockWidth) return;
+
   row.dataset.carouselBlock = blockWidth;
 
-  /* =========================
-     CLONES
-     ========================= */
   const leftFrag = document.createDocumentFragment();
   const rightFrag = document.createDocumentFragment();
 
@@ -896,9 +843,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   row.prepend(leftFrag);
   row.append(rightFrag);
 
-  /* =========================
-     CENTRAR SIN GLITCH
-     ========================= */
   const oldVis = row.style.visibility;
   const oldBehavior = row.style.scrollBehavior;
 
@@ -914,16 +858,11 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   requestAnimationFrame(() => {
     row.style.visibility = oldVis || "";
     row.style.scrollBehavior = oldBehavior || "";
-
-    // ✅ medir después de clones + layout visible
     scheduleTwoLinesScan(carousel);
   });
 
   const base = firstOriginal.offsetLeft;
 
-  /* =========================
-     WRAP ESTABLE
-     ========================= */
   let wrapping = false;
   let isManualScrolling = false;
 
@@ -941,56 +880,43 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     });
   }
 
-  row.addEventListener(
-    "scroll",
-    () => {
-      if (wrapping || isManualScrolling) return;
+  row.addEventListener("scroll", () => {
+    if (wrapping || isManualScrolling) return;
 
-      const x = row.scrollLeft;
-      const leftLimit = base - blockWidth * 0.75;
-      const rightLimit = base + blockWidth * 0.75;
+    const x = row.scrollLeft;
+    const leftLimit = base - blockWidth * 0.75;
+    const rightLimit = base + blockWidth * 0.75;
 
-      if (x < leftLimit) wrapTo(x + blockWidth);
-      else if (x > rightLimit) wrapTo(x - blockWidth);
-    },
-    { passive: true }
-  );
+    if (x < leftLimit) wrapTo(x + blockWidth);
+    else if (x > rightLimit) wrapTo(x - blockWidth);
+  }, { passive: true });
 
-  /* =========================
-     FLECHAS
-     ========================= */
   const moveAmount = () => Math.max(260, row.clientWidth * 0.9);
 
   function handleArrow(direction) {
     if (isManualScrolling) return;
-
     isManualScrolling = true;
+
     row.scrollBy({ left: direction * moveAmount(), behavior: "smooth" });
 
-    setTimeout(() => {
-      isManualScrolling = false;
-    }, 450);
+    setTimeout(() => { isManualScrolling = false; }, 450);
   }
 
   if (btnRight) btnRight.onclick = () => handleArrow(1);
   if (btnLeft) btnLeft.onclick = () => handleArrow(-1);
 }
 
-/* =========================================================
-   SET ROW
-========================================================= */
 function setRow(el, html) {
   if (!el) return;
   resetCarouselState(el);
   el.innerHTML = html;
-
-  // ✅ primera pasada (antes de clones)
   scheduleTwoLinesScan(el);
 }
 
 /* =========================================================
    CONTINUE WATCHING HELPERS
 ========================================================= */
+
 function buildContinueHref(row) {
   const m = row?.movies;
   if (!m?.id) return "#";
@@ -1016,7 +942,6 @@ function buildContinueSubtitle(row) {
 function buildContinuePct(row) {
   const m = row?.movies || null;
   const progressSec = Number(row?.progress_seconds || 0);
-
   let totalSec = Number(row?.duration_seconds || 0);
 
   if (!totalSec && m?.category === "movie") {
@@ -1033,8 +958,8 @@ function buildContinuePct(row) {
 /* =========================================================
    INIT
 ========================================================= */
+
 async function init() {
-  // ✅ HOME SIEMPRE usa satvplusClient.0.css (disfrazado)
   applyDisguisedCssFromId(0, {
     linkId: "app-style",
     disguisedPrefix: "/css/satvplusClient.",
@@ -1046,7 +971,7 @@ async function init() {
   renderNav({ active: "home" });
   await renderAuthButtons();
 
-  // ✅ activar tipografía inline 2 líneas exactas
+  // ✅ instala tipografía inline estable
   installTwoLinesObservers();
 
   const session = await getSession();
@@ -1078,18 +1003,16 @@ async function init() {
 
         setRow(
           contRow,
-          uniqueRows
-            .map((r) => {
-              const m = r.movies;
-              if (!m) return "";
+          uniqueRows.map((r) => {
+            const m = r.movies;
+            if (!m) return "";
 
-              const href = buildContinueHref(r);
-              const subtitle = buildContinueSubtitle(r);
-              const pct = buildContinuePct(r);
+            const href = buildContinueHref(r);
+            const subtitle = buildContinueSubtitle(r);
+            const pct = buildContinuePct(r);
 
-              return cardHtml(m, href, subtitle, pct);
-            })
-            .join("")
+            return cardHtml(m, href, subtitle, pct);
+          }).join("")
         );
 
         buildCarousel(contRow, { cloneRounds: 2 });
@@ -1128,7 +1051,7 @@ async function init() {
 
     startHomeHeroRotation([...heroPoolMap.values()], { userId });
 
-    // ✅ pasada final
+    // pasada final por seguridad
     scheduleTwoLinesScan();
   } catch (e) {
     console.error(e);
