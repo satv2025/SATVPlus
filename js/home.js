@@ -16,15 +16,17 @@ import { supabase } from "./supabaseClient.js";
 
 /* =========================================================
    ✅ TIPOGRAFÍA INLINE SOLO PARA 2 LÍNEAS EXACTAS
-   - Aplica inline con !important (le gana a tu * { font-family: ... !important })
+   - Inserta EXACTO:
+     style="font-family: HBOMaxSansCond !important; font-weight: 400;"
+     style="font-family: HBOMaxSansCond !important; font-weight: 700;"
    - SOLO cuando es EXACTAMENTE 2 líneas (no a todos)
-   - Limpia clases/estilos anteriores (is-2lines) si quedaron
+   - Limpia .is-2lines si quedó de pruebas anteriores
 ========================================================= */
 
 let __twoLinesRaf = 0;
 let __twoLinesInstalled = false;
 
-const TWO_LINE_TOL = 0.35; // tolerancia por subpíxel / métricas de font
+const TWO_LINE_TOL = 0.35; // tolerancia por subpíxel / métricas
 
 function getLineHeightPx(el, cs = null) {
   try {
@@ -67,46 +69,42 @@ function isExactlyTwoLines(el) {
   return raw > (2 - TWO_LINE_TOL) && raw < (2 + TWO_LINE_TOL);
 }
 
-function applyInlineCondensedIfTwoLines(el, { family, weight } = {}) {
+function applyInlineCondensedIfTwoLines(el, weight) {
   if (!el) return;
 
-  // Limpia clase vieja si quedó de pruebas anteriores
+  // Limpia clase vieja si quedó (para que no “ensucie” el DOM)
   if (el.classList.contains("is-2lines")) el.classList.remove("is-2lines");
 
   const two = isExactlyTwoLines(el);
 
   if (two) {
-    // INLINE + IMPORTANT (necesario por tu CSS global con !important)
-    el.style.setProperty("font-family", family, "important");
-    el.style.setProperty("font-weight", String(weight), "important");
+    // ✅ EXACTO como pediste en style=""
+    el.style.setProperty("font-family", "HBOMaxSansCond", "important");
+    el.style.setProperty("font-weight", String(weight)); // sin !important
     el.dataset.twoLinesApplied = "1";
+    el.dataset.twoLinesWeight = String(weight);
   } else {
-    // Solo borramos si nosotros lo pusimos antes (no pisamos estilos ajenos)
+    // Solo limpiamos si lo pusimos nosotros
     if (el.dataset.twoLinesApplied === "1") {
       el.style.removeProperty("font-family");
       el.style.removeProperty("font-weight");
       delete el.dataset.twoLinesApplied;
+      delete el.dataset.twoLinesWeight;
     }
   }
 }
 
 function applyTwoLinesTypographyInline(scope = document) {
-  // TITLES: todos
+  // TITLE: 2 líneas => Cond 700
   scope.querySelectorAll(".card-title").forEach((el) => {
-    applyInlineCondensedIfTwoLines(el, {
-      family: '"HBOMaxSansCond","HBOMaxSans"',
-      weight: 700
-    });
+    applyInlineCondensedIfTwoLines(el, 700);
   });
 
-  // SUBTITLE: solo continue-wrap (como pediste)
+  // SUBTITLE: SOLO continue-wrap, 2 líneas => Cond 400
   document
     .querySelectorAll("#continue-wrap .carousel .card .card-subtitle")
     .forEach((el) => {
-      applyInlineCondensedIfTwoLines(el, {
-        family: '"HBOMaxSansCond","HBOMaxSans"',
-        weight: 400
-      });
+      applyInlineCondensedIfTwoLines(el, 400);
     });
 }
 
@@ -122,7 +120,7 @@ function installTwoLinesObservers() {
   if (__twoLinesInstalled) return;
   __twoLinesInstalled = true;
 
-  // Fonts ready (cambia el alto => cambia cantidad de líneas)
+  // Fonts ready (cambia altura => cambia líneas)
   if (document.fonts?.ready?.then) {
     document.fonts.ready.then(() => scheduleTwoLinesScan()).catch(() => { });
   }
@@ -241,12 +239,16 @@ function mountHomeHeroTrailerVideo(hero, movie) {
   syncVolumeUi();
 
   // Si falla el video: limpieza y fallback al banner
-  video.addEventListener("error", () => {
-    volBtn.remove();
-    media.remove();
-    hero.classList.remove("hero-video-ready");
-    console.warn("[home] trailer hero error:", trailerUrl);
-  }, { once: true });
+  video.addEventListener(
+    "error",
+    () => {
+      volBtn.remove();
+      media.remove();
+      hero.classList.remove("hero-video-ready");
+      console.warn("[home] trailer hero error:", trailerUrl);
+    },
+    { once: true }
+  );
 
   // Cuando está listo -> habilitamos clase
   const showVideo = () => {
@@ -262,7 +264,6 @@ function mountHomeHeroTrailerVideo(hero, movie) {
     if (p && typeof p.catch === "function") {
       p.catch((err) => {
         console.warn("[home] autoplay trailer bloqueado:", err);
-        // queda poster/background, no rompe nada
       });
     }
   });
@@ -284,17 +285,13 @@ function readHomeHeroSelection(userId) {
 function writeHomeHeroSelection(userId, data) {
   try {
     localStorage.setItem(getHomeHeroStorageKey(userId), JSON.stringify(data));
-  } catch {
-    // localStorage puede fallar (modo privado, quota, etc)
-  }
+  } catch { }
 }
 
 function clearHomeHeroSelection(userId) {
   try {
     localStorage.removeItem(getHomeHeroStorageKey(userId));
-  } catch {
-    // ignore
-  }
+  } catch { }
 }
 
 /* =========================================================
@@ -316,7 +313,10 @@ function getMyListIdsLocal() {
 
 function saveMyListIdsLocal(ids) {
   try {
-    localStorage.setItem(MY_LIST_KEY, JSON.stringify([...new Set((ids || []).filter(Boolean).map(String))]));
+    localStorage.setItem(
+      MY_LIST_KEY,
+      JSON.stringify([...new Set((ids || []).filter(Boolean).map(String))])
+    );
   } catch (e) {
     console.warn("[home] no se pudo guardar Mi Lista local:", e);
   }
@@ -333,7 +333,7 @@ function setLocalMyListMembership(contentId, added) {
 
   let next = ids;
   if (added && !exists) next = [...ids, id];
-  if (!added && exists) next = ids.filter(x => x !== id);
+  if (!added && exists) next = ids.filter((x) => x !== id);
 
   saveMyListIdsLocal(next);
   return added;
@@ -343,9 +343,9 @@ function toggleLocalMyList(contentId) {
   const id = String(contentId);
   const ids = getMyListIdsLocal();
   const exists = ids.includes(id);
-  const next = exists ? ids.filter(x => x !== id) : [...ids, id];
+  const next = exists ? ids.filter((x) => x !== id) : [...ids, id];
   saveMyListIdsLocal(next);
-  return !exists; // true => quedó agregado
+  return !exists;
 }
 
 async function isInMyListRemote(profileId, contentId) {
@@ -370,12 +370,10 @@ async function addToMyListRemote(profileId, contentId) {
     added_at: new Date().toISOString()
   };
 
-  const { error } = await supabase
-    .from("my_list")
-    .upsert(payload, {
-      onConflict: "profile_id,content_id",
-      ignoreDuplicates: false
-    });
+  const { error } = await supabase.from("my_list").upsert(payload, {
+    onConflict: "profile_id,content_id",
+    ignoreDuplicates: false
+  });
 
   if (error) throw error;
   return true;
@@ -405,7 +403,6 @@ async function resolveHeroMyListState({ userId, contentId }) {
 
   try {
     const remoteAdded = await isInMyListRemote(userId, contentId);
-    // espejo local para consistencia con /mylist
     setLocalMyListMembership(contentId, remoteAdded);
 
     return {
@@ -424,7 +421,10 @@ async function resolveHeroMyListState({ userId, contentId }) {
   }
 }
 
-function setHeroMyListBtnState(btn, { contentId, added = false, pending = false, source = "unknown" } = {}) {
+function setHeroMyListBtnState(
+  btn,
+  { contentId, added = false, pending = false, source = "unknown" } = {}
+) {
   if (!btn || !contentId) return;
 
   btn.dataset.myListContentId = String(contentId);
@@ -436,9 +436,11 @@ function setHeroMyListBtnState(btn, { contentId, added = false, pending = false,
   btn.setAttribute("aria-label", added ? "Quitar de Mi Lista" : "Agregar a Mi Lista");
   btn.classList.toggle("is-active", !!added);
 
-  try { btn.disabled = !!pending; } catch { }
+  try {
+    btn.disabled = !!pending;
+  } catch { }
 
-  const label = pending ? "Actualizando…" : (added ? "En Mi Lista" : "Mi Lista");
+  const label = pending ? "Actualizando…" : added ? "En Mi Lista" : "Mi Lista";
   const labelNode = btn.querySelector(".home-hero-mylist-label");
 
   if (labelNode) {
@@ -479,11 +481,8 @@ function bindHeroMyListButton({ movie, userId }) {
   if (!btn || !movie?.id) return;
 
   const contentId = String(movie.id);
-
-  // Si el hero se re-renderiza, es un botón nuevo => bind limpio
   btn.dataset.myListContentId = contentId;
 
-  // estado real (async)
   refreshHeroMyListButton(btn, { userId, contentId }).catch((e) => {
     console.warn("[home] refreshHeroMyListButton error:", e);
     setHeroMyListBtnState(btn, {
@@ -494,99 +493,90 @@ function bindHeroMyListButton({ movie, userId }) {
     });
   });
 
-  btn.addEventListener("click", async (ev) => {
-    ev.preventDefault();
+  btn.addEventListener(
+    "click",
+    async (ev) => {
+      ev.preventDefault();
 
-    const currentId = btn.dataset.myListContentId || contentId;
-    if (!currentId) return;
-    if (btn.dataset.myListPending === "1") return;
+      const currentId = btn.dataset.myListContentId || contentId;
+      if (!currentId) return;
+      if (btn.dataset.myListPending === "1") return;
 
-    const visualAdded = btn.dataset.myListState === "in";
+      const visualAdded = btn.dataset.myListState === "in";
 
-    setHeroMyListBtnState(btn, {
-      contentId: currentId,
-      added: visualAdded,
-      pending: true,
-      source: btn.dataset.myListSource || "unknown"
-    });
-
-    try {
-      const state = await resolveHeroMyListState({ userId, contentId: currentId });
-
-      if (state.source === "supabase" && userId) {
-        if (state.added) {
-          await removeFromMyListRemote(userId, currentId);
-          setLocalMyListMembership(currentId, false);
-
-          setHeroMyListBtnState(btn, {
-            contentId: currentId,
-            added: false,
-            pending: false,
-            source: "supabase"
-          });
-
-          toast?.("Quitado de Mi Lista.", "success");
-          console.log("[home] quitado de Mi Lista (Supabase)");
-        } else {
-          await addToMyListRemote(userId, currentId);
-          setLocalMyListMembership(currentId, true);
-
-          setHeroMyListBtnState(btn, {
-            contentId: currentId,
-            added: true,
-            pending: false,
-            source: "supabase"
-          });
-
-          toast?.("Agregado a Mi Lista.", "success");
-          console.log("[home] agregado a Mi Lista (Supabase)");
-        }
-        return;
-      }
-
-      // Fallback local (si no hay sesión o falló Supabase)
-      const added = toggleLocalMyList(currentId);
       setHeroMyListBtnState(btn, {
         contentId: currentId,
-        added,
-        pending: false,
-        source: "local"
+        added: visualAdded,
+        pending: true,
+        source: btn.dataset.myListSource || "unknown"
       });
 
-      toast?.(
-        added ? "Agregado a Mi Lista (local)." : "Quitado de Mi Lista (local).",
-        "success"
-      );
-
-      console.log(
-        added
-          ? "[home] agregado a Mi Lista (local fallback)"
-          : "[home] quitado de Mi Lista (local fallback)"
-      );
-    } catch (e) {
-      console.warn("[home] toggle hero Mi Lista error:", e);
-
-      // Rehidratar estado
       try {
-        await refreshHeroMyListButton(btn, { userId, contentId: currentId });
-      } catch {
+        const state = await resolveHeroMyListState({ userId, contentId: currentId });
+
+        if (state.source === "supabase" && userId) {
+          if (state.added) {
+            await removeFromMyListRemote(userId, currentId);
+            setLocalMyListMembership(currentId, false);
+
+            setHeroMyListBtnState(btn, {
+              contentId: currentId,
+              added: false,
+              pending: false,
+              source: "supabase"
+            });
+
+            toast?.("Quitado de Mi Lista.", "success");
+          } else {
+            await addToMyListRemote(userId, currentId);
+            setLocalMyListMembership(currentId, true);
+
+            setHeroMyListBtnState(btn, {
+              contentId: currentId,
+              added: true,
+              pending: false,
+              source: "supabase"
+            });
+
+            toast?.("Agregado a Mi Lista.", "success");
+          }
+          return;
+        }
+
+        const added = toggleLocalMyList(currentId);
         setHeroMyListBtnState(btn, {
           contentId: currentId,
-          added: isInMyListLocal(currentId),
+          added,
           pending: false,
           source: "local"
         });
-      }
 
-      toast?.("No se pudo actualizar Mi Lista.", "error");
-    }
-  }, { passive: false });
+        toast?.(added ? "Agregado a Mi Lista (local)." : "Quitado de Mi Lista (local).", "success");
+      } catch (e) {
+        console.warn("[home] toggle hero Mi Lista error:", e);
+
+        try {
+          await refreshHeroMyListButton(btn, { userId, contentId: currentId });
+        } catch {
+          setHeroMyListBtnState(btn, {
+            contentId: currentId,
+            added: isInMyListLocal(currentId),
+            pending: false,
+            source: "local"
+          });
+        }
+
+        toast?.("No se pudo actualizar Mi Lista.", "error");
+      }
+    },
+    { passive: false }
+  );
 }
 
 function buildMyListUrl(userId) {
   if (!userId) return "/mylist";
   const q = new URLSearchParams({
-    list: String(userId), // asumimos 1 lista por usuario
+    list: String(userId),
     user: String(userId)
   });
   return `/mylist?${q.toString()}`;
@@ -613,7 +603,6 @@ function ensureMyListNavLink(userId) {
 
 /* =========================================================
    LIVE MODE (cards del home)
-   - Si live_mode=true y hay live_starts_at, muestra "dd/mm/aaaa - hh:mm"
 ========================================================= */
 
 const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
@@ -621,7 +610,6 @@ const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
 function getMovieLiveStartDate(movie) {
   if (!movie) return null;
 
-  // Compat por si probaste otros nombres antes
   const raw =
     movie.live_starts_at ??
     movie.live_start_at ??
@@ -658,8 +646,6 @@ function formatMovieLiveDateTime(movie, { timeZone = LIVE_DISPLAY_TIMEZONE } = {
 
 function homeCatalogCardHtml(movie) {
   const liveLabel = Boolean(movie?.live_mode) ? formatMovieLiveDateTime(movie) : "";
-
-  // cardHtml(m, href?, subtitle?, progressPct?)
   if (liveLabel) return cardHtml(movie, undefined, liveLabel);
   return cardHtml(movie);
 }
@@ -695,8 +681,7 @@ function renderHomeHeroItem(movie, { userId } = {}) {
   if (!hero || !movie?.id) return;
 
   const banner = movie.banner_url || movie.thumbnail_url || "";
-  if (banner) hero.style.backgroundImage = `url("${banner}")`;
-  else hero.style.backgroundImage = "";
+  hero.style.backgroundImage = banner ? `url("${banner}")` : "";
 
   const meta = homeHeroMeta(movie);
   const synopsis = movie.description || movie.sinopsis || "";
@@ -734,30 +719,24 @@ function renderHomeHeroItem(movie, { userId } = {}) {
     </div>
   `;
 
-  // ✅ Trailer de fondo + volumen en RIGHT
   mountHomeHeroTrailerVideo(hero, movie);
-
-  // Bind toggle real (Supabase + fallback local)
   bindHeroMyListButton({ movie, userId });
 }
 
 function pickStableHomeHero(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
-  const pool = (items || []).filter(x => x?.id);
+  const pool = (items || []).filter((x) => x?.id);
   if (!pool.length) return null;
 
   const now = Date.now();
   const saved = readHomeHeroSelection(userId);
 
-  // ✅ Si existe uno guardado y no venció, usarlo
   if (saved?.id && Number(saved.expiresAt) > now) {
-    const existing = pool.find(x => String(x.id) === String(saved.id));
+    const existing = pool.find((x) => String(x.id) === String(saved.id));
     if (existing) return existing;
   }
 
-  // ✅ Si venció o no existe, elegir uno nuevo
   let next = pool[Math.floor(Math.random() * pool.length)];
 
-  // Evitar repetir el mismo si hay más de 1 opción
   if (pool.length > 1 && saved?.id) {
     let guard = 0;
     while (String(next?.id) === String(saved.id) && guard < 12) {
@@ -784,21 +763,16 @@ function scheduleHomeHeroRefresh(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {
   const saved = readHomeHeroSelection(userId);
   const expiresAt = Number(saved?.expiresAt || 0);
   const delay = Math.max(0, expiresAt - Date.now());
-
-  // Si no hay expiración válida, no programar nada.
   if (!delay) return;
 
-  // ✅ Si la pestaña queda abierta días, al vencer cambia solo
   __homeHeroRotationTimer = setTimeout(() => {
     clearHomeHeroSelection(userId);
     startHomeHeroRotation(items, { userId, ttlMs });
   }, delay);
 }
 
-// Mantengo el nombre para no tocar el resto del flujo.
-// Ahora NO rota cada 20s; pinta 1 hero estable por TTL.
 function startHomeHeroRotation(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
-  const pool = (items || []).filter(x => x?.id);
+  const pool = (items || []).filter((x) => x?.id);
   if (!pool.length) return;
 
   const chosen = pickStableHomeHero(pool, { userId, ttlMs });
@@ -879,16 +853,13 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   const itemCount = originals.length;
   row.dataset.carouselReady = "1";
 
-  const isRestrictedRow =
-    row.id === "series-row" ||
-    row.id === "continue-row";
+  const isRestrictedRow = row.id === "series-row" || row.id === "continue-row";
 
   if (isRestrictedRow && itemCount < 6) {
     if (btnLeft) btnLeft.remove();
     if (btnRight) btnRight.remove();
     carousel.classList.add("carousel-disabled");
 
-    // ✅ tipografía inline (por si cambió el ancho)
     scheduleTwoLinesScan(carousel);
     return;
   }
@@ -907,7 +878,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   const blockWidth = (cardW + gap) * itemCount;
 
   if (!blockWidth) return;
-
   row.dataset.carouselBlock = blockWidth;
 
   /* =========================
@@ -919,7 +889,6 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   for (let r = 0; r < cloneRounds; r++) {
     for (let i = 0; i < itemCount; i++) leftFrag.appendChild(originals[i].cloneNode(true));
   }
-
   for (let r = 0; r < cloneRounds; r++) {
     for (let i = 0; i < itemCount; i++) rightFrag.appendChild(originals[i].cloneNode(true));
   }
@@ -946,7 +915,7 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     row.style.visibility = oldVis || "";
     row.style.scrollBehavior = oldBehavior || "";
 
-    // ✅ medir 2 líneas cuando ya está visible + clones puestos
+    // ✅ medir después de clones + layout visible
     scheduleTwoLinesScan(carousel);
   });
 
@@ -972,16 +941,20 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     });
   }
 
-  row.addEventListener("scroll", () => {
-    if (wrapping || isManualScrolling) return;
+  row.addEventListener(
+    "scroll",
+    () => {
+      if (wrapping || isManualScrolling) return;
 
-    const x = row.scrollLeft;
-    const leftLimit = base - blockWidth * 0.75;
-    const rightLimit = base + blockWidth * 0.75;
+      const x = row.scrollLeft;
+      const leftLimit = base - blockWidth * 0.75;
+      const rightLimit = base + blockWidth * 0.75;
 
-    if (x < leftLimit) wrapTo(x + blockWidth);
-    else if (x > rightLimit) wrapTo(x - blockWidth);
-  }, { passive: true });
+      if (x < leftLimit) wrapTo(x + blockWidth);
+      else if (x > rightLimit) wrapTo(x - blockWidth);
+    },
+    { passive: true }
+  );
 
   /* =========================
      FLECHAS
@@ -1011,7 +984,7 @@ function setRow(el, html) {
   resetCarouselState(el);
   el.innerHTML = html;
 
-  // ✅ primera pasada (sin clones aún)
+  // ✅ primera pasada (antes de clones)
   scheduleTwoLinesScan(el);
 }
 
@@ -1022,7 +995,6 @@ function buildContinueHref(row) {
   const m = row?.movies;
   if (!m?.id) return "#";
 
-  // ✅ Ir a la ficha del título (NO directo al reproductor)
   const episodeId = row?.episode_id || row?.episodes?.id || null;
 
   return episodeId
@@ -1047,7 +1019,6 @@ function buildContinuePct(row) {
 
   let totalSec = Number(row?.duration_seconds || 0);
 
-  // fallback razonable para películas si no existe duration_seconds
   if (!totalSec && m?.category === "movie") {
     totalSec = Number(m?.duration_minutes || 0) * 60;
   }
@@ -1056,7 +1027,6 @@ function buildContinuePct(row) {
     return Math.min(98, Math.max(2, Math.round((progressSec / totalSec) * 100)));
   }
 
-  // sin duración -> barra mínima visible
   return 8;
 }
 
@@ -1065,7 +1035,6 @@ function buildContinuePct(row) {
 ========================================================= */
 async function init() {
   // ✅ HOME SIEMPRE usa satvplusClient.0.css (disfrazado)
-  // Requisito: <link id="app-style" ...> en index.html
   applyDisguisedCssFromId(0, {
     linkId: "app-style",
     disguisedPrefix: "/css/satvplusClient.",
@@ -1077,7 +1046,7 @@ async function init() {
   renderNav({ active: "home" });
   await renderAuthButtons();
 
-  // ✅ activar observers para tipografía 2 líneas (inline)
+  // ✅ activar tipografía inline 2 líneas exactas
   installTwoLinesObservers();
 
   const session = await getSession();
@@ -1090,9 +1059,8 @@ async function init() {
   if (userId) {
     try {
       const rows = await fetchContinueWatching(userId, 24);
-      const filtered = rows.filter(r => (Number(r.progress_seconds) || 0) >= 5);
+      const filtered = rows.filter((r) => (Number(r.progress_seconds) || 0) >= 5);
 
-      // ✅ 1 card por título (serie/peli), usando la fila más reciente
       const grouped = filtered.reduce((acc, r) => {
         const movieId = r.movies?.id || r.movie_id;
         if (!movieId) return acc;
@@ -1110,16 +1078,18 @@ async function init() {
 
         setRow(
           contRow,
-          uniqueRows.map(r => {
-            const m = r.movies;
-            if (!m) return "";
+          uniqueRows
+            .map((r) => {
+              const m = r.movies;
+              if (!m) return "";
 
-            const href = buildContinueHref(r);
-            const subtitle = buildContinueSubtitle(r);
-            const pct = buildContinuePct(r);
+              const href = buildContinueHref(r);
+              const subtitle = buildContinueSubtitle(r);
+              const pct = buildContinuePct(r);
 
-            return cardHtml(m, href, subtitle, pct);
-          }).join("")
+              return cardHtml(m, href, subtitle, pct);
+            })
+            .join("")
         );
 
         buildCarousel(contRow, { cloneRounds: 2 });
@@ -1140,26 +1110,25 @@ async function init() {
     const seriesRow = $("#series-row");
 
     const latest = await fetchLatest(24);
-    setRow(latestRow, latest.map(m => homeCatalogCardHtml(m)).join(""));
+    setRow(latestRow, latest.map((m) => homeCatalogCardHtml(m)).join(""));
     buildCarousel(latestRow, { cloneRounds: 2 });
 
     const movies = await fetchByCategory("movie", 24);
-    setRow(moviesRow, movies.map(m => homeCatalogCardHtml(m)).join(""));
+    setRow(moviesRow, movies.map((m) => homeCatalogCardHtml(m)).join(""));
     buildCarousel(moviesRow, { cloneRounds: 2 });
 
     const series = await fetchByCategory("series", 24);
-    setRow(seriesRow, series.map(m => homeCatalogCardHtml(m)).join(""));
+    setRow(seriesRow, series.map((m) => homeCatalogCardHtml(m)).join(""));
     buildCarousel(seriesRow, { cloneRounds: 2 });
 
     const heroPoolMap = new Map();
-    [...latest, ...movies, ...series].forEach(item => {
+    [...latest, ...movies, ...series].forEach((item) => {
       if (item?.id && !heroPoolMap.has(item.id)) heroPoolMap.set(item.id, item);
     });
 
-    // ✅ Hero estable por TTL (default 3 días)
     startHomeHeroRotation([...heroPoolMap.values()], { userId });
 
-    // ✅ pasada final por si algún carrusel ajustó ancho (flechas/fade)
+    // ✅ pasada final
     scheduleTwoLinesScan();
   } catch (e) {
     console.error(e);
