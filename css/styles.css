@@ -2393,13 +2393,3 @@ media-player {
     max-height: 78vh;
   }
 }
-
-.card-title.is-2lines {
-  font-family: "HBOMaxSansCond" !important;
-  font-weight: 700 !important;
-}
-
-#continue-wrap .carousel .card .card-subtitle.is-2lines {
-  font-family: "HBOMaxSansCond" !important;
-  font-weight: 400 !important;
-}
