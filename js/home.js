@@ -33,10 +33,10 @@ const HOME_HERO_STORAGE_PREFIX = "homeHeroSelection:v1";
 ========================================================= */
 
 const HERO_VOLUME_ICON_MUTE =
-  "https://akira.satvplus.com.ar/assets/media/icons/svg/volume/mute.svg";
+  "https://satvplus.com.ar/images/svg/heromute.svg";
 
 const HERO_VOLUME_ICON_UNMUTE =
-  "https://akira.satvplus.com.ar/assets/media/icons/svg/volume/vol2.svg";
+  "https://satvplus.com.ar/images/svg/heroon.svg";
 
 function mountHomeHeroTrailerVideo(hero, movie) {
   if (!hero || !movie?.id) return;
