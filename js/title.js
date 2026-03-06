@@ -421,7 +421,6 @@ window.addEventListener("beforeunload", clearLiveCountdownTimer);
 
 /* ===========================
    Continue Watching (watch_progress)
-✅ Usa supabaseClient.js real (mismo cliente que el resto)
 =========================== */
 
 async function getAppSupabaseClient() {
@@ -905,23 +904,24 @@ async function bindMyListButton(btn, movie) {
 function getMoreCardBadgeLabel(movie) {
     if (!movie) return "";
 
-    const state = getMoviePublishState(movie);
-    const custom = String(movie.publish_state_text || "").trim();
+    const publishState = getMoviePublishState(movie);
+    const customText = String(movie.publish_state_text || "").trim();
 
-    if (state === "upcoming") {
-        return custom || "Próximamente";
+    if (publishState === "upcoming") {
+        return customText || "Próximamente";
     }
 
-    if (state === "other") {
-        return custom || "Otro";
+    if (publishState === "other") {
+        return customText || "Otro";
     }
 
     if (Boolean(movie.live_mode)) {
         const d = getLiveStartDate(movie);
         if (d) return `${formatLiveDateEs(d)} - ${formatLiveTimeEs(d)}`;
+        if (publishState === "live") return "En Vivo";
     }
 
-    if (state === "live") {
+    if (publishState === "live") {
         return "En Vivo";
     }
 
@@ -935,10 +935,12 @@ function renderMoreCardHtml({ item, esc }) {
     const badgeLabel = getMoreCardBadgeLabel(item);
 
     return `
-    <article class="episode-card" tabindex="0" role="link" data-title="${esc(item.id)}">
-      <img class="episode-thumb" src="${esc(thumb)}" alt="">
-      <div class="episode-body">
+    <article class="episode-card more-card" tabindex="0" role="link" data-title="${esc(item.id)}">
+      <div class="more-card-thumb-wrap">
+        <img class="episode-thumb" src="${esc(thumb)}" alt="">
         ${badgeLabel ? `<div class="card-badge card-badge-upcoming">${esc(badgeLabel)}</div>` : ``}
+      </div>
+      <div class="episode-body">
         <h4 class="episode-title">${title}</h4>
         ${meta ? `<p class="episode-sub">${meta}</p>` : ``}
       </div>
