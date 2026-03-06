@@ -21,7 +21,6 @@ import { supabase } from "./supabaseClient.js";
 let __twoLinesRaf = 0;
 let __twoLinesInstalled = false;
 
-// tolerancia por subpíxel / métricas
 const TWO_LINE_TOL = 0.35;
 
 function getLineHeightPx(el, cs = null) {
@@ -668,6 +667,21 @@ function homeCatalogCardHtml(movie) {
   return cardHtml(movie);
 }
 
+function promoteCatalogCardBadges(rootEl) {
+  if (!rootEl) return;
+
+  rootEl.querySelectorAll(".card .card-subtitle").forEach((node) => {
+    const text = String(node.textContent || "").trim();
+    if (!text) return;
+
+    const badge = document.createElement("div");
+    badge.className = "card-badge card-badge-upcoming";
+    badge.textContent = text;
+
+    node.replaceWith(badge);
+  });
+}
+
 /* =========================================================
    HERO RENDER
 ========================================================= */
@@ -1039,14 +1053,17 @@ async function init() {
 
     const latest = await fetchLatest(24);
     setRow(latestRow, latest.map((m) => homeCatalogCardHtml(m)).join(""));
+    promoteCatalogCardBadges(latestRow);
     buildCarousel(latestRow, { cloneRounds: 2 });
 
     const movies = await fetchByCategory("movie", 24);
     setRow(moviesRow, movies.map((m) => homeCatalogCardHtml(m)).join(""));
+    promoteCatalogCardBadges(moviesRow);
     buildCarousel(moviesRow, { cloneRounds: 2 });
 
     const series = await fetchByCategory("series", 24);
     setRow(seriesRow, series.map((m) => homeCatalogCardHtml(m)).join(""));
+    promoteCatalogCardBadges(seriesRow);
     buildCarousel(seriesRow, { cloneRounds: 2 });
 
     const heroPoolMap = new Map();

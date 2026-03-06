@@ -68,13 +68,14 @@ function getMoviePublishState(movie) {
 
 function getMoviePublishStateLabel(movie) {
     const state = getMoviePublishState(movie);
+    const custom = String(movie?.publish_state_text || "").trim();
 
     if (state === "public") return "Público";
-    if (state === "upcoming") return "Próximamente";
+    if (state === "upcoming") return custom || "Próximamente";
     if (state === "live") return "En Vivo";
+    if (state === "other") return custom || "Otro";
 
-    const custom = String(movie?.publish_state_text || "").trim();
-    return custom || "Otro";
+    return "Público";
 }
 
 /* ===========================
@@ -390,7 +391,6 @@ function setWatchBtnLiveCountdown(watchBtn, movie) {
         const nowMs = Date.now();
         const diff = targetMs - nowMs;
 
-        // Cuando llega la hora, vuelve a "Ver ahora"
         if (diff <= 0) {
             clearLiveCountdownTimer();
             setWatchBtnVerAhora(watchBtn, movie);
@@ -425,7 +425,6 @@ window.addEventListener("beforeunload", clearLiveCountdownTimer);
 =========================== */
 
 async function getAppSupabaseClient() {
-    // Import dinámico para asegurarnos de que ya existe window.supabase (por ensureSupabaseGlobal)
     const mod = await import("./supabaseClient.js");
     return mod?.supabase || null;
 }
@@ -474,7 +473,6 @@ async function fetchContinueWatchingForTitle({ movieId }) {
             .limit(1)
             .maybeSingle();
 
-        // fallback si duration_seconds todavía no existe
         if (error && String(error.message || "").toLowerCase().includes("duration_seconds")) {
             const retry = await supabase
                 .from("watch_progress")
@@ -538,8 +536,6 @@ async function fetchContinueWatchingForTitle({ movieId }) {
 
 /* ===========================
    MI LISTA (Supabase REAL + fallback localStorage)
-   - Reutiliza #episodes-jump como botón "Mi Lista"
-   - Tabla real: my_list(profile_id, content_id, added_at)
 =========================== */
 
 const MY_LIST_KEY = "satv_my_list_ids";
@@ -587,7 +583,7 @@ function toggleMyListLocal(movieId) {
         : [...ids, movieId];
 
     saveMyListIds(next);
-    return !exists; // true si quedó agregado
+    return !exists;
 }
 
 function setMyListBtnState(btn, movieId, opts = {}) {
@@ -596,37 +592,31 @@ function setMyListBtnState(btn, movieId, opts = {}) {
     const {
         added = false,
         pending = false,
-        source = "unknown" // "supabase" | "local" | "unknown"
+        source = "unknown"
     } = opts;
 
-    // aseguramos visibilidad
     btn.classList.remove("hidden");
     btn.setAttribute("type", "button");
     btn.setAttribute("aria-pressed", String(added));
     btn.setAttribute("aria-label", added ? "Quitar de Mi Lista" : "Agregar a Mi Lista");
     btn.classList.toggle("is-active", !!added);
 
-    // data attrs útiles para debug / CSS
     btn.dataset.myListState = added ? "in" : "out";
     btn.dataset.myListSource = source;
     btn.dataset.myListPending = pending ? "1" : "0";
 
-    // Disable real para evitar doble click mientras hace request
     try { btn.disabled = !!pending; } catch { }
 
     const nextLabel = pending
-        ? (added ? "Actualizando…" : "Actualizando…")
+        ? "Actualizando…"
         : (added ? "En Mi Lista" : "Mi Lista");
 
-    // 1) Si existe <span>, lo seguimos usando
     const labelSpan = btn.querySelector("span");
     if (labelSpan) {
         labelSpan.textContent = nextLabel;
         return;
     }
 
-    // 2) Soporte para tu HTML exacto: <svg>...</svg>Mi Lista
-    //    Buscamos un text node después del SVG y lo actualizamos sin romper el ícono
     const textNode = [...btn.childNodes].find(
         (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0
     );
@@ -634,7 +624,6 @@ function setMyListBtnState(btn, movieId, opts = {}) {
     if (textNode) {
         textNode.textContent = ` ${nextLabel}`;
     } else {
-        // fallback seguro: agrega texto al final y conserva el SVG
         btn.appendChild(document.createTextNode(` ${nextLabel}`));
     }
 }
@@ -658,17 +647,15 @@ async function getMyListAuthContext() {
     }
 }
 
-// ✅ URL Mi Lista (igual criterio que home.js)
 function buildMyListUrl(userId) {
     if (!userId) return "/mylist";
     const q = new URLSearchParams({
-        list: String(userId), // asumimos 1 lista por usuario
+        list: String(userId),
         user: String(userId)
     });
     return `/mylist?${q.toString()}`;
 }
 
-// ✅ Inserta "Mi Lista" a la derecha de "Inicio" en topnav
 function ensureMyListNavLink(userId) {
     const topnav = document.getElementById("topnav");
     if (!topnav) return;
@@ -686,7 +673,6 @@ function ensureMyListNavLink(userId) {
 
     link.href = buildMyListUrl(userId);
 
-    // Buscar "Inicio" para insertar justo a la derecha
     const navItems = [...navLeft.querySelectorAll("a, button")];
     const inicio = navItems.find((n) => {
         if (n === link) return false;
@@ -701,7 +687,6 @@ function ensureMyListNavLink(userId) {
             navLeft.insertBefore(link, inicio.nextSibling);
         }
     } else {
-        // fallback: primer lugar lógico en nav-left
         if (link.parentElement !== navLeft) navLeft.appendChild(link);
     }
 }
@@ -717,12 +702,7 @@ async function isInMyListSupabase({ supabase, profileId, contentId }) {
         .limit(1)
         .maybeSingle();
 
-    if (error) {
-        // maybeSingle normalmente no tira error cuando no hay filas,
-        // pero si pasa otra cosa la propagamos.
-        throw error;
-    }
-
+    if (error) throw error;
     return !!data;
 }
 
@@ -737,7 +717,6 @@ async function addToMyListSupabase({ supabase, profileId, contentId }) {
         added_at: new Date().toISOString()
     };
 
-    // Usa tu unique(profile_id, content_id)
     const { error } = await supabase
         .from("my_list")
         .upsert(payload, {
@@ -785,7 +764,6 @@ async function resolveMyListState(contentId) {
             contentId
         });
 
-        // espejo local para consistencia con /mylist si usa sync
         setLocalMyListMembership(contentId, remoteAdded);
 
         return {
@@ -812,7 +790,7 @@ async function refreshMyListButtonState(btn, contentId) {
     if (!btn || !contentId) return;
 
     setMyListBtnState(btn, contentId, {
-        added: isInMyListLocal(contentId), // estado rápido inicial
+        added: isInMyListLocal(contentId),
         pending: true,
         source: "unknown"
     });
@@ -831,17 +809,12 @@ async function refreshMyListButtonState(btn, contentId) {
 async function bindMyListButton(btn, movie) {
     if (!btn || !movie?.id) return;
 
-    // limpia cualquier handler previo (antes era scroll episodios)
     btn.onclick = null;
-
     btn.dataset.myListMovieId = movie.id;
 
-    // estado inicial (real)
     await refreshMyListButtonState(btn, movie.id);
 
-    // evitar rebind accidental si main() se dispara de nuevo
     if (btn.dataset.myListBound === "1") return;
-
     btn.dataset.myListBound = "1";
 
     btn.addEventListener("click", async (ev) => {
@@ -852,7 +825,6 @@ async function bindMyListButton(btn, movie) {
         const currentMovieId = btn.dataset.myListMovieId || movie.id;
         const currentVisualAdded = btn.dataset.myListState === "in";
 
-        // UI pending inmediata
         setMyListBtnState(btn, currentMovieId, {
             added: currentVisualAdded,
             pending: true,
@@ -860,11 +832,9 @@ async function bindMyListButton(btn, movie) {
         });
 
         try {
-            // Resolvemos estado/auth "real" al momento del click
             const state = await resolveMyListState(currentMovieId);
 
             if (state.source === "supabase" && state.supabase && state.profileId) {
-                // Toggle real en Supabase
                 if (state.added) {
                     await removeFromMyListSupabase({
                         supabase: state.supabase,
@@ -902,7 +872,6 @@ async function bindMyListButton(btn, movie) {
                 return;
             }
 
-            // Fallback local si no hay sesión o falla Supabase/RLS
             const added = toggleMyListLocal(currentMovieId);
             setMyListBtnState(btn, currentMovieId, {
                 added,
@@ -916,7 +885,6 @@ async function bindMyListButton(btn, movie) {
         } catch (e) {
             console.warn("[title] toggle Mi Lista error:", e);
 
-            // Rehidrata estado (intenta remoto y/o local)
             try {
                 await refreshMyListButtonState(btn, currentMovieId);
             } catch {
@@ -934,15 +902,43 @@ async function bindMyListButton(btn, movie) {
    TE PODRÍA GUSTAR (cards)
 =========================== */
 
+function getMoreCardBadgeLabel(movie) {
+    if (!movie) return "";
+
+    const state = getMoviePublishState(movie);
+    const custom = String(movie.publish_state_text || "").trim();
+
+    if (state === "upcoming") {
+        return custom || "Próximamente";
+    }
+
+    if (state === "other") {
+        return custom || "Otro";
+    }
+
+    if (Boolean(movie.live_mode)) {
+        const d = getLiveStartDate(movie);
+        if (d) return `${formatLiveDateEs(d)} - ${formatLiveTimeEs(d)}`;
+    }
+
+    if (state === "live") {
+        return "En Vivo";
+    }
+
+    return "";
+}
+
 function renderMoreCardHtml({ item, esc }) {
     const thumb = item.thumbnail_url || item.banner_url || "";
     const title = esc(shortenTitle(item.title || ""));
     const meta = esc(getMoreMetaLine(item));
+    const badgeLabel = getMoreCardBadgeLabel(item);
 
     return `
     <article class="episode-card" tabindex="0" role="link" data-title="${esc(item.id)}">
       <img class="episode-thumb" src="${esc(thumb)}" alt="">
       <div class="episode-body">
+        ${badgeLabel ? `<div class="card-badge card-badge-upcoming">${esc(badgeLabel)}</div>` : ``}
         <h4 class="episode-title">${title}</h4>
         ${meta ? `<p class="episode-sub">${meta}</p>` : ``}
       </div>
@@ -963,11 +959,6 @@ function bindMoreCardNavigation(rootEl) {
     });
 }
 
-/**
- * Render More:
- * - Si existe api.fetchMoreExcluding -> lo usa
- * - Si no -> fallback api.fetchLatest y filtra la actual
- */
 async function renderMoreSection({ api, esc, currentMovieId }) {
     const moreGrid = el("more-grid");
     const moreSection = el("more-section");
@@ -1019,13 +1010,12 @@ async function main() {
     ui.enableDataHrefNavigation?.();
     ui.applyDisguisedCssFromMovieId?.();
 
-    // ✅ Topnav: agregar "Mi Lista" a la derecha de "Inicio" con URL dinámica
     try {
         const navCtx = await getMyListAuthContext();
         ensureMyListNavLink(navCtx?.profileId || null);
     } catch (e) {
         console.warn("[title] no se pudo preparar link Mi Lista en topnav:", e);
-        ensureMyListNavLink(null); // fallback => /mylist
+        ensureMyListNavLink(null);
     }
 
     const esc = ui.escapeHtml;
@@ -1036,7 +1026,7 @@ async function main() {
     const sinopsisEl = el("t-sinopsis");
     const watchBtn = el("watch-btn");
     const trailerBtn = el("trailer-btn");
-    const myListBtn = el("episodes-jump"); // mismo id, ahora se usa como "Mi Lista"
+    const myListBtn = el("episodes-jump");
 
     const episodesSection = el("episodes-section");
     const episodesTitle = el("episodes-title");
@@ -1050,14 +1040,11 @@ async function main() {
 
     document.title = `${movie.title || "Título"} · SATV+`;
 
-    // MI LISTA (siempre visible para películas y series) - REAL en Supabase
     await bindMyListButton(myListBtn, movie);
 
-    // Nivel X
     const NIVELX_ID = "0acf7d27-5a80-4682-873a-760dd1ffdb51";
     document.body.classList.toggle("is-nivelx", movie.id === NIVELX_ID);
 
-    // HERO
     if (titleEl) titleEl.textContent = movie.title || "";
     if (sinopsisEl) sinopsisEl.textContent = movie.description || "";
 
@@ -1066,20 +1053,20 @@ async function main() {
 
     if (trailerBtn) trailerBtn.classList.add("hidden");
 
-    // WATCH BUTTON según publish_state (solo "upcoming" cambia comportamiento)
     const publishState = getMoviePublishState(movie);
     const publishStateLabel = getMoviePublishStateLabel(movie);
 
     if (publishState === "upcoming") {
-        // Próximamente => no clicable
         setWatchBtnDisabledStatus(watchBtn, publishStateLabel);
     } else {
-        // public / live / other => mismo comportamiento que "public"
-        // (live_mode + live_starts_at sigue mostrando countdown si corresponde)
         const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
 
         if (!isUpcomingLiveCountdown) {
-            setWatchBtnVerAhora(watchBtn, movie);
+            if (publishState === "other" || publishState === "live") {
+                setWatchBtnStatusClickable(watchBtn, movie, publishStateLabel);
+            } else {
+                setWatchBtnVerAhora(watchBtn, movie);
+            }
 
             try {
                 const progress = await fetchContinueWatchingForTitle({ movieId: movie.id });
@@ -1090,7 +1077,6 @@ async function main() {
         }
     }
 
-    // META
     const year = movie.release_year ? String(movie.release_year) : "";
     let right = "";
     const mm = movie.movie_meta || null;
@@ -1110,10 +1096,8 @@ async function main() {
 
     if (metaEl) metaEl.textContent = [year, right].filter(Boolean).join(" · ");
 
-    // TE PODRÍA GUSTAR (antes de episodios)
     await renderMoreSection({ api, esc, currentMovieId: movie.id });
 
-    // INFO FULL
     if (extraEl) {
         const durText = movie.category === "movie" ? formatDuration(movie.duration_minutes) : "";
         const hasAny =
@@ -1145,7 +1129,6 @@ async function main() {
         extraEl.classList.remove("hidden");
     }
 
-    // EPISODES
     if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) return;
 
     if (movie.category !== "series") {
@@ -1158,9 +1141,6 @@ async function main() {
     seasonFilter.classList.remove("hidden");
     episodesGrid.classList.remove("hidden");
 
-    // ⛔ Ya no usamos #episodes-jump para scroll a episodios
-    // (ahora es "Mi Lista", bindMyListButton ya lo configuró)
-
     const episodes = await api.fetchEpisodes(movie.id);
     if (!episodes?.length) {
         episodesGrid.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
@@ -1170,7 +1150,7 @@ async function main() {
     const grouped = groupBySeason(episodes);
     const seasons = grouped.map(([s]) => s);
 
-    let currentSeason = clampSeason(seasons, seasons[0]); // number | "all"
+    let currentSeason = clampSeason(seasons, seasons[0]);
     let dropdownOpen = false;
 
     function removeGeneratedAllNodes() {
