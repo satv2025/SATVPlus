@@ -1331,7 +1331,7 @@ media-player {
 /* ✅ NUEVO COMPORTAMIENTO: dentro del RIGHT */
 .home-hero-right>.home-hero-volume-btn {
   position: relative !important;
-  right: auto !important;
+  right: -3em !important;
   bottom: auto !important;
   top: auto !important;
   left: auto !important;
