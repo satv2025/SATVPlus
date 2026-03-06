@@ -1,13 +1,27 @@
 @font-face {
     font-family: "HBOMaxSans";
-    src: url("HandsetSansUI-Regular.b97141eb372e372e3327eda6d6912ffe.sha.woff2") format("woff2");
+    src: url("BOMaxSansRegular.woff2") format("woff2");
     font-weight: 400;
     font-style: normal;
 }
 
 @font-face {
     font-family: "HBOMaxSans";
-    src: url("HandsetSansUI-Bold.84d095a9c5c41b75737cdeeacc4a8fd4.sha.woff2") format("woff2");
+    src: url("HBOMaxSansBold.woff2") format("woff2");
     font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "HBOMaxSansCond";
+    src: url("HBOMaxSansCondBold.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "HBOMaxSansCond";
+    src: url("HBOMaxSansCondRegular.woff2") format("woff2");
+    font-weight: 400;
     font-style: normal;
 }
