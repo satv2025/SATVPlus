@@ -87,10 +87,10 @@ function shortenTitle(raw) {
     if (!s) return "";
 
     const m = s.match(/\s(?:-|—|:|\|)\s/);
-    if (!m) return s.length > 40 ? s.slice(0, 40).trimEnd() + "…" : s;
+    if (!m) return s;
 
     const idx = m.index ?? -1;
-    if (idx <= 0) return s.length > 40 ? s.slice(0, 40).trimEnd() + "…" : s;
+    if (idx <= 0) return s;
 
     const left = s.slice(0, idx).trim();
     const right = s.slice(idx + m[0].length).trim();
@@ -106,25 +106,29 @@ function shortenTitle(raw) {
     const rightLooksSubtitle = wordsRight.length >= 3;
 
     if (leftLooksBrandish || !rightLooksSubtitle) {
-        return s.length > 40 ? s.slice(0, 40).trimEnd() + "…" : s;
+        return s;
     }
 
-    const out = left;
-    return out.length > 34 ? out.slice(0, 34).trimEnd() + "…" : out;
+    return left;
 }
 
 function formatSeriesMeta(movie) {
-    const mm = movie.movie_meta || null;
+    const mm = movie?.movie_meta || null;
     const sc = Number(mm?.seasons_count);
     const ec = Number(mm?.episodes_count);
 
-    if (Number.isFinite(sc) && sc > 0) {
-        if (sc === 1) return "1 temporada";
+    if (Number.isFinite(sc) && sc >= 2) {
         return `${sc} temporadas`;
     }
+
     if (Number.isFinite(ec) && ec > 0) {
         return `${ec} ${plural(ec, "episodio", "episodios")}`;
     }
+
+    if (Number.isFinite(sc) && sc === 1) {
+        return "1 temporada";
+    }
+
     return "Serie";
 }
 
@@ -1084,13 +1088,15 @@ async function main() {
     const mm = movie.movie_meta || null;
 
     if (movie.category === "series") {
-        const seasonsCount = mm?.seasons_count ?? null;
-        const epsCount = mm?.episodes_count ?? null;
+        const seasonsCount = Number(mm?.seasons_count);
+        const epsCount = Number(mm?.episodes_count);
 
-        if (typeof seasonsCount === "number" && seasonsCount > 0) {
+        if (Number.isFinite(seasonsCount) && seasonsCount >= 2) {
             right = `${seasonsCount} ${plural(seasonsCount, "temporada", "temporadas")}`;
-        } else if (typeof epsCount === "number" && epsCount > 0) {
+        } else if (Number.isFinite(epsCount) && epsCount > 0) {
             right = `${epsCount} ${plural(epsCount, "episodio", "episodios")}`;
+        } else if (Number.isFinite(seasonsCount) && seasonsCount === 1) {
+            right = "1 temporada";
         }
     } else {
         right = formatDuration(movie.duration_minutes);
