@@ -62,6 +62,50 @@ function isPositiveIntegerLike(value) {
 }
 
 /* ===========================
+   Episode title wrapped font helper
+=========================== */
+
+let __episodeTitleWrappedRaf = 0;
+
+function applyCondensedFontToWrappedEpisodeTitles(root = document) {
+    const titles = root.querySelectorAll("h4.episode-title");
+
+    titles.forEach((title) => {
+        title.classList.remove("episode-title--wrapped");
+
+        const style = window.getComputedStyle(title);
+
+        let lineHeight = parseFloat(style.lineHeight);
+        if (!Number.isFinite(lineHeight) || lineHeight <= 0) {
+            const fontSize = parseFloat(style.fontSize) || 16;
+            lineHeight = fontSize * 1.2;
+        }
+
+        const rect = title.getBoundingClientRect();
+        const height = rect.height;
+
+        if (!Number.isFinite(height) || height <= 0) return;
+
+        const lines = Math.round(height / lineHeight);
+
+        if (lines >= 2) {
+            title.classList.add("episode-title--wrapped");
+        }
+    });
+}
+
+function scheduleApplyCondensedFontToWrappedEpisodeTitles(root = document) {
+    if (__episodeTitleWrappedRaf) {
+        cancelAnimationFrame(__episodeTitleWrappedRaf);
+    }
+
+    __episodeTitleWrappedRaf = requestAnimationFrame(() => {
+        __episodeTitleWrappedRaf = 0;
+        applyCondensedFontToWrappedEpisodeTitles(root);
+    });
+}
+
+/* ===========================
    PUBLISH STATE (movies.publish_state)
 =========================== */
 
@@ -1083,6 +1127,7 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
 
     moreGrid.innerHTML = htmlParts.join("");
     bindMoreCardNavigation(moreGrid);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(moreGrid);
 }
 
 /* ===========================
@@ -1422,6 +1467,7 @@ async function main() {
             });
 
             bindEpisodeCardNavigation(parent, movie.id);
+            scheduleApplyCondensedFontToWrappedEpisodeTitles(parent);
             return;
         }
 
@@ -1431,6 +1477,7 @@ async function main() {
         episodesGrid.innerHTML = list.map(ep => renderEpisodeCardHtml({ ep, fallbackThumb, esc })).join("");
 
         bindEpisodeCardNavigation(episodesGrid, movie.id);
+        scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);
     }
 
     document.addEventListener("click", (ev) => {
@@ -1442,6 +1489,10 @@ async function main() {
 
     document.addEventListener("keydown", (ev) => {
         if (ev.key === "Escape") closeDropdown();
+    });
+
+    window.addEventListener("resize", () => {
+        scheduleApplyCondensedFontToWrappedEpisodeTitles(document);
     });
 
     renderSeasonSelector();

@@ -30,8 +30,6 @@
     box-sizing: border-box;
 }
 
-.more-card-thumb-wrap:hover {}
-
 .season-title {
     font-weight: 700;
     font-size: 18px;
@@ -419,16 +417,16 @@ a#watch-btn[data-mode="countdown"] {
     overflow: visible;
     background: #1A1D2500;
     border-radius: var(--ep-radius);
-    border: none;
     outline: none;
     cursor: pointer;
     z-index: 0;
     transition: background .2s ease, scale .2s ease, transform .2s ease, border-color .2s ease;
     min-height: 0;
+    border: 2px solid transparent;
 }
 
 .more-card:hover {
-    transform: scale(1.04);
+    border: 2px solid #fff;
 }
 
 .episode-card:hover {
@@ -441,7 +439,7 @@ a#watch-btn[data-mode="countdown"] {
     display: block;
     object-fit: cover;
     height: auto;
-    background: #0f1118;
+    background: #0f111800;
     transform: scale(1);
     transform-origin: center;
     /* crece hacia afuera (arriba + costados) */
@@ -449,6 +447,14 @@ a#watch-btn[data-mode="countdown"] {
     position: relative;
     z-index: 1;
     border-radius: .25em;
+}
+
+#episodes-grid .episode-card .episode-thumb {
+    border: 2px solid transparent;
+}
+
+#episodes-grid .episode-card .episode-thumb:hover {
+    border: 2px solid #fff;
 }
 
 .episode-body {
