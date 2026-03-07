@@ -1,5 +1,6 @@
 // /js/api.js
 import { supabase } from "./supabaseClient.js";
+import { CONFIG } from "./config.js";
 
 /* =========================================================
    HELPERS
@@ -24,6 +25,11 @@ const MOVIE_CARD_FIELDS = `
   publish_state_text
 `;
 
+const GEO_COUNTRY_CACHE_KEY = "satv_geo_country_v2";
+const COUNTRY_META_CACHE_PREFIX = "satv_country_meta_v1";
+const GEO_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
+const COUNTRY_META_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+
 function clampLimit(limit, min = 1, max = 100, fallback = 24) {
   const n = Number(limit);
   if (!Number.isFinite(n)) return fallback;
@@ -31,8 +37,6 @@ function clampLimit(limit, min = 1, max = 100, fallback = 24) {
 }
 
 function normalizeEmbeddedOne(value) {
-  // Supabase normalmente devuelve objeto en many-to-one,
-  // pero esto evita romper si llega array por alguna configuración/join.
   if (Array.isArray(value)) return value[0] || null;
   return value || null;
 }
@@ -44,6 +48,236 @@ function normalizeMovieMeta(row) {
     : (row.movie_meta || null);
 
   return { ...row, movie_meta: mm };
+}
+
+function normalizeCountryCode(value) {
+  return String(value || "").trim().toUpperCase().slice(0, 2);
+}
+
+function normalizeLangCode(value) {
+  return String(value || "").trim();
+}
+
+function getLanguageBase(value) {
+  return normalizeLangCode(value).split("-")[0].toLowerCase();
+}
+
+function getStorageItem(storage, key) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function setStorageItem(storage, key, value) {
+  try {
+    storage.setItem(key, value);
+  } catch { }
+}
+
+function getCachedJson(storage, key, ttlMs) {
+  try {
+    const raw = storage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const ts = Number(parsed?.ts || 0);
+    if (!ts) return null;
+    if ((Date.now() - ts) > ttlMs) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedJson(storage, key, value) {
+  try {
+    storage.setItem(key, JSON.stringify({
+      ...value,
+      ts: Date.now()
+    }));
+  } catch { }
+}
+
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 4000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: ctrl.signal
+    });
+
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status} at ${url}`);
+      err.status = res.status;
+      throw err;
+    }
+
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function getNavigatorLanguages() {
+  if (typeof navigator === "undefined") return [];
+  const langs = Array.isArray(navigator.languages) && navigator.languages.length
+    ? navigator.languages
+    : [navigator.language];
+
+  return langs.map(normalizeLangCode).filter(Boolean);
+}
+
+function getBrowserRegionFallback() {
+  const langs = getNavigatorLanguages();
+
+  for (const lang of langs) {
+    const parts = lang.split("-");
+    if (parts.length >= 2) {
+      const region = normalizeCountryCode(parts[1]);
+      if (region) return region;
+    }
+
+    try {
+      if (typeof Intl?.Locale === "function") {
+        const locale = new Intl.Locale(lang);
+        const region = normalizeCountryCode(locale?.region);
+        if (region) return region;
+      }
+    } catch { }
+  }
+
+  return null;
+}
+
+/* =========================================================
+   LANGUAGE / COUNTRY
+========================================================= */
+
+export function getPreferredDeviceLanguage() {
+  const langs = getNavigatorLanguages();
+
+  for (const lang of langs) {
+    if (getLanguageBase(lang) !== "es") return lang;
+  }
+
+  return langs[0] || "en-US";
+}
+
+export async function detectConnectionCountryCode() {
+  const cached = getCachedJson(sessionStorage, GEO_COUNTRY_CACHE_KEY, GEO_CACHE_TTL_MS);
+  if (cached?.countryCode) return normalizeCountryCode(cached.countryCode);
+
+  const endpoint = String(CONFIG?.GEO_COUNTRY_ENDPOINT || "https://ipwho.is/").trim();
+
+  try {
+    const json = await fetchJsonWithTimeout(endpoint, {
+      method: "GET",
+      headers: { "Accept": "application/json" }
+    }, 4000);
+
+    const countryCode = normalizeCountryCode(
+      json?.country_code ||
+      json?.countryCode ||
+      json?.country_code_iso2 ||
+      json?.location?.country_code
+    );
+
+    if (countryCode) {
+      setCachedJson(sessionStorage, GEO_COUNTRY_CACHE_KEY, { countryCode });
+      return countryCode;
+    }
+  } catch { }
+
+  return getBrowserRegionFallback();
+}
+
+export async function fetchCountryLanguageMeta(countryCode) {
+  const cc = normalizeCountryCode(countryCode);
+  if (!cc) return null;
+
+  const cacheKey = `${COUNTRY_META_CACHE_PREFIX}:${cc}`;
+  const cached = getCachedJson(sessionStorage, cacheKey, COUNTRY_META_CACHE_TTL_MS);
+  if (cached?.countryCode) {
+    return {
+      countryCode: cached.countryCode,
+      languages: cached.languages || {},
+      nameEs: cached.nameEs || cc,
+      nameEn: cached.nameEn || cc
+    };
+  }
+
+  const url = `https://restcountries.com/v3.1/alpha/${encodeURIComponent(cc)}?fields=cca2,languages,name`;
+  const json = await fetchJsonWithTimeout(url, {
+    method: "GET",
+    headers: { "Accept": "application/json" }
+  }, 5000);
+
+  const row = Array.isArray(json) ? (json[0] || null) : json;
+  if (!row) return null;
+
+  const meta = {
+    countryCode: normalizeCountryCode(row?.cca2 || cc),
+    languages: row?.languages || {},
+    nameEs: row?.name?.nativeName?.spa?.common || row?.name?.common || cc,
+    nameEn: row?.name?.common || cc
+  };
+
+  setCachedJson(sessionStorage, cacheKey, meta);
+  return meta;
+}
+
+export async function countryHasSpanishOfficialLanguage(countryCode) {
+  const meta = await fetchCountryLanguageMeta(countryCode);
+  if (!meta) return false;
+
+  const keys = Object.keys(meta.languages || {}).map((v) => String(v).toLowerCase());
+  const values = Object.values(meta.languages || {}).map((v) => String(v).toLowerCase());
+
+  return (
+    keys.includes("spa") ||
+    values.includes("spanish") ||
+    values.includes("español")
+  );
+}
+
+export async function fetchLanguagePreference(userId) {
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("lang")
+    .select("id, county, lang_code")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+export async function upsertLanguagePreference({ userId, countryCode, langCode }) {
+  if (!userId) throw new Error("Falta userId");
+  if (!countryCode) throw new Error("Falta countryCode");
+  if (!langCode) throw new Error("Falta langCode");
+
+  const payload = {
+    id: userId,
+    county: normalizeCountryCode(countryCode),
+    lang_code: normalizeLangCode(langCode)
+  };
+
+  const { data, error } = await supabase
+    .from("lang")
+    .upsert(payload, {
+      onConflict: "id",
+      ignoreDuplicates: false
+    })
+    .select("id, county, lang_code")
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || payload;
 }
 
 /* =========================================================
@@ -71,7 +305,6 @@ export async function fetchProfile(userId) {
   return data || null;
 }
 
-// (Opcional) útil para editar perfil más adelante
 export async function updateMyProfile(userId, patch = {}) {
   if (!userId) throw new Error("Falta userId");
 
@@ -83,7 +316,6 @@ export async function updateMyProfile(userId, patch = {}) {
     avatar_url: patch.avatar_url ?? undefined,
   };
 
-  // Sacar undefined
   const clean = Object.fromEntries(
     Object.entries(allowed).filter(([, v]) => v !== undefined)
   );
@@ -113,23 +345,11 @@ export async function updateMyProfile(userId, patch = {}) {
    CONTINUE WATCHING (desde watch_progress)
 ========================================================= */
 
-/**
- * Devuelve filas de watch_progress con embeds:
- * - movies
- * - episodes (si aplica)
- *
- * home.js espera:
- *   r.progress_seconds
- *   r.updated_at
- *   r.movies?.id
- *   r.episodes (opcional)
- */
 export async function fetchContinueWatching(userId, limit = 24) {
   if (!userId) return [];
 
   const safeLimit = clampLimit(limit, 1, 100, 24);
 
-  // Usamos aliases + FK explícitas para evitar ambigüedad.
   const selectWPWithDuration = `
     id,
     user_id,
@@ -178,7 +398,6 @@ export async function fetchContinueWatching(userId, limit = 24) {
     .order("updated_at", { ascending: false })
     .limit(safeLimit);
 
-  // Fallback si duration_seconds aún no existe en la tabla
   if (error && String(error.message || "").toLowerCase().includes("duration_seconds")) {
     const retry = await supabase
       .from("watch_progress")
@@ -231,9 +450,6 @@ export async function fetchByCategory(category, limit = 24) {
   return data || [];
 }
 
-/**
- * 1 movie por UUID + movie_meta
- */
 export async function fetchMovie(movieId) {
   if (!movieId) return null;
 
@@ -263,10 +479,6 @@ export async function fetchMovie(movieId) {
   return normalizeMovieMeta(row);
 }
 
-/**
- * TE PODRÍA GUSTAR
- * Trae movies excluyendo la UUID actual (con movie_meta para temporadas/episodios)
- */
 export async function fetchMoreExcluding(movieId, limit = 24) {
   const safeLimit = clampLimit(limit, 1, 100, 24);
 

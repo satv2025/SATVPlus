@@ -184,6 +184,7 @@ svg {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
+  backdrop-filter: blur(32px);
 }
 
 /* Nav layout */
@@ -291,8 +292,6 @@ img.brand-logo,
   font-weight: 800;
   cursor: pointer;
   text-decoration: none;
-
-  min-height: var(--control-h);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -319,13 +318,12 @@ button#btn-logout {
 
 .pill {
   background: #2563eb;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: var(--ep-radius);
   color: #ffffff;
   font-size: 15px;
   text-decoration: none;
   opacity: 1;
-
   min-height: 38px;
   display: inline-flex;
   align-items: center;
@@ -2391,5 +2389,172 @@ media-player {
 
   .video-wrap {
     max-height: 78vh;
+  }
+}
+
+/* ================= LANG PROMPT MODAL ================= */
+body.lang-modal-open {
+  overflow: hidden;
+}
+
+.lang-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: grid;
+  place-items: center;
+  padding:
+    max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgba(3, 6, 12, 0.72);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+}
+
+.lang-modal-backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lang-modal {
+  width: min(560px, calc(100vw - 24px));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .03)),
+    var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius2);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transform: translateY(8px) scale(.985);
+  transition: transform .18s ease, opacity .18s ease;
+  opacity: 0;
+}
+
+.lang-modal-backdrop.show .lang-modal {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.lang-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 0 16px;
+}
+
+.lang-modal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--satvblue);
+  box-shadow: 0 0 0 6px rgba(37, 99, 235, .18);
+  flex: 0 0 auto;
+}
+
+.lang-modal-title {
+  margin: 0;
+  font-size: clamp(16px, .8vw + 13px, 20px);
+  line-height: 1.15;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.lang-modal-body {
+  padding: 14px 16px 16px 16px;
+}
+
+.lang-modal-copy {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.55;
+  font-size: clamp(13px, .45vw + 11px, 15px);
+}
+
+.lang-modal-copy+.lang-modal-copy {
+  margin-top: 10px;
+  color: var(--muted);
+}
+
+.lang-modal-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-radius: var(--ep-radius);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .04);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.lang-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 16px 16px 16px;
+  flex-wrap: wrap;
+}
+
+.lang-modal-actions .btn {
+  min-width: 140px;
+}
+
+.lang-modal-close {
+  margin-left: auto;
+  appearance: none;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, .04);
+  color: var(--muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.lang-modal-close:hover {
+  background: rgba(255, 255, 255, .08);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.lang-modal-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 768px) {
+  .lang-modal {
+    width: min(100%, 520px);
+  }
+
+  .lang-modal-head {
+    padding: 14px 14px 0 14px;
+  }
+
+  .lang-modal-body {
+    padding: 12px 14px 14px 14px;
+  }
+
+  .lang-modal-actions {
+    padding: 0 14px 14px 14px;
+  }
+
+  .lang-modal-actions .btn,
+  .lang-modal-actions .pill {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .lang-modal-backdrop,
+  .lang-modal {
+    transition: none !important;
   }
 }
