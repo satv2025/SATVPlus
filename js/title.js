@@ -100,7 +100,7 @@ function shortenTitle(raw) {
 
     const leftLooksBrandish =
         wordsLeft.length <= 1 ||
-        /[%0-9]/.test(left) ||
+        /[%]/.test(left) ||
         /^[A-Z0-9%]+$/.test(left.replace(/\s+/g, ""));
 
     const rightLooksSubtitle = wordsRight.length >= 3;
@@ -118,18 +118,19 @@ function formatSeriesMeta(movie) {
     const ec = Number(mm?.episodes_count);
 
     if (Number.isFinite(sc) && sc >= 2) {
-        return `${sc} temporadas`;
-    }
-
-    if (Number.isFinite(ec) && ec > 0) {
-        return `${ec} ${plural(ec, "episodio", "episodios")}`;
+        return `${sc} ${plural(sc, "temporada", "temporadas")}`;
     }
 
     if (Number.isFinite(sc) && sc === 1) {
-        return "1 temporada";
+        if (Number.isFinite(ec) && ec === 1) return "1 episodio";
+        if (Number.isFinite(ec) && ec >= 2) return `${ec} episodios`;
+        return "";
     }
 
-    return "Serie";
+    if (Number.isFinite(ec) && ec === 1) return "1 episodio";
+    if (Number.isFinite(ec) && ec >= 2) return `${ec} episodios`;
+
+    return "";
 }
 
 function getMoreMetaLine(movie) {
@@ -1093,10 +1094,20 @@ async function main() {
 
         if (Number.isFinite(seasonsCount) && seasonsCount >= 2) {
             right = `${seasonsCount} ${plural(seasonsCount, "temporada", "temporadas")}`;
-        } else if (Number.isFinite(epsCount) && epsCount > 0) {
-            right = `${epsCount} ${plural(epsCount, "episodio", "episodios")}`;
         } else if (Number.isFinite(seasonsCount) && seasonsCount === 1) {
-            right = "1 temporada";
+            if (Number.isFinite(epsCount) && epsCount === 1) {
+                right = "1 episodio";
+            } else if (Number.isFinite(epsCount) && epsCount >= 2) {
+                right = `${epsCount} episodios`;
+            } else {
+                right = "";
+            }
+        } else if (Number.isFinite(epsCount) && epsCount === 1) {
+            right = "1 episodio";
+        } else if (Number.isFinite(epsCount) && epsCount >= 2) {
+            right = `${epsCount} episodios`;
+        } else {
+            right = "";
         }
     } else {
         right = formatDuration(movie.duration_minutes);
