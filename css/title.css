@@ -286,7 +286,7 @@ a#watch-btn[data-mode="countdown"] {
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    min-width: 231px;
+    max-width: 258px;
     border: 1px solid rgba(255, 255, 255, .08);
     background: rgb(3 19 55);
 
@@ -296,6 +296,7 @@ a#watch-btn[data-mode="countdown"] {
     z-index: 50;
     box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
     overflow: hidden;
+    width: 100%;
 }
 
 /* Items: SIN padding lateral (0) */
