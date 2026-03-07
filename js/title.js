@@ -72,6 +72,7 @@ function applyCondensedFontToWrappedEpisodeTitles(root = document) {
 
     titles.forEach((title) => {
         title.classList.remove("episode-title--wrapped");
+        title.style.removeProperty("font-family");
 
         const style = window.getComputedStyle(title);
 
@@ -81,15 +82,18 @@ function applyCondensedFontToWrappedEpisodeTitles(root = document) {
             lineHeight = fontSize * 1.2;
         }
 
-        const rect = title.getBoundingClientRect();
-        const height = rect.height;
+        const scrollHeight = title.scrollHeight;
+        const clientHeight = title.clientHeight;
+        const rectHeight = title.getBoundingClientRect().height;
+        const renderedHeight = Math.max(scrollHeight, clientHeight, rectHeight);
 
-        if (!Number.isFinite(height) || height <= 0) return;
+        if (!Number.isFinite(renderedHeight) || renderedHeight <= 0) return;
 
-        const lines = Math.round(height / lineHeight);
+        const isWrapped = renderedHeight > (lineHeight * 1.35);
 
-        if (lines >= 2) {
+        if (isWrapped) {
             title.classList.add("episode-title--wrapped");
+            title.style.setProperty("font-family", "HBOMaxSansCond", "important");
         }
     });
 }
@@ -100,8 +104,10 @@ function scheduleApplyCondensedFontToWrappedEpisodeTitles(root = document) {
     }
 
     __episodeTitleWrappedRaf = requestAnimationFrame(() => {
-        __episodeTitleWrappedRaf = 0;
-        applyCondensedFontToWrappedEpisodeTitles(root);
+        __episodeTitleWrappedRaf = requestAnimationFrame(() => {
+            __episodeTitleWrappedRaf = 0;
+            applyCondensedFontToWrappedEpisodeTitles(root);
+        });
     });
 }
 
@@ -1494,6 +1500,12 @@ async function main() {
     window.addEventListener("resize", () => {
         scheduleApplyCondensedFontToWrappedEpisodeTitles(document);
     });
+
+    if (document.fonts?.ready) {
+        document.fonts.ready.then(() => {
+            scheduleApplyCondensedFontToWrappedEpisodeTitles(document);
+        }).catch(() => { });
+    }
 
     renderSeasonSelector();
     renderEpisodesGrid();
