@@ -56,6 +56,11 @@ function row(label, value, esc) {
     </div>`;
 }
 
+function isPositiveIntegerLike(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 1 && Number.isInteger(n);
+}
+
 /* ===========================
    PUBLISH STATE (movies.publish_state)
 =========================== */
@@ -76,6 +81,69 @@ function getMoviePublishStateLabel(movie) {
     if (state === "other") return custom || "Otro";
 
     return "Público";
+}
+
+/* ===========================
+   SERIES COUNTS (robusto desde episodes)
+=========================== */
+
+function deriveSeriesCountsFromEpisodes(episodes) {
+    const list = Array.isArray(episodes) ? episodes : [];
+
+    const seasonSet = new Set();
+    let episodesCount = 0;
+
+    for (const ep of list) {
+        episodesCount += 1;
+
+        const seasonRaw = ep?.season;
+        if (seasonRaw !== null && seasonRaw !== undefined && seasonRaw !== "") {
+            seasonSet.add(String(seasonRaw));
+        }
+    }
+
+    return {
+        seasonsCount: seasonSet.size,
+        episodesCount
+    };
+}
+
+function resolveSeriesCounts(movie, episodes) {
+    const fromEpisodes = deriveSeriesCountsFromEpisodes(episodes);
+    const mm = movie?.movie_meta || null;
+
+    const metaSeasons = Number(mm?.seasons_count);
+    const metaEpisodes = Number(mm?.episodes_count);
+
+    const seasonsCount = fromEpisodes.seasonsCount >= 1
+        ? fromEpisodes.seasonsCount
+        : (isPositiveIntegerLike(metaSeasons) ? metaSeasons : 0);
+
+    const episodesCount = fromEpisodes.episodesCount >= 1
+        ? fromEpisodes.episodesCount
+        : (isPositiveIntegerLike(metaEpisodes) ? metaEpisodes : 0);
+
+    return {
+        seasonsCount,
+        episodesCount
+    };
+}
+
+function formatSeriesMetaFromCounts({ seasonsCount, episodesCount }) {
+    if (Number.isFinite(seasonsCount) && seasonsCount >= 2) {
+        return `${seasonsCount} ${plural(seasonsCount, "temporada", "temporadas")}`;
+    }
+
+    if (Number.isFinite(seasonsCount) && seasonsCount === 1) {
+        if (Number.isFinite(episodesCount) && episodesCount === 1) return "1 episodio";
+        if (Number.isFinite(episodesCount) && episodesCount >= 2) return `${episodesCount} episodios`;
+        return "";
+    }
+
+    if (Number.isFinite(episodesCount) && episodesCount === 1) return "1 episodio";
+    if (Number.isFinite(episodesCount) && episodesCount >= 2) return `${episodesCount} episodios`;
+
+    return "";
 }
 
 /* ===========================
@@ -113,24 +181,8 @@ function shortenTitle(raw) {
 }
 
 function formatSeriesMeta(movie) {
-    const mm = movie?.movie_meta || null;
-    const sc = Number(mm?.seasons_count);
-    const ec = Number(mm?.episodes_count);
-
-    if (Number.isFinite(sc) && sc >= 2) {
-        return `${sc} ${plural(sc, "temporada", "temporadas")}`;
-    }
-
-    if (Number.isFinite(sc) && sc === 1) {
-        if (Number.isFinite(ec) && ec === 1) return "1 episodio";
-        if (Number.isFinite(ec) && ec >= 2) return `${ec} episodios`;
-        return "";
-    }
-
-    if (Number.isFinite(ec) && ec === 1) return "1 episodio";
-    if (Number.isFinite(ec) && ec >= 2) return `${ec} episodios`;
-
-    return "";
+    const counts = resolveSeriesCounts(movie, movie?.__episodes_for_meta || []);
+    return formatSeriesMetaFromCounts(counts);
 }
 
 function getMoreMetaLine(movie) {
@@ -154,19 +206,30 @@ function pickEpisodeThumb(ep) {
 
 function groupBySeason(episodes) {
     const map = new Map();
+
     for (const ep of episodes || []) {
-        const s = ep.season ?? 1;
+        const seasonValue = ep?.season;
+        const s = (seasonValue !== null && seasonValue !== undefined) ? seasonValue : 1;
+
         if (!map.has(s)) map.set(s, []);
         map.get(s).push(ep);
     }
+
     for (const [, list] of map) {
         list.sort((a, b) => (a.episode_number ?? 0) - (b.episode_number ?? 0));
     }
-    return [...map.entries()].sort((a, b) => a[0] - b[0]);
+
+    return [...map.entries()].sort((a, b) => {
+        const na = Number(a[0]);
+        const nb = Number(b[0]);
+
+        if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+        return String(a[0]).localeCompare(String(b[0]), "es");
+    });
 }
 
 function clampSeason(seasons, desired) {
-    if (!seasons?.length) return 1;
+    if (!seasons?.length) return seasons?.[0] ?? 1;
     if (seasons.includes(desired)) return desired;
     return seasons[0];
 }
@@ -183,7 +246,14 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc }) {
     const s = ep.season ?? "";
     const n = ep.episode_number ?? "";
 
-    const tag = (s && n) ? `T${s}E${n}` : (n ? `E${n}` : (s ? `T${s}` : ""));
+    const tag = (s !== "" && s != null && n !== "" && n != null)
+        ? `T${s}E${n}`
+        : (n !== "" && n != null)
+            ? `E${n}`
+            : (s !== "" && s != null)
+                ? `T${s}`
+                : "";
+
     const epTitleText = tag ? `${tag} ${ep.title || ""}`.trim() : (ep.title || "");
     const epTitle = esc(epTitleText);
 
@@ -933,10 +1003,21 @@ function getMoreCardBadgeLabel(movie) {
     return "";
 }
 
-function renderMoreCardHtml({ item, esc }) {
+async function renderMoreCardHtml({ item, esc, api }) {
     const thumb = item.thumbnail_url || item.banner_url || "";
     const title = esc(shortenTitle(item.title || ""));
-    const meta = esc(getMoreMetaLine(item));
+    let meta = "";
+
+    if (item.category === "series" && typeof api?.fetchEpisodes === "function") {
+        try {
+            const eps = await api.fetchEpisodes(item.id);
+            item.__episodes_for_meta = Array.isArray(eps) ? eps : [];
+        } catch {
+            item.__episodes_for_meta = [];
+        }
+    }
+
+    meta = esc(getMoreMetaLine(item));
     const badgeLabel = getMoreCardBadgeLabel(item);
 
     return `
@@ -994,7 +1075,13 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
     }
 
     moreSection.classList.remove("hidden");
-    moreGrid.innerHTML = list.map(item => renderMoreCardHtml({ item, esc })).join("");
+
+    const htmlParts = [];
+    for (const item of list) {
+        htmlParts.push(await renderMoreCardHtml({ item, esc, api }));
+    }
+
+    moreGrid.innerHTML = htmlParts.join("");
     bindMoreCardNavigation(moreGrid);
 }
 
@@ -1045,6 +1132,18 @@ async function main() {
     const movie = await api.fetchMovie(movieId);
     if (!movie) return;
 
+    let episodes = [];
+    if (movie.category === "series" && typeof api.fetchEpisodes === "function") {
+        try {
+            episodes = await api.fetchEpisodes(movie.id);
+        } catch (e) {
+            console.warn("[title] no se pudieron cargar episodios para meta robusta:", e);
+            episodes = [];
+        }
+    }
+
+    movie.__episodes_for_meta = episodes;
+
     document.title = `${movie.title || "Título"} · SATV+`;
 
     await bindMyListButton(myListBtn, movie);
@@ -1089,26 +1188,8 @@ async function main() {
     const mm = movie.movie_meta || null;
 
     if (movie.category === "series") {
-        const seasonsCount = Number(mm?.seasons_count);
-        const epsCount = Number(mm?.episodes_count);
-
-        if (Number.isFinite(seasonsCount) && seasonsCount >= 2) {
-            right = `${seasonsCount} ${plural(seasonsCount, "temporada", "temporadas")}`;
-        } else if (Number.isFinite(seasonsCount) && seasonsCount === 1) {
-            if (Number.isFinite(epsCount) && epsCount === 1) {
-                right = "1 episodio";
-            } else if (Number.isFinite(epsCount) && epsCount >= 2) {
-                right = `${epsCount} episodios`;
-            } else {
-                right = "";
-            }
-        } else if (Number.isFinite(epsCount) && epsCount === 1) {
-            right = "1 episodio";
-        } else if (Number.isFinite(epsCount) && epsCount >= 2) {
-            right = `${epsCount} episodios`;
-        } else {
-            right = "";
-        }
+        const counts = resolveSeriesCounts(movie, episodes);
+        right = formatSeriesMetaFromCounts(counts);
     } else {
         right = formatDuration(movie.duration_minutes);
     }
@@ -1160,7 +1241,6 @@ async function main() {
     seasonFilter.classList.remove("hidden");
     episodesGrid.classList.remove("hidden");
 
-    const episodes = await api.fetchEpisodes(movie.id);
     if (!episodes?.length) {
         episodesGrid.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
         return;
@@ -1186,7 +1266,7 @@ async function main() {
 
     function setSeasonClassOnFirstGrid(seasonNum) {
         clearSeasonClassOnFirstGrid();
-        episodesGrid.classList.add(`episodes-grid-s${seasonNum}`);
+        episodesGrid.classList.add(`episodes-grid-s${String(seasonNum).replace(/[^\w-]/g, "_")}`);
     }
 
     function createTitleNode(seasonNum, count) {
@@ -1200,7 +1280,7 @@ async function main() {
 
     function createSiblingGridForSeason(seasonNum) {
         const g = document.createElement("div");
-        g.className = `episodes-grid episodes-grid-s${seasonNum}`;
+        g.className = `episodes-grid episodes-grid-s${String(seasonNum).replace(/[^\w-]/g, "_")}`;
         g.dataset.generated = "1";
         g.dataset.season = String(seasonNum);
         return g;
@@ -1233,7 +1313,7 @@ async function main() {
         if (seasons.length === 1) {
             seasonFilter.innerHTML = `
         <div class="season-chip active" aria-current="true">
-          Temporada ${seasons[0]}
+          Temporada ${esc(String(seasons[0]))}
         </div>
       `;
             return;
@@ -1250,7 +1330,7 @@ async function main() {
              tabindex="0"
              aria-haspopup="true"
              aria-expanded="false">
-          ${esc(currentLabel)}
+          ${esc(String(currentLabel))}
         </div>
 
         <div class="dropdown-menu hidden" role="menu">
@@ -1258,8 +1338,8 @@ async function main() {
             <div class="dropdown-item ${s === currentSeason ? "active" : ""}"
                  role="menuitem"
                  tabindex="0"
-                 data-season="${s}">
-              Temporada ${s}
+                 data-season="${esc(String(s))}">
+              Temporada ${esc(String(s))}
               <span class="meta-dropitem">(${list.length} ${plural(list.length, "episodio", "episodios")})</span>
             </div>
           `).join("")}
@@ -1298,12 +1378,15 @@ async function main() {
                     return;
                 }
 
-                const s = Number(item.dataset.season);
-                if (Number.isFinite(s)) {
-                    currentSeason = s;
-                    renderSeasonSelector();
-                    renderEpisodesGrid();
-                    closeDropdown();
+                const raw = item.dataset.season;
+                if (raw !== undefined) {
+                    const matched = seasons.find((s) => String(s) === String(raw));
+                    if (matched !== undefined) {
+                        currentSeason = matched;
+                        renderSeasonSelector();
+                        renderEpisodesGrid();
+                        closeDropdown();
+                    }
                 }
             };
 
@@ -1344,7 +1427,7 @@ async function main() {
 
         setSeasonClassOnFirstGrid(currentSeason);
 
-        const list = grouped.find(([s]) => s === currentSeason)?.[1] || [];
+        const list = grouped.find(([s]) => String(s) === String(currentSeason))?.[1] || [];
         episodesGrid.innerHTML = list.map(ep => renderEpisodeCardHtml({ ep, fallbackThumb, esc })).join("");
 
         bindEpisodeCardNavigation(episodesGrid, movie.id);
