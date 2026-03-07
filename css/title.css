@@ -441,23 +441,26 @@ a#watch-btn[data-mode="countdown"] {
     border-radius: .25em;
 }
 
-#episode-grid .episode-card .episode-thumb {
+#episodes-grid .episode-card .episode-thumb {
     border: 2px solid transparent;
     transition: border 0.3s ease;
 }
 
-#episode-grid .episode-card .episode-thumb:hover {
+#episodes-grid .episode-card .episode-thumb:hover {
     border: 2px solid #fff;
+}
+
+.more-card-thumb-wrap .episode-thumb {
+    border: none !important;
 }
 
 .more-card-thumb-wrap {
     border-radius: .25em;
-    border: 2px solid transparent;
-    transition: border 0.3s ease;
+    transition: outline 0.3s ease;
 }
 
 .more-card-thumb-wrap:hover {
-    border: 2px solid #fff;
+    outline: 2px solid #fff;
 }
 
 
