@@ -450,19 +450,13 @@ a#watch-btn[data-mode="countdown"] {
     border: 2px solid #fff;
 }
 
-.more-card-thumb-wrap .episode-thumb {
-    border: none !important;
-}
-
 .more-card-thumb-wrap {
     border-radius: .25em;
-    transition: outline 0.3s ease;
 }
 
 .more-card-thumb-wrap:hover {
     outline: 2px solid #fff;
 }
-
 
 .episode-body {
     position: relative;
