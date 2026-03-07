@@ -283,7 +283,7 @@ function bindEpisodeCardNavigation(rootEl, movieId) {
 }
 
 /* ===========================
-   WATCH BUTTON: Ver ahora / Reanudar / Countdown Live / Status
+   WATCH BUTTON: Reproducir / Reanudar / Countdown Live / Status
 =========================== */
 
 let __liveCountdownTimer = null;
@@ -374,8 +374,8 @@ function setWatchBtnVerAhora(watchBtn, movie) {
         ? `/watch?series=${encodeURIComponent(movie.id)}`
         : `/watch?movie=${encodeURIComponent(movie.id)}`;
 
-    watchBtn.setAttribute("aria-label", "Ver ahora");
-    watchBtn.innerHTML = `Ver ahora <span aria-hidden="true">▶</span>`;
+    watchBtn.setAttribute("aria-label", "Reproducir");
+    watchBtn.innerHTML = `Reproducir <span aria-hidden="true">▶</span>`;
     watchBtn.dataset.mode = "now";
 }
 
@@ -443,8 +443,8 @@ function setWatchBtnStatusClickable(watchBtn, movie, label) {
         : `/watch?movie=${encodeURIComponent(movie.id)}`;
 
     watchBtn.dataset.mode = "status-clickable";
-    watchBtn.setAttribute("aria-label", label || "Ver ahora");
-    watchBtn.innerHTML = `${label || "Ver ahora"} <span aria-hidden="true">▶</span>`;
+    watchBtn.setAttribute("aria-label", label || "Reproducir");
+    watchBtn.innerHTML = `${label || "Reproducir"} <span aria-hidden="true">▶</span>`;
 }
 
 /**
@@ -1168,7 +1168,7 @@ async function main() {
         const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
 
         if (!isUpcomingLiveCountdown) {
-            if (publishState === "other" || publishState === "live") {
+            if (publishState === "live") {
                 setWatchBtnStatusClickable(watchBtn, movie, publishStateLabel);
             } else {
                 setWatchBtnVerAhora(watchBtn, movie);

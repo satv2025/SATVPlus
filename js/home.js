@@ -734,7 +734,7 @@ function renderHomeHeroItem(movie, { userId } = {}) {
           ${synopsis ? `<p class="home-hero-synopsis">${synopsis}</p>` : ""}
 
           <div class="home-hero-actions">
-            <a class="btn" href="${titleHref}">Ver ahora <span aria-hidden="true"> ▶</span></a>
+            <a class="btn" href="${titleHref}">Reproducir <span aria-hidden="true"> ▶</span></a>
 
             <button
               class="btn ghost home-hero-mylist"
