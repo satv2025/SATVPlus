@@ -16,7 +16,7 @@
     --ep-body-h: auto;
     --ep-pad-x: 10px;
     --ep-pad-y: 18px;
-    --ep-gap: 12px;
+    --ep-gap: 10px;
     --ep-radius: .25em;
     --line: rgba(255, 255, 255, .12);
     --text: rgba(243, 244, 246, .92);
@@ -435,7 +435,6 @@ a#watch-btn[data-mode="countdown"] {
     object-fit: cover;
     height: auto;
     background: #0f111800;
-    transform: scale(1);
     transform-origin: center;
     position: relative;
     z-index: 1;
@@ -443,20 +442,20 @@ a#watch-btn[data-mode="countdown"] {
 }
 
 #episodes-grid .episode-card .episode-thumb {
-    border: 2px solid transparent;
-    transition: border 0.3s ease;
+    border: 2px solid transparent !important;
 }
 
 #episodes-grid .episode-card .episode-thumb:hover {
-    border: 2px solid #fff;
+    border-color: #fff !important;
 }
 
 .more-card-thumb-wrap {
     border-radius: .25em;
+    border: 2px solid transparent;
 }
 
 .more-card-thumb-wrap:hover {
-    outline: 2px solid #fff;
+    border-color: #fff;
 }
 
 .episode-body {
@@ -870,4 +869,6 @@ a#watch-btn[data-mode="status-clickable"]:hover {
     right: 0;
     z-index: 3;
     border-radius: 0 .25em 0 0;
+    border: 0 !important;
+    outline: none !important;
 }

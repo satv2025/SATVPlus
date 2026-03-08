@@ -93,6 +93,11 @@
   font-family: "HBOMaxSans" !important;
 }
 
+::selection {
+  background: white;
+  color: var(--bg);
+}
+
 html,
 body {
   height: 100%;
