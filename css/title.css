@@ -441,12 +441,67 @@ a#watch-btn[data-mode="countdown"] {
     border-radius: .25em;
 }
 
-#episodes-grid .episode-card .episode-thumb {
-    border: 2px solid transparent !important;
+/* =========================
+   EPISODE THUMB HOVER
+   ========================= */
+
+#episodes-grid .episode-card {
+    position: relative;
+    overflow: visible;
+    cursor: pointer;
 }
 
-#episodes-grid .episode-card .episode-thumb:hover {
-    border-color: #fff !important;
+#episodes-grid .episode-card .episode-thumb {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    height: auto;
+    border: 2px solid transparent !important;
+    border-radius: .25em;
+    transition: border-color .2s ease-in;
+    position: relative;
+    z-index: 1;
+}
+
+/* Overlay solo sobre la imagen */
+#episodes-grid .episode-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: .25em;
+    opacity: 0;
+    transition: opacity .2s ease-in;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Botón play perfectamente centrado */
+#episodes-grid .episode-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: .25em;
+    opacity: 0;
+    transition: opacity .2s ease-in;
+    pointer-events: none;
+    z-index: 3;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 65px 59px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'><circle cx='24' cy='24' r='23.5' fill='rgba(30,30,20,0.5)' stroke='white' stroke-width='1'/><g transform='translate(8 8) scale(1.35)'><path fill='white' d='M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z'/></g></svg>");
+}
+
+/* Mostrar overlay + botón */
+#episodes-grid .episode-card:hover::before,
+#episodes-grid .episode-card:hover::after {
+    opacity: 1;
 }
 
 .more-card-thumb-wrap {
