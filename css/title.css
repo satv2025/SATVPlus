@@ -1,13 +1,7 @@
 /* =========================================================
    SATV+ — TITLE PAGE (RESPONSIVE + FIXES + ALL SEASONS)
-   - FIX 1: --ep-body-h ahora se usa (altura fija del overlay)
-   - FIX 2: se eliminan empujes raros del título
-   - FIX 3: .episode-sub NO va con !important (rompía el toggle)
-   - FIX 4: overlay consistente, thumb no tapado, hover sin pisarse
-   - + DROPDOWN DIV-BASED para temporadas
-   - + ALL: mostrar todas las temporadas con header "Temporada X"
-   - + FIX BOTONES: alturas consistentes + Mi Lista (SVG/texto) centrado
-   - + PROGRESS BAR en #episodes-grid SIN wrapper box
+   - Progress adaptado SIN .episode-thumb-box
+   - El <img class="episode-thumb"> queda directo dentro de .episode-card
    ========================================================= */
 
 /* =========================
@@ -408,7 +402,6 @@ a#watch-btn[data-mode="countdown"] {
 /* =========================
    EPISODE THUMB HOVER
    ========================= */
-
 #episodes-grid .episode-card {
     position: relative;
     overflow: visible;
@@ -428,11 +421,6 @@ a#watch-btn[data-mode="countdown"] {
     z-index: 1;
 }
 
-#episodes-grid .episode-card:hover .episode-thumb {
-    border-color: #fff !important;
-}
-
-/* Overlay solo sobre la imagen */
 #episodes-grid .episode-card::before {
     content: "";
     position: absolute;
@@ -441,17 +429,12 @@ a#watch-btn[data-mode="countdown"] {
     width: 100%;
     aspect-ratio: 16 / 9;
     border-radius: .25em;
-    background-image: linear-gradient(195deg,
-            hsla(0, 0%, 9%, .7),
-            hsla(0, 0%, 9%, .5) 10%,
-            transparent 25%);
     opacity: 0;
     transition: opacity .2s ease-in;
     pointer-events: none;
     z-index: 2;
 }
 
-/* Botón play centrado */
 #episodes-grid .episode-card::after {
     content: "";
     position: absolute;
@@ -475,43 +458,8 @@ a#watch-btn[data-mode="countdown"] {
     opacity: 1;
 }
 
-/* =========================
-   PROGRESS BAR SOLO EPISODIOS
-   SIN BOX WRAPPER
-   ========================= */
-
-#episodes-grid .episode-card .episode-progress {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    display: flex;
-    align-items: flex-end;
-    pointer-events: none;
-    z-index: 4;
-}
-
-#episodes-grid .episode-card .episode-progress-track {
-    width: 100%;
-    height: 4px;
-    background: rgba(255, 255, 255, .14);
-    border-radius: 0 0 .25em .25em;
-    overflow: hidden;
-}
-
-#episodes-grid .episode-card .episode-progress-bar {
-    height: 100%;
-    width: 0;
-    background: linear-gradient(90deg, #00eaff, #2563eb);
-    border-radius: inherit;
-}
-
-/* =========================
-   MORE GRID
-   ========================= */
-
 .more-card-thumb-wrap {
+    position: relative;
     border-radius: .25em;
     border: 2px solid transparent;
 }
@@ -520,9 +468,6 @@ a#watch-btn[data-mode="countdown"] {
     border-color: #fff;
 }
 
-/* =========================
-   EPISODE BODY
-   ========================= */
 .episode-body {
     position: relative;
     left: 0;
@@ -764,7 +709,7 @@ section#more-section {
     margin-top: -1em;
 }
 
-/* Bloquear selección de texto */
+/* Bloquear selección de texto (Title page) */
 body {
     -webkit-user-select: none;
     -ms-user-select: none;
@@ -839,9 +784,9 @@ textarea,
     color: #fff;
 }
 
-/* =========================================================
+/* =========================
    WATCH BTN — ESTADOS EDITORIALES
-   ========================================================= */
+   ========================= */
 a#watch-btn[data-mode="status-disabled"],
 a#watch-btn[data-mode="countdown"] {
     background: rgba(255, 255, 255, .06) !important;
@@ -886,9 +831,9 @@ a#watch-btn[data-mode="status-clickable"] {
     }
 }
 
-/* =========================================================
-   TITLE / TE PODRÍA GUSTAR — badge dentro del thumb
-========================================================= */
+/* =========================
+   TITLE / TE PODRÍA GUSTAR — badge
+   ========================= */
 #more-grid .more-card-thumb-wrap .card-badge {
     position: absolute;
     top: 0;
@@ -897,4 +842,28 @@ a#watch-btn[data-mode="status-clickable"] {
     border-radius: 0 .25em 0 0;
     border: 0 !important;
     outline: none !important;
+}
+
+/* =========================
+   EPISODE PROGRESS — SIN WRAPPER
+   El thumb sigue siendo <img class="episode-thumb">
+   ========================= */
+#episodes-grid .episode-card .episode-progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc((100% / 16) * 9 - 4px);
+    height: 4px;
+    background: rgba(255, 255, 255, .14);
+    border-radius: 0 0 .25em .25em;
+    overflow: hidden;
+    z-index: 4;
+    pointer-events: none;
+}
+
+#episodes-grid .episode-card .episode-progress-bar {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #00eaff, #2563eb);
+    border-radius: inherit;
 }
