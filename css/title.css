@@ -1,7 +1,13 @@
 /* =========================================================
    SATV+ — TITLE PAGE (RESPONSIVE + FIXES + ALL SEASONS)
-   - Progress adaptado SIN .episode-thumb-box
-   - El <img class="episode-thumb"> queda directo dentro de .episode-card
+   - FIX 1: --ep-body-h ahora se usa (altura fija del overlay)
+   - FIX 2: se eliminan empujes raros del título
+   - FIX 3: .episode-sub NO va con !important (rompía el toggle)
+   - FIX 4: overlay consistente, thumb no tapado, hover sin pisarse
+   - + DROPDOWN DIV-BASED para temporadas
+   - + ALL: mostrar todas las temporadas con header "Temporada X"
+   - + FIX BOTONES: alturas consistentes + Mi Lista (SVG/texto) centrado
+   - + EPISODE PROGRESS pegado al pie del thumb SIN WRAPPER
    ========================================================= */
 
 /* =========================
@@ -519,7 +525,7 @@ a#watch-btn[data-mode="countdown"] {
     color: rgba(243, 244, 246, .88);
     font-size: 12px;
     line-height: 1.2;
-    display: block !important;
+    display: block;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -717,6 +723,7 @@ body {
     user-select: none;
 }
 
+/* Permití seleccionar/editar donde corresponde */
 input,
 textarea,
 [contenteditable="true"] {
@@ -846,12 +853,12 @@ a#watch-btn[data-mode="status-clickable"] {
 
 /* =========================
    EPISODE PROGRESS — SIN WRAPPER
-   El thumb sigue siendo <img class="episode-thumb">
+   Pegado al pie del thumb, sin bajarse ni salirse
    ========================= */
 #episodes-grid .episode-card .episode-progress {
     position: absolute;
-    left: 0;
-    right: 0;
+    left: 2px;
+    right: 2px;
     top: calc((100% / 16) * 9 - 4px);
     height: 4px;
     background: rgba(255, 255, 255, .14);

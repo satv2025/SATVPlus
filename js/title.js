@@ -589,10 +589,6 @@ function setWatchBtnStatusClickable(watchBtn, movie, label) {
     watchBtn.innerHTML = `${label || "Reproducir"} <span aria-hidden="true">▶</span>`;
 }
 
-/**
- * Si es live_mode y todavía no empezó => reemplaza botón por countdown.
- * Devuelve true si aplicó countdown; false si no.
- */
 function setWatchBtnLiveCountdown(watchBtn, movie) {
     clearLiveCountdownTimer();
 
