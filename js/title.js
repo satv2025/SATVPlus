@@ -271,7 +271,7 @@ function groupBySeason(episodes) {
 
     return [...map.entries()].sort((a, b) => {
         const na = Number(a[0]);
-        const nb = Number(a[0] === b[0] ? a[0] : b[0]);
+        const nb = Number(b[0]);
 
         if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
         return String(a[0]).localeCompare(String(b[0]), "es");
@@ -289,91 +289,8 @@ function scrollToEpisodes() {
     if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-/* ===========================
-   Episode progress helpers
-=========================== */
-
-function clampProgressPercent(progressSeconds, durationSeconds) {
-    const progress = Number(progressSeconds || 0);
-    const duration = Number(durationSeconds || 0);
-
-    if (!Number.isFinite(progress) || !Number.isFinite(duration) || duration <= 0) {
-        return 0;
-    }
-
-    const pct = (progress / duration) * 100;
-    return Math.max(0, Math.min(100, pct));
-}
-
-async function fetchEpisodeProgressMapForTitle({ movieId }) {
-    if (!movieId) return new Map();
-
-    try {
-        const supabase = await getAppSupabaseClient();
-        if (!supabase) {
-            console.warn("[title] supabaseClient.js no devolvió supabase (episode progress map)");
-            return new Map();
-        }
-
-        const { data: userData, error: userErr } = await supabase.auth.getUser();
-        if (userErr) {
-            console.warn("[title] getUser error (episode progress map):", userErr);
-            return new Map();
-        }
-
-        const userId = userData?.user?.id;
-        if (!userId) {
-            console.log("[title] sin sesión activa (episode progress map)");
-            return new Map();
-        }
-
-        const { data, error } = await supabase
-            .from("watch_progress")
-            .select(`
-                episode_id,
-                progress_seconds,
-                duration_seconds,
-                updated_at
-            `)
-            .eq("user_id", userId)
-            .eq("movie_id", movieId)
-            .not("episode_id", "is", null)
-            .gt("progress_seconds", 0)
-            .order("updated_at", { ascending: false });
-
-        if (error) {
-            console.warn("[title] watch_progress map query error:", error);
-            return new Map();
-        }
-
-        const map = new Map();
-
-        for (const row of data || []) {
-            const episodeId = row?.episode_id;
-            if (!episodeId) continue;
-            if (map.has(episodeId)) continue;
-
-            const percent = clampProgressPercent(row.progress_seconds, row.duration_seconds);
-
-            map.set(episodeId, {
-                episodeId,
-                progressSeconds: Number(row.progress_seconds || 0),
-                durationSeconds: Number(row.duration_seconds || 0),
-                percent,
-                updatedAt: row.updated_at || null
-            });
-        }
-
-        console.log("[title] progress map episodios:", map);
-        return map;
-    } catch (e) {
-        console.warn("[title] fetchEpisodeProgressMapForTitle error:", e);
-        return new Map();
-    }
-}
-
 /** Card HTML (episodes) */
-function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
+function renderEpisodeCardHtml({ ep, fallbackThumb, esc }) {
     const thumb = pickEpisodeThumb(ep) || fallbackThumb;
 
     const s = ep.season ?? "";
@@ -390,20 +307,9 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
     const epTitleText = tag ? `${tag} ${ep.title || ""}`.trim() : (ep.title || "");
     const epTitle = esc(epTitleText);
 
-    const progress = progressMap?.get?.(ep.id) || null;
-    const progressPercent = Math.max(0, Math.min(100, Number(progress?.percent || 0)));
-    const hasProgress = progressPercent > 0;
-
     return `
     <article class="episode-card" tabindex="0" role="link" data-episode="${ep.id}">
-      <div class="episode-thumb-box">
-        <img class="episode-thumb" src="${esc(thumb)}" alt="">
-        ${hasProgress ? `
-          <div class="episode-progress" aria-hidden="true">
-            <div class="episode-progress-bar" style="width:${progressPercent}%;"></div>
-          </div>
-        ` : ""}
-      </div>
+      <img class="episode-thumb" src="${esc(thumb)}" alt="">
       <div class="episode-body"> 
         <h4 class="episode-title">${epTitle}</h4>
         <span class="episode-sub">${esc(ep.sinopsis || "")}</span>
@@ -1278,21 +1184,12 @@ async function main() {
     if (!movie) return;
 
     let episodes = [];
-    let episodeProgressMap = new Map();
-
     if (movie.category === "series" && typeof api.fetchEpisodes === "function") {
         try {
             episodes = await api.fetchEpisodes(movie.id);
         } catch (e) {
             console.warn("[title] no se pudieron cargar episodios para meta robusta:", e);
             episodes = [];
-        }
-
-        try {
-            episodeProgressMap = await fetchEpisodeProgressMapForTitle({ movieId: movie.id });
-        } catch (e) {
-            console.warn("[title] no se pudo cargar progress map de episodios:", e);
-            episodeProgressMap = new Map();
         }
     }
 
@@ -1561,12 +1458,7 @@ async function main() {
         if (currentSeason === "all") {
             grouped.forEach(([s, list], idx) => {
                 const titleNode = createTitleNode(s, list.length);
-                const html = list.map(ep => renderEpisodeCardHtml({
-                    ep,
-                    fallbackThumb,
-                    esc,
-                    progressMap: episodeProgressMap
-                })).join("");
+                const html = list.map(ep => renderEpisodeCardHtml({ ep, fallbackThumb, esc })).join("");
 
                 if (idx === 0) {
                     setSeasonClassOnFirstGrid(s);
@@ -1588,12 +1480,7 @@ async function main() {
         setSeasonClassOnFirstGrid(currentSeason);
 
         const list = grouped.find(([s]) => String(s) === String(currentSeason))?.[1] || [];
-        episodesGrid.innerHTML = list.map(ep => renderEpisodeCardHtml({
-            ep,
-            fallbackThumb,
-            esc,
-            progressMap: episodeProgressMap
-        })).join("");
+        episodesGrid.innerHTML = list.map(ep => renderEpisodeCardHtml({ ep, fallbackThumb, esc })).join("");
 
         bindEpisodeCardNavigation(episodesGrid, movie.id);
         scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);

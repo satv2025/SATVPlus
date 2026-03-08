@@ -7,6 +7,7 @@
    - + DROPDOWN DIV-BASED para temporadas
    - + ALL: mostrar todas las temporadas con header "Temporada X"
    - + FIX BOTONES: alturas consistentes + Mi Lista (SVG/texto) centrado
+   - + PROGRESS BAR en #episodes-grid SIN wrapper box
    ========================================================= */
 
 /* =========================
@@ -66,8 +67,6 @@ span.meta-dropitem {
     inset: 0;
     pointer-events: none;
     z-index: 1;
-
-    /* Gradiente eased + micro-grain (2 capas) */
     background: linear-gradient(to top, rgb(7 9 13 / 1) 0%, rgb(7 9 13 / 0.96) 8%, rgb(7 9 13 / 0.88) 16%, rgb(7 9 13 / 0.72) 28%, rgb(7 9 13 / 0.50) 42%, rgb(7 9 13 / 0.28) 58%, rgb(7 9 13 / 0.12) 74%, rgb(7 9 13 / 0.03) 88%, rgb(7 9 13 / 0) 100%);
 }
 
@@ -129,12 +128,9 @@ span.meta-dropitem {
     align-items: center;
     justify-content: center;
     gap: 8px;
-
-    /* mismo alto visual real */
     min-height: 44px;
     line-height: 1;
     box-sizing: border-box;
-
     padding: 11px 14px;
     text-decoration: none;
     font-weight: 900;
@@ -154,7 +150,6 @@ a#watch-btn[data-mode="countdown"] {
     pointer-events: none;
 }
 
-/* Countdown secundario */
 #watch-btn .watch-meta {
     font-size: .9em;
     font-weight: 700;
@@ -165,7 +160,6 @@ a#watch-btn[data-mode="countdown"] {
     background: #2563eb;
     color: #fff;
     border-color: transparent;
-    /* iguala “masa” visual con ghost */
 }
 
 .btn-primary:hover {
@@ -204,7 +198,6 @@ a#watch-btn[data-mode="countdown"] {
     font-weight: 800;
     font-size: 13px;
     cursor: pointer;
-
     transition: scale .2s ease, transform .2s ease, background .15s ease, border-color .2s ease;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
@@ -221,8 +214,6 @@ a#watch-btn[data-mode="countdown"] {
 
 /* =========================
    DROPDOWN (DIV-BASED) COMPACTO
-   - Items sin gap
-   - Menu e items sin padding lateral
    ========================= */
 .dropdown {
     position: relative;
@@ -230,7 +221,6 @@ a#watch-btn[data-mode="countdown"] {
     align-items: center;
 }
 
-/* Trigger */
 .dropdown-btn {
     padding: 9px 12px;
     border-radius: var(--ep-radius);
@@ -281,7 +271,6 @@ a#watch-btn[data-mode="countdown"] {
     background: rgba(37, 99, 235, .55);
 }
 
-/* Menu: sin padding lateral */
 .dropdown-menu {
     position: absolute;
     top: calc(100% + 8px);
@@ -289,8 +278,6 @@ a#watch-btn[data-mode="countdown"] {
     max-width: 258px;
     border: 1px solid rgba(255, 255, 255, .08);
     background: rgb(3 19 55);
-
-    /* SIN padding lateral */
     padding: 16px 0;
     display: block;
     z-index: 50;
@@ -299,16 +286,11 @@ a#watch-btn[data-mode="countdown"] {
     width: 100%;
 }
 
-/* Items: SIN padding lateral (0) */
 .dropdown-item {
-    /* SIN padding lateral */
     padding: 12px 0;
     margin: 0;
-    /* sin márgenes */
     border: 0;
-    /* menos borde */
     border-radius: 0;
-    /* lista compacta sin “pastillitas” */
     background: transparent;
     color: rgba(243, 244, 246, .92);
     font-weight: 800;
@@ -318,23 +300,16 @@ a#watch-btn[data-mode="countdown"] {
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     outline: none;
-
-    /* para que sea clickeable fácil, alineado lindo */
     display: block;
     width: 100%;
     text-align: left;
-
-    /* texto con margen interno “visual” pero sin padding real lateral:
-       usamos indent con pseudo-elemento */
     position: relative;
 }
 
-/* “indent” sin padding: pseudo */
 .dropdown-item::before {
     content: "";
     display: inline-block;
     width: 12px;
-    /* “aire” visual sin padding */
     height: 1px;
 }
 
@@ -350,15 +325,12 @@ a#watch-btn[data-mode="countdown"] {
     background: rgba(37, 99, 235, .18);
 }
 
-/* Separador único */
 .separator {
     height: 1px;
     margin: 1rem 0.8em;
     border: 1px solid #2563eb;
-    /* sin lateral */
 }
 
-/* Item ALL */
 .dropdown-item.dropdown-all {
     font-size: 16px;
     color: rgba(243, 244, 246, .95);
@@ -368,7 +340,6 @@ a#watch-btn[data-mode="countdown"] {
     background: rgba(255, 255, 255, .08);
 }
 
-/* hidden */
 .hidden {
     display: none !important;
 }
@@ -376,14 +347,11 @@ a#watch-btn[data-mode="countdown"] {
 /* =========================
    ALL SEASONS VIEW
    ========================= */
-
-/* Contenedor de temporadas */
 .seasons-all {
     display: grid;
     gap: 18px;
 }
 
-/* Header "Temporada X" */
 .season-block-title {
     margin: 0 0 10px;
     font-weight: 900;
@@ -393,23 +361,19 @@ a#watch-btn[data-mode="countdown"] {
     opacity: .98;
 }
 
-/* Separador opcional debajo del título */
 .season-block {
     padding-top: 6px;
     border-top: 1px solid rgba(255, 255, 255, .06);
 }
 
 /* =========================
-   EPISODES GRID — 6 por línea
+   EPISODES GRID
    ========================= */
 .episodes-grid {
     display: grid;
     gap: var(--ep-gap);
     grid-template-columns: repeat(6, minmax(0, 1fr));
     align-items: stretch;
-}
-
-.episodes-grid {
     margin-bottom: 1.9em;
 }
 
@@ -464,6 +428,10 @@ a#watch-btn[data-mode="countdown"] {
     z-index: 1;
 }
 
+#episodes-grid .episode-card:hover .episode-thumb {
+    border-color: #fff !important;
+}
+
 /* Overlay solo sobre la imagen */
 #episodes-grid .episode-card::before {
     content: "";
@@ -473,13 +441,17 @@ a#watch-btn[data-mode="countdown"] {
     width: 100%;
     aspect-ratio: 16 / 9;
     border-radius: .25em;
+    background-image: linear-gradient(195deg,
+            hsla(0, 0%, 9%, .7),
+            hsla(0, 0%, 9%, .5) 10%,
+            transparent 25%);
     opacity: 0;
     transition: opacity .2s ease-in;
     pointer-events: none;
     z-index: 2;
 }
 
-/* Botón play perfectamente centrado */
+/* Botón play centrado */
 #episodes-grid .episode-card::after {
     content: "";
     position: absolute;
@@ -498,11 +470,46 @@ a#watch-btn[data-mode="countdown"] {
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'><circle cx='24' cy='24' r='23.5' fill='rgba(30,30,20,0.5)' stroke='white' stroke-width='1'/><g transform='translate(8 8) scale(1.35)'><path fill='white' d='M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z'/></g></svg>");
 }
 
-/* Mostrar overlay + botón */
 #episodes-grid .episode-card:hover::before,
 #episodes-grid .episode-card:hover::after {
     opacity: 1;
 }
+
+/* =========================
+   PROGRESS BAR SOLO EPISODIOS
+   SIN BOX WRAPPER
+   ========================= */
+
+#episodes-grid .episode-card .episode-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: flex-end;
+    pointer-events: none;
+    z-index: 4;
+}
+
+#episodes-grid .episode-card .episode-progress-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, .14);
+    border-radius: 0 0 .25em .25em;
+    overflow: hidden;
+}
+
+#episodes-grid .episode-card .episode-progress-bar {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #00eaff, #2563eb);
+    border-radius: inherit;
+}
+
+/* =========================
+   MORE GRID
+   ========================= */
 
 .more-card-thumb-wrap {
     border-radius: .25em;
@@ -513,6 +520,9 @@ a#watch-btn[data-mode="countdown"] {
     border-color: #fff;
 }
 
+/* =========================
+   EPISODE BODY
+   ========================= */
 .episode-body {
     position: relative;
     left: 0;
@@ -754,19 +764,14 @@ section#more-section {
     margin-top: -1em;
 }
 
-/* Bloquear selección de texto (Title page) */
+/* Bloquear selección de texto */
 body {
     -webkit-user-select: none;
-    /* Safari */
     -ms-user-select: none;
-    /* IE/Edge viejo */
     -moz-user-select: none;
-    /* Firefox */
     user-select: none;
-    /* Standard */
 }
 
-/* Permití seleccionar/editar donde corresponde */
 input,
 textarea,
 [contenteditable="true"] {
@@ -777,9 +782,7 @@ textarea,
 }
 
 /* =========================
-   BOTÓN "MI LISTA" (texto + SVG centrados)
-   - Compatible con tu HTML actual (svg suelto + texto suelto)
-   - También compatible si luego usás .btn-icon / .btn-label
+   BOTÓN "MI LISTA"
    ========================= */
 #episodes-jump {
     display: inline-flex;
@@ -788,12 +791,9 @@ textarea,
     gap: 7px;
     line-height: 1;
     white-space: nowrap;
-
-    /* SOLO el texto del botón (el icono se fija aparte) */
     font-size: 14px;
 }
 
-/* SVG actual (sin clase) + versión futura con .btn-icon */
 #episodes-jump>svg,
 #episodes-jump .btn-icon {
     width: 17px;
@@ -803,13 +803,11 @@ textarea,
     fill: currentColor;
 }
 
-/* Fuerza el path a usar el color del texto/botón */
 #episodes-jump>svg path,
 #episodes-jump .btn-icon path {
     fill: currentColor;
 }
 
-/* Si más adelante envolvés el texto en span.btn-label */
 #episodes-jump .btn-label {
     font-size: 14px;
     line-height: 1;
@@ -842,14 +840,8 @@ textarea,
 }
 
 /* =========================================================
-   WATCH BTN — ESTADOS EDITORIALES (publish_state)
-   Requiere title.js:
-   - data-mode="status-disabled"   (Próximamente)
-   - data-mode="status-clickable"  (En Vivo / Otro)
-   - data-mode="countdown"         (live_mode countdown)
+   WATCH BTN — ESTADOS EDITORIALES
    ========================================================= */
-
-/* Base segura para estados NO clicables */
 a#watch-btn[data-mode="status-disabled"],
 a#watch-btn[data-mode="countdown"] {
     background: rgba(255, 255, 255, .06) !important;
@@ -863,7 +855,6 @@ a#watch-btn[data-mode="countdown"] {
     scale: 1 !important;
 }
 
-/* Evitar hover visual cuando está bloqueado */
 a#watch-btn[data-mode="status-disabled"]:hover,
 a#watch-btn[data-mode="countdown"]:hover,
 a#watch-btn[aria-disabled="true"]:hover {
@@ -874,28 +865,11 @@ a#watch-btn[aria-disabled="true"]:hover {
     scale: 1 !important;
 }
 
-/* Estado clicable (En Vivo / Otro) */
 a#watch-btn[data-mode="status-clickable"] {
     cursor: pointer;
     pointer-events: auto;
 }
 
-/* Si querés que "En Vivo / Otro" mantenga look primary, esto ya alcanza.
-   (La clase .btn-primary lo pinta azul)
-   Podés descomentar esto si querés reforzarlo:
-
-a#watch-btn[data-mode="status-clickable"] {
-    background: #2563eb;
-    color: #fff;
-    border-color: transparent;
-}
-a#watch-btn[data-mode="status-clickable"]:hover {
-    background: #fff;
-    color: var(--satvblue);
-}
-*/
-
-/* Texto largo en "Otro" (ej: Estreno exclusivo) no rompe el botón */
 #watch-btn[data-mode="status-clickable"],
 #watch-btn[data-mode="status-disabled"] {
     max-width: min(100%, 100%);
@@ -904,7 +878,6 @@ a#watch-btn[data-mode="status-clickable"]:hover {
     text-overflow: ellipsis;
 }
 
-/* Mobile: que no se vea apretado con textos custom */
 @media (max-width: 480px) {
 
     #watch-btn[data-mode="status-clickable"],
@@ -916,8 +889,6 @@ a#watch-btn[data-mode="status-clickable"]:hover {
 /* =========================================================
    TITLE / TE PODRÍA GUSTAR — badge dentro del thumb
 ========================================================= */
-
-/* badge dentro del thumb, igual criterio que Home */
 #more-grid .more-card-thumb-wrap .card-badge {
     position: absolute;
     top: 0;
