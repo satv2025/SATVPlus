@@ -7,7 +7,7 @@
    - + DROPDOWN DIV-BASED para temporadas
    - + ALL: mostrar todas las temporadas con header "Temporada X"
    - + FIX BOTONES: alturas consistentes + Mi Lista (SVG/texto) centrado
-   - + EPISODE PROGRESS pegado al pie del thumb SIN WRAPPER
+   - + EPISODE PROGRESS pegado al pie del thumb SIN WRAPPER y SIN absolute raro
    ========================================================= */
 
 /* =========================
@@ -22,6 +22,8 @@
     --line: rgba(255, 255, 255, .12);
     --text: rgba(243, 244, 246, .92);
     --radius2: .25em;
+    --ep-progress-h: 4px;
+    --ep-thumb-border: 2px;
 }
 
 /* Mejora legibilidad */
@@ -380,7 +382,7 @@ a#watch-btn[data-mode="countdown"] {
 .episode-card {
     position: relative;
     overflow: visible;
-    background: #1A1D2500;
+    background: transparent;
     border-radius: var(--ep-radius);
     outline: none;
     cursor: pointer;
@@ -398,7 +400,7 @@ a#watch-btn[data-mode="countdown"] {
     display: block;
     object-fit: cover;
     height: auto;
-    background: #0f111800;
+    background: transparent;
     transform-origin: center;
     position: relative;
     z-index: 1;
@@ -420,7 +422,7 @@ a#watch-btn[data-mode="countdown"] {
     aspect-ratio: 16 / 9;
     object-fit: cover;
     height: auto;
-    border: 2px solid transparent !important;
+    border: var(--ep-thumb-border) solid transparent !important;
     border-radius: .25em;
     transition: border-color .2s ease-in;
     position: relative;
@@ -474,6 +476,31 @@ a#watch-btn[data-mode="countdown"] {
     border-color: #fff;
 }
 
+/* =========================
+   EPISODE PROGRESS — SIN WRAPPER
+   Se monta sobre el borde inferior real del img
+   ========================= */
+#episodes-grid .episode-card .episode-progress {
+    position: relative;
+    z-index: 4;
+    pointer-events: none;
+    height: var(--ep-progress-h);
+    margin-top: calc(var(--ep-progress-h) * 0.5);
+    margin-left: var(--ep-thumb-border);
+    margin-right: var(--ep-thumb-border);
+    background: rgba(255, 255, 255, .14);
+    overflow: hidden;
+    border-radius: .25em;
+    top: 0;
+}
+
+#episodes-grid .episode-card .episode-progress-bar {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #00eaff, #2563eb);
+    border-radius: inherit;
+}
+
 .episode-body {
     position: relative;
     left: 0;
@@ -487,7 +514,7 @@ a#watch-btn[data-mode="countdown"] {
     gap: 6px;
     overflow: hidden;
     isolation: isolate;
-    background: #00000000 !important;
+    background: transparent !important;
     margin-top: -0.34em;
 }
 
@@ -495,7 +522,7 @@ a#watch-btn[data-mode="countdown"] {
     content: "";
     position: absolute;
     inset: 0;
-    background: #00000000;
+    background: transparent;
     z-index: 0;
     pointer-events: none;
 }
@@ -849,28 +876,4 @@ a#watch-btn[data-mode="status-clickable"] {
     border-radius: 0 .25em 0 0;
     border: 0 !important;
     outline: none !important;
-}
-
-/* =========================
-   EPISODE PROGRESS — SIN WRAPPER
-   Pegado al pie del thumb, sin bajarse ni salirse
-   ========================= */
-#episodes-grid .episode-card .episode-progress {
-    position: absolute;
-    left: 2px;
-    right: 2px;
-    top: calc((100% / 16) * 9 - 4px);
-    height: 4px;
-    background: rgba(255, 255, 255, .14);
-    border-radius: 0 0 .25em .25em;
-    overflow: hidden;
-    z-index: 4;
-    pointer-events: none;
-}
-
-#episodes-grid .episode-card .episode-progress-bar {
-    height: 100%;
-    width: 0;
-    background: linear-gradient(90deg, #00eaff, #2563eb);
-    border-radius: inherit;
 }
