@@ -611,21 +611,6 @@ a#watch-btn[data-mode="countdown"] {
 }
 
 /* =========================
-   NIVEL X vs NO NIVEL X
-   ========================= */
-body.is-nivelx .episode-sub {
-    display: none;
-}
-
-body.is-nivelx {
-    --ep-body-h: auto;
-}
-
-body:not(.is-nivelx) .episode-sub {
-    display: -webkit-box;
-}
-
-/* =========================
    RESPONSIVE
    ========================= */
 @media (max-width: 1200px) {
