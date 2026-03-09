@@ -527,6 +527,25 @@ a.pill.profile-link:hover {
   border-radius: var(--radius2);
   padding: clamp(12px, 2vw, 16px);
   box-shadow: var(--shadow);
+  position: relative;
+  margin-top: 0 !important;
+}
+
+.auth-main {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding-top: clamp(90px, 10vh, 130px);
+  padding-bottom: 24px;
+}
+
+.auth-panel {
+  margin: 0 auto !important;
+  width: min(100%, 520px);
+}
+
+.auth-panel-wide {
+  width: min(100%, 680px);
 }
 
 /* =========================================================
