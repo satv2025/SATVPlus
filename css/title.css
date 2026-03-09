@@ -860,6 +860,15 @@ a#watch-btn[data-mode="status-clickable"] {
     outline: none !important;
 }
 
+#more-grid .more-card .more-card-synopsis {
+    display: block;
+    margin: 0;
+    color: rgba(243, 244, 246, .9);
+    font-size: 12px;
+    line-height: 1.25;
+    opacity: .92;
+}
+
 @media (min-width: 1200px) {
     .container {
         width: min(93%, var(--container-max)) !important;

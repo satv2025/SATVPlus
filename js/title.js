@@ -1145,6 +1145,7 @@ async function renderMoreCardHtml({ item, esc, api }) {
     const thumb = item.thumbnail_url || item.banner_url || "";
     const title = esc(shortenTitle(item.title || ""));
     let meta = "";
+    const synopsis = esc(item.description || item.sinopsis || "");
 
     if (item.category === "series" && typeof api?.fetchEpisodes === "function") {
         try {
@@ -1166,7 +1167,8 @@ async function renderMoreCardHtml({ item, esc, api }) {
       </div>
       <div class="episode-body">
         <h4 class="episode-title">${title}</h4>
-        ${meta ? `<p class="episode-sub">${meta}</p>` : ``}
+        ${meta ? `<p class="episode-sub more-card-meta">${meta}</p>` : ``}
+        ${synopsis ? `<p class="episode-sub more-card-synopsis">${synopsis}</p>` : ``}
       </div>
     </article>
   `;
