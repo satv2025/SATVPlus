@@ -492,6 +492,7 @@ a#watch-btn[data-mode="countdown"] {
     overflow: hidden;
     border-radius: .25em;
     top: 0;
+    width: 97.9%;
 }
 
 #episodes-grid .episode-card .episode-progress-bar {
@@ -545,6 +546,7 @@ a#watch-btn[data-mode="countdown"] {
     margin-bottom: 0.3em;
     margin-top: -0.5em;
     height: auto;
+    text-align: left;
 }
 
 .episode-sub {
