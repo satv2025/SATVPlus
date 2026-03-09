@@ -1174,15 +1174,49 @@ async function renderMoreCardHtml({ item, esc, api }) {
   `;
 }
 
-function bindMoreCardNavigation(rootEl) {
+function bindMoreCardNavigation(rootEl, itemsById = new Map()) {
     rootEl.querySelectorAll("[data-title]").forEach(card => {
-        const go = () => {
+        const go = async () => {
             const id = card.dataset.title;
-            window.location.href = `/title?title=${encodeURIComponent(id)}`;
+            const item = itemsById.get(id);
+
+            if (!id || !item) {
+                window.location.href = `/title?title=${encodeURIComponent(id || "")}`;
+                return;
+            }
+
+            try {
+                const progress = await fetchContinueWatchingForTitle({ movieId: id });
+
+                if (item.category === "series") {
+                    if (progress?.episode_id) {
+                        window.location.href = `/watch?series=${encodeURIComponent(id)}&episode=${encodeURIComponent(progress.episode_id)}`;
+                        return;
+                    }
+
+                    window.location.href = `/watch?series=${encodeURIComponent(id)}`;
+                    return;
+                }
+
+                window.location.href = `/watch?movie=${encodeURIComponent(id)}`;
+            } catch (e) {
+                console.warn("[title] more-grid reanudar fallback error:", e);
+
+                if (item.category === "series") {
+                    window.location.href = `/watch?series=${encodeURIComponent(id)}`;
+                    return;
+                }
+
+                window.location.href = `/watch?movie=${encodeURIComponent(id)}`;
+            }
         };
+
         card.addEventListener("click", go);
         card.addEventListener("keydown", (ev) => {
-            if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); }
+            if (ev.key === "Enter" || ev.key === " ") {
+                ev.preventDefault();
+                go();
+            }
         });
     });
 }
@@ -1222,7 +1256,14 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
     }
 
     moreGrid.innerHTML = htmlParts.join("");
-    bindMoreCardNavigation(moreGrid);
+
+    const itemsById = new Map(
+        list
+            .filter(item => item?.id)
+            .map(item => [String(item.id), item])
+    );
+
+    bindMoreCardNavigation(moreGrid, itemsById);
     scheduleApplyCondensedFontToWrappedEpisodeTitles(moreGrid);
 }
 

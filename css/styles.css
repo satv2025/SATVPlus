@@ -189,7 +189,6 @@ svg {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
-  backdrop-filter: blur(32px);
 }
 
 /* Nav layout */
