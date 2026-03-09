@@ -24,6 +24,7 @@
     --radius2: .25em;
     --ep-progress-h: 4px;
     --ep-thumb-border: 2px;
+    --container-max: 1920px;
 }
 
 /* Mejora legibilidad */
@@ -863,4 +864,11 @@ a#watch-btn[data-mode="status-clickable"] {
     border-radius: 0 .25em 0 0;
     border: 0 !important;
     outline: none !important;
+}
+
+@media (min-width: 1200px) {
+    .container {
+        width: min(93%, var(--container-max)) !important;
+        max-width: var(--container-max) !important;
+    }
 }
