@@ -17,7 +17,7 @@
     --ep-body-h: auto;
     --ep-pad-x: 10px;
     --ep-pad-y: 18px;
-    --ep-gap: 10px;
+    --ep-gap: 12px;
     --ep-radius: .25em;
     --line: rgba(255, 255, 255, .12);
     --text: rgba(243, 244, 246, .92);
@@ -411,26 +411,25 @@ a#watch-btn[data-mode="countdown"] {
 /* =========================
    EPISODE THUMB HOVER
    ========================= */
-#episodes-grid .episode-card {
+.episode-card {
     position: relative;
     overflow: visible;
     cursor: pointer;
 }
 
-#episodes-grid .episode-card .episode-thumb {
+.episode-card .episode-thumb {
     display: block;
     width: 100%;
     aspect-ratio: 16 / 9;
     object-fit: cover;
     height: auto;
-    border: var(--ep-thumb-border) solid transparent !important;
     border-radius: .25em;
     transition: border-color .2s ease-in;
     position: relative;
     z-index: 1;
 }
 
-#episodes-grid .episode-card::before {
+.episode-card::before {
     content: "";
     position: absolute;
     top: 0;
@@ -444,7 +443,7 @@ a#watch-btn[data-mode="countdown"] {
     z-index: 2;
 }
 
-#episodes-grid .episode-card::after {
+.episode-card::after {
     content: "";
     position: absolute;
     top: 0;
@@ -462,19 +461,14 @@ a#watch-btn[data-mode="countdown"] {
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'><circle cx='24' cy='24' r='23.5' fill='rgba(30,30,20,0.5)' stroke='white' stroke-width='1'/><g transform='translate(8 8) scale(1.35)'><path fill='white' d='M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z'/></g></svg>");
 }
 
-#episodes-grid .episode-card:hover::before,
-#episodes-grid .episode-card:hover::after {
+.episode-card:hover::before,
+.episode-card:hover::after {
     opacity: 1;
 }
 
 .more-card-thumb-wrap {
     position: relative;
     border-radius: .25em;
-    border: 2px solid transparent;
-}
-
-.more-card-thumb-wrap:hover {
-    border-color: #fff;
 }
 
 /* =========================
@@ -516,7 +510,7 @@ a#watch-btn[data-mode="countdown"] {
     gap: 6px;
     overflow: hidden;
     isolation: isolate;
-    background: transparent !important;
+    background: #35232300 !important;
     margin-top: -0.34em;
 }
 
