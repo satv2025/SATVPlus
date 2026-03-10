@@ -1,534 +1,516 @@
 <!doctype html>
 <html lang="es">
 
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SATV+</title>
-  <link rel="icon" href="/images/satvpluslogo.png" />
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SATV+</title>
+    <link rel="icon" href="/images/satvpluslogo.png" />
 
-  <!-- CSS del player -->
-  <link rel="stylesheet" href="https://akira.satvplus.com.ar/akira-player.css" />
+    <!-- CSS del player -->
+    <link rel="stylesheet" href="https://akira.satvplus.com.ar/akira-player.css" />
 
-  <style>
-    html,
-    body {
-      margin: 0;
-      background: #000;
-      height: 100%;
-    }
-
-    body {
-      overflow: hidden;
-    }
-
-    #akira-player-root {
-      width: 100%;
-      min-height: 100vh;
-      background: #07090d;
-      color: #fff;
-      position: relative;
-    }
-
-    /* ✅ Loader global de watch (se mantiene hasta que el video entra en playing) */
-    #watch-loading-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 99990;
-      display: grid;
-      place-items: center;
-      background: #07090d;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity .22s ease, visibility .22s ease;
-      pointer-events: none;
-      /* no bloquea clicks si autoplay está bloqueado */
-      box-sizing: border-box;
-    }
-
-    #watch-loading-overlay.visible {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .watch-loading-card {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      color: #2563eb;
-      padding: 16px;
-    }
-
-    .watch-loading-spinner {
-      width: 84px;
-      height: 84px;
-      border-radius: 999px;
-      border: 5px solid rgba(37, 100, 235, 0);
-      border-top-color: #2563eb;
-      animation: satv-watch-spin .8s linear infinite;
-      box-sizing: border-box;
-    }
-
-    .watch-loading-text {
-      font-size: 12px;
-      opacity: .9;
-      color: #93c5fd;
-      text-align: center;
-      max-width: min(92vw, 520px);
-      word-break: break-word;
-    }
-
-    @keyframes satv-watch-spin {
-      to {
-        transform: rotate(360deg);
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #000;
+        height: 100%;
       }
-    }
 
-    .watch-error {
-      color: #fff;
-      font-family: system-ui, sans-serif;
-      padding: 16px;
-      margin: 16px;
-      background: #111;
-      border: 1px solid #333;
-      border-radius: 12px;
-      white-space: pre-wrap;
-      line-height: 1.4;
-    }
+      body {
+        overflow: hidden;
+      }
 
-    .watch-fallback {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #000;
-      padding: 16px;
-      box-sizing: border-box;
-    }
+      #akira-player-root {
+        width: 100%;
+        min-height: 100vh;
+        background: #07090d;
+        color: #fff;
+        position: relative;
+      }
 
-    .watch-fallback-card {
-      width: min(1200px, 100%);
-      display: grid;
-      gap: 12px;
-    }
+      /* ✅ Loader global de watch (se mantiene hasta que el video entra en playing) */
+      #watch-loading-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 99990;
+        display: grid;
+        place-items: center;
+        background: #07090d;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity .22s ease, visibility .22s ease;
+        pointer-events: none;
+        box-sizing: border-box;
+      }
 
-    .watch-fallback-title {
-      font: 600 18px/1.3 system-ui, sans-serif;
-      color: #fff;
-      opacity: .95;
-    }
+      #watch-loading-overlay.visible {
+        opacity: 1;
+        visibility: visible;
+      }
 
-    .watch-fallback-meta {
-      font: 500 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      color: #93c5fd;
-      white-space: pre-wrap;
-      word-break: break-word;
-      background: rgba(20, 20, 20, .9);
-      border: 1px solid rgba(255, 255, 255, .08);
-      border-radius: 10px;
-      padding: 10px;
-      margin: 0;
-      max-height: 240px;
-      overflow: auto;
-    }
+      .watch-loading-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        color: #2563eb;
+        padding: 16px;
+      }
 
-    .watch-fallback video {
-      width: 100%;
-      max-height: 78vh;
-      background: #000;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, .1);
-    }
+      .watch-loading-spinner {
+        width: 84px;
+        height: 84px;
+        border-radius: 999px;
+        border: 5px solid rgba(37, 100, 235, 0);
+        border-top-color: #2563eb;
+        animation: satv-watch-spin .8s linear infinite;
+        box-sizing: border-box;
+      }
 
-    /* Overlay de debug opcional (?debug=1) */
-    #satv-debug-overlay {
-      position: fixed;
-      right: 8px;
-      bottom: 8px;
-      width: min(560px, calc(100vw - 16px));
-      max-height: 42vh;
-      overflow: auto;
-      z-index: 999999;
-      background: rgba(0, 0, 0, .88);
-      border: 1px solid rgba(255, 255, 255, .12);
-      border-radius: 12px;
-      color: #dbeafe;
-      font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      padding: 10px;
-      display: none;
-      box-sizing: border-box;
-      backdrop-filter: blur(6px);
-    }
+      .watch-loading-text {
+        font-size: 12px;
+        opacity: .9;
+        color: #93c5fd;
+        text-align: center;
+        max-width: min(92vw, 520px);
+        word-break: break-word;
+      }
 
-    #satv-debug-overlay.visible {
-      display: block;
-    }
+      @keyframes satv-watch-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
 
-    #satv-debug-overlay .line {
-      margin-bottom: 6px;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
+      .watch-error {
+        color: #fff;
+        font-family: system-ui, sans-serif;
+        padding: 16px;
+        margin: 16px;
+        background: #111;
+        border: 1px solid #333;
+        border-radius: 12px;
+        white-space: pre-wrap;
+        line-height: 1.4;
+      }
 
-    #satv-debug-overlay .line.err {
-      color: #fca5a5;
-    }
+      .watch-fallback {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #000;
+        padding: 16px;
+        box-sizing: border-box;
+      }
 
-    #satv-debug-overlay .line.warn {
-      color: #fde68a;
-    }
+      .watch-fallback-card {
+        width: min(1200px, 100%);
+        display: grid;
+        gap: 12px;
+      }
 
-    #satv-debug-overlay .line.ok {
-      color: #86efac;
-    }
-  </style>
-</head>
+      .watch-fallback-title {
+        font: 600 18px/1.3 system-ui, sans-serif;
+        color: #fff;
+        opacity: .95;
+      }
 
-<body data-asset-base="https://akira.satvplus.com.ar/assets">
-  <div id="akira-player-root"></div>
+      .watch-fallback-meta {
+        font: 500 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color: #93c5fd;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: rgba(20, 20, 20, .9);
+        border: 1px solid rgba(255, 255, 255, .08);
+        border-radius: 10px;
+        padding: 10px;
+        margin: 0;
+        max-height: 240px;
+        overflow: auto;
+      }
 
-  <!-- ✅ Loader global de watch -->
-  <div id="watch-loading-overlay" aria-hidden="true">
-    <div class="watch-loading-card">
-      <div class="watch-loading-spinner" aria-hidden="true"></div>
-      <div id="watch-loading-overlay-text" class="watch-loading-text"></div>
+      .watch-fallback video {
+        width: 100%;
+        max-height: 78vh;
+        background: #000;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, .1);
+      }
+
+      #satv-debug-overlay {
+        position: fixed;
+        right: 8px;
+        bottom: 8px;
+        width: min(560px, calc(100vw - 16px));
+        max-height: 42vh;
+        overflow: auto;
+        z-index: 999999;
+        background: rgba(0, 0, 0, .88);
+        border: 1px solid rgba(255, 255, 255, .12);
+        border-radius: 12px;
+        color: #dbeafe;
+        font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        padding: 10px;
+        display: none;
+        box-sizing: border-box;
+        backdrop-filter: blur(6px);
+      }
+
+      #satv-debug-overlay.visible {
+        display: block;
+      }
+
+      #satv-debug-overlay .line {
+        margin-bottom: 6px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      #satv-debug-overlay .line.err {
+        color: #fca5a5;
+      }
+
+      #satv-debug-overlay .line.warn {
+        color: #fde68a;
+      }
+
+      #satv-debug-overlay .line.ok {
+        color: #86efac;
+      }
+    </style>
+  </head>
+
+  <body data-asset-base="https://akira.satvplus.com.ar/assets">
+    <div id="akira-player-root"></div>
+
+    <div id="watch-loading-overlay" aria-hidden="true">
+      <div class="watch-loading-card">
+        <div class="watch-loading-spinner" aria-hidden="true"></div>
+        <div id="watch-loading-overlay-text" class="watch-loading-text"></div>
+      </div>
     </div>
-  </div>
 
-  <div id="satv-debug-overlay" aria-live="polite"></div>
+    <div id="satv-debug-overlay" aria-live="polite"></div>
 
-  <!-- 1) Supabase global (si supabaseClient.js usa window.supabase) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.18/dist/hls.min.js"></script>
+    <script src="https://akira.satvplus.com.ar/akira-player.umd.js"></script>
 
-  <!-- 2) Hls.js global SOLO para fallback nativo/debug.
-       (Akira puede usar su propio Hls interno bundleado) -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.18/dist/hls.min.js"></script>
+    <script>
+      (function () {
+        const rootEl = document.getElementById("akira-player-root");
+        const debugOverlay = document.getElementById("satv-debug-overlay");
+        const watchLoadingOverlay = document.getElementById("watch-loading-overlay");
+        const watchLoadingOverlayText = document.getElementById("watch-loading-overlay-text");
 
-  <!-- 3) UMD de Akira -->
-  <script src="https://akira.satvplus.com.ar/akira-player.umd.js"></script>
+        const params = new URL(location.href).searchParams;
+        const DEBUG = params.get("debug") === "1" || params.get("debug") === "true";
 
-  <!-- 4) Bridge -->
-  <script>
-    (function () {
-      const rootEl = document.getElementById("akira-player-root");
-      const debugOverlay = document.getElementById("satv-debug-overlay");
-      const watchLoadingOverlay = document.getElementById("watch-loading-overlay");
-      const watchLoadingOverlayText = document.getElementById("watch-loading-overlay-text");
+        if (DEBUG && debugOverlay) debugOverlay.classList.add("visible");
 
-      const params = new URL(location.href).searchParams;
-      const DEBUG = params.get("debug") === "1" || params.get("debug") === "true";
-
-      if (DEBUG && debugOverlay) debugOverlay.classList.add("visible");
-
-      /* ✅ API global simple para mostrar/ocultar loader de watch */
-      function setWatchLoadingOverlayVisible(visible, text) {
-        if (!watchLoadingOverlay) return;
-        if (typeof text === "string" && watchLoadingOverlayText) {
-          watchLoadingOverlayText.textContent = text || "";
-        }
-        watchLoadingOverlay.classList.toggle("visible", !!visible);
-        watchLoadingOverlay.setAttribute("aria-hidden", visible ? "false" : "true");
-      }
-
-      window.showWatchLoadingOverlay = function showWatchLoadingOverlay(text) {
-        setWatchLoadingOverlayVisible(true, text);
-      };
-
-      window.hideWatchLoadingOverlay = function hideWatchLoadingOverlay() {
-        setWatchLoadingOverlayVisible(false);
-      };
-
-      function overlay(kind, ...parts) {
-        if (!DEBUG || !debugOverlay) return;
-        const div = document.createElement("div");
-        div.className = "line " + (kind || "");
-        div.textContent = parts.map((p) => {
-          if (typeof p === "string") return p;
-          try { return JSON.stringify(p, null, 2); } catch { return String(p); }
-        }).join(" ")
-        debugOverlay.prepend(div);
-        while (debugOverlay.childElementCount > 140) {
-          debugOverlay.removeChild(debugOverlay.lastChild);
-        }
-      }
-
-      function log(...args) {
-        console.log(...args);
-        overlay("ok", ...args);
-      }
-      function warn(...args) {
-        console.warn(...args);
-        overlay("warn", ...args);
-      }
-      function err(...args) {
-        console.error(...args);
-        overlay("err", ...args);
-      }
-
-      function escapeHtml(str) {
-        return String(str ?? "")
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#039;");
-      }
-
-      function fail(msg) {
-        try { window.hideWatchLoadingOverlay && window.hideWatchLoadingOverlay(); } catch { }
-        if (!rootEl) return;
-        rootEl.innerHTML = '<div class="watch-error">' + escapeHtml(String(msg || "Error")) + '</div>';
-      }
-
-      function getAkiraApi() {
-        // UMD puede exponer mount() directo o en default.mount
-        const direct = window.AkiraPlayer;
-        if (direct && typeof direct.mount === "function") return direct;
-        if (direct && direct.default && typeof direct.default.mount === "function") return direct.default;
-        return null;
-      }
-
-      function isHlsUrl(url) {
-        return /\.m3u8(\?|#|$)/i.test(String(url || ""));
-      }
-
-      function mediaErrorName(code) {
-        return ({
-          1: "MEDIA_ERR_ABORTED",
-          2: "MEDIA_ERR_NETWORK",
-          3: "MEDIA_ERR_DECODE",
-          4: "MEDIA_ERR_SRC_NOT_SUPPORTED"
-        })[code] || "UNKNOWN_MEDIA_ERROR";
-      }
-
-      function networkStateName(v) {
-        return ({
-          0: "NETWORK_EMPTY",
-          1: "NETWORK_IDLE",
-          2: "NETWORK_LOADING",
-          3: "NETWORK_NO_SOURCE"
-        })[v] || "UNKNOWN_NETWORK_STATE";
-      }
-
-      function readyStateName(v) {
-        return ({
-          0: "HAVE_NOTHING",
-          1: "HAVE_METADATA",
-          2: "HAVE_CURRENT_DATA",
-          3: "HAVE_FUTURE_DATA",
-          4: "HAVE_ENOUGH_DATA"
-        })[v] || "UNKNOWN_READY_STATE";
-      }
-
-      function getMediaErrorInfo(video) {
-        const e = video?.error;
-        if (!e) return null;
-        return {
-          code: e.code ?? null,
-          codeName: mediaErrorName(e.code),
-          message: e.message || null
-        };
-      }
-
-      function snapshotVideo(video, label) {
-        const snap = {
-          label,
-          currentSrc: video?.currentSrc || null,
-          srcAttr: video?.getAttribute?.("src") || null,
-          readyState: video?.readyState,
-          readyStateName: readyStateName(video?.readyState),
-          networkState: video?.networkState,
-          networkStateName: networkStateName(video?.networkState),
-          paused: video?.paused,
-          muted: video?.muted,
-          ended: video?.ended,
-          currentTime: video?.currentTime,
-          duration: Number.isFinite(video?.duration) ? video.duration : null,
-          canPlayHlsNative: video?.canPlayType?.("application/vnd.apple.mpegurl") || "",
-          mediaError: getMediaErrorInfo(video)
-        };
-        log("[watch.html][video] snapshot", snap);
-        return snap;
-      }
-
-      function hideWatchLoaderIfVideoPlaying(video) {
-        if (!video) return;
-        const isPlaying = !video.paused && !video.ended && Number(video.readyState || 0) >= 2;
-        if (!isPlaying) return;
-        try {
-          if (typeof window.hideWatchLoadingOverlay === "function") {
-            window.hideWatchLoadingOverlay();
+        function setWatchLoadingOverlayVisible(visible, text) {
+          if (!watchLoadingOverlay) return;
+          if (typeof text === "string" && watchLoadingOverlayText) {
+            watchLoadingOverlayText.textContent = text || "";
           }
-        } catch {
-          // noop
+          watchLoadingOverlay.classList.toggle("visible", !!visible);
+          watchLoadingOverlay.setAttribute("aria-hidden", visible ? "false" : "true");
         }
-      }
 
-      function attachVideoDebug(video, tag) {
-        if (!video || video.__satvDebugBound) return;
-        video.__satvDebugBound = true;
+        window.showWatchLoadingOverlay = function showWatchLoadingOverlay(text) {
+          setWatchLoadingOverlayVisible(true, text);
+        };
 
-        // ✅ Si el video ya está reproduciendo o entra en playing, ocultar loader de watch
-        hideWatchLoaderIfVideoPlaying(video);
-        video.addEventListener("playing", () => hideWatchLoaderIfVideoPlaying(video));
+        window.hideWatchLoadingOverlay = function hideWatchLoadingOverlay() {
+          setWatchLoadingOverlayVisible(false);
+        };
 
-        const events = [
-          "loadstart", "loadedmetadata", "loadeddata", "canplay", "canplaythrough",
-          "play", "playing", "pause", "waiting", "stalled", "suspend", "emptied",
-          "progress", "seeking", "seeked", "timeupdate", "ended", "error"
-        ];
+        function overlay(kind, ...parts) {
+          if (!DEBUG || !debugOverlay) return;
+          const div = document.createElement("div");
+          div.className = "line " + (kind || "");
+          div.textContent = parts.map((p) => {
+            if (typeof p === "string") return p;
+            try { return JSON.stringify(p, null, 2); } catch { return String(p); }
+          }).join(" ");
+          debugOverlay.prepend(div);
+          while (debugOverlay.childElementCount > 140) {
+            debugOverlay.removeChild(debugOverlay.lastChild);
+          }
+        }
 
-        events.forEach((ev) => {
-          video.addEventListener(ev, () => {
-            const snap = snapshotVideo(video, tag + ":" + ev);
-            if (ev === "error") {
-              err("[watch.html][video] ERROR EVENT", snap);
+        function log(...args) {
+          console.log(...args);
+          overlay("ok", ...args);
+        }
+
+        function warn(...args) {
+          console.warn(...args);
+          overlay("warn", ...args);
+        }
+
+        function err(...args) {
+          console.error(...args);
+          overlay("err", ...args);
+        }
+
+        function escapeHtml(str) {
+          return String(str ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+        }
+
+        function fail(msg) {
+          try { window.hideWatchLoadingOverlay && window.hideWatchLoadingOverlay(); } catch { }
+          if (!rootEl) return;
+          rootEl.innerHTML = '<div class="watch-error">' + escapeHtml(String(msg || "Error")) + '</div>';
+        }
+
+        function getAkiraApi() {
+          const direct = window.AkiraPlayer;
+          if (direct && typeof direct.mount === "function") return direct;
+          if (direct && direct.default && typeof direct.default.mount === "function") return direct.default;
+          return null;
+        }
+
+        function isHlsUrl(url) {
+          return /\.m3u8(\?|#|$)/i.test(String(url || ""));
+        }
+
+        function mediaErrorName(code) {
+          return ({
+            1: "MEDIA_ERR_ABORTED",
+            2: "MEDIA_ERR_NETWORK",
+            3: "MEDIA_ERR_DECODE",
+            4: "MEDIA_ERR_SRC_NOT_SUPPORTED"
+          })[code] || "UNKNOWN_MEDIA_ERROR";
+        }
+
+        function networkStateName(v) {
+          return ({
+            0: "NETWORK_EMPTY",
+            1: "NETWORK_IDLE",
+            2: "NETWORK_LOADING",
+            3: "NETWORK_NO_SOURCE"
+          })[v] || "UNKNOWN_NETWORK_STATE";
+        }
+
+        function readyStateName(v) {
+          return ({
+            0: "HAVE_NOTHING",
+            1: "HAVE_METADATA",
+            2: "HAVE_CURRENT_DATA",
+            3: "HAVE_FUTURE_DATA",
+            4: "HAVE_ENOUGH_DATA"
+          })[v] || "UNKNOWN_READY_STATE";
+        }
+
+        function getMediaErrorInfo(video) {
+          const e = video?.error;
+          if (!e) return null;
+          return {
+            code: e.code ?? null,
+            codeName: mediaErrorName(e.code),
+            message: e.message || null
+          };
+        }
+
+        function snapshotVideo(video, label) {
+          const snap = {
+            label,
+            currentSrc: video?.currentSrc || null,
+            srcAttr: video?.getAttribute?.("src") || null,
+            readyState: video?.readyState,
+            readyStateName: readyStateName(video?.readyState),
+            networkState: video?.networkState,
+            networkStateName: networkStateName(video?.networkState),
+            paused: video?.paused,
+            muted: video?.muted,
+            ended: video?.ended,
+            currentTime: video?.currentTime,
+            duration: Number.isFinite(video?.duration) ? video.duration : null,
+            canPlayHlsNative: video?.canPlayType?.("application/vnd.apple.mpegurl") || "",
+            mediaError: getMediaErrorInfo(video)
+          };
+          log("[watch.html][video] snapshot", snap);
+          return snap;
+        }
+
+        function hideWatchLoaderIfVideoPlaying(video) {
+          if (!video) return;
+          const isPlaying = !video.paused && !video.ended && Number(video.readyState || 0) >= 2;
+          if (!isPlaying) return;
+          try {
+            if (typeof window.hideWatchLoadingOverlay === "function") {
+              window.hideWatchLoadingOverlay();
             }
+          } catch { }
+        }
+
+        function attachVideoDebug(video, tag) {
+          if (!video || video.__satvDebugBound) return;
+          video.__satvDebugBound = true;
+
+          hideWatchLoaderIfVideoPlaying(video);
+          video.addEventListener("playing", () => hideWatchLoaderIfVideoPlaying(video));
+
+          const events = [
+            "loadstart", "loadedmetadata", "loadeddata", "canplay", "canplaythrough",
+            "play", "playing", "pause", "waiting", "stalled", "suspend", "emptied",
+            "progress", "seeking", "seeked", "timeupdate", "ended", "error"
+          ];
+
+          events.forEach((ev) => {
+            video.addEventListener(ev, () => {
+              const snap = snapshotVideo(video, tag + ":" + ev);
+              if (ev === "error") {
+                err("[watch.html][video] ERROR EVENT", snap);
+              }
+            });
           });
-        });
-      }
+        }
 
-      function patchNetworkDebug() {
-        if (window.__satvNetworkDebugPatched) return;
-        window.__satvNetworkDebugPatched = true;
+        function patchNetworkDebug() {
+          if (window.__satvNetworkDebugPatched) return;
+          window.__satvNetworkDebugPatched = true;
 
-        // XHR
-        try {
-          const XHR = window.XMLHttpRequest;
-          if (XHR && XHR.prototype) {
-            const open0 = XHR.prototype.open;
-            const send0 = XHR.prototype.send;
+          try {
+            const XHR = window.XMLHttpRequest;
+            if (XHR && XHR.prototype) {
+              const open0 = XHR.prototype.open;
+              const send0 = XHR.prototype.send;
 
-            function isMediaUrl(url) {
-              const s = String(url || "");
-              return /(\.m3u8(\?|#|$)|\.ts(\?|#|$)|\.m4s(\?|#|$)|\.mp4(\?|#|$)|\.aac(\?|#|$)|\.vtt(\?|#|$))/i.test(s);
-            }
-
-            XHR.prototype.open = function (method, url, ...rest) {
-              this.__satvMethod = method;
-              this.__satvUrl = url;
-              return open0.call(this, method, url, ...rest);
-            };
-
-            XHR.prototype.send = function (...args) {
-              const url = this.__satvUrl;
-              const method = this.__satvMethod || "GET";
-              const media = isMediaUrl(url);
-              const t0 = performance.now();
-
-              if (media) {
-                this.addEventListener("load", () => {
-                  log("[XHR media]", method, this.status, Math.round(performance.now() - t0) + "ms", url);
-                });
-                this.addEventListener("error", () => {
-                  err("[XHR media] ERROR", method, url);
-                });
-                this.addEventListener("abort", () => {
-                  warn("[XHR media] ABORT", method, url);
-                });
+              function isMediaUrl(url) {
+                const s = String(url || "");
+                return /(\.m3u8(\?|#|$)|\.ts(\?|#|$)|\.m4s(\?|#|$)|\.mp4(\?|#|$)|\.aac(\?|#|$)|\.vtt(\?|#|$)|\.mpd(\?|#|$))/i.test(s);
               }
 
-              return send0.apply(this, args);
-            };
-          }
-        } catch (e) {
-          warn("[watch.html] XHR patch warning:", e);
-        }
+              XHR.prototype.open = function (method, url, ...rest) {
+                this.__satvMethod = method;
+                this.__satvUrl = url;
+                return open0.call(this, method, url, ...rest);
+              };
 
-        // fetch
-        try {
-          if (window.fetch && !window.fetch.__satvPatched) {
-            const f0 = window.fetch;
+              XHR.prototype.send = function (...args) {
+                const url = this.__satvUrl;
+                const method = this.__satvMethod || "GET";
+                const media = isMediaUrl(url);
+                const t0 = performance.now();
 
-            function isMediaUrl(url) {
-              const s = String(url || "");
-              return /(\.m3u8(\?|#|$)|\.ts(\?|#|$)|\.m4s(\?|#|$)|\.mp4(\?|#|$)|\.aac(\?|#|$)|\.vtt(\?|#|$))/i.test(s);
+                if (media) {
+                  this.addEventListener("load", () => {
+                    log("[XHR media]", method, this.status, Math.round(performance.now() - t0) + "ms", url);
+                  });
+                  this.addEventListener("error", () => {
+                    err("[XHR media] ERROR", method, url);
+                  });
+                  this.addEventListener("abort", () => {
+                    warn("[XHR media] ABORT", method, url);
+                  });
+                }
+
+                return send0.apply(this, args);
+              };
             }
+          } catch (e) {
+            warn("[watch.html] XHR patch warning:", e);
+          }
 
-            const f1 = async function (input, init) {
-              const url = typeof input === "string" ? input : (input && input.url) || "";
-              const method = (init && init.method) || (typeof input !== "string" && input && input.method) || "GET";
-              const media = isMediaUrl(url);
-              const t0 = performance.now();
+          try {
+            if (window.fetch && !window.fetch.__satvPatched) {
+              const f0 = window.fetch;
 
-              try {
-                const res = await f0(input, init);
-                if (media) {
-                  log("[fetch media]", method, res.status, Math.round(performance.now() - t0) + "ms", url);
-                }
-                return res;
-              } catch (e) {
-                if (media) {
-                  err("[fetch media] ERROR", method, url, e?.message || e);
-                }
-                throw e;
+              function isMediaUrl(url) {
+                const s = String(url || "");
+                return /(\.m3u8(\?|#|$)|\.ts(\?|#|$)|\.m4s(\?|#|$)|\.mp4(\?|#|$)|\.aac(\?|#|$)|\.vtt(\?|#|$)|\.mpd(\?|#|$))/i.test(s);
               }
-            };
 
-            f1.__satvPatched = true;
-            window.fetch = f1;
+              const f1 = async function (input, init) {
+                const url = typeof input === "string" ? input : (input && input.url) || "";
+                const method = (init && init.method) || (typeof input !== "string" && input && input.method) || "GET";
+                const media = isMediaUrl(url);
+                const t0 = performance.now();
+
+                try {
+                  const res = await f0(input, init);
+                  if (media) {
+                    log("[fetch media]", method, res.status, Math.round(performance.now() - t0) + "ms", url);
+                  }
+                  return res;
+                } catch (e) {
+                  if (media) {
+                    err("[fetch media] ERROR", method, url, e?.message || e);
+                  }
+                  throw e;
+                }
+              };
+
+              f1.__satvPatched = true;
+              window.fetch = f1;
+            }
+          } catch (e) {
+            warn("[watch.html] fetch patch warning:", e);
           }
-        } catch (e) {
-          warn("[watch.html] fetch patch warning:", e);
         }
-      }
 
-      function nextMountSeq() {
-        const n = Number(window.__SATV_AKIRA_MOUNT_SEQ__ || 0) + 1;
-        window.__SATV_AKIRA_MOUNT_SEQ__ = n;
-        return n;
-      }
+        function nextMountSeq() {
+          const n = Number(window.__SATV_AKIRA_MOUNT_SEQ__ || 0) + 1;
+          window.__SATV_AKIRA_MOUNT_SEQ__ = n;
+          return n;
+        }
 
-      function isCurrentMountSeq(seq) {
-        return Number(window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ || 0) === Number(seq);
-      }
+        function isCurrentMountSeq(seq) {
+          return Number(window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ || 0) === Number(seq);
+        }
 
-      function cleanupPrevious() {
-        // Invalida cualquier readyPromise previo (stale)
-        window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ = Number(window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ || 0) + 1;
-        window.__SATV_AKIRA_READY_PROMISE__ = null;
-        window.__SATV_AKIRA_LAST_READY_INFO__ = null;
+        function cleanupPrevious() {
+          window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ = Number(window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ || 0) + 1;
+          window.__SATV_AKIRA_READY_PROMISE__ = null;
+          window.__SATV_AKIRA_LAST_READY_INFO__ = null;
 
-        try {
-          if (window.__SATV_AKIRA_MOUNT__ && typeof window.__SATV_AKIRA_MOUNT__.unmount === "function") {
-            window.__SATV_AKIRA_MOUNT__.unmount();
+          try {
+            if (window.__SATV_AKIRA_MOUNT__ && typeof window.__SATV_AKIRA_MOUNT__.unmount === "function") {
+              window.__SATV_AKIRA_MOUNT__.unmount();
+            }
+          } catch (e) {
+            warn("[watch.html] unmount warning:", e);
           }
-        } catch (e) {
-          warn("[watch.html] unmount warning:", e);
-        }
-        window.__SATV_AKIRA_MOUNT__ = null;
+          window.__SATV_AKIRA_MOUNT__ = null;
 
-        try {
-          if (window.__SATV_NATIVE_HLS__ && typeof window.__SATV_NATIVE_HLS__.destroy === "function") {
-            window.__SATV_NATIVE_HLS__.destroy();
+          try {
+            if (window.__SATV_NATIVE_HLS__ && typeof window.__SATV_NATIVE_HLS__.destroy === "function") {
+              window.__SATV_NATIVE_HLS__.destroy();
+            }
+          } catch (e) {
+            warn("[watch.html] native HLS destroy warning:", e);
           }
-        } catch (e) {
-          warn("[watch.html] native HLS destroy warning:", e);
-        }
-        window.__SATV_NATIVE_HLS__ = null;
+          window.__SATV_NATIVE_HLS__ = null;
 
-        // limpiar latches del mount anterior
-        window.__SATV_AKIRA_LAST_PREPARING_EVENT__ = null;
-        window.__SATV_AKIRA_LAST_READY_EVENT__ = null;
+          window.__SATV_AKIRA_LAST_PREPARING_EVENT__ = null;
+          window.__SATV_AKIRA_LAST_READY_EVENT__ = null;
 
-        if (rootEl) rootEl.innerHTML = "";
-      }
-
-      function renderNativeFallback(props, reason) {
-        const src = props?.src;
-        if (!src) {
-          fail("Fallback nativo sin src");
-          return;
+          if (rootEl) rootEl.innerHTML = "";
         }
 
-        // ✅ si pasamos a fallback, no queremos taparlo con el loader de watch
-        try { window.hideWatchLoadingOverlay && window.hideWatchLoadingOverlay(); } catch { }
+        function renderNativeFallback(props, reason) {
+          const src = props?.src;
+          if (!src) {
+            fail("Fallback nativo sin src");
+            return;
+          }
 
-        warn("[watch.html] Fallback nativo activo. Motivo:", reason);
+          try { window.hideWatchLoadingOverlay && window.hideWatchLoadingOverlay(); } catch { }
 
-        rootEl.innerHTML = `
+          warn("[watch.html] Fallback nativo activo. Motivo:", reason);
+
+          rootEl.innerHTML = `
           <div class="watch-fallback">
             <div class="watch-fallback-card">
               <div class="watch-fallback-title">${escapeHtml(props?.title || "SATV+")}</div>
@@ -538,532 +520,518 @@
           </div>
         `;
 
-        const v = document.getElementById("satv-native-video");
-        const meta = document.getElementById("satv-native-meta");
-        if (!v) return;
+          const v = document.getElementById("satv-native-video");
+          const meta = document.getElementById("satv-native-meta");
+          if (!v) return;
 
-        attachVideoDebug(v, "native");
-        const tracks = Array.isArray(props?.subtitles) ? props.subtitles : [];
+          attachVideoDebug(v, "native");
+          const tracks = Array.isArray(props?.subtitles) ? props.subtitles : [];
 
-        for (const t of tracks) {
-          if (!t?.src) continue;
-          const tr = document.createElement("track");
-          tr.kind = "subtitles";
-          tr.src = t.src;
-          tr.srclang = t.srclang || "es";
-          tr.label = t.label || "Subtítulos";
-          if (t.default) tr.default = true;
-          v.appendChild(tr);
-        }
+          for (const t of tracks) {
+            if (!t?.src) continue;
+            const tr = document.createElement("track");
+            tr.kind = "subtitles";
+            tr.src = t.src;
+            tr.srclang = t.srclang || "es";
+            tr.label = t.label || "Subtítulos";
+            if (t.default) tr.default = true;
+            v.appendChild(tr);
+          }
 
-        function setMeta(extra) {
-          if (!meta) return;
-          meta.textContent = [
-            "Fallback nativo activo",
-            "Motivo: " + reason,
-            "src: " + src,
-            "window.Hls: " + !!window.Hls,
-            "Hls.isSupported(): " + (window.Hls && typeof window.Hls.isSupported === "function" ? window.Hls.isSupported() : "n/a"),
-            "canPlayType(m3u8): " + (v.canPlayType?.("application/vnd.apple.mpegurl") || ""),
-            extra ? ("detalle: " + extra) : ""
-          ].filter(Boolean).join("\n");
-        }
+          function setMeta(extra) {
+            if (!meta) return;
+            meta.textContent = [
+              "Fallback nativo activo",
+              "Motivo: " + reason,
+              "src: " + src,
+              "window.Hls: " + !!window.Hls,
+              "Hls.isSupported(): " + (window.Hls && typeof window.Hls.isSupported === "function" ? window.Hls.isSupported() : "n/a"),
+              "canPlayType(m3u8): " + (v.canPlayType?.("application/vnd.apple.mpegurl") || ""),
+              extra ? ("detalle: " + extra) : ""
+            ].filter(Boolean).join("\n");
+          }
 
-        setMeta("");
+          setMeta("");
 
-        if (isHlsUrl(src)) {
-          if (window.Hls && typeof window.Hls.isSupported === "function" && window.Hls.isSupported()) {
-            const hls = new window.Hls({
-              enableWorker: true,
-              lowLatencyMode: false
-            });
-            window.__SATV_NATIVE_HLS__ = hls;
+          if (isHlsUrl(src)) {
+            if (window.Hls && typeof window.Hls.isSupported === "function" && window.Hls.isSupported()) {
+              const hls = new window.Hls({
+                enableWorker: true,
+                lowLatencyMode: false
+              });
+              window.__SATV_NATIVE_HLS__ = hls;
 
-            const E = window.Hls.Events || {};
+              const E = window.Hls.Events || {};
 
-            if (E.MEDIA_ATTACHED) {
-              hls.on(E.MEDIA_ATTACHED, () => log("[NATIVE HLS] MEDIA_ATTACHED"));
-            }
-            if (E.MANIFEST_LOADING) {
-              hls.on(E.MANIFEST_LOADING, (_e, d) => log("[NATIVE HLS] MANIFEST_LOADING", d));
-            }
-            if (E.MANIFEST_PARSED) {
-              hls.on(E.MANIFEST_PARSED, (_e, d) => {
-                log("[NATIVE HLS] MANIFEST_PARSED", d);
-                setMeta("Manifest parseado OK. Intentando play...");
-                const p = v.play();
-                if (p && typeof p.catch === "function") {
-                  p.catch((e) => {
-                    warn("[NATIVE HLS] autoplay bloqueado:", e);
-                    setMeta("Manifest OK. Autoplay bloqueado (click en Play).");
+              if (E.MEDIA_ATTACHED) {
+                hls.on(E.MEDIA_ATTACHED, () => log("[NATIVE HLS] MEDIA_ATTACHED"));
+              }
+              if (E.MANIFEST_LOADING) {
+                hls.on(E.MANIFEST_LOADING, (_e, d) => log("[NATIVE HLS] MANIFEST_LOADING", d));
+              }
+              if (E.MANIFEST_PARSED) {
+                hls.on(E.MANIFEST_PARSED, (_e, d) => {
+                  log("[NATIVE HLS] MANIFEST_PARSED", d);
+                  setMeta("Manifest parseado OK. Intentando play...");
+                  const p = v.play();
+                  if (p && typeof p.catch === "function") {
+                    p.catch((e) => {
+                      warn("[NATIVE HLS] autoplay bloqueado:", e);
+                      setMeta("Manifest OK. Autoplay bloqueado (click en Play).");
+                    });
+                  }
+                });
+              }
+              if (E.ERROR) {
+                hls.on(E.ERROR, (_e, data) => {
+                  err("[NATIVE HLS] ERROR", {
+                    type: data?.type,
+                    details: data?.details,
+                    fatal: !!data?.fatal,
+                    reason: data?.reason || null,
+                    response: data?.response ? {
+                      code: data.response.code,
+                      text: data.response.text,
+                      url: data.response.url
+                    } : null
                   });
-                }
-              });
-            }
-            if (E.ERROR) {
-              hls.on(E.ERROR, (_e, data) => {
-                err("[NATIVE HLS] ERROR", {
-                  type: data?.type,
-                  details: data?.details,
-                  fatal: !!data?.fatal,
-                  reason: data?.reason || null,
-                  response: data?.response ? {
-                    code: data.response.code,
-                    text: data.response.text,
-                    url: data.response.url
-                  } : null
-                });
-                setMeta(`HLS error: ${data?.type || ""} / ${data?.details || ""} / fatal=${!!data?.fatal}`);
-              });
-            }
-
-            hls.loadSource(src);
-            hls.attachMedia(v);
-            return;
-          }
-
-          if (v.canPlayType && v.canPlayType("application/vnd.apple.mpegurl")) {
-            v.src = src;
-            v.addEventListener("loadedmetadata", () => {
-              setMeta("HLS nativo OK. Intentando play...");
-              const p = v.play();
-              if (p && typeof p.catch === "function") {
-                p.catch(() => setMeta("HLS nativo OK. Autoplay bloqueado (click en Play)."));
-              }
-            }, { once: true });
-            return;
-          }
-
-          setMeta("Sin soporte HLS nativo ni Hls.js global.");
-          return;
-        }
-
-        // Fuente no HLS
-        v.src = src;
-        v.addEventListener("loadedmetadata", () => {
-          const p = v.play();
-          if (p && typeof p.catch === "function") {
-            p.catch(() => setMeta("Autoplay bloqueado (click en Play)."));
-          }
-        }, { once: true });
-      }
-
-      // ✅ Handshake robusto por evento custom emitido desde AkiraPlayer.tsx
-      window.waitForAkiraPlaybackReady = function waitForAkiraPlaybackReady(opts) {
-        const options = Object.assign(
-          {
-            timeoutMs: 30000,
-            autoplayRetry: true,
-            requireCustomReadyEvent: true,
-            requirePreparingEventIfSeen: true
-          },
-          opts || {}
-        );
-
-        return new Promise((resolve, reject) => {
-          const t0 = performance.now();
-          let done = false;
-          let timeoutId = 0;
-          let rafId = 0;
-          let observer = null;
-          let lastVideo = null;
-
-          let sawPreparingEvent = false;
-          let sawReadyEvent = false;
-          let lastPreparingDetail = null;
-          let lastReadyDetail = null;
-
-          function getAkiraVideo() {
-            return rootEl?.querySelector?.("video") || null;
-          }
-
-          function isAkiraPreparingOverlayVisible() {
-            if (!rootEl) return false;
-            const nodes = rootEl.querySelectorAll(".akira-empty-state");
-            for (const n of nodes) {
-              const txt = String(n?.textContent || "").trim();
-              if (/preparando reproducci[oó]n/i.test(txt)) return true;
-            }
-            return false;
-          }
-
-          function isVideoPlaybackReady(video) {
-            if (!video) return false;
-            const hasSource = !!(video.currentSrc || video.getAttribute?.("src"));
-            const rs = Number(video.readyState || 0);
-            if (!hasSource) return false;
-            return rs >= 1; // HAVE_METADATA+
-          }
-
-          // ✅ NUEVO: "ready" de watch = reproduciendo de verdad
-          function isVideoActuallyPlaying(video) {
-            if (!video) return false;
-            const hasSource = !!(video.currentSrc || video.getAttribute?.("src"));
-            if (!hasSource) return false;
-            const rs = Number(video.readyState || 0);
-            return !video.paused && !video.ended && rs >= 2; // HAVE_CURRENT_DATA+
-          }
-
-          function tryAutoplay(video) {
-            if (!options.autoplayRetry || !video) return;
-            try {
-              const p = video.play?.();
-              if (p && typeof p.catch === "function") {
-                p.catch((e) => {
-                  warn("[watch.html] autoplay retry bloqueado/no disponible:", e?.message || e);
+                  setMeta(`HLS error: ${data?.type || ""} / ${data?.details || ""} / fatal=${!!data?.fatal}`);
                 });
               }
-            } catch (e) {
-              warn("[watch.html] autoplay retry exception:", e);
-            }
-          }
 
-          function cleanup() {
-            done = true;
-            if (timeoutId) clearTimeout(timeoutId);
-            if (rafId) cancelAnimationFrame(rafId);
-            try { observer && observer.disconnect(); } catch { }
-
-            window.removeEventListener("akira:playback-preparing", onPreparingEvent);
-            window.removeEventListener("akira:playback-ready", onReadyEvent);
-
-            if (lastVideo) {
-              try {
-                lastVideo.removeEventListener("loadedmetadata", onVideoMaybeReady);
-                lastVideo.removeEventListener("canplay", onVideoMaybeReady);
-                lastVideo.removeEventListener("playing", onVideoMaybeReady);
-                lastVideo.removeEventListener("error", onVideoError);
-              } catch { }
-            }
-          }
-
-          function attachVideoListeners(video) {
-            if (!video || video === lastVideo) return;
-
-            if (lastVideo) {
-              try {
-                lastVideo.removeEventListener("loadedmetadata", onVideoMaybeReady);
-                lastVideo.removeEventListener("canplay", onVideoMaybeReady);
-                lastVideo.removeEventListener("playing", onVideoMaybeReady);
-                lastVideo.removeEventListener("error", onVideoError);
-              } catch { }
-            }
-
-            lastVideo = video;
-            attachVideoDebug(video, "akira-ready-wait");
-            video.addEventListener("loadedmetadata", onVideoMaybeReady);
-            video.addEventListener("canplay", onVideoMaybeReady);
-            video.addEventListener("playing", onVideoMaybeReady);
-            video.addEventListener("error", onVideoError);
-          }
-
-          function eventMatchesCurrentMount(detail) {
-            const props = window.__SATV_LAST_PROPS__ || window.__SATV_WATCH_LAST_PROPS__ || {};
-            const wantSrc = String(props?.src || "");
-            const wantContentId = String(props?.contentId || "");
-            const wantEpisodeId = props?.episodeId == null ? null : String(props.episodeId);
-
-            const gotSrc = String(detail?.src || "");
-            const gotContentId = detail?.contentId == null ? "" : String(detail.contentId);
-            const gotEpisodeId = detail?.episodeId == null ? null : String(detail.episodeId);
-
-            if (wantSrc && gotSrc && wantSrc === gotSrc) return true;
-            if (wantContentId && gotContentId && wantContentId !== gotContentId) return false;
-            if (wantEpisodeId !== null && gotEpisodeId !== null && wantEpisodeId !== gotEpisodeId) return false;
-
-            return true;
-          }
-
-          function buildInfo(video) {
-            return {
-              elapsedMs: Math.round(performance.now() - t0),
-              sawPreparingEvent,
-              sawReadyEvent,
-              preparingOverlayVisible: isAkiraPreparingOverlayVisible(),
-              videoActuallyPlaying: isVideoActuallyPlaying(video),
-              currentSrc: video?.currentSrc || null,
-              srcAttr: video?.getAttribute?.("src") || null,
-              readyState: video?.readyState ?? null,
-              networkState: video?.networkState ?? null,
-              lastPreparingDetail,
-              lastReadyDetail
-            };
-          }
-
-          function canResolve(video) {
-            const videoPrepared = isVideoPlaybackReady(video);
-            const videoPlaying = isVideoActuallyPlaying(video);
-
-            if (!videoPrepared) return false;
-            if (!videoPlaying) return false;
-
-            // ✅ Nunca resolver si todavía está visible el overlay de "Preparando reproducción..."
-            if (isAkiraPreparingOverlayVisible()) return false;
-
-            if (options.requireCustomReadyEvent) {
-              if (!sawReadyEvent) return false;
-
-              if (options.requirePreparingEventIfSeen && sawPreparingEvent && isAkiraPreparingOverlayVisible()) {
-                return false;
-              }
-              return true;
-            }
-
-            return true;
-          }
-
-          function check() {
-            if (done) return;
-
-            const video = getAkiraVideo();
-            attachVideoListeners(video);
-
-            if (canResolve(video)) {
-              const info = buildInfo(video);
-              log("[watch.html] Akira playback READY detectado", info);
-              tryAutoplay(video);
-
-              // ✅ por las dudas, ocultar loader de watch al resolver ready
-              try { window.hideWatchLoadingOverlay && window.hideWatchLoadingOverlay(); } catch { }
-
-              cleanup();
-              resolve(info);
+              hls.loadSource(src);
+              hls.attachMedia(v);
               return;
             }
 
-            rafId = requestAnimationFrame(check);
-          }
-
-          function onPreparingEvent(ev) {
-            if (done) return;
-            const detail = ev?.detail || {};
-            if (!eventMatchesCurrentMount(detail)) return;
-
-            sawPreparingEvent = true;
-            lastPreparingDetail = detail;
-            log("[watch.html] evento akira:playback-preparing", detail);
-            check();
-          }
-
-          function onReadyEvent(ev) {
-            if (done) return;
-            const detail = ev?.detail || {};
-            if (!eventMatchesCurrentMount(detail)) return;
-
-            sawReadyEvent = true;
-            lastReadyDetail = detail;
-            log("[watch.html] evento akira:playback-ready", detail);
-            check();
-          }
-
-          function onVideoMaybeReady() {
-            check();
-          }
-
-          function onVideoError() {
-            warn("[watch.html] video error durante waitForAkiraPlaybackReady");
-          }
-
-          // ✅ seed desde latches globales (por si el evento pasó antes de enganchar listeners)
-          try {
-            const seededPreparing = window.__SATV_AKIRA_LAST_PREPARING_EVENT__;
-            if (seededPreparing && eventMatchesCurrentMount(seededPreparing)) {
-              sawPreparingEvent = true;
-              lastPreparingDetail = seededPreparing;
+            if (v.canPlayType && v.canPlayType("application/vnd.apple.mpegurl")) {
+              v.src = src;
+              v.addEventListener("loadedmetadata", () => {
+                setMeta("HLS nativo OK. Intentando play...");
+                const p = v.play();
+                if (p && typeof p.catch === "function") {
+                  p.catch(() => setMeta("HLS nativo OK. Autoplay bloqueado (click en Play)."));
+                }
+              }, { once: true });
+              return;
             }
-          } catch { }
 
-          try {
-            const seededReady = window.__SATV_AKIRA_LAST_READY_EVENT__;
-            if (seededReady && eventMatchesCurrentMount(seededReady)) {
-              sawReadyEvent = true;
-              lastReadyDetail = seededReady;
-            }
-          } catch { }
-
-          window.addEventListener("akira:playback-preparing", onPreparingEvent);
-          window.addEventListener("akira:playback-ready", onReadyEvent);
-
-          timeoutId = setTimeout(() => {
-            if (done) return;
-            const video = getAkiraVideo();
-            const info = buildInfo(video);
-            if (video) info.snapshot = snapshotVideo(video, "wait-timeout");
-            cleanup();
-            reject(new Error("waitForAkiraPlaybackReady timeout: " + JSON.stringify(info)));
-          }, options.timeoutMs);
-
-          try {
-            observer = new MutationObserver(() => check());
-            if (rootEl) {
-              observer.observe(rootEl, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                characterData: true
-              });
-            }
-          } catch (e) {
-            warn("[watch.html] MutationObserver warning:", e);
+            setMeta("Sin soporte HLS nativo ni Hls.js global.");
+            return;
           }
 
-          check();
-        });
-      };
-
-      // ✅ Helper: reutiliza la promesa del mount actual (si existe)
-      window.waitForCurrentAkiraPlaybackReady = function waitForCurrentAkiraPlaybackReady(opts) {
-        const p = window.__SATV_AKIRA_READY_PROMISE__;
-        if (p && typeof p.then === "function") return p;
-        return window.waitForAkiraPlaybackReady(opts);
-      };
-
-      // Espera READY antes de diagnósticos/fallback (usando la MISMA promesa del mount actual)
-      async function runDiagnosticsAfterMount(props, mountSeq, readyPromise) {
-        let readyOk = false;
-
-        try {
-          const info = await (readyPromise && typeof readyPromise.then === "function"
-            ? readyPromise
-            : window.waitForAkiraPlaybackReady({
-              timeoutMs: 30000,
-              autoplayRetry: true,
-              requireCustomReadyEvent: true
-            })
-          );
-
-          if (!isCurrentMountSeq(mountSeq)) return;
-          readyOk = true;
-          log("[watch.html] runDiagnosticsAfterMount ready OK", info);
-        } catch (e) {
-          if (!isCurrentMountSeq(mountSeq)) return;
-          warn("[watch.html] waitForAkiraPlaybackReady timeout/fallo:", e);
+          v.src = src;
+          v.addEventListener("loadedmetadata", () => {
+            const p = v.play();
+            if (p && typeof p.catch === "function") {
+              p.catch(() => setMeta("Autoplay bloqueado (click en Play)."));
+            }
+          }, { once: true });
         }
 
-        setTimeout(() => {
-          if (!isCurrentMountSeq(mountSeq)) return;
-
-          const video = rootEl.querySelector("video");
-          if (!video) {
-            warn("[watch.html] No apareció <video> tras mount (post-ready +2s)");
-            return;
-          }
-          attachVideoDebug(video, "akira");
-          snapshotVideo(video, readyOk ? "akira-post-ready+t2s" : "akira-post-waitfail+t2s");
-        }, 2000);
-
-        setTimeout(() => {
-          if (!isCurrentMountSeq(mountSeq)) return;
-
-          const video = rootEl.querySelector("video");
-          if (!video) {
-            warn("[watch.html] No apareció <video> tras mount (post-ready +6s). Fallback nativo.");
-            renderNativeFallback(props, "Akira montó UI pero no creó <video> tras wait-ready");
-            return;
-          }
-
-          const snap = snapshotVideo(video, readyOk ? "akira-post-ready+t6s" : "akira-post-waitfail+t6s");
-          const stuckNoSource = snap.readyState === 0 && snap.networkState === 3 && !!(snap.currentSrc || snap.srcAttr);
-
-          if (stuckNoSource) {
-            warn("[watch.html] Akira quedó en NETWORK_NO_SOURCE. Activando fallback nativo para diagnóstico.");
-            renderNativeFallback(props, "Akira quedó en NETWORK_NO_SOURCE (post wait-ready)");
-          }
-        }, 6000);
-      }
-
-      window.addEventListener("error", (e) => {
-        err("[watch.html] window error:", e?.message || e, e?.error || null);
-      });
-
-      window.addEventListener("unhandledrejection", (e) => {
-        err("[watch.html] unhandledrejection:", e?.reason || e);
-      });
-
-      patchNetworkDebug();
-
-      window.renderAkiraPlayer = function renderAkiraPlayer(props) {
-        try {
-          const api = getAkiraApi();
-          if (!api || typeof api.mount !== "function") {
-            fail("No se encontró AkiraPlayer.mount en el UMD");
-            err("[watch.html] Akira API inválida", window.AkiraPlayer);
-            return { mountHandle: null, readyPromise: Promise.reject(new Error("Akira API inválida")), mountSeq: null };
-          }
-
-          const mergedProps = Object.assign(
+        window.waitForAkiraPlaybackReady = function waitForAkiraPlaybackReady(opts) {
+          const options = Object.assign(
             {
-              assetBaseUrl: document.body?.dataset?.assetBase || "https://akira.satvplus.com.ar/assets"
-            },
-            props || {}
-          );
-
-          window.__SATV_LAST_PROPS__ = mergedProps;
-
-          log("[watch.html] renderAkiraPlayer(props)", {
-            hasAkira: !!window.AkiraPlayer,
-            akiraKeys: Object.keys(window.AkiraPlayer || {}),
-            hasHlsGlobal: !!window.Hls,
-            src: mergedProps?.src,
-            thumbnailsVtt: mergedProps?.thumbnailsVtt,
-            subtitles: mergedProps?.subtitles
-          });
-
-          cleanupPrevious();
-
-          const mountSeq = nextMountSeq();
-          window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ = mountSeq;
-
-          const mountHandle = api.mount(rootEl, mergedProps);
-          window.__SATV_AKIRA_MOUNT__ = mountHandle || null;
-
-          // ✅ Una sola promesa de ready por mount (reutilizable por watch.js)
-          const readyPromise = Promise.resolve().then(async () => {
-            const info = await window.waitForAkiraPlaybackReady({
               timeoutMs: 30000,
               autoplayRetry: true,
-              requireCustomReadyEvent: true
+              requireCustomReadyEvent: true,
+              requirePreparingEventIfSeen: true
+            },
+            opts || {}
+          );
+
+          return new Promise((resolve, reject) => {
+            const t0 = performance.now();
+            let done = false;
+            let timeoutId = 0;
+            let rafId = 0;
+            let observer = null;
+            let lastVideo = null;
+
+            let sawPreparingEvent = false;
+            let sawReadyEvent = false;
+            let lastPreparingDetail = null;
+            let lastReadyDetail = null;
+
+            function getAkiraVideo() {
+              return rootEl?.querySelector?.("video") || null;
+            }
+
+            function isAkiraPreparingOverlayVisible() {
+              if (!rootEl) return false;
+              const nodes = rootEl.querySelectorAll(".akira-empty-state");
+              for (const n of nodes) {
+                const txt = String(n?.textContent || "").trim();
+                if (/preparando reproducci[oó]n/i.test(txt)) return true;
+              }
+              return false;
+            }
+
+            function isVideoPlaybackReady(video) {
+              if (!video) return false;
+              const hasSource = !!(video.currentSrc || video.getAttribute?.("src"));
+              const rs = Number(video.readyState || 0);
+              if (!hasSource) return false;
+              return rs >= 1;
+            }
+
+            function isVideoActuallyPlaying(video) {
+              if (!video) return false;
+              const hasSource = !!(video.currentSrc || video.getAttribute?.("src"));
+              if (!hasSource) return false;
+              const rs = Number(video.readyState || 0);
+              return !video.paused && !video.ended && rs >= 2;
+            }
+
+            function tryAutoplay(video) {
+              if (!options.autoplayRetry || !video) return;
+              try {
+                const p = video.play?.();
+                if (p && typeof p.catch === "function") {
+                  p.catch((e) => {
+                    warn("[watch.html] autoplay retry bloqueado/no disponible:", e?.message || e);
+                  });
+                }
+              } catch (e) {
+                warn("[watch.html] autoplay retry exception:", e);
+              }
+            }
+
+            function cleanup() {
+              done = true;
+              if (timeoutId) clearTimeout(timeoutId);
+              if (rafId) cancelAnimationFrame(rafId);
+              try { observer && observer.disconnect(); } catch { }
+
+              window.removeEventListener("akira:playback-preparing", onPreparingEvent);
+              window.removeEventListener("akira:playback-ready", onReadyEvent);
+
+              if (lastVideo) {
+                try {
+                  lastVideo.removeEventListener("loadedmetadata", onVideoMaybeReady);
+                  lastVideo.removeEventListener("canplay", onVideoMaybeReady);
+                  lastVideo.removeEventListener("playing", onVideoMaybeReady);
+                  lastVideo.removeEventListener("error", onVideoError);
+                } catch { }
+              }
+            }
+
+            function attachVideoListeners(video) {
+              if (!video || video === lastVideo) return;
+
+              if (lastVideo) {
+                try {
+                  lastVideo.removeEventListener("loadedmetadata", onVideoMaybeReady);
+                  lastVideo.removeEventListener("canplay", onVideoMaybeReady);
+                  lastVideo.removeEventListener("playing", onVideoMaybeReady);
+                  lastVideo.removeEventListener("error", onVideoError);
+                } catch { }
+              }
+
+              lastVideo = video;
+              attachVideoDebug(video, "akira-ready-wait");
+              video.addEventListener("loadedmetadata", onVideoMaybeReady);
+              video.addEventListener("canplay", onVideoMaybeReady);
+              video.addEventListener("playing", onVideoMaybeReady);
+              video.addEventListener("error", onVideoError);
+            }
+
+            function eventMatchesCurrentMount(detail) {
+              const props = window.__SATV_LAST_PROPS__ || window.__SATV_WATCH_LAST_PROPS__ || {};
+              const wantSrc = String(props?.src || "");
+              const wantContentId = String(props?.contentId || "");
+              const wantEpisodeId = props?.episodeId == null ? null : String(props.episodeId);
+
+              const gotSrc = String(detail?.src || "");
+              const gotContentId = detail?.contentId == null ? "" : String(detail.contentId);
+              const gotEpisodeId = detail?.episodeId == null ? null : String(detail.episodeId);
+
+              if (wantSrc && gotSrc && wantSrc === gotSrc) return true;
+              if (wantContentId && gotContentId && wantContentId !== gotContentId) return false;
+              if (wantEpisodeId !== null && gotEpisodeId !== null && wantEpisodeId !== gotEpisodeId) return false;
+
+              return true;
+            }
+
+            function buildInfo(video) {
+              return {
+                elapsedMs: Math.round(performance.now() - t0),
+                sawPreparingEvent,
+                sawReadyEvent,
+                preparingOverlayVisible: isAkiraPreparingOverlayVisible(),
+                videoActuallyPlaying: isVideoActuallyPlaying(video),
+                currentSrc: video?.currentSrc || null,
+                srcAttr: video?.getAttribute?.("src") || null,
+                readyState: video?.readyState ?? null,
+                networkState: video?.networkState ?? null,
+                lastPreparingDetail,
+                lastReadyDetail
+              };
+            }
+
+            function canResolve(video) {
+              const videoPrepared = isVideoPlaybackReady(video);
+              const videoPlaying = isVideoActuallyPlaying(video);
+
+              if (!videoPrepared) return false;
+              if (!videoPlaying) return false;
+              if (isAkiraPreparingOverlayVisible()) return false;
+
+              if (options.requireCustomReadyEvent) {
+                if (!sawReadyEvent) return false;
+
+                if (options.requirePreparingEventIfSeen && sawPreparingEvent && isAkiraPreparingOverlayVisible()) {
+                  return false;
+                }
+                return true;
+              }
+
+              return true;
+            }
+
+            function check() {
+              if (done) return;
+
+              const video = getAkiraVideo();
+              attachVideoListeners(video);
+
+              if (canResolve(video)) {
+                const info = buildInfo(video);
+                log("[watch.html] Akira playback READY detectado", info);
+                tryAutoplay(video);
+                try { window.hideWatchLoadingOverlay && window.hideWatchLoadingOverlay(); } catch { }
+                cleanup();
+                resolve(info);
+                return;
+              }
+
+              rafId = requestAnimationFrame(check);
+            }
+
+            function onPreparingEvent(ev) {
+              if (done) return;
+              const detail = ev?.detail || {};
+              if (!eventMatchesCurrentMount(detail)) return;
+
+              sawPreparingEvent = true;
+              lastPreparingDetail = detail;
+              log("[watch.html] evento akira:playback-preparing", detail);
+              check();
+            }
+
+            function onReadyEvent(ev) {
+              if (done) return;
+              const detail = ev?.detail || {};
+              if (!eventMatchesCurrentMount(detail)) return;
+
+              sawReadyEvent = true;
+              lastReadyDetail = detail;
+              log("[watch.html] evento akira:playback-ready", detail);
+              check();
+            }
+
+            function onVideoMaybeReady() {
+              check();
+            }
+
+            function onVideoError() {
+              warn("[watch.html] video error durante waitForAkiraPlaybackReady");
+            }
+
+            try {
+              const seededPreparing = window.__SATV_AKIRA_LAST_PREPARING_EVENT__;
+              if (seededPreparing && eventMatchesCurrentMount(seededPreparing)) {
+                sawPreparingEvent = true;
+                lastPreparingDetail = seededPreparing;
+              }
+            } catch { }
+
+            try {
+              const seededReady = window.__SATV_AKIRA_LAST_READY_EVENT__;
+              if (seededReady && eventMatchesCurrentMount(seededReady)) {
+                sawReadyEvent = true;
+                lastReadyDetail = seededReady;
+              }
+            } catch { }
+
+            window.addEventListener("akira:playback-preparing", onPreparingEvent);
+            window.addEventListener("akira:playback-ready", onReadyEvent);
+
+            timeoutId = setTimeout(() => {
+              if (done) return;
+              const video = getAkiraVideo();
+              const info = buildInfo(video);
+              if (video) info.snapshot = snapshotVideo(video, "wait-timeout");
+              cleanup();
+              reject(new Error("waitForAkiraPlaybackReady timeout: " + JSON.stringify(info)));
+            }, options.timeoutMs);
+
+            try {
+              observer = new MutationObserver(() => check());
+              if (rootEl) {
+                observer.observe(rootEl, {
+                  childList: true,
+                  subtree: true,
+                  attributes: true,
+                  characterData: true
+                });
+              }
+            } catch (e) {
+              warn("[watch.html] MutationObserver warning:", e);
+            }
+
+            check();
+          });
+        };
+
+        window.waitForCurrentAkiraPlaybackReady = function waitForCurrentAkiraPlaybackReady(opts) {
+          const p = window.__SATV_AKIRA_READY_PROMISE__;
+          if (p && typeof p.then === "function") return p;
+          return window.waitForAkiraPlaybackReady(opts);
+        };
+
+        async function runDiagnosticsAfterMount(props, mountSeq, readyPromise) {
+          let readyOk = false;
+
+          try {
+            const info = await (readyPromise && typeof readyPromise.then === "function"
+              ? readyPromise
+              : window.waitForAkiraPlaybackReady({
+                timeoutMs: 30000,
+                autoplayRetry: true,
+                requireCustomReadyEvent: true
+              })
+            );
+
+            if (!isCurrentMountSeq(mountSeq)) return;
+            readyOk = true;
+            log("[watch.html] runDiagnosticsAfterMount ready OK", info);
+          } catch (e) {
+            if (!isCurrentMountSeq(mountSeq)) return;
+            warn("[watch.html] waitForAkiraPlaybackReady timeout/fallo:", e);
+          }
+
+          setTimeout(() => {
+            if (!isCurrentMountSeq(mountSeq)) return;
+
+            const video = rootEl.querySelector("video");
+            if (!video) {
+              warn("[watch.html] No apareció <video> tras mount (post-ready +2s)");
+              return;
+            }
+            attachVideoDebug(video, "akira");
+            snapshotVideo(video, readyOk ? "akira-post-ready+t2s" : "akira-post-waitfail+t2s");
+          }, 2000);
+
+          setTimeout(() => {
+            if (!isCurrentMountSeq(mountSeq)) return;
+
+            const video = rootEl.querySelector("video");
+            if (!video) {
+              warn("[watch.html] No apareció <video> tras mount (post-ready +6s). Fallback nativo.");
+              renderNativeFallback(props, "Akira montó UI pero no creó <video> tras wait-ready");
+              return;
+            }
+
+            const snap = snapshotVideo(video, readyOk ? "akira-post-ready+t6s" : "akira-post-waitfail+t6s");
+            const stuckNoSource = snap.readyState === 0 && snap.networkState === 3 && !!(snap.currentSrc || snap.srcAttr);
+
+            if (stuckNoSource) {
+              warn("[watch.html] Akira quedó en NETWORK_NO_SOURCE. Activando fallback nativo para diagnóstico.");
+              renderNativeFallback(props, "Akira quedó en NETWORK_NO_SOURCE (post wait-ready)");
+            }
+          }, 6000);
+        }
+
+        window.addEventListener("error", (e) => {
+          err("[watch.html] window error:", e?.message || e, e?.error || null);
+        });
+
+        window.addEventListener("unhandledrejection", (e) => {
+          err("[watch.html] unhandledrejection:", e?.reason || e);
+        });
+
+        patchNetworkDebug();
+
+        window.renderAkiraPlayer = function renderAkiraPlayer(props) {
+          try {
+            const api = getAkiraApi();
+            if (!api || typeof api.mount !== "function") {
+              fail("No se encontró AkiraPlayer.mount en el UMD");
+              err("[watch.html] Akira API inválida", window.AkiraPlayer);
+              return { mountHandle: null, readyPromise: Promise.reject(new Error("Akira API inválida")), mountSeq: null };
+            }
+
+            const mergedProps = Object.assign(
+              {
+                assetBaseUrl: document.body?.dataset?.assetBase || "https://akira.satvplus.com.ar/assets"
+              },
+              props || {}
+            );
+
+            window.__SATV_LAST_PROPS__ = mergedProps;
+
+            log("[watch.html] renderAkiraPlayer(props)", {
+              hasAkira: !!window.AkiraPlayer,
+              akiraKeys: Object.keys(window.AkiraPlayer || {}),
+              hasHlsGlobal: !!window.Hls,
+              src: mergedProps?.src,
+              thumbnailsVtt: mergedProps?.thumbnailsVtt,
+              subtitles: mergedProps?.subtitles,
+              isCollectionMode: mergedProps?.isCollectionMode || false
             });
 
-            if (!isCurrentMountSeq(mountSeq)) {
-              throw new Error("READY de mount viejo ignorado (stale mount)");
+            cleanupPrevious();
+
+            const mountSeq = nextMountSeq();
+            window.__SATV_AKIRA_ACTIVE_MOUNT_SEQ__ = mountSeq;
+
+            const mountHandle = api.mount(rootEl, mergedProps);
+            window.__SATV_AKIRA_MOUNT__ = mountHandle || null;
+
+            const readyPromise = Promise.resolve().then(async () => {
+              const info = await window.waitForAkiraPlaybackReady({
+                timeoutMs: 30000,
+                autoplayRetry: true,
+                requireCustomReadyEvent: true
+              });
+
+              if (!isCurrentMountSeq(mountSeq)) {
+                throw new Error("READY de mount viejo ignorado (stale mount)");
+              }
+
+              window.__SATV_AKIRA_LAST_READY_INFO__ = info;
+              return info;
+            });
+
+            window.__SATV_AKIRA_READY_PROMISE__ = readyPromise;
+            runDiagnosticsAfterMount(mergedProps, mountSeq, readyPromise);
+
+            return {
+              mountHandle: window.__SATV_AKIRA_MOUNT__,
+              readyPromise,
+              mountSeq
+            };
+          } catch (e) {
+            err("[watch.html] renderAkiraPlayer error", e);
+            window.__SATV_AKIRA_READY_PROMISE__ = Promise.reject(e);
+            try {
+              renderNativeFallback(props || {}, "Excepción montando Akira: " + (e?.message || e));
+            } catch (fallbackErr) {
+              err("[watch.html] fallback error", fallbackErr);
+              fail("Error montando Akira: " + (e?.message || e));
             }
-
-            window.__SATV_AKIRA_LAST_READY_INFO__ = info;
-            return info;
-          });
-
-          window.__SATV_AKIRA_READY_PROMISE__ = readyPromise;
-
-          // Diagnóstico encadenado a la misma promesa
-          runDiagnosticsAfterMount(mergedProps, mountSeq, readyPromise);
-
-          return {
-            mountHandle: window.__SATV_AKIRA_MOUNT__,
-            readyPromise,
-            mountSeq
-          };
-        } catch (e) {
-          err("[watch.html] renderAkiraPlayer error", e);
-          window.__SATV_AKIRA_READY_PROMISE__ = Promise.reject(e);
-          try {
-            renderNativeFallback(props || {}, "Excepción montando Akira: " + (e?.message || e));
-          } catch (fallbackErr) {
-            err("[watch.html] fallback error", fallbackErr);
-            fail("Error montando Akira: " + (e?.message || e));
+            return {
+              mountHandle: null,
+              readyPromise: window.__SATV_AKIRA_READY_PROMISE__,
+              mountSeq: null
+            };
           }
-          return {
-            mountHandle: null,
-            readyPromise: window.__SATV_AKIRA_READY_PROMISE__,
-            mountSeq: null
-          };
-        }
-      };
-    })();
-  </script>
+        };
+      })();
+    </script>
 
-  <!-- 5) Loader -->
-  <script type="module" src="/js/watch.js"></script>
-</body>
+    <script type="module" src="/js/watch.js"></script>
+  </body>
 
 </html>

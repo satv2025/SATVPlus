@@ -1,22 +1,9 @@
 // js/watch.js
-// SATV+ Watch loader (SIN proxy / SIN remote-media)
-// Lee m3u8_url y vtt_url DESDE SUPABASE y los pasa directos al AkiraPlayer.
-//
-// Requiere:
-// - watch.html con window.renderAkiraPlayer(props)
-// - watch.html con window.waitForAkiraPlaybackReady(opts) o window.waitForCurrentAkiraPlaybackReady(opts)
-// - ./supabaseClient.js exportando `supabase`
-// - UMD de Akira cargado
-//
-// ✅ LIVE MODE soportado (sin countdown/gate):
-// - movies.live_mode (boolean)
-// - movies.live_starts_at (timestamptz)
-// Si live_mode=true, se renderiza DIRECTO el player (sin "esperando transmisión").
-//
-// ✅ Mantiene compat con metadata live:
-// - props.isLiveMode
-// - props.liveStartsAt
-// - props.streamType = "live"
+// SATV+ Watch loader
+// - Soporta movie / episode / series
+// - Soporta collection + movie
+// - En collection mode, el modal del player usa una lista obtenida desde public.collections
+//   y navega con /watch?collection=<uuid>&movie=<uuid>
 
 import { supabase } from "./supabaseClient.js";
 
@@ -43,13 +30,14 @@ const DB = {
       thumbnail: "thumbnail_url",
       banner: "banner_url",
       m3u8: "m3u8_url",
-      category: "category", // 'movie' | 'series'
+      category: "category",
       createdAt: "created_at",
       vtt: "vtt_url",
       durationMinutes: "duration_minutes",
       releaseYear: "release_year",
       liveMode: "live_mode",
-      liveStartsAt: "live_starts_at"
+      liveStartsAt: "live_starts_at",
+      collectionId: "collection_id"
     }
   },
   episodes: {
@@ -65,6 +53,9 @@ const DB = {
       vtt: "vtt_url",
       sinopsis: "sinopsis"
     }
+  },
+  collections: {
+    table: "collections"
   }
 };
 
@@ -94,9 +85,7 @@ function showWatchLoadingOverlay(text = "") {
       window.showWatchLoadingOverlay(text);
       return true;
     }
-  } catch {
-    // noop
-  }
+  } catch { }
   return false;
 }
 
@@ -106,17 +95,13 @@ function hideWatchLoadingOverlay() {
       window.hideWatchLoadingOverlay();
       return true;
     }
-  } catch {
-    // noop
-  }
+  } catch { }
   return false;
 }
 
 function setLoading() {
-  // ✅ Preferimos overlay global de watch.html (se mantiene hasta "playing")
   const usedGlobalOverlay = showWatchLoadingOverlay("");
 
-  // Fallback por compat (si no existe el overlay global)
   if (usedGlobalOverlay) {
     const root = getRootEl();
     if (root) root.innerHTML = "";
@@ -214,7 +199,7 @@ function getAssetBaseUrl() {
 }
 
 /* ============================================================
- * LIVE mode helpers (solo metadata, SIN gate/countdown)
+ * LIVE helpers
  * ============================================================ */
 function getLiveStartDateFromRow(row, keyName = "live_starts_at") {
   if (!row) return null;
@@ -251,9 +236,10 @@ function getParams() {
     movieId: url.searchParams.get("movie"),
     episodeId: url.searchParams.get("episode"),
     seriesId: url.searchParams.get("series"),
+    collectionId: url.searchParams.get("collection"),
     autoplay: url.searchParams.get("autoplay") !== "0",
     forceThumbsLocal: url.searchParams.get("forceThumbsLocal") === "1",
-    probe: url.searchParams.get("probe") !== "0" // default ON
+    probe: url.searchParams.get("probe") !== "0"
   };
 }
 
@@ -276,7 +262,7 @@ function safeArray(v) {
   return Array.isArray(v) ? v : [];
 }
 
-function isHlsUrl(url) {
+function isMpdUrl(url) {
   return /\.mpd(\?|#|$)/i.test(String(url || ""));
 }
 
@@ -303,8 +289,6 @@ function isLocalhostPage() {
 
 function normalizeSubtitlesFromVtt(vttUrlFromSupabase) {
   if (!vttUrlFromSupabase) return [];
-
-  // Si vtt_url contiene thumbs.vtt, NO lo tratamos como subtítulo
   if (isThumbsVtt(vttUrlFromSupabase)) return [];
 
   const src = proxifyRemoteUrl(vttUrlFromSupabase);
@@ -349,14 +333,6 @@ function isPromiseLike(v) {
   );
 }
 
-/**
- * Espera el READY del player del mount actual.
- * Prioridad:
- * 1) renderAkiraPlayer(...).readyPromise (nuevo bridge)
- * 2) renderAkiraPlayer(...) devuelve Promise (compat)
- * 3) window.waitForCurrentAkiraPlaybackReady (nuevo bridge global)
- * 4) window.waitForAkiraPlaybackReady (legacy)
- */
 async function awaitAkiraReadyAfterRender(renderResult, opts = {}) {
   const waitOpts = {
     timeoutMs: 45000,
@@ -367,20 +343,13 @@ async function awaitAkiraReadyAfterRender(renderResult, opts = {}) {
 
   let readyPromise = null;
 
-  // Nuevo bridge: objeto con readyPromise
   if (renderResult && isPromiseLike(renderResult.readyPromise)) {
     readyPromise = renderResult.readyPromise;
-  }
-  // Compat: renderAkiraPlayer devuelve Promise directa
-  else if (isPromiseLike(renderResult)) {
+  } else if (isPromiseLike(renderResult)) {
     readyPromise = renderResult;
-  }
-  // Nuevo helper global del bridge
-  else if (typeof window.waitForCurrentAkiraPlaybackReady === "function") {
+  } else if (typeof window.waitForCurrentAkiraPlaybackReady === "function") {
     readyPromise = window.waitForCurrentAkiraPlaybackReady(waitOpts);
-  }
-  // Legacy helper
-  else if (typeof window.waitForAkiraPlaybackReady === "function") {
+  } else if (typeof window.waitForAkiraPlaybackReady === "function") {
     readyPromise = window.waitForAkiraPlaybackReady(waitOpts);
   }
 
@@ -394,13 +363,13 @@ async function awaitAkiraReadyAfterRender(renderResult, opts = {}) {
 }
 
 /* ============================================================
- * Probes (diagnóstico no bloqueante)
+ * Probes
  * ============================================================ */
 async function probeM3u8(url) {
-  if (!url || !isLikelyAbsoluteUrl(url) || !isHlsUrl(url)) return;
+  if (!url || !isLikelyAbsoluteUrl(url) || (!/\.m3u8(\?|#|$)/i.test(url) && !/\.mpd(\?|#|$)/i.test(url))) return;
 
   try {
-    infoLog("[watch][probe] Probing m3u8:", url);
+    infoLog("[watch][probe] Probing stream:", url);
 
     const res = await fetch(url, {
       method: "GET",
@@ -411,7 +380,7 @@ async function probeM3u8(url) {
     const text = await res.text();
     const lines = text.split("\n").slice(0, 10).join("\n");
 
-    infoLog("[watch][probe] m3u8 response:", {
+    infoLog("[watch][probe] stream response:", {
       ok: res.ok,
       status: res.status,
       type: res.type,
@@ -420,12 +389,8 @@ async function probeM3u8(url) {
       contentType: res.headers.get("content-type"),
       firstLines: lines
     });
-
-    if (!text.includes("#EXTM3U")) {
-      warnLog("[watch][probe] El m3u8 no contiene #EXTM3U");
-    }
   } catch (e) {
-    console.error("[watch][probe] m3u8 fetch error:", {
+    console.error("[watch][probe] stream fetch error:", {
       message: e?.message || String(e),
       name: e?.name || null,
       url
@@ -461,64 +426,6 @@ async function probeVtt(url) {
 }
 
 /* ============================================================
- * Live stream availability probe (se deja por compat/debug; ya no gatea)
- * ============================================================ */
-function looksLikePlayableHlsPlaylist(text) {
-  const s = String(text || "");
-  if (!s.includes("#EXTM3U")) return false;
-
-  // Master playlist o media playlist
-  const hasMaster = /#EXT-X-STREAM-INF:/i.test(s);
-  const hasMedia = /#EXTINF:/i.test(s);
-
-  return hasMaster || hasMedia || s.trim().startsWith("#EXTM3U");
-}
-
-async function probeLiveStreamAvailability(url, { timeoutMs = 4500 } = {}) {
-  if (!url || !isLikelyAbsoluteUrl(url) || !isHlsUrl(url)) {
-    return {
-      online: false,
-      reason: "invalid_url",
-      status: null
-    };
-  }
-
-  try {
-    const res = await withTimeout(
-      fetch(url, {
-        method: "GET",
-        mode: "cors",
-        cache: "no-store"
-      }),
-      timeoutMs,
-      "probeLiveStreamAvailability"
-    );
-
-    const text = await res.text();
-    const playlistOk = res.ok && looksLikePlayableHlsPlaylist(text);
-
-    return {
-      online: !!playlistOk,
-      reason: playlistOk
-        ? "playlist_ok"
-        : res.ok
-          ? "invalid_playlist"
-          : "http_error",
-      status: res.status,
-      contentType: res.headers.get("content-type") || null,
-      firstLines: text.split("\n").slice(0, 8).join("\n")
-    };
-  } catch (e) {
-    return {
-      online: false,
-      reason: "fetch_error",
-      status: null,
-      error: e?.message || String(e)
-    };
-  }
-}
-
-/* ============================================================
  * Supabase queries
  * ============================================================ */
 async function fetchMovieById(movieId) {
@@ -540,7 +447,8 @@ async function fetchMovieById(movieId) {
           m.durationMinutes,
           m.releaseYear,
           m.liveMode,
-          m.liveStartsAt
+          m.liveStartsAt,
+          m.collectionId
         ].join(",")
       )
       .eq(m.id, movieId)
@@ -669,7 +577,115 @@ async function fetchRecommendations(currentContentId = null) {
 }
 
 /* ============================================================
- * Mapping -> AkiraPlayer props (reales)
+ * COLLECTIONS TABLE
+ * ============================================================ */
+
+function pickFirstNonEmpty(row, keys = []) {
+  for (const key of keys) {
+    const value = row?.[key];
+    if (value == null) continue;
+    const s = String(value).trim();
+    if (s) return value;
+  }
+  return null;
+}
+
+function normalizeCollectionRowToPlayerItem(row, index = 0) {
+  const id = pickFirstNonEmpty(row, ["movie_id", "content_id", "title_id", "item_id", "id"]);
+  if (!id) return null;
+
+  const title = pickFirstNonEmpty(row, ["title", "name", "label"]) || `Contenido ${index + 1}`;
+  const synopsis = pickFirstNonEmpty(row, ["description", "synopsis", "sinopsis", "summary"]) || null;
+  const thumb =
+    pickFirstNonEmpty(row, ["thumbnail_url", "thumbnail", "poster", "poster_url", "banner_url", "image_url"]) || null;
+
+  const durationMinutesRaw = pickFirstNonEmpty(row, ["duration_minutes", "duration"]);
+  const durationMinutes = durationMinutesRaw != null ? Number(durationMinutesRaw) : null;
+
+  const orderRaw =
+    pickFirstNonEmpty(row, ["sort_order", "position", "order_index", "index_order", "created_at"]) ?? index;
+
+  return {
+    id: String(id),
+    title: String(title),
+    synopsis: synopsis ? String(synopsis) : null,
+    thumbnail: thumb ? String(thumb) : null,
+    seasonNumber: 1,
+    episodeNumber: Number.isFinite(Number(orderRaw)) ? Number(orderRaw) + 1 : index + 1,
+    durationSeconds: Number.isFinite(durationMinutes) ? durationMinutes * 60 : null,
+    __sort: orderRaw
+  };
+}
+
+function sortCollectionItems(items) {
+  return [...items].sort((a, b) => {
+    const av = a.__sort;
+    const bv = b.__sort;
+
+    if (typeof av === "number" && typeof bv === "number") return av - bv;
+    return String(av ?? "").localeCompare(String(bv ?? ""));
+  });
+}
+
+async function fetchCollectionItemsFromCollectionsTable(collectionId, currentMovieId = null) {
+  if (!collectionId) return [];
+
+  const attempts = [
+    {
+      label: "collections by collection_id",
+      query: () =>
+        supabase
+          .from(DB.collections.table)
+          .select("*")
+          .eq("collection_id", collectionId)
+          .limit(500)
+    },
+    {
+      label: "collections by id",
+      query: () =>
+        supabase
+          .from(DB.collections.table)
+          .select("*")
+          .eq("id", collectionId)
+          .limit(500)
+    }
+  ];
+
+  let lastError = null;
+  let rows = [];
+
+  for (const attempt of attempts) {
+    try {
+      const { data, error } = await withTimeout(attempt.query(), 15000, attempt.label);
+      if (error) {
+        lastError = error;
+        continue;
+      }
+
+      const arr = safeArray(data);
+      if (arr.length) {
+        rows = arr;
+        break;
+      }
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  if (!rows.length && lastError) {
+    warnLog("[watch] no se pudieron leer items desde collections:", lastError);
+  }
+
+  const normalized = rows
+    .map((row, index) => normalizeCollectionRowToPlayerItem(row, index))
+    .filter(Boolean)
+    .filter((item) => !currentMovieId || String(item.id) !== String(currentMovieId));
+
+  return sortCollectionItems(normalized).map(({ __sort, ...rest }) => rest);
+}
+
+/* ============================================================
+ * Mapping -> AkiraPlayer props
  * ============================================================ */
 function buildAkiraProps({
   srcUrl,
@@ -684,7 +700,10 @@ function buildAkiraProps({
   vttUrlFromSupabase,
   allowThumbsOnLocal = false,
   isLiveMode = false,
-  liveStartsAt = null
+  liveStartsAt = null,
+  isCollectionMode = false,
+  collectionLabel = "Colección",
+  collectionId = null
 }) {
   const src = proxifyRemoteUrl(srcUrl);
   const subtitles = normalizeSubtitlesFromVtt(vttUrlFromSupabase);
@@ -693,7 +712,6 @@ function buildAkiraProps({
   });
 
   const props = {
-    // === Props reales que espera AkiraPlayer.tsx ===
     src,
     poster: poster || undefined,
     autoplay: !!autoplay,
@@ -712,14 +730,16 @@ function buildAkiraProps({
     episodes: safeArray(episodes),
     recommendationsLabel: "Te podría gustar",
 
-    // explícito
-    playlistMode: true,
+    playlistMode: !isCollectionMode,
 
-    // ✅ extras live (si el bridge/TSX quiere aprovecharlos)
     isLiveMode: !!isLiveMode,
     liveStartsAt: liveStartsAt || null,
     streamType: isLiveMode ? "live" : "on-demand",
-    disableResumeForLive: !!isLiveMode
+    disableResumeForLive: !!isLiveMode,
+
+    isCollectionMode: !!isCollectionMode,
+    collectionLabel,
+    collectionId: collectionId || null
   };
 
   return props;
@@ -735,10 +755,6 @@ function movieToPlayerProps(
   const vttFromSupabase = movie[m.vtt];
   const isLiveMode = Boolean(movie[m.liveMode]);
   const liveStartsAt = movie[m.liveStartsAt] || null;
-
-  debugLog("[watch] movie m3u8 desde Supabase:", m3u8FromSupabase);
-  debugLog("[watch] movie vtt desde Supabase:", vttFromSupabase);
-  debugLog("[watch] movie live:", { isLiveMode, liveStartsAt });
 
   const props = buildAkiraProps({
     srcUrl: m3u8FromSupabase,
@@ -778,16 +794,8 @@ function episodeToPlayerProps(
   const seriesId = series?.[m.id] || episode[e.seriesId] || null;
   const m3u8FromSupabase = episode[e.m3u8];
   const vttFromSupabase = episode[e.vtt];
-  const isLiveMode = Boolean(series?.[m.liveMode]); // live flag vive en movies (la serie)
+  const isLiveMode = Boolean(series?.[m.liveMode]);
   const liveStartsAt = series?.[m.liveStartsAt] || null;
-
-  debugLog("[watch] episode m3u8 desde Supabase:", m3u8FromSupabase);
-  debugLog("[watch] episode vtt desde Supabase:", vttFromSupabase);
-  debugLog("[watch] episode live (desde serie):", {
-    isLiveMode,
-    liveStartsAt,
-    seriesId
-  });
 
   const props = buildAkiraProps({
     srcUrl: m3u8FromSupabase,
@@ -825,13 +833,134 @@ function episodeToPlayerProps(
   return props;
 }
 
+function collectionMovieToPlayerProps(
+  movie,
+  {
+    collectionId,
+    collectionItems = [],
+    recommendations = [],
+    autoplay = true,
+    forceThumbsLocal = false
+  } = {}
+) {
+  const m = DB.movies.cols;
+
+  const m3u8FromSupabase = movie[m.m3u8];
+  const vttFromSupabase = movie[m.vtt];
+  const isLiveMode = Boolean(movie[m.liveMode]);
+  const liveStartsAt = movie[m.liveStartsAt] || null;
+
+  const props = buildAkiraProps({
+    srcUrl: m3u8FromSupabase,
+    poster: movie[m.banner] || movie[m.thumbnail],
+    autoplay,
+    title: movie[m.title] || "SATV+",
+    contentId: movie[m.id],
+    seasonId: collectionId || null,
+    episodeId: null,
+    recommendations,
+    episodes: collectionItems,
+    vttUrlFromSupabase: vttFromSupabase,
+    allowThumbsOnLocal: forceThumbsLocal,
+    isLiveMode,
+    liveStartsAt,
+    isCollectionMode: true,
+    collectionLabel: "Colección",
+    collectionId
+  });
+
+  props.onBack = () => window.history.back();
+
+  props.onSelectEpisode = (selectedMovieId) => {
+    if (!selectedMovieId || !collectionId) return;
+    window.location.href = buildWatchUrl({
+      collection: collectionId,
+      movie: selectedMovieId
+    });
+  };
+
+  props.onSelectRecommendation = (item) => {
+    if (!item?.id) return;
+    window.location.href = buildWatchUrl(
+      item.type === "series" ? { series: item.id } : { movie: item.id }
+    );
+  };
+
+  return props;
+}
+
 /* ============================================================
  * Route resolver
  * ============================================================ */
 async function resolveRouteAndBuildProps() {
-  const { movieId, episodeId, seriesId, autoplay, forceThumbsLocal, probe } = getParams();
+  const {
+    movieId,
+    episodeId,
+    seriesId,
+    collectionId,
+    autoplay,
+    forceThumbsLocal,
+    probe
+  } = getParams();
+
   const m = DB.movies.cols;
   const e = DB.episodes.cols;
+
+  // ?collection=<uuid>&movie=<uuid>
+  if (collectionId || (collectionId && movieId)) {
+    if (!collectionId) {
+      throw new Error("Falta ?collection=<uuid>");
+    }
+
+    if (!isUuid(collectionId)) {
+      throw new Error("Parámetro ?collection inválido (UUID esperado)");
+    }
+
+    if (!movieId) {
+      throw new Error("Para colección debés usar ?collection=<uuid>&movie=<uuid>");
+    }
+
+    if (!isUuid(movieId)) {
+      throw new Error("Parámetro ?movie inválido (UUID esperado)");
+    }
+
+    const movie = await fetchMovieById(movieId);
+    if (!movie) throw new Error("No se encontró el contenido de la colección");
+    if (!movie[m.m3u8]) throw new Error("El contenido no tiene m3u8_url");
+
+    const [collectionItems, recommendations] = await Promise.all([
+      fetchCollectionItemsFromCollectionsTable(collectionId, movie[m.id]),
+      fetchRecommendations(movie[m.id])
+    ]);
+
+    if (probe) {
+      probeM3u8(movie[m.m3u8]);
+      if (movie[m.vtt]) probeVtt(movie[m.vtt]);
+    }
+
+    const liveStartsAtDate = getLiveStartDateFromRow(movie, m.liveStartsAt);
+    const liveGate = {
+      enabled: Boolean(movie[m.liveMode]),
+      isUpcoming: isUpcomingLiveFromRow(movie, {
+        liveModeKey: m.liveMode,
+        liveStartsAtKey: m.liveStartsAt
+      }),
+      startsAt: liveStartsAtDate,
+      title: movie[m.title] || "Colección"
+    };
+
+    return {
+      title: movie[m.title] || "Colección",
+      props: collectionMovieToPlayerProps(movie, {
+        collectionId,
+        collectionItems,
+        recommendations,
+        autoplay,
+        forceThumbsLocal
+      }),
+      liveGate
+    };
+  }
 
   // ?movie=<uuid>
   if (movieId) {
@@ -948,13 +1077,12 @@ async function resolveRouteAndBuildProps() {
     };
   }
 
-  // ?series=<uuid> -> redirige al primer episodio
+  // ?series=<uuid>
   if (seriesId) {
     if (!isUuid(seriesId)) {
       throw new Error("Parámetro ?series inválido (UUID esperado)");
     }
 
-    // Valida serie (y permite que otras pantallas la usen)
     await fetchSeriesById(seriesId);
 
     const episodesList = await fetchEpisodesForSeries(seriesId);
@@ -971,11 +1099,11 @@ async function resolveRouteAndBuildProps() {
     return null;
   }
 
-  throw new Error("Ruta inválida. Usá ?movie=<uuid> o ?episode=<uuid> o ?series=<uuid>");
+  throw new Error("Ruta inválida. Usá ?movie=<uuid> o ?episode=<uuid> o ?series=<uuid> o ?collection=<uuid>&movie=<uuid>");
 }
 
 /* ============================================================
- * Post-render debug del <video> (por fuera de Akira)
+ * Post-render debug del <video>
  * ============================================================ */
 function mediaErrorName(code) {
   return (
@@ -1072,7 +1200,7 @@ function inspectMountedVideoLater() {
 }
 
 /* ============================================================
- * Render pipeline (extraído para reutilizar)
+ * Render pipeline
  * ============================================================ */
 async function renderAndWaitPlayer(result) {
   window.__SATV_WATCH_LAST_RESULT__ = result;
@@ -1089,8 +1217,6 @@ async function renderAndWaitPlayer(result) {
   const root = getRootEl();
   if (root) root.innerHTML = "";
 
-  // ✅ render + esperar el READY del MISMO mount actual
-  // (el READY exige que el video esté PLAYING)
   const renderResult = window.renderAkiraPlayer(result.props);
 
   try {
@@ -1102,16 +1228,11 @@ async function renderAndWaitPlayer(result) {
 
     window.__SATV_WATCH_LAST_READY_INFO__ = readyInfo;
     infoLog("[watch] Akira playback ready:", readyInfo);
-
-    // ✅ Se oculta cuando ya entró en playing (porque el bridge resuelve recién ahí)
     hideWatchLoadingOverlay();
   } catch (e) {
-    // OJO: no ocultamos siempre acá, porque si autoplay está bloqueado
-    // el loader debe quedarse hasta que el usuario dé play (evento playing).
     warnLog("[watch] wait READY del player timeout/fallo:", e);
   }
 
-  // corre después del intento de wait (éxito o fallo), para que el timing sea relativo al ready
   inspectMountedVideoLater();
 }
 
@@ -1129,10 +1250,8 @@ async function boot() {
     }
 
     const result = await resolveRouteAndBuildProps();
-    if (!result) return; // redirect
+    if (!result) return;
 
-    // ✅ SIN countdown / gate live:
-    // siempre renderiza directo (incluyendo contenidos live)
     await renderAndWaitPlayer(result);
   } catch (err) {
     console.error("[watch] boot error:", err);
