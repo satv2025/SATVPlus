@@ -153,23 +153,26 @@ svg {
 }
 
 .card-collection-overlay img {
-  width: 71px !important;
+  width: 37px !important;
   height: auto !important;
-    display: block;
-    object-fit: contain;
+  display: block;
+  object-fit: contain;
 }
 
 .card-collection-overlay {
-   position: absolute;
-    top: 10px;
-    right: 10px;
-    width: auto;
-    height: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 3;
-    pointer-events: none;
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  width: auto;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  pointer-events: none;
+  background: #0000003b;
+  border-radius: 999px;
+  padding: 0.2em;
 }
 
 /* ================= CONTAINER ================= */
