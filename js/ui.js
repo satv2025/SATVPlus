@@ -1,2607 +1,804 @@
-/* ================= CUSTOM FONTS — HBOMaxSans ================= */
-@import url('fonts/hbomaxsans/hbomaxsans.css');
-
-/* =========================================================
-   SATV / HBO-ish UI — FULL RESPONSIVE REWRITE
-   (MISMAS FEATURES / SELECTORES, SIN SACAR NADA)
-   + HERO NUEVO: LEFT / RIGHT / VIDEO / VOLUME SLOT
-   ========================================================= */
-
-/* ================= TOKENS ================= */
-:root {
-  --bg: #07090d;
-  --panel: #0e1420;
-  --panel2: #111724;
-  --text: #f5f7fb;
-  --muted: #b6bfd1;
-  --satvblue: #2563eb;
-  --line: rgba(255, 255, 255, .08);
-  --shadow: 0 18px 55px rgba(0, 0, 0, .34);
-
-  /* Tus radios (se mantienen) */
-  --radius: .25em;
-  --radius2: .25em;
-  --ep-radius: .25em;
-
-  /* Hero */
-  --hero-overlay: #07090d;
-
-  /* carousel tuning */
-  --edge-fade: 120px;
-  --arrow-w: 48px;
-  --arrow-h: 92px;
-
-  /* ✅ CONTROL DEL PEGADO DEL LOGO A LA PARED */
-  --logo-gap: 18px;
-
-  /* =========================================
-     ✅ TOKENS RESPONSIVOS
-     ========================================= */
-  --container-max: 1600px;
-  --ui-pad-x: clamp(10px, 2vw, 24px);
-  --ui-pad-y: clamp(10px, 1.6vw, 18px);
-  --section-x: clamp(10px, 2.4vw, 28px);
-  --hero-pad-x: clamp(12px, 5vw, 80px);
-  --hero-pad-y: clamp(12px, 3vw, 28px);
-
-  /* Control heights */
-  --control-h: 42px;
-
-  /* Carousel fluid */
-  --edge-fade-fluid: clamp(14px, 7vw, 120px);
-  --arrow-w-fluid: clamp(32px, 4vw, 56px);
-  --arrow-h-fluid: clamp(54px, 10vw, 112px);
-
-  /* ✅ HERO HEIGHT FLUID (mantiene tu “feel” grande) */
-  --hero-h-desktop: clamp(420px, 56vw, 946px);
-  --hero-h-1200: clamp(320px, 42vw, 500px);
-  --hero-h-992: clamp(300px, 54vw, 440px);
-  --hero-h-768: clamp(280px, 68vw, 420px);
-  --hero-h-480: clamp(250px, 76vw, 340px);
-
-  /* ✅ VIDEO SHADE FLUID */
-  --hero-shade-h: clamp(160px, 42%, 520px);
-
-  /* ✅ VOLUME BTN */
-  --hero-design-w: 1280;
-  --hero-design-h: 763;
-
-  /* botón basado en 64px dentro de un canvas de 1280px */
-  --hero-vol-size: clamp(40px, 5vw, 64px);
-
-  /* icono basado en 46px dentro de un canvas de 1280px */
-  --hero-vol-icon-w: clamp(28px, 3.59375vw, 46px);
-  --hero-vol-icon-h: clamp(28px, 3.59375vw, 46px);
-
-  /* separación basada en 24px dentro de 1280px */
-  --hero-vol-pad: clamp(8px, 1.875vw, 24px);
-
-  /* ✅ NUEVO HERO LAYOUT */
-  --hero-title-max: min(720px, 96%);
-  --hero-left-max: min(760px, 100%);
-  --hero-layout-gap: clamp(12px, 2vw, 28px);
-  --hero-actions-gap: clamp(6px, 1vw, 10px);
-  --hero-meta-size: clamp(12px, .45vw + 10px, 14px);
-  --hero-synopsis-size: clamp(13px, .5vw + 11px, 17px);
-  --hero-synopsis-maxw: min(720px, 96%);
-  --hero-right-min: clamp(48px, 7vw, 84px);
-}
-
-/* ================= RESET / BASE ================= */
-* {
-  box-sizing: border-box;
-  font-family: "HBOMaxSans" !important;
-}
-
-::selection {
-  background: white;
-  color: var(--bg);
-}
-
-html,
-body {
-  height: 100%;
-}
-
-/* overflow-x: clip fallback sin cambiar UI */
-html,
-body {
-  overflow-x: clip;
-}
-
-@supports not (overflow: clip) {
-
-  html,
-  body {
-    overflow-x: hidden;
+// ui.js
+import { CONFIG } from "./config.js";
+import { getSession, signOut } from "./auth.js";
+import {
+  fetchMovie,
+  fetchLanguagePreference,
+  upsertLanguagePreference,
+  detectConnectionCountryCode,
+  countryHasSpanishOfficialLanguage,
+  getPreferredDeviceLanguage
+} from "./api.js";
+
+export function $(sel) { return document.querySelector(sel); }
+export function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
+
+export function escapeHtml(str = "") {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/* =========================
+   APP NAME + TITLE
+========================= */
+
+export function setAppName() {
+  const els = $all("[data-appname]");
+  for (const el of els) el.textContent = CONFIG.APP_NAME;
+
+  const currentTitle = document.title.trim();
+  if (!currentTitle || currentTitle === CONFIG.APP_NAME) {
+    document.title = CONFIG.APP_NAME;
+  }
+}
+
+/* =========================
+   TOAST
+========================= */
+
+export function toast(msg, type = "info") {
+  const host = document.getElementById("toast-host");
+  if (!host) {
+    alert(msg);
+    return;
+  }
+
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  host.appendChild(t);
+
+  requestAnimationFrame(() => t.classList.add("show"));
+
+  setTimeout(() => {
+    t.classList.remove("show");
+    setTimeout(() => t.remove(), 200);
+  }, 2800);
+}
+
+/* =========================
+   TIME FORMAT
+========================= */
+
+export function formatTime(secs) {
+  const s = Math.max(0, Math.floor(secs || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+
+  if (h > 0) {
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
   }
-}
-
-html {
-  -webkit-text-size-adjust: 100%;
-  scrollbar-gutter: stable;
-  /* evita “saltos” por scrollbar */
-}
-
-body {
-  margin: 0;
-  color: var(--text);
-  background: var(--bg);
-}
-
-/* Media elements */
-img,
-video,
-canvas,
-svg {
-  max-width: 100%;
-}
-
-/* hidden */
-.hidden {
-  display: none !important;
-}
-
-/* No-select (mantengo tu bloque) */
-.no-select,
-.no-select * {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-
-.card-collection-overlay img {
-  width: 37px !important;
-  height: auto !important;
-  display: block;
-  object-fit: contain;
-}
-
-.card-collection-overlay {
-   position: absolute;
-   right: 6px;
-   top: 6px;
-   width: auto;
-   height: auto;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   z-index: 3;
-   pointer-events: none;
-   background: #00000082;
-   border-radius: 999px;
-   padding: 0.2em;
-   border: 2px solid #fff;
-}
-
-/* ================= CONTAINER ================= */
-/* Mantengo tu idea de 100% width, pero fluido y estable */
-.container {
-  margin: 0 auto;
-  padding: var(--ui-pad-y) var(--ui-pad-x);
-  width: 100%;
-  max-width: 100%;
-}
-
-/* (No saco nada) — tu ajuste puntual */
-#continue-row .card {
-  height: auto !important;
-}
-
-/* ================= NAV ================= */
-.topnav {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 9999;
-  background: #17192400;
-  border-bottom: 1px solid rgb(255 255 255 / 0%);
-  width: 100%;
-}
-
-/* si el hero está dentro del primer .container después del nav */
-.topnav+.container {
-  padding-top: 0 !important;
-}
-
-/* ✅ CLAVE: si nav-inner tiene "container", NO lo dejes al 85% nunca */
-.topnav .container,
-.topnav .nav-inner.container {
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-}
-
-/* Nav layout */
-.nav-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: clamp(10px, 1.2vw, 18px);
-
-  padding-top: clamp(10px, 1.2vw, 14px);
-  padding-bottom: clamp(10px, 1.2vw, 14px);
-  padding-left: var(--logo-gap);
-  padding-right: var(--ui-pad-x);
-}
-
-/* Evita overflow raro en flex cuando hay textos largos o wrap */
-.nav-left,
-.brand {
-  min-width: 0;
-}
-
-.nav-left {
-  display: flex;
-  align-items: center;
-  gap: clamp(10px, 1.2vw, 14px);
-  flex-wrap: wrap;
-
-  flex: 1 1 auto;
-}
-
-/* Brand */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 900;
-  letter-spacing: .2px;
-  flex: 0 0 auto;
-}
-
-/* ✅ Logo SIEMPRE natural en flujo, sin margin-left */
-img.brand-logo,
-.brand-logo {
-  display: block;
-  width: clamp(120px, 10vw, 180px);
-  max-width: 100%;
-  height: auto;
-
-  margin: 0 !important;
-  padding: 0 !important;
-
-  flex: 0 0 auto;
-  object-fit: contain;
-  object-position: left center;
-}
-
-.brand-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--satvblue);
-  box-shadow: 0 0 0 6px #2563eb63;
+  return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
+
+/* =========================
+   NAVBAR
+========================= */
 
-.navlink {
-  padding: 8px 10px;
-  border-radius: var(--ep-radius);
-  color: var(--muted);
-  border: 1px solid transparent;
-  text-decoration: none;
-
-  display: inline-flex;
-  align-items: center;
-  min-height: 38px;
-}
+export function renderNav({ active = "home" } = {}) {
+  const nav = document.getElementById("topnav");
+  if (!nav) return;
 
-.navlink:hover {
-  border-color: var(--line);
-  color: var(--text);
+  nav.innerHTML = `
+    <div class="nav-left">
+      <a class="brand" href="/index.html">
+        <img src="/images/satvpluslogo1.png" alt="Logo" class="brand-logo"/>
+      </a>
+      <a class="navlink ${active === "home" ? "active" : ""}" href="/index.html">Inicio</a>
+    </div>
+    <div class="nav-right" id="nav-right"></div>
+  `;
 }
 
-.navlink.active {
-  background: rgba(255, 255, 255, .06);
-  color: var(--text);
-}
+/* =========================
+   PERFIL / USERNAME (profiles.username)
+   - Lee username desde la tabla "profiles" (columna username / "Username")
+   - Soporta Supabase PostgREST directo (sin supabase-js)
+========================= */
 
-/* Derecha siempre a la punta */
-.nav-right {
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1vw, 10px);
-  flex-wrap: wrap;
-
-  flex: 0 0 auto;
-  margin-left: auto;
+function getUserIdFromSession(session) {
+  return (
+    session?.user?.id ||
+    session?.session?.user?.id ||
+    session?.data?.session?.user?.id ||
+    null
+  );
 }
 
-/* ================= BUTTONS ================= */
-.btn {
-  background: var(--satvblue);
-  color: white;
-  border: none;
-  border-radius: var(--ep-radius);
-  padding: 10px 12px;
-  font-weight: 800;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+function getAccessTokenFromSession(session) {
+  return (
+    session?.access_token ||
+    session?.session?.access_token ||
+    session?.data?.session?.access_token ||
+    session?.token ||
+    null
+  );
 }
 
-.btn.ghost {
-  background: rgba(255, 255, 255, .06);
-  border: 1px solid var(--line);
+function getSupabaseUrlFromConfig() {
+  return (
+    CONFIG?.SUPABASE_URL ||
+    CONFIG?.SUPABASE_PROJECT_URL ||
+    CONFIG?.SB_URL ||
+    null
+  );
 }
 
-.btn:hover {
-  color: var(--satvblue);
-  background: #fff;
+function getSupabaseAnonKeyFromConfig() {
+  return (
+    CONFIG?.SUPABASE_ANON_KEY ||
+    CONFIG?.SUPABASE_ANON ||
+    CONFIG?.SUPABASE_KEY ||
+    CONFIG?.SB_ANON_KEY ||
+    null
+  );
 }
 
-button#btn-logout:hover {
-  background: #fff;
+function safeLocalPartFromEmail(email) {
+  const s = String(email || "");
+  const i = s.indexOf("@");
+  return (i > 0 ? s.slice(0, i) : s) || "";
 }
 
-button#btn-logout {
-  background: #2563eb;
-}
+async function fetchProfileRowByUserId({ userId, accessToken } = {}) {
+  const supabaseUrl = getSupabaseUrlFromConfig();
+  const anonKey = getSupabaseAnonKeyFromConfig();
 
-.pill {
-  background: #2563eb;
-  padding: 10px 12px;
-  border-radius: var(--ep-radius);
-  color: #ffffff;
-  font-size: 15px;
-  text-decoration: none;
-  opacity: 1;
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
+  if (!supabaseUrl || !anonKey || !userId) return null;
 
-a.pill.profile-link:hover {
-  background: #fff;
-  color: #2563eb;
-}
+  const url =
+    `${supabaseUrl.replace(/\/+$/, "")}/rest/v1/profiles` +
+    `?id=eq.${encodeURIComponent(userId)}` +
+    `&select=username,full_name`;
 
-/* ================= HERO (REHECHO, MISMA UI) ================= */
-/* Mantengo full bleed + overlay + estética, pero height FLUID */
-.hero {
-  margin-top: clamp(-72px, -6vw, -46px) !important;
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-
-  /* FULL WIDTH sin overflow por scrollbar */
-  width: 100dvw;
-  max-width: 100dvw;
-  margin-left: calc(50% - 50dvw);
-  margin-right: calc(50% - 50dvw);
-  position: relative;
-
-  /* tu idea 16/9 */
-  aspect-ratio: 16 / 9;
-
-  /* ✅ alturas responsivas (mantiene tu feel “big”, sin hard-lock) */
-  min-height: clamp(250px, 56vw, 520px) !important;
-  height: var(--hero-h-desktop) !important;
-
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-color: #0b0c10;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-end;
-  isolation: isolate;
-
-  padding: var(--hero-pad-y) var(--hero-pad-x) !important;
-}
+  const headers = {
+    "apikey": anonKey,
+    "Accept": "application/json",
+  };
 
-/* dvw fallback sin cambiar layout */
-@supports not (width: 100dvw) {
-  .hero {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    margin-left: calc(50% - 50vw) !important;
-    margin-right: calc(50% - 50vw) !important;
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  } else {
+    headers["Authorization"] = `Bearer ${anonKey}`;
   }
-}
-
-/* overlay sin seams / gradient TO TOP con #0b0c10 */
-.hero::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  z-index: 0;
-  pointer-events: none;
-
-  /* fallback */
-  background: linear-gradient(to top,
-      rgba(7, 9, 13, 1) 0%,
-      rgba(7, 9, 13, .94) 28%,
-      rgba(7, 9, 13, .66) 55%,
-      rgba(7, 9, 13, .22) 78%,
-      rgba(7, 9, 13, 0) 100%);
-
-  /* tu color-mix */
-  background: linear-gradient(to top,
-      color-mix(in srgb, var(--hero-overlay) 100%, transparent) 0%,
-      color-mix(in srgb, var(--hero-overlay) 94%, transparent) 28%,
-      color-mix(in srgb, var(--hero-overlay) 66%, transparent) 55%,
-      color-mix(in srgb, var(--hero-overlay) 22%, transparent) 78%,
-      color-mix(in srgb, var(--hero-overlay) 0%, transparent) 100%);
-}
-
-/* contenido arriba del overlay */
-.home-hero-inner {
-  position: relative;
-  z-index: 1;
-  max-width: 100%;
-  height: 20% !important;
-  min-height: auto !important;
-  height: auto !important;
-  padding: 0 1em 0 1em;
-  width: 100%;
-}
-
-/* ✅ NUEVO TÍTULO HERO */
-.home-hero-title,
-.home-hero-inner h1,
-.hero h1 {
-  margin: 0 0 clamp(8px, 1vw, 14px) 0;
-  max-width: var(--hero-title-max);
-  font-size: clamp(28px, 2.6vw, 54px);
-  line-height: .98;
-  font-weight: 900;
-  letter-spacing: -.02em;
-  text-wrap: balance;
-}
-
-/* ✅ NUEVO LAYOUT LEFT/RIGHT */
-.home-hero-layout {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--hero-layout-gap);
-  width: 100%;
-  max-width: 100%;
-}
-
-.home-hero-left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: clamp(8px, 1vw, 14px);
-  width: 100%;
-  max-width: var(--hero-left-max);
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.home-hero-right {
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  align-self: flex-end;
-  flex: 0 0 auto;
-  min-width: var(--hero-right-min);
-  min-height: var(--hero-vol-size);
-  position: relative;
-  z-index: 3;
-  margin-right: clamp(0.5em, 2vw, 2em);
-}
-
-.home-hero-meta {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  font-size: var(--hero-meta-size);
-  line-height: 1.25;
-  color: rgba(255, 255, 255, .86);
-  text-shadow: 0 2px 16px rgba(0, 0, 0, .26);
-}
-
-.home-hero-synopsis,
-.home-hero-inner p,
-.hero p {
-  margin: 0;
-  max-width: var(--hero-synopsis-maxw);
-  font-size: var(--hero-synopsis-size);
-  line-height: 1.45;
-  color: rgba(255, 255, 255, .92);
-  text-shadow: 0 2px 16px rgba(0, 0, 0, .3);
-  word-break: break-word;
-}
-
-/* ================= SECTIONS ================= */
-.section {
-  margin-top: clamp(12px, 2vw, 18px);
-  width: 100%;
-  margin-bottom: clamp(2.4rem, 6vw, 5em);
-}
-
-.section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-
-  margin: 0 0 10px clamp(0px, 6vw, 78px);
-}
-
-.section-title {
-  font-size: clamp(18px, 1.3vw + 12px, 22px);
-  margin: 0;
-
-  margin-left: clamp(-2em, -2vw, 0em);
-}
-
-.muted {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.panel {
-  background: rgba(255, 255, 255, .03);
-  border: 1px solid var(--line);
-  border-radius: var(--radius2);
-  padding: clamp(12px, 2vw, 16px);
-  box-shadow: var(--shadow);
-  position: relative;
-  margin-top: 0 !important;
-}
-
-.auth-main {
-  min-height: 100svh;
-  display: grid;
-  place-items: center;
-  padding-top: clamp(90px, 10vh, 130px);
-  padding-bottom: 24px;
-}
-
-.auth-panel {
-  margin: 0 auto !important;
-  width: min(100%, 520px);
-}
-
-.auth-panel-wide {
-  width: min(100%, 680px);
-}
-
-/* =========================================================
-   ✅ CAROUSEL WRAPPER
-   ========================================================= */
-.carousel {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-
-  --edge-fade: var(--edge-fade-fluid);
-  --arrow-w: var(--arrow-w-fluid);
-  --arrow-h: var(--arrow-h-fluid);
-}
-
-/* fade edges */
-.carousel::before,
-.carousel::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  width: var(--edge-fade);
-  height: 100%;
-  pointer-events: none;
-  z-index: 8;
-}
-
-.carousel::before {
-  left: 0;
-  background: linear-gradient(to right, var(--bg), rgba(11, 12, 16, 0));
-}
-
-.carousel::after {
-  right: 0;
-  background: linear-gradient(to left, var(--bg), rgba(11, 12, 16, 0));
-}
-
-/* arrows */
-.carousel-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: var(--arrow-w);
-  height: var(--arrow-h);
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
-  background: rgba(0, 0, 0, .55);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-
-  transition: transform 0.4s ease, opacity .18s ease, background .18s ease;
-  z-index: 10;
-  opacity: 0;
-}
-
-.carousel:hover .carousel-btn {
-  opacity: 1;
-}
-
-.carousel-btn:hover {
-  background: rgba(0, 0, 0, .85);
-  transform: translateY(-50%) scale(1.06);
-}
-
-.carousel-btn.left {
-  left: 10px;
-}
-
-.carousel-btn.right {
-  right: 10px;
-}
-
-.carousel-btn svg {
-  width: clamp(16px, 1.7vw, 22px);
-  height: clamp(16px, 1.7vw, 22px);
-}
-
-/* =========================================================
-   ROWS + CARDS
-   ========================================================= */
-.row {
-  display: flex;
-  gap: clamp(8px, 1.2vw, 12px);
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 6px 0;
-  scroll-snap-type: x mandatory;
-  scroll-padding-left: calc(var(--arrow-w) + clamp(14px, 2vw, 28px));
-  scroll-padding-right: calc(var(--arrow-w) + clamp(14px, 2vw, 28px));
-  width: 100%;
-  max-width: 100%;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
-  justify-content: center;
-}
-
-/* tu “reserva” por flechas */
-.row .card:first-child {
-  margin-left: calc(var(--arrow-w) + clamp(14px, 2vw, 28px));
-}
-
-.row .card:last-child {
-  margin-right: calc(var(--arrow-w) + clamp(14px, 2vw, 28px));
-}
-
-/* scrollbar hidden */
-.row::-webkit-scrollbar {
-  display: none;
-}
-
-.row {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* ================= CARDS ================= */
-.card {
-  width: clamp(220px, 25vw, 320px);
-
-  flex: 0 0 auto;
-  scroll-snap-align: start;
-  background: rgba(255, 255, 255, .03);
-  border-radius: var(--radius) !important;
-  overflow: hidden;
-  transition: transform 0.4s ease, background .18s ease, outline .18s ease;
-
-  display: flex;
-  flex-direction: column;
-  height: auto;
-  max-height: none !important;
-
-  padding-bottom: 0.4em;
-  position: relative;
-  color: inherit;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-#continue-row .card {
-  height: 14em;
-}
-
-.card:hover {
-  background: rgba(255, 255, 255, .06);
-  outline: 2px solid #fff;
-}
-
-/* 🔥 16:9 REAL SIN ALTURA FIJA */
-.thumb {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: #0f1118;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-}
-
-/* 🔥 TEXTO CRECE NATURALMENTE */
-.card-title {
-  padding: 10px 10px 2px 10px;
-  font-weight: 900;
-  font-size: clamp(12px, .55vw + 10px, 14px);
-  line-height: 1.3;
-  word-break: break-word;
-}
-
-/* Subtitles: mantengo tu selector específico */
-#continue-wrap .carousel .card .card-subtitle {
-  padding: 0 10px 10px 10px;
-  font-size: clamp(11px, .45vw + 9px, 13px);
-  color: var(--muted);
-  line-height: 1.3;
-  word-break: break-word;
-  display: block;
-}
-
-/* 🔥 PROGRESSBAR EXACTAMENTE EN TU POSICIÓN */
-.progressbar {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-
-  bottom: max(-3.6em, -29%);
-
-  height: 0.25em;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 0;
-  overflow: hidden;
-}
-
-.progressfill {
-  height: 100%;
-  width: 30%;
-  border-radius: inherit;
-  transition: width .25s ease;
-
-  background: linear-gradient(90deg, #00eaff, #2563eb);
-  box-shadow:
-    0 0 4px #00eaff,
-    0 0 8px #00eaff,
-    0 0 16px #2563eb,
-    0 0 24px #2563eb;
-}
-
-/* ================= FORMS ================= */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: clamp(10px, 1.2vw, 12px);
-}
 
-@media (min-width: 920px) {
-  .grid {
-    grid-template-columns: 1fr 1fr;
+  const res = await fetch(url, { method: "GET", headers });
+  if (!res.ok) {
+    return null;
   }
-}
-
-label {
-  display: block;
-  font-size: 13px;
-  color: var(--muted);
-  margin: 10px 0 6px;
-}
-
-#season-dropdown-mount .dropdown label {
-  display: none;
-}
-
-input,
-select,
-textarea {
-  width: 100%;
-  padding: clamp(10px, 1vw, 12px);
-  border-radius: var(--radius2);
-  border: 1px solid var(--line);
-  outline: none;
-  background: rgba(0, 0, 0, .25);
-  color: var(--text);
-
-  /* ✅ evita zoom iOS */
-  font-size: 16px;
-}
-
-textarea {
-  min-height: 90px;
-  resize: vertical;
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-/* ================= PLAYER ================= */
-.video-wrap {
-  height: auto !important;
-  position: relative;
-  aspect-ratio: 16 / 9;
-
-  width: 100%;
-  max-width: 100%;
-
-  border-radius: clamp(12px, 1.2vw, 18px);
-  overflow: hidden;
-}
-
-media-player {
-  display: block;
-  width: 100%;
-  background: black;
-  height: 100%;
-}
-
-/* ================= EPISODES ================= */
-#episodes-wrap {
-  width: 100%;
-  max-width: min(88em, 100%);
-  margin: 0 auto;
-  padding: 0 clamp(10px, 2vw, 24px);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(16px, 3vw, 36px);
-}
-
-.ep-list {
-  display: flex;
-  flex-direction: column;
-  gap: 13px;
-  margin-top: -17px;
-}
-
-.ep {
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, .1);
-  border-radius: var(--radius2);
-  padding: clamp(14px, 2vw, 24px);
-
-  display: flex;
-  flex-direction: row;
-  gap: clamp(12px, 1.4vw, 20px);
-  align-items: center;
-
-  transition: background 0.3s ease, box-shadow 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.ep:hover {
-  background: rgba(62, 61, 61, .9);
-}
-
-.ep.active {
-  border-color: rgba(37, 99, 235, .9);
-  background: rgba(37, 99, 235, .18);
-}
-
-.ep-number {
-  font-size: clamp(24px, 2.5vw, 35px);
-  display: block;
-  width: 1em;
-  text-align: right;
-}
-
-/* Miniatura de 16:9 con bordes suaves */
-.ep-thumbnail {
-  width: clamp(132px, 18vw, 177px);
-  height: auto;
-  max-width: 1200px;
-  aspect-ratio: 16 / 9;
-  background-size: cover;
-  background-position: center;
-  border-radius: var(--radius2);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Título del episodio */
-.ep-title {
-  font-size: clamp(14px, .7vw + 10px, 18px);
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.3;
-  margin: 0;
-
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: break-spaces;
-
-  width: clamp(160px, 18vw, 260px);
-  word-break: break-word;
-}
-
-/* Sinopsis */
-.ep-synopsis {
-  font-size: clamp(12px, .5vw + 10px, 14px);
-  color: #ffff !important;
-  line-height: 1.5;
-  font-weight: 300;
-
-  max-height: 5em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  text-align: left;
-  position: relative;
-
-  flex: 1;
-  width: auto;
-
-  padding-right: clamp(0px, 12vw, 180px);
-}
-
-/* Acción del episodio */
-.ep-action {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  position: absolute;
-  bottom: clamp(12px, 2vw, 24px);
-  right: clamp(12px, 2vw, 24px);
-}
-
-.ep-action .btn {
-  padding: 10px 14px;
-  font-size: 14px;
-  font-weight: 600;
-  background: var(--satvblue);
-  color: white;
-  border: none;
-  border-radius: var(--radius2);
-  transition: background 0.3s ease, transform 0.2s ease;
-
-  min-height: 38px;
-  white-space: nowrap;
-}
-
-.ep-action .btn:hover {
-  background: var(--satvblue);
-  transform: scale(1.05);
-}
-
-/* Expansión de la sinopsis */
-.ep-synopsis-expander {
-  margin-top: 8px;
-  display: none;
-  font-size: 14px;
-  color: var(--muted);
-  text-align: justify;
-  width: auto;
-  word-wrap: break-word;
-}
-
-.ep.expanded .ep-synopsis-expander {
-  display: block;
-}
-
-/* ================= TOASTS ================= */
-.toast-host {
-  position: fixed;
-  right: max(12px, env(safe-area-inset-right));
-  bottom: max(12px, env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 100;
-
-  width: min(360px, calc(100vw - 24px));
-}
-
-.toast {
-  opacity: 0;
-  transition: all .18s ease;
-  padding: 12px 14px;
-  border-radius: var(--radius2);
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, .06);
-  backdrop-filter: blur(8px);
-  color: var(--text);
-  max-width: 360px;
-  box-shadow: var(--shadow);
-
-  transform: translateY(8px);
-}
-
-/* ✅ FIX (sin sacar nada): show debe ser visible */
-.toast.show {
-  opacity: 1;
-  transform: translateY(0);
-}
 
-.toast.success {
-  border-color: rgba(0, 200, 120, .35);
+  const data = await res.json();
+  if (!Array.isArray(data) || data.length === 0) return null;
+  return data[0] || null;
 }
 
-.toast.error {
-  border-color: rgba(255, 80, 80, .35);
-}
-
-.toast.info {
-  border-color: rgba(120, 160, 255, .35);
-}
+async function getUsernameFromProfilesTable(session) {
+  const userId = getUserIdFromSession(session);
+  const accessToken = getAccessTokenFromSession(session);
 
-/* ================= TABLES ================= */
-.hr {
-  height: 1px;
-  background: var(--line);
-  border: none;
-  margin: 12px 0;
-}
+  if (!userId) return null;
 
-/* Carousel disabled */
-.carousel-disabled::before,
-.carousel-disabled::after {
-  display: none !important;
-}
+  const cacheKey = `profiles.username.${userId}`;
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) return cached;
+  } catch (_) { }
 
-.carousel-disabled .row {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  padding: 6px 0 !important;
-}
+  const row = await fetchProfileRowByUserId({ userId, accessToken });
+  const username = row?.username ? String(row.username) : null;
 
-.carousel-disabled .row .card:first-child,
-.carousel-disabled .row .card:last-child {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-}
+  if (username) {
+    try { sessionStorage.setItem(cacheKey, username); } catch (_) { }
+    return username;
+  }
 
-/* =========================================================
-   🔥 CUSTOM DROPDOWN
-   ========================================================= */
-.dropdown {
-  position: relative;
-  width: min(100%, 18em);
-  user-select: none;
+  return null;
 }
 
-/* Caja principal */
-.dropdown-selected {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: rgba(0, 0, 0, .25);
-  cursor: pointer;
-  transition: border .2s ease, background .2s ease;
-
-  min-height: var(--control-h);
-}
+function getFallbackDisplayName(session) {
+  const u =
+    session?.user ||
+    session?.session?.user ||
+    session?.data?.session?.user ||
+    {};
 
-.dropdown-selected:hover {
-  background: rgba(255, 255, 255, .04);
+  const meta = u?.user_metadata || u?.metadata || {};
+  return (
+    u?.username ||
+    meta?.username ||
+    u?.name ||
+    meta?.full_name ||
+    safeLocalPartFromEmail(u?.email) ||
+    "Usuario"
+  );
 }
 
-.dropdown.open .dropdown-selected {
-  border-color: rgba(37, 99, 235, .6);
-  background: rgba(255, 255, 255, .06);
-}
+/* =========================
+   LANGUAGE PREFERENCE
+========================= */
 
-/* Texto */
-.dropdown-text {
-  font-size: 14px;
-  color: var(--text);
-}
+const APP_LANG_STORAGE_KEY = "satv_lang_code";
+const LANG_PROMPT_SESSION_KEY_PREFIX = "satv_lang_prompt_v3";
 
-/* Flecha */
-.dropdown-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  transition: transform .25s ease, opacity .25s ease;
-  opacity: .7;
+function normalizeCountryCode(value) {
+  return String(value || "").trim().toUpperCase().slice(0, 2);
 }
 
-.dropdown-arrow svg {
-  width: 18px;
-  height: 18px;
+function normalizeLangCode(value) {
+  return String(value || "").trim();
 }
 
-.dropdown.open .dropdown-arrow {
-  transform: rotate(180deg);
-  opacity: 1;
+function getLangBase(value) {
+  return normalizeLangCode(value).split("-")[0].toLowerCase();
 }
-
-/* Opciones */
-.dropdown-options {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
 
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
+function sameLanguage(a, b) {
+  const aa = getLangBase(a);
+  const bb = getLangBase(b);
+  return !!aa && aa === bb;
+}
 
-  overflow: hidden;
-  z-index: 30;
+function getCurrentAppLanguage(savedLang = null) {
+  try {
+    return (
+      normalizeLangCode(savedLang) ||
+      normalizeLangCode(localStorage.getItem(APP_LANG_STORAGE_KEY)) ||
+      normalizeLangCode(document.documentElement.lang) ||
+      normalizeLangCode(navigator.language) ||
+      "es-AR"
+    );
+  } catch {
+    return (
+      normalizeLangCode(savedLang) ||
+      normalizeLangCode(document.documentElement.lang) ||
+      normalizeLangCode(navigator.language) ||
+      "es-AR"
+    );
+  }
+}
+
+function applyLanguagePreference(langCode) {
+  const safe = normalizeLangCode(langCode);
+  if (!safe) return;
+
+  try {
+    localStorage.setItem(APP_LANG_STORAGE_KEY, safe);
+  } catch (_) { }
+
+  document.documentElement.lang = safe;
+  window.__APP_LANG__ = safe;
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent("app:langchange", {
+        detail: { langCode: safe }
+      })
+    );
+  } catch (_) { }
+}
+
+function getRegionDisplayName(countryCode, locale = "es") {
+  const safe = normalizeCountryCode(countryCode);
+  if (!safe) return "";
+  try {
+    return new Intl.DisplayNames([locale], { type: "region" }).of(safe) || safe;
+  } catch {
+    return safe;
+  }
+}
+
+function getLanguageDisplayName(langCode, locale = "es") {
+  const base = getLangBase(langCode);
+  if (!base) return normalizeLangCode(langCode);
+  try {
+    return new Intl.DisplayNames([locale], { type: "language" }).of(base) || normalizeLangCode(langCode);
+  } catch {
+    return normalizeLangCode(langCode);
+  }
+}
+
+function getPromptCacheKey(userId, countryCode, suggestedLang) {
+  return `${LANG_PROMPT_SESSION_KEY_PREFIX}:${userId}:${normalizeCountryCode(countryCode)}:${getLangBase(suggestedLang)}`;
+}
+
+function ensureLanguagePromptModal() {
+  let root = document.getElementById("lang-modal-root");
+  if (root) return root;
+
+  root = document.createElement("div");
+  root.id = "lang-modal-root";
+  root.className = "lang-modal-backdrop";
+  root.setAttribute("aria-hidden", "true");
+
+  root.innerHTML = `
+    <div class="lang-modal" role="dialog" aria-modal="true" aria-labelledby="lang-modal-title">
+      <div class="lang-modal-head">
+        <span class="lang-modal-dot" aria-hidden="true"></span>
+        <h3 class="lang-modal-title" id="lang-modal-title">Idioma / Language</h3>
+        <button type="button" class="lang-modal-close" data-lang-close aria-label="Cerrar / Close">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="lang-modal-body">
+        <p class="lang-modal-copy" data-lang-copy-es></p>
+        <p class="lang-modal-copy" data-lang-copy-en></p>
+        <div class="lang-modal-meta" data-lang-meta hidden></div>
+      </div>
+      <div class="lang-modal-actions">
+        <button type="button" class="btn ghost" data-lang-decline>
+          Mantener idioma actual / Keep current language
+        </button>
+        <button type="button" class="btn" data-lang-accept>
+          Traducir / Translate
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(root);
+  return root;
+}
+
+function showLanguagePromptModal({ regionName, suggestedLang }) {
+  return new Promise((resolve) => {
+    const root = ensureLanguagePromptModal();
+    const closeBtn = root.querySelector("[data-lang-close]");
+    const acceptBtn = root.querySelector("[data-lang-accept]");
+    const declineBtn = root.querySelector("[data-lang-decline]");
+    const copyEs = root.querySelector("[data-lang-copy-es]");
+    const copyEn = root.querySelector("[data-lang-copy-en]");
+    const meta = root.querySelector("[data-lang-meta]");
+
+    const langEs = getLanguageDisplayName(suggestedLang, "es");
+    const langEn = getLanguageDisplayName(suggestedLang, "en");
+
+    copyEs.textContent =
+      `Detectamos que te estás conectando desde ${regionName}. ¿Deseas traducir la app a ${langEs}?`;
+    copyEn.textContent =
+      `We detected that you're connecting from ${regionName}. Would you like to translate the app to ${langEn}?`;
+    meta.hidden = false;
+    meta.textContent = `${regionName} • ${langEs} / ${langEn}`;
+
+    const focusables = () => [closeBtn, declineBtn, acceptBtn].filter(Boolean);
+    const previousFocused = document.activeElement;
+
+    let settled = false;
+
+    const cleanup = (accepted) => {
+      if (settled) return;
+      settled = true;
+
+      root.classList.remove("show");
+      root.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("lang-modal-open");
+
+      root.removeEventListener("click", onBackdropClick);
+      document.removeEventListener("keydown", onKeyDown);
+      acceptBtn.removeEventListener("click", onAccept);
+      declineBtn.removeEventListener("click", onDecline);
+      closeBtn.removeEventListener("click", onDecline);
+
+      window.setTimeout(() => {
+        try { previousFocused?.focus?.(); } catch (_) { }
+        resolve(accepted);
+      }, 180);
+    };
+
+    const onAccept = () => cleanup(true);
+    const onDecline = () => cleanup(false);
+
+    const onBackdropClick = (e) => {
+      if (e.target === root) cleanup(false);
+    };
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cleanup(false);
+        return;
+      }
+
+      if (e.key !== "Tab") return;
+
+      const nodes = focusables();
+      if (!nodes.length) return;
+
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    root.addEventListener("click", onBackdropClick);
+    document.addEventListener("keydown", onKeyDown);
+    acceptBtn.addEventListener("click", onAccept);
+    declineBtn.addEventListener("click", onDecline);
+    closeBtn.addEventListener("click", onDecline);
+
+    document.body.classList.add("lang-modal-open");
+    root.setAttribute("aria-hidden", "false");
+
+    requestAnimationFrame(() => {
+      root.classList.add("show");
+      acceptBtn.focus();
+    });
+  });
+}
+
+async function maybeSuggestLanguageChange(session) {
+  const userId = getUserIdFromSession(session);
+  if (!userId) return;
+
+  let savedPreference = null;
+  try {
+    savedPreference = await fetchLanguagePreference(userId);
+    if (savedPreference?.lang_code) {
+      applyLanguagePreference(savedPreference.lang_code);
+    }
+  } catch (error) {
+    console.warn("[ui] no se pudo leer public.lang:", error);
+  }
+
+  const detectedCountry = normalizeCountryCode(await detectConnectionCountryCode());
+  if (!detectedCountry) return;
+
+  const currentLang = getCurrentAppLanguage(savedPreference?.lang_code);
+
+  if (normalizeCountryCode(savedPreference?.county) === detectedCountry) {
+    return;
+  }
+
+  let isSpanishCountry = false;
+  try {
+    isSpanishCountry = await countryHasSpanishOfficialLanguage(detectedCountry);
+  } catch (error) {
+    console.warn("[ui] no se pudo resolver idioma oficial del país:", error);
+  }
+
+  if (isSpanishCountry) {
+    try {
+      await upsertLanguagePreference({
+        userId,
+        countryCode: detectedCountry,
+        langCode: currentLang
+      });
+    } catch (error) {
+      console.warn("[ui] no se pudo guardar idioma automático:", error);
+    }
+    return;
+  }
 
-  max-height: min(40vh, 320px);
-  overflow-y: auto;
+  const suggestedLang = normalizeLangCode(getPreferredDeviceLanguage()) || "en-US";
 
-  opacity: 0;
-  transform: translateY(-6px);
-  pointer-events: none;
-
-  transition: opacity .18s ease, transform .18s ease;
-}
+  if (sameLanguage(currentLang, suggestedLang)) {
+    try {
+      await upsertLanguagePreference({
+        userId,
+        countryCode: detectedCountry,
+        langCode: currentLang
+      });
+    } catch (error) {
+      console.warn("[ui] no se pudo persistir idioma actual:", error);
+    }
+    return;
+  }
 
-.dropdown.open .dropdown-options {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
+  const promptKey = getPromptCacheKey(userId, detectedCountry, suggestedLang);
+  try {
+    if (sessionStorage.getItem(promptKey) === "1") return;
+    sessionStorage.setItem(promptKey, "1");
+  } catch (_) { }
 
-/* Scroll interno elegante */
-.dropdown-options::-webkit-scrollbar {
-  width: 6px;
-}
+  const regionName =
+    getRegionDisplayName(detectedCountry, "es") ||
+    getRegionDisplayName(detectedCountry, "en") ||
+    detectedCountry;
 
-.dropdown-options::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, .15);
-  border-radius: 6px;
-}
+  const accepted = await showLanguagePromptModal({
+    regionName,
+    suggestedLang
+  });
 
-/* Cada opción */
-.dropdown-option {
-  padding: 12px;
-  cursor: pointer;
-  transition: background .15s ease;
-  font-size: 14px;
-}
+  const chosenLang = accepted ? suggestedLang : currentLang;
 
-.dropdown-option:hover {
-  background: rgba(255, 255, 255, .06);
-}
+  try {
+    await upsertLanguagePreference({
+      userId,
+      countryCode: detectedCountry,
+      langCode: chosenLang
+    });
+  } catch (error) {
+    console.warn("[ui] no se pudo guardar la preferencia de idioma:", error);
+  }
 
-.dropdown-option+.dropdown-option {
-  border-top: 1px solid rgba(255, 255, 255, .05);
-}
+  if (!accepted) return;
 
-/* =========================================================
-   HOME HERO ACTIONS / GHOST / MYLIST
-   ========================================================= */
-.home-hero-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--hero-actions-gap);
-  flex-wrap: wrap;
-  width: 100%;
-  max-width: 100%;
-}
+  applyLanguagePreference(chosenLang);
+  toast(
+    `Idioma actualizado a ${getLanguageDisplayName(chosenLang, "es")} / Language updated to ${getLanguageDisplayName(chosenLang, "en")}.`,
+    "info"
+  );
 
-.home-hero-mylist {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-
-  justify-content: center;
-  margin: 0;
-  vertical-align: middle;
+  window.location.reload();
 }
 
-.home-hero-mylist-icon {
-  width: 18px;
-  height: 18px;
-  display: block;
-  flex: 0 0 18px;
-  fill: currentColor;
-}
+export async function renderAuthButtons() {
+  const host = document.getElementById("nav-right");
+  if (!host) return;
 
-.home-hero-mylist-icon path {
-  fill: currentColor;
-}
+  const session = await getSession();
 
-.home-hero-mylist.is-active {
-  border-color: rgba(37, 99, 235, .65);
-  background: rgba(37, 99, 235, .18);
-}
+  if (!session) {
+    host.innerHTML = `
+      <a class="btn ghost" href="/login.html">Entrar</a>
+      <a class="btn" href="/register.html">Crear cuenta</a>
+    `;
+    return;
+  }
 
-/* Ghost icon */
-.btn.ghost svg {
-  width: 19px;
-  height: auto;
-  fill: #fff;
-}
+  let display = null;
+  try {
+    display = await getUsernameFromProfilesTable(session);
+  } catch (e) {
+    console.warn("No se pudo leer profiles.username:", e);
+  }
 
-/* tu estado activo original (pero estabilizado) */
-.btn.ghost.is-active {
-  background: rgba(37, 99, 235, .18);
-  border-color: rgba(37, 99, 235, .65);
-  color: #fff;
-
-  position: relative;
-  top: 0;
-  height: var(--control-h);
-}
+  if (!display) display = getFallbackDisplayName(session);
 
-/* Igualar altura/alineación visual entre botones del hero */
-.home-hero-actions .btn,
-.home-hero-actions .btn.ghost,
-.home-hero-actions .home-hero-mylist,
-.home-hero-actions .home-hero-mylist.btn,
-.home-hero-actions .home-hero-mylist .btn,
-.home-hero-actions .home-hero-mylist .btn.ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: var(--control-h);
-  min-height: var(--control-h);
-  line-height: 1;
-  padding-top: 0;
-  padding-bottom: 0;
-  vertical-align: middle;
-  box-sizing: border-box;
-
-  white-space: nowrap;
-}
+  const name = escapeHtml(display || "Usuario");
 
-/* =========================================================
-   ✅ BADGES
-   ========================================================= */
-.card .thumb {
-  position: relative;
-}
+  host.innerHTML = `
+    <a class="pill profile-link" href="/profile.html">${name}</a>
+    <button class="btn ghost" id="btn-logout" type="button">Salir</button>
+  `;
 
-/* base */
-.card-badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 3;
-
-  padding: 4px 8px;
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1;
-
-  color: #fff;
-  background: rgba(0, 0, 0, .6);
-  border: 1px solid rgba(255, 255, 255, .16);
-  backdrop-filter: blur(4px);
-
-  max-width: calc(100% - 16px);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  pointer-events: none;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, .22);
-
-  border-radius: 0 0 0 0;
-}
+  const btnLogout = document.getElementById("btn-logout");
+  if (btnLogout) {
+    btnLogout.addEventListener("click", async () => {
+      await signOut();
+      window.location.href = "/login.html";
+    });
+  }
 
-/* Próximamente */
-.card-badge-upcoming {
-  background: #fff;
-  color: #000;
+  try {
+    await maybeSuggestLanguageChange(session);
+  } catch (e) {
+    console.warn("[ui] maybeSuggestLanguageChange error:", e);
+  }
 }
 
-/* En Vivo */
-.card-badge-live {
-  background: rgba(220, 38, 38, .94);
-  border-color: rgba(255, 255, 255, .18);
-}
+/* =========================
+   DATA-HREF NAVIGATION
+========================= */
 
-/* Otro */
-.card-badge-other {
-  background: #fff;
-  color: #000;
-}
+let __dataHrefNavEnabled = false;
 
-/* Mobile badge compacto */
-@media (max-width: 480px) {
-  .card-badge {
-    top: 6px;
-    right: 6px;
-    padding: 4px 7px;
-    font-size: 10px;
-    max-width: calc(100% - 12px);
-  }
-}
+export function enableDataHrefNavigation() {
+  if (__dataHrefNavEnabled) return;
+  __dataHrefNavEnabled = true;
 
-/* =========================================================
-   🔊 HERO VOLUME BUTTON (mantengo TUS 2 CLASES)
-   - No saco nada: hago que ambas funcionen y sean responsivas.
-   - ✅ NUEVO: si está en .home-hero-right se posiciona normal.
-   - ✅ FALLBACK: si cuelga directo del .hero, queda absoluto.
-   ========================================================= */
-
-/* Alias base para ambas (no elimina nada) */
-.home-hero-volume-btn,
-.home-hero-volume-btn {
-  border-radius: 999px;
-  cursor: pointer;
-}
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-href]");
+    if (!el) return;
 
-/* Base común */
-.home-hero-volume-btn {
-  z-index: 3 !important;
-
-  width: var(--hero-vol-size) !important;
-  height: var(--hero-vol-size) !important;
-  min-width: var(--hero-vol-size) !important;
-  min-height: var(--hero-vol-size) !important;
-
-  border-radius: 999px !important;
-  border: none !important;
-  background: #ffffff00 !important;
-  backdrop-filter: none !important;
-
-  display: grid !important;
-  place-items: center !important;
-  padding: 0 !important;
-  cursor: pointer !important;
-  margin: 0 !important;
-  align-self: flex-end;
-  justify-self: end;
-  box-sizing: border-box !important;
-  overflow: visible !important;
-  line-height: 0 !important;
-}
+    const href = el.dataset.href;
+    if (!href) return;
 
-.home-hero-volume-btn img {
-  width: var(--hero-vol-icon-w) !important;
-  height: var(--hero-vol-icon-h) !important;
-  max-width: none !important;
-  max-height: none !important;
-  object-fit: contain !important;
-  display: block !important;
-  filter: brightness(0) invert(1) !important;
-  flex: 0 0 auto !important;
-}
+    const tag = e.target?.tagName?.toLowerCase?.() || "";
+    if (tag === "button" || tag === "input" || tag === "select" || tag === "textarea") return;
 
-/* ✅ NUEVO COMPORTAMIENTO: dentro del RIGHT */
-.home-hero-right>.home-hero-volume-btn {
-  position: relative !important;
-  right: -3em !important;
-  bottom: auto !important;
-  top: auto !important;
-  left: auto !important;
-}
+    if (e.ctrlKey || e.metaKey) {
+      window.open(href, "_blank", "noopener");
+      return;
+    }
 
-/* ✅ FALLBACK LEGACY: si por alguna razón queda directo dentro del hero */
-.hero>.home-hero-volume-btn {
-  position: absolute !important;
-  right: var(--hero-vol-pad) !important;
-  bottom: var(--hero-vol-pad) !important;
-  top: auto !important;
-  left: auto !important;
-}
+    window.location.href = href;
+  });
 
-/* =========================================================
-   🎬 HERO VIDEO (sin inline styles)
-   ========================================================= */
+  document.addEventListener("keydown", (e) => {
+    const el = e.target.closest("[data-href]");
+    if (!el) return;
 
-/* Para hero con video: apagamos el overlay general para no duplicar */
-.hero.hero-video-ready::before {
-  display: none !important;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      const href = el.dataset.href;
+      if (href) window.location.href = href;
+    }
+  });
 }
 
-/* Capa media del video */
-.hero .home-hero-media {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
+/* =========================
+   MOVIE CARD BADGE (publish_state)
+========================= */
 
-/* Video full-cover */
-.hero .home-hero-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center center;
-  background: #000;
-  opacity: 0;
-  transition: opacity .35s ease;
+function getMoviePublishState(movie) {
+  const state = String(movie?.publish_state || "public").toLowerCase();
+  if (["public", "upcoming", "live", "other"].includes(state)) return state;
+  return "public";
 }
 
-.hero.hero-video-ready .home-hero-video {
-  opacity: 1;
-}
+function getMovieBadgeLabel(movie) {
+  const state = getMoviePublishState(movie);
 
-/* ✅ Overlay del video (MISMO GRADIENT, ahora anclado al fondo) */
-.hero .home-hero-video-shade {
-  position: absolute;
-  inset: -1px;
-  z-index: 1;
-  pointer-events: none;
-
-  background: linear-gradient(to top,
-      color-mix(in srgb, var(--hero-overlay) 100%, transparent) 0%,
-      color-mix(in srgb, var(--hero-overlay) 94%, transparent) 28%,
-      color-mix(in srgb, var(--hero-overlay) 66%, transparent) 55%,
-      color-mix(in srgb, var(--hero-overlay) 22%, transparent) 78%,
-      color-mix(in srgb, var(--hero-overlay) 0%, transparent) 100%) !important;
-
-  /* antes: height:21em + margin-top:39em (rompía) */
-  top: auto !important;
-  bottom: -1px !important;
-  height: var(--hero-shade-h) !important;
-}
+  if (state === "public") return "";
+  if (state === "upcoming") return "Próximamente";
+  if (state === "live") return "En Vivo";
 
-/* Contenido arriba del video/overlay */
-.hero.hero-video-ready .home-hero-inner {
-  position: relative;
-  z-index: 2;
+  const custom = String(movie?.publish_state_text || "").trim();
+  return custom || "Otro";
 }
 
-/* Mobile: overlay del video igual (tu bloque final) */
-@media (max-width: 768px) {
-  .hero .home-hero-video-shade {
-    background: linear-gradient(to top,
-        color-mix(in srgb, var(--hero-overlay) 100%, transparent) 0%,
-        color-mix(in srgb, var(--hero-overlay) 94%, transparent) 28%,
-        color-mix(in srgb, var(--hero-overlay) 66%, transparent) 55%,
-        color-mix(in srgb, var(--hero-overlay) 22%, transparent) 78%,
-        color-mix(in srgb, var(--hero-overlay) 0%, transparent) 100%) !important;
-
-    bottom: -1px !important;
-    height: clamp(140px, 46%, 420px) !important;
-  }
+function getMovieBadgeClass(movie) {
+  const state = getMoviePublishState(movie);
+  return `card-badge-${state}`;
 }
 
-/* =========================================================
-   RESPONSIVE DESIGN (mantengo tus breakpoints, ordenados)
-   ========================================================= */
-
-/* ≥920px (tu bloque) */
-@media (min-width: 920px) {
-  .nav-inner {
-    gap: 18px;
-  }
+/* =========================
+   URL HELPERS
+========================= */
 
-  .hero h1 {
-    font-size: 32px;
-  }
+export function buildTitleUrl(movieId, { collectionId = null, episodeId = null } = {}) {
+  if (!movieId) return "#";
 
-  .hero p {
-    font-size: 16px;
-  }
+  const parts = [];
 
-  .card {
-    width: clamp(260px, 20vw, 320px);
+  if (collectionId) {
+    parts.push(`collection=${encodeURIComponent(String(collectionId))}`);
   }
 
-  .ep-thumbnail {
-    width: 177px;
-    height: 100px;
-  }
+  parts.push(`title=${encodeURIComponent(String(movieId))}`);
 
-  .video-wrap {
-    height: auto !important;
-    max-height: min(70vh, 760px);
+  if (episodeId) {
+    parts.push(`episode=${encodeURIComponent(String(episodeId))}`);
   }
 
-  .media-player {
-    height: 100%;
-  }
+  return `/title?${parts.join("&")}`;
 }
-
-/* ≥1200px (tu bloque, pero sin romper container) */
-@media (min-width: 1200px) {
-  .nav-inner {
-    gap: 24px;
-  }
-
-  .container {
-    width: min(85%, var(--container-max));
-    max-width: var(--container-max);
-  }
-
-  .card {
-    width: clamp(280px, 18vw, 340px);
-  }
-
-  .hero {
-    padding: 24px !important;
-    height: var(--hero-h-desktop) !important;
-    /* mantiene tu “big hero” */
-  }
-
-  .ep-thumbnail {
-    width: 160px;
-    height: 90px;
-  }
 
-  .section-head {
-    margin: 0 0 10px clamp(24px, 5vw, 120px);
-  }
+/* =========================
+   MOVIE CARD
+========================= */
+
+export function cardHtml(
+  movie,
+  hrefOverride = null,
+  subtitle = null,
+  progressPercent = null,
+  options = {}
+) {
+  const thumb = movie.thumbnail_url || "";
+  const title = escapeHtml(movie.title || "Sin título");
 
-  .carousel-btn {
-    width: clamp(48px, 4vw, 56px);
-    height: clamp(92px, 10vw, 112px);
-  }
+  const href = hrefOverride
+    ? hrefOverride
+    : buildTitleUrl(movie?.id, {
+      collectionId: movie?.collection_id || null
+    });
 
-  .dropdown {
-    width: 18em;
-  }
-
-  .video-wrap {
-    height: auto !important;
-    max-height: min(82vh, 900px);
-  }
-
-  .home-hero-inner {
-    max-width: 100%;
-  }
-
-  .home-hero-title {
-    max-width: min(720px, 75%);
-  }
-
-  .home-hero-left {
-    max-width: min(760px, 76%);
-  }
-}
-
-/* ≤1200px (tu bloque) */
-@media (max-width: 1200px) {
-  .container {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .hero {
-    padding-left: clamp(16px, 4vw, 48px) !important;
-    padding-right: clamp(16px, 4vw, 48px) !important;
-    min-height: clamp(320px, 50vw, 500px);
-    height: var(--hero-h-1200) !important;
-  }
-
-  .section-head {
-    margin-left: clamp(10px, 3vw, 44px);
-  }
-
-  .section-title {
-    margin-left: 0;
-  }
-
-  .ep {
-    display: grid;
-    grid-template-columns: auto auto minmax(160px, 220px) 1fr;
-    align-items: center;
-  }
-
-  .ep-title {
-    width: auto;
-  }
-
-  .ep-synopsis {
-    padding-right: 130px;
-  }
-
-  .ep-action {
-    position: absolute;
-    right: 16px;
-    bottom: 16px;
-  }
-
-  .video-wrap {
-    height: auto !important;
-    max-height: min(70vh, 760px);
-  }
-
-  .home-hero-layout {
-    gap: clamp(10px, 1.6vw, 18px);
-  }
-
-  .home-hero-left {
-    max-width: min(700px, 84%);
-  }
-
-  .home-hero-right {
-    margin-right: clamp(0.4em, 1.6vw, 1.4em);
-  }
-}
-
-/* ≤992px (tu bloque) */
-@media (max-width: 992px) {
-  .nav-inner {
-    gap: 10px;
-    padding-right: 12px;
-  }
-
-  .nav-left {
-    gap: 10px;
-  }
-
-  .nav-right {
-    gap: 8px;
-  }
-
-  .hero {
-    margin-top: -60px !important;
-    height: var(--hero-h-992) !important;
-    min-height: var(--hero-h-992) !important;
-    aspect-ratio: auto;
-  }
-
-  .home-hero-inner {
-    max-width: min(92vw, 860px);
-  }
-
-  .home-hero-layout {
-    width: 100%;
-    align-items: flex-end;
-  }
-
-  .home-hero-left {
-    max-width: min(82vw, 700px);
-  }
-
-  .home-hero-right {
-    min-width: clamp(44px, 8vw, 64px);
-    min-height: clamp(44px, 8vw, 64px);
-    margin-right: clamp(0.35em, 1.2vw, 1em);
-  }
-
-  .home-hero-actions {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .home-hero-actions .btn,
-  .home-hero-actions .btn.ghost,
-  .home-hero-actions .home-hero-mylist,
-  .home-hero-actions .home-hero-mylist.btn,
-  .home-hero-actions .home-hero-mylist .btn,
-  .home-hero-actions .home-hero-mylist .btn.ghost {
-    height: 40px !important;
-    min-height: 40px !important;
-  }
-
-  .carousel::before,
-  .carousel::after {
-    width: clamp(14px, 5vw, 60px);
-  }
-
-  .carousel-btn {
-    opacity: 1;
-    background: rgba(0, 0, 0, .45);
-  }
-
-  .row .card:first-child,
-  .row .card:last-child {
-    margin-left: 0;
-    margin-right: 0;
-  }
-
-  .row {
-    scroll-padding-left: 8px;
-    scroll-padding-right: 8px;
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .card {
-    width: clamp(220px, 42vw, 300px);
-  }
-
-  .panel {
-    border-radius: 18px;
-    padding: clamp(12px, 2vw, 16px);
-  }
-
-  .ep-list {
-    gap: 12px;
-  }
-
-  .ep {
-    grid-template-columns: auto auto minmax(140px, 190px) 1fr;
-    padding: 14px;
-    border-radius: 18px;
-  }
-
-  .ep-number {
-    width: auto;
-    min-width: 1.1em;
-    text-align: left;
-  }
-
-  .ep-thumbnail {
-    width: 150px;
-    min-width: 150px;
-  }
-
-  .ep-title {
-    font-size: 15px;
-  }
-
-  .ep-synopsis {
-    max-height: 4.8em;
-    padding-right: 110px;
-  }
-
-  .ep-action {
-    bottom: 12px;
-    right: 12px;
-  }
-
-  #episodes-wrap {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-
-  .video-wrap {
-    max-height: min(62vh, 560px);
-  }
-}
-
-/* ≤768px (tu bloque general + episodios carrusel) */
-@media (max-width: 768px) {
-  .container {
-    padding: 10px;
-  }
-
-  .topnav {
-    padding-top: env(safe-area-inset-top);
-  }
-
-  .container {
-    padding-left: max(10px, env(safe-area-inset-left));
-    padding-right: max(10px, env(safe-area-inset-right));
-  }
-
-  .nav-inner {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding-left: var(--logo-gap);
-    padding-right: 10px;
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .brand {
-    font-size: 1.4em;
-  }
-
-  .brand-logo {
-    width: clamp(120px, 42vw, 220px);
-  }
-
-  .navlink {
-    padding: 6px 12px;
-    font-size: 14px;
-  }
-
-  .nav-left,
-  .nav-right {
-    width: 100%;
-  }
-
-  .nav-right {
-    margin-left: 0;
-    justify-content: flex-start;
-  }
-
-  .navlink,
-  .btn,
-  .pill {
-    min-height: 38px;
-  }
-
-  .hero {
-    margin-top: -52px !important;
-    width: 100vw;
-    max-width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
-
-    height: var(--hero-h-768) !important;
-    min-height: var(--hero-h-768) !important;
-
-    padding-left: clamp(12px, 4vw, 24px) !important;
-    padding-right: clamp(12px, 4vw, 24px) !important;
-    padding-top: clamp(12px, 2vh, 16px) !important;
-    padding-bottom: clamp(12px, 2.4vh, 20px) !important;
-
-    align-items: flex-end;
-  }
-
-  .hero h1 {
-    font-size: 24px;
-    margin-bottom: 12px;
-  }
-
-  .hero p {
-    font-size: 14px;
-  }
-
-  .home-hero-inner {
-    left: 0;
-    max-width: 100%;
-  }
-
-  .home-hero-title {
-    max-width: 100%;
-  }
-
-  .home-hero-layout {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .home-hero-left {
-    max-width: min(100%, calc(100% - 52px));
-    gap: 10px;
-  }
-
-  .home-hero-right {
-    min-width: 40px;
-    min-height: 40px;
-    margin-right: clamp(0.2em, 1vw, 0.6em);
-    padding-bottom: 2px;
-  }
-
-  .home-hero-meta {
-    font-size: 12px;
-  }
-
-  .home-hero-synopsis {
-    max-width: 100%;
-    line-height: 1.4;
-  }
-
-  .section-head {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-
-    margin: 0 0 10px 0;
-    padding: 0 2px;
-  }
-
-  .section-title {
-    margin-left: 0;
-  }
-
-  .row .card,
-  .carousel .row .card {
-    width: min(86vw, 320px) !important;
-    max-width: min(86vw, 320px) !important;
-    height: auto;
-    margin-bottom: 0;
-    scroll-snap-align: start;
-  }
-
-  .carousel-btn {
-    width: 34px;
-    height: 60px;
-    border-radius: 10px;
-    top: 44%;
-  }
-
-  .carousel-btn.left {
-    left: 4px;
-  }
-
-  .carousel-btn.right {
-    right: 4px;
-  }
-
-  .row {
-    gap: 10px;
-    padding: 6px 0 8px;
-  }
-
-  .progressbar {
-    left: 8px;
-    right: 8px;
-    bottom: -2.7em;
-  }
-
-  #episodes-wrap {
-    padding: 0 10px;
-    gap: 14px;
-  }
-
-  .ep-list {
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
-    padding: 8px 0;
-    margin-top: 0;
-    flex-wrap: nowrap;
-
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
-  }
-
-  .ep {
-    display: flex;
-    flex-direction: column;
-    width: min(88vw, 360px);
-    max-width: min(88vw, 360px);
-    min-width: min(88vw, 360px);
-
-    height: auto;
-    background: rgba(255, 255, 255, .1);
-    border-radius: 16px;
-    padding: 12px;
-    flex-shrink: 0;
-    scroll-snap-align: start;
-  }
-
-  .ep-number {
-    display: none;
-  }
-
-  .ep-thumbnail {
-    width: 100%;
-    height: auto;
-    max-height: none;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border-radius: 10px;
-  }
-
-  .ep-title {
-    font-size: 16px;
-    margin-top: 8px;
-    line-height: 1.4;
-    width: 100%;
-    text-align: left;
-  }
-
-  .ep-synopsis {
-    font-size: 14px;
-    line-height: 1.6;
-    max-height: 4.8em;
-    padding-right: 0;
-    color: var(--muted);
-  }
-
-  .ep-action {
-    position: relative;
-    bottom: 0;
-    right: 0;
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    margin-top: 10px;
-    width: 100%;
-    justify-content: flex-start;
-    inset: auto;
-  }
-
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
-  .dropdown {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .dropdown-selected {
-    padding: 12px;
-    font-size: 14px;
-    min-height: 44px;
-    border-radius: 12px;
-  }
-
-  .dropdown-options {
-    border-radius: 12px;
-  }
-
-  .video-wrap {
-    height: auto;
-    max-height: none;
-    aspect-ratio: 16 / 9;
-    border-radius: 14px;
-  }
-
-  .toast-host {
-    left: max(10px, env(safe-area-inset-left));
-    right: max(10px, env(safe-area-inset-right));
-    width: auto;
-  }
-
-  .toast {
-    border-radius: 12px;
-  }
-
-  .form-actions {
-    gap: 8px;
-  }
-
-  .form-actions .btn,
-  .form-actions .pill {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* ≤480px (tu bloque) */
-@media (max-width: 480px) {
-  :root {
-    --logo-gap: 10px;
-    --hero-vol-size: 40px;
-    /* volumen más chico */
-  }
-
-  .nav-inner {
-    gap: 10px;
-  }
-
-  .brand {
-    font-size: 1.2em;
-  }
-
-  .brand-logo {
-    width: clamp(110px, 52vw, 210px);
-  }
-
-  .navlink {
-    padding: 5px 10px;
-    font-size: 13px;
-    border-radius: 12px;
-  }
-
-  .pill {
-    font-size: 12px;
-    padding: 7px 9px;
-  }
-
-  .btn {
-    padding: 9px 11px;
-    font-size: 13px;
-  }
-
-  .btn.ghost svg {
-    width: 17px;
-  }
-
-  .hero {
-    margin-top: -46px !important;
-    height: var(--hero-h-480) !important;
-    min-height: var(--hero-h-480) !important;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-    padding-bottom: 12px !important;
-  }
-
-  .hero h1 {
-    font-size: 22px;
-  }
-
-  .hero p {
-    font-size: 12px;
-  }
-
-  .home-hero-layout {
-    gap: 10px;
-  }
-
-  .home-hero-left {
-    max-width: min(100%, calc(100% - 42px));
-    gap: 8px;
-  }
-
-  .home-hero-meta {
-    font-size: 11px;
-  }
-
-  .home-hero-synopsis {
-    font-size: 12px;
-    line-height: 1.35;
-  }
-
-  .home-hero-right {
-    min-width: 40px;
-    min-height: 40px;
-    margin-right: 0;
-    padding-bottom: 0;
-  }
-
-  .section-head {
-    gap: 6px;
-  }
-
-  .card {
-    width: min(90vw, 310px) !important;
-    max-width: min(90vw, 310px) !important;
-  }
-
-  .carousel::before,
-  .carousel::after {
-    display: none;
-  }
-
-  .carousel-btn {
-    width: 30px;
-    height: 52px;
-    opacity: 1;
-    background: rgba(0, 0, 0, .5);
-    border-radius: 9px;
-  }
-
-  .carousel-btn svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  .row {
-    gap: 8px;
-  }
-
-  .card-title {
-    font-size: 12px;
-    line-height: 1.25;
-  }
-
-  #continue-wrap .carousel .card .card-subtitle {
-    font-size: 11px;
-    line-height: 1.25;
-  }
-
-  .progressbar {
-    bottom: -2.35em;
-    height: .22em;
-  }
-
-  label {
-    font-size: 12px;
-    margin: 8px 0 5px;
-  }
-
-  input,
-  select,
-  textarea {
-    border-radius: 12px;
-    padding: 10px;
-  }
-
-  textarea {
-    min-height: 80px;
-  }
-
-  .dropdown-selected {
-    padding: 10px;
-  }
-
-  .dropdown-text,
-  .dropdown-option {
-    font-size: 13px;
-  }
-
-  .dropdown-options {
-    max-height: 38vh;
-  }
-
-  #episodes-wrap {
-    padding: 0 8px;
-    gap: 12px;
-  }
-
-  .ep-list {
-    gap: 8px;
-  }
-
-  .ep {
-    width: min(92vw, 340px);
-    max-width: min(92vw, 340px);
-    min-width: min(92vw, 340px);
-    padding: 10px;
-    border-radius: 14px;
-  }
-
-  .ep-title {
-    font-size: 14px;
-    line-height: 1.3;
-  }
-
-  .ep-synopsis {
-    font-size: 12px;
-    line-height: 1.35;
-    max-height: 4.4em;
-  }
-
-  .ep-action {
-    gap: 6px;
-    margin-top: 8px;
-  }
-
-  .ep-action .btn {
-    font-size: 12px;
-    padding: 8px 10px;
-    min-height: 34px;
-  }
-
-  .toast {
-    padding: 10px 12px;
-    font-size: 13px;
-  }
-
-  /* volumen: más chico (misma intención, ahora real) */
-  .hero .home-hero-volume-btn {
-    width: var(--hero-vol-size) !important;
-    height: var(--hero-vol-size) !important;
-    min-width: var(--hero-vol-size) !important;
-    min-height: var(--hero-vol-size) !important;
-  }
-
-  .hero>.home-hero-volume-btn {
-    right: 10px !important;
-    bottom: 10px !important;
-  }
-
-  .home-hero-volume-btn img {
-    width: calc(var(--hero-vol-size) * var(--hero-vol-icon-scale)) !important;
-    height: calc(var(--hero-vol-size) * var(--hero-vol-icon-scale)) !important;
-  }
-}
-
-/* ≤360px (tu bloque) */
-@media (max-width: 360px) {
-
-  .nav-left,
-  .nav-right {
-    gap: 6px;
-  }
-
-  .navlink,
-  .pill,
-  .btn {
-    font-size: 12px;
-  }
-
-  .hero {
-    height: 240px !important;
-    min-height: 240px !important;
-  }
-
-  .home-hero-inner h1,
-  .hero h1 {
-    font-size: 1rem;
-  }
-
-  .home-hero-inner p,
-  .hero p {
-    font-size: 11px;
-  }
-
-  .home-hero-layout {
-    gap: 8px;
-  }
-
-  .home-hero-left {
-    max-width: calc(100% - 38px);
-  }
-
-  .home-hero-meta {
-    font-size: 10px;
-  }
-
-  .home-hero-synopsis {
-    font-size: 11px;
-    line-height: 1.28;
-  }
-
-  .home-hero-right {
-    min-width: 34px;
-    min-height: 34px;
-    margin-right: 0;
-  }
-
-  .home-hero-actions .btn,
-  .home-hero-actions .btn.ghost,
-  .home-hero-actions .home-hero-mylist,
-  .home-hero-actions .home-hero-mylist.btn,
-  .home-hero-actions .home-hero-mylist .btn,
-  .home-hero-actions .home-hero-mylist .btn.ghost {
-    font-size: 11px;
-    padding-left: 8px;
-    padding-right: 8px;
-    min-height: 34px !important;
-    height: 34px !important;
-  }
-
-  .row .card,
-  .carousel .row .card {
-    width: 92vw !important;
-    max-width: 92vw !important;
-  }
-
-  .ep {
-    width: 94vw;
-    max-width: 94vw;
-    min-width: 94vw;
-  }
-}
-
-/* Reduced motion (tu bloque) */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    scroll-behavior: auto !important;
-  }
-
-  .card,
-  .ep,
-  .btn,
-  .carousel-btn,
-  .dropdown-options,
-  .dropdown-arrow,
-  .progressfill {
-    transition: none !important;
-  }
-}
-
-/* Hover real vs touch (tu bloque) */
-@media (hover: none) and (pointer: coarse) {
-  .carousel-btn {
-    opacity: 1;
-  }
-
-  .card:hover,
-  .ep:hover,
-  .btn:hover,
-  .navlink:hover {
-    transform: none;
-    outline: none;
-  }
-
-  .btn:hover {
-    color: white;
-    background: var(--satvblue);
-  }
-
-  .ep-action .btn:hover {
-    transform: none;
-    background: var(--satvblue);
-  }
-}
-
-/* Pantallas bajas (landscape phones) (tu bloque) */
-@media (max-height: 500px) and (orientation: landscape) {
-  .topnav {
-    position: sticky;
-    top: 0;
-  }
-
-  .hero {
-    height: 78vh !important;
-    min-height: 220px !important;
-    margin-top: 0 !important;
-  }
-
-  .home-hero-inner h1,
-  .hero h1 {
-    font-size: clamp(1rem, 2vw, 1.4rem);
-    margin-bottom: 6px;
-  }
-
-  .home-hero-inner p,
-  .hero p {
-    font-size: 12px;
-    line-height: 1.3;
-  }
-
-  .home-hero-layout {
-    align-items: flex-end;
-    gap: 10px;
-  }
-
-  .home-hero-left {
-    gap: 8px;
-  }
-
-  .home-hero-right {
-    min-width: 34px;
-    min-height: 34px;
-    margin-right: clamp(0.2em, 1vw, 0.8em);
-  }
-
-  .home-hero-actions .btn,
-  .home-hero-actions .btn.ghost,
-  .home-hero-actions .home-hero-mylist,
-  .home-hero-actions .home-hero-mylist.btn,
-  .home-hero-actions .home-hero-mylist .btn,
-  .home-hero-actions .home-hero-mylist .btn.ghost {
-    height: 34px !important;
-    min-height: 34px !important;
-  }
-
-  .video-wrap {
-    max-height: 78vh;
-  }
-}
-
-/* ================= LANG PROMPT MODAL ================= */
-body.lang-modal-open {
-  overflow: hidden;
-}
-
-.lang-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 10050;
-  display: grid;
-  place-items: center;
-  padding:
-    max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  background: rgba(3, 6, 12, 0.72);
-  backdrop-filter: blur(10px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .18s ease;
-}
-
-.lang-modal-backdrop.show {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.lang-modal {
-  width: min(560px, calc(100vw - 24px));
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .03)),
-    var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius2);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  transform: translateY(8px) scale(.985);
-  transition: transform .18s ease, opacity .18s ease;
-  opacity: 0;
-}
-
-.lang-modal-backdrop.show .lang-modal {
-  transform: translateY(0) scale(1);
-  opacity: 1;
-}
-
-.lang-modal-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px 0 16px;
-}
-
-.lang-modal-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--satvblue);
-  box-shadow: 0 0 0 6px rgba(37, 99, 235, .18);
-  flex: 0 0 auto;
-}
-
-.lang-modal-title {
-  margin: 0;
-  font-size: clamp(16px, .8vw + 13px, 20px);
-  line-height: 1.15;
-  font-weight: 900;
-  color: var(--text);
-}
-
-.lang-modal-body {
-  padding: 14px 16px 16px 16px;
-}
-
-.lang-modal-copy {
-  margin: 0;
-  color: var(--text);
-  line-height: 1.55;
-  font-size: clamp(13px, .45vw + 11px, 15px);
-}
-
-.lang-modal-copy+.lang-modal-copy {
-  margin-top: 10px;
-  color: var(--muted);
-}
-
-.lang-modal-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 8px 10px;
-  border-radius: var(--ep-radius);
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, .04);
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.lang-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 0 16px 16px 16px;
-  flex-wrap: wrap;
-}
-
-.lang-modal-actions .btn {
-  min-width: 140px;
-}
-
-.lang-modal-close {
-  margin-left: auto;
-  appearance: none;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, .04);
-  color: var(--muted);
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  display: inline-grid;
-  place-items: center;
-  cursor: pointer;
-  transition: background .18s ease, border-color .18s ease, color .18s ease;
-}
-
-.lang-modal-close:hover {
-  background: rgba(255, 255, 255, .08);
-  border-color: var(--line);
-  color: var(--text);
-}
-
-.lang-modal-close svg {
-  width: 16px;
-  height: 16px;
-}
-
-@media (max-width: 768px) {
-  .lang-modal {
-    width: min(100%, 520px);
-  }
-
-  .lang-modal-head {
-    padding: 14px 14px 0 14px;
-  }
-
-  .lang-modal-body {
-    padding: 12px 14px 14px 14px;
-  }
-
-  .lang-modal-actions {
-    padding: 0 14px 14px 14px;
-  }
-
-  .lang-modal-actions .btn,
-  .lang-modal-actions .pill {
-    width: 100%;
-    min-width: 0;
-  }
-}
+  const sub = subtitle
+    ? `<div class="card-subtitle">${escapeHtml(subtitle)}</div>`
+    : "";
 
-@media (prefers-reduced-motion: reduce) {
+  const pb = typeof progressPercent === "number"
+    ? `<div class="progressbar">
+         <div class="progressfill" style="width:${Math.min(100, Math.max(0, progressPercent))}%"></div>
+       </div>`
+    : "";
 
-  .lang-modal-backdrop,
-  .lang-modal {
-    transition: none !important;
+  const badgeLabel = getMovieBadgeLabel(movie);
+  const badge = badgeLabel
+    ? `<div class="card-badge ${getMovieBadgeClass(movie)}">${escapeHtml(badgeLabel)}</div>`
+    : "";
+
+  const isCollection =
+    options?.showCollectionOverlay === true &&
+    !!movie?.collection_id;
+
+  const collectionOverlay = isCollection
+    ? `
+      <div
+        class="card-collection-overlay"
+        aria-hidden="true"
+      >
+        <img
+          src="/images/svg/collections.svg"
+          alt=""
+        />
+      </div>
+    `
+    : "";
+
+  return `
+    <div class="card no-select" role="link" tabindex="0" data-href="${href}">
+      <div class="thumb" style="background-image:url('${thumb}'); position:relative;">
+        ${collectionOverlay}
+        ${badge}
+        ${pb}
+      </div>
+      <div class="card-title">${title}</div>
+      ${sub}
+    </div>
+  `;
+}
+
+/* =========================
+   CSS DISFRAZADO
+   - URL visible: /url/css/satvplusClient.{id}.css
+   - Contenido real: /css/styles.css (via vercel.json rewrite)
+   Requisito en HTML:
+     <link id="app-style" rel="stylesheet" href="/css/styles.css" />
+========================= */
+
+function setDisguisedCssHref(href, linkId = "app-style") {
+  const link = document.getElementById(linkId);
+  if (!link) return;
+  link.href = href;
+}
+
+export function applyDisguisedCssFromId(id, {
+  linkId = "app-style",
+  disguisedPrefix = "/css/satvplusClient.",
+  disguisedSuffix = ".css"
+} = {}) {
+  const safe = (id === null || id === undefined) ? "0" : String(id);
+  const href = `${disguisedPrefix}${encodeURIComponent(safe)}${disguisedSuffix}`;
+  setDisguisedCssHref(href, linkId);
+}
+
+function getMovieIdFromUrl() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get("movie") || urlParams.get("title");
+}
+
+export function applyDisguisedCssFromMovieId({
+  linkId = "app-style",
+  disguisedPrefix = "/css/satvplusClient.",
+  disguisedSuffix = ".css",
+  defaultId = "0"
+} = {}) {
+  const movieId = getMovieIdFromUrl();
+  const id = movieId || defaultId;
+  applyDisguisedCssFromId(id, { linkId, disguisedPrefix, disguisedSuffix });
+}
+
+/* =========================
+   SET MOVIE TITLE (watch/title page)
+========================= */
+
+export async function setMovieTitleFromUrl() {
+  const movieId = getMovieIdFromUrl();
+
+  if (!movieId) {
+    document.title = "Película no encontrada · SATV+";
+    return null;
+  }
+
+  try {
+    const movie = await fetchMovie(movieId);
+
+    if (movie) {
+      document.title = `${movie.title} · SATV+`;
+      return movie;
+    } else {
+      document.title = "Película no encontrada · SATV+";
+      return null;
+    }
+  } catch (error) {
+    console.error("Error al obtener la película:", error);
+    document.title = "Error al cargar la película · SATV+";
+    return null;
   }
 }
