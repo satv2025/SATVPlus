@@ -307,7 +307,6 @@ function getPromptCacheKey(userId, countryCode, suggestedLang) {
 }
 
 function ensureLanguagePromptModal() {
-
   let root = document.getElementById("lang-modal-root");
   if (root) return root;
 
@@ -673,7 +672,13 @@ export function buildTitleUrl(movieId, { collectionId = null, episodeId = null }
    MOVIE CARD
 ========================= */
 
-export function cardHtml(movie, hrefOverride = null, subtitle = null, progressPercent = null) {
+export function cardHtml(
+  movie,
+  hrefOverride = null,
+  subtitle = null,
+  progressPercent = null,
+  options = {}
+) {
   const thumb = movie.thumbnail_url || "";
   const title = escapeHtml(movie.title || "Sin título");
 
@@ -698,9 +703,51 @@ export function cardHtml(movie, hrefOverride = null, subtitle = null, progressPe
     ? `<div class="card-badge ${getMovieBadgeClass(movie)}">${escapeHtml(badgeLabel)}</div>`
     : "";
 
+  const isCollection =
+    options?.showCollectionOverlay === true &&
+    !!movie?.collection_id;
+
+  const collectionOverlay = isCollection
+    ? `
+      <div
+        class="card-collection-overlay"
+        aria-hidden="true"
+        style="
+          position:absolute;
+          top:10px;
+          right:10px;
+          width:36px;
+          height:36px;
+          border-radius:999px;
+          background:rgba(0,0,0,.58);
+          backdrop-filter:blur(4px);
+          -webkit-backdrop-filter:blur(4px);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          z-index:3;
+          pointer-events:none;
+          box-shadow:0 2px 10px rgba(0,0,0,.25);
+        "
+      >
+        <img
+          src="/images/svg/collections.svg"
+          alt=""
+          style="
+            width:20px;
+            height:20px;
+            display:block;
+            object-fit:contain;
+          "
+        />
+      </div>
+    `
+    : "";
+
   return `
     <div class="card no-select" role="link" tabindex="0" data-href="${href}">
-      <div class="thumb" style="background-image:url('${thumb}')">
+      <div class="thumb" style="background-image:url('${thumb}'); position:relative;">
+        ${collectionOverlay}
         ${badge}
         ${pb}
       </div>
