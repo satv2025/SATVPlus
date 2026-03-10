@@ -78,14 +78,14 @@ function renderTitleNotFound() {
         hero.style.backgroundImage = "none";
         hero.innerHTML = `
       <div class="title-not-found" style="
-        min-height:52vh;
+        min-height: 52vh;
         display:flex;
         align-items:center;
         justify-content:center;
         padding:32px 20px;
       ">
         <div style="
-          width:min(720px,100%);
+          width:min(720px, 100%);
           text-align:center;
           display:flex;
           flex-direction:column;
@@ -94,7 +94,7 @@ function renderTitleNotFound() {
         ">
           <h1 style="
             margin:0;
-            font-size:clamp(28px,4vw,46px);
+            font-size:clamp(28px, 4vw, 46px);
             line-height:1.05;
             font-weight:800;
           ">Oops. Título no encontrado</h1>
@@ -1352,34 +1352,55 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
 }
 
 /* ===========================
-   COLLECTION helpers
+   COLLECTION (cards tipo episodio, sin collections.svg)
 =========================== */
 
-function renderCollectionCardHtml({ item, ui }) {
-    return ui.cardHtml(item, null, null, null, {
-        showCollectionOverlay: true
-    });
+function renderCollectionCardHtml({ item, esc }) {
+    const thumb = item.thumbnail_url || item.banner_url || "";
+    const synopsis = esc(item.description || item.sinopsis || "");
+
+    return `
+    <article class="episode-card more-card" tabindex="0" role="link" data-title="${esc(item.id)}">
+      <div class="more-card-thumb-wrap">
+        <img class="episode-thumb" src="${esc(thumb)}" alt="">
+      </div>
+      <div class="episode-body">
+        <h4 class="episode-title">${esc(item.title || "")}</h4>
+        ${synopsis ? `<p class="episode-sub more-card-synopsis">${synopsis}</p>` : ``}
+      </div>
+    </article>
+  `;
 }
 
 function bindCollectionCardNavigation(rootEl, itemsById = new Map()) {
-    rootEl.querySelectorAll("[data-href]").forEach(card => {
-        const href = card.dataset.href;
-        if (!href) return;
+    rootEl.querySelectorAll("[data-title]").forEach(card => {
+        const go = () => {
+            const id = card.dataset.title;
+            const item = itemsById.get(String(id));
 
-        card.addEventListener("click", () => {
-            window.location.href = href;
-        });
+            if (!id || !item) {
+                window.location.href = `/title?title=${encodeURIComponent(id || "")}`;
+                return;
+            }
 
+            const params = new URLSearchParams();
+            if (item.collection_id) params.set("collection", item.collection_id);
+            params.set("title", item.id);
+
+            window.location.href = `/title?${params.toString()}`;
+        };
+
+        card.addEventListener("click", go);
         card.addEventListener("keydown", (ev) => {
             if (ev.key === "Enter" || ev.key === " ") {
                 ev.preventDefault();
-                window.location.href = href;
+                go();
             }
         });
     });
 }
 
-async function renderCollectionSection({ api, ui, collectionId, currentMovieId }) {
+async function renderCollectionSection({ api, esc, collectionId, currentMovieId }) {
     const episodesSection = el("episodes-section");
     const episodesTitle = el("episodes-title");
     const seasonFilter = el("season-filter");
@@ -1413,7 +1434,9 @@ async function renderCollectionSection({ api, ui, collectionId, currentMovieId }
         return true;
     }
 
-    episodesGrid.innerHTML = items.map((item) => renderCollectionCardHtml({ item, ui })).join("");
+    episodesGrid.innerHTML = items.map((item) =>
+        renderCollectionCardHtml({ item, esc })
+    ).join("");
 
     const itemsById = new Map(
         items
@@ -1422,6 +1445,7 @@ async function renderCollectionSection({ api, ui, collectionId, currentMovieId }
     );
 
     bindCollectionCardNavigation(episodesGrid, itemsById);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);
     return true;
 }
 
@@ -1604,7 +1628,7 @@ async function main() {
     if (collectionId) {
         await renderCollectionSection({
             api,
-            ui,
+            esc,
             collectionId,
             currentMovieId: movie.id
         });
