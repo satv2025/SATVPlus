@@ -22,7 +22,8 @@ const MOVIE_CARD_FIELDS = `
   live_mode,
   live_starts_at,
   publish_state,
-  publish_state_text
+  publish_state_text,
+  collection_id
 `;
 
 const GEO_COUNTRY_CACHE_KEY = "satv_geo_country_v2";
@@ -498,6 +499,7 @@ export async function fetchMoreExcluding(movieId, limit = 24) {
       live_starts_at,
       publish_state,
       publish_state_text,
+      collection_id,
       movie_meta!movie_id (
         seasons_count,
         episodes_count

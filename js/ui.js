@@ -648,6 +648,28 @@ function getMovieBadgeClass(movie) {
 }
 
 /* =========================
+   URL HELPERS
+========================= */
+
+export function buildTitleUrl(movieId, { collectionId = null, episodeId = null } = {}) {
+  if (!movieId) return "#";
+
+  const parts = [];
+
+  if (collectionId) {
+    parts.push(`collection=${encodeURIComponent(String(collectionId))}`);
+  }
+
+  parts.push(`title=${encodeURIComponent(String(movieId))}`);
+
+  if (episodeId) {
+    parts.push(`episode=${encodeURIComponent(String(episodeId))}`);
+  }
+
+  return `/title?${parts.join("&")}`;
+}
+
+/* =========================
    MOVIE CARD
 ========================= */
 
@@ -657,7 +679,9 @@ export function cardHtml(movie, hrefOverride = null, subtitle = null, progressPe
 
   const href = hrefOverride
     ? hrefOverride
-    : `/title?movie=${encodeURIComponent(movie.id)}`;
+    : buildTitleUrl(movie?.id, {
+      collectionId: movie?.collection_id || null
+    });
 
   const sub = subtitle
     ? `<div class="card-subtitle">${escapeHtml(subtitle)}</div>`
@@ -712,7 +736,7 @@ export function applyDisguisedCssFromId(id, {
 
 function getMovieIdFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get("movie");
+  return urlParams.get("movie") || urlParams.get("title");
 }
 
 export function applyDisguisedCssFromMovieId({
@@ -727,7 +751,7 @@ export function applyDisguisedCssFromMovieId({
 }
 
 /* =========================
-   SET MOVIE TITLE (watch page)
+   SET MOVIE TITLE (watch/title page)
 ========================= */
 
 export async function setMovieTitleFromUrl() {

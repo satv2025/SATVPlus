@@ -7,7 +7,8 @@ import {
   $,
   formatTime,
   enableDataHrefNavigation,
-  applyDisguisedCssFromId
+  applyDisguisedCssFromId,
+  buildTitleUrl
 } from "./ui.js";
 
 import { getSession, requireAuthOrRedirect } from "./auth.js";
@@ -661,11 +662,34 @@ function getMovieCardPublicLabel(movie) {
   return "";
 }
 
+/* =========================================================
+   COLLECTION HELPERS
+========================================================= */
+
+function getMovieCollectionId(movie) {
+  return movie?.collection_id || null;
+}
+
 function homeCatalogCardHtml(movie) {
   const stateLabel = getMovieCardPublicLabel(movie);
-  if (stateLabel) return cardHtml(movie, undefined, stateLabel);
-  return cardHtml(movie);
+  const href = buildTitleUrl(movie?.id, {
+    collectionId: getMovieCollectionId(movie)
+  });
+
+  if (stateLabel) {
+    return cardHtml(movie, href, stateLabel, null, {
+      showCollectionOverlay: true
+    });
+  }
+
+  return cardHtml(movie, href, null, null, {
+    showCollectionOverlay: true
+  });
 }
+
+/* =========================================================
+   BADGES
+========================================================= */
 
 function promoteCatalogCardBadges(rootEl) {
   if (!rootEl) return;
@@ -722,7 +746,9 @@ function renderHomeHeroItem(movie, { userId } = {}) {
   const meta = homeHeroMeta(movie);
   const synopsis = movie.description || movie.sinopsis || "";
   const title = movie.title || "Destacado";
-  const titleHref = `/title?title=${encodeURIComponent(movie.id)}`;
+  const titleHref = buildTitleUrl(movie.id, {
+    collectionId: getMovieCollectionId(movie)
+  });
 
   hero.innerHTML = `
     <div class="home-hero-inner">
@@ -942,10 +968,12 @@ function buildContinueHref(row) {
   if (!m?.id) return "#";
 
   const episodeId = row?.episode_id || row?.episodes?.id || null;
+  const collectionId = m?.collection_id || null;
 
-  return episodeId
-    ? `/title?title=${encodeURIComponent(m.id)}&episode=${encodeURIComponent(episodeId)}`
-    : `/title?title=${encodeURIComponent(m.id)}`;
+  return buildTitleUrl(m.id, {
+    collectionId,
+    episodeId
+  });
 }
 
 function buildContinueSubtitle(row) {
@@ -1030,7 +1058,9 @@ async function init() {
             const subtitle = buildContinueSubtitle(r);
             const pct = buildContinuePct(r);
 
-            return cardHtml(m, href, subtitle, pct);
+            return cardHtml(m, href, subtitle, pct, {
+              showCollectionOverlay: true
+            });
           }).join("")
         );
 
