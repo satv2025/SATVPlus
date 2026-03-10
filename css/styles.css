@@ -163,7 +163,7 @@ svg {
   position: absolute;
   right: 6px;
   top: 6px;
-  width: auto;
+  width: 50px;
   height: auto;
   display: flex;
   align-items: center;
@@ -172,7 +172,7 @@ svg {
   pointer-events: none;
   background: #00000082;
   border-radius: 999px;
-  padding: 0.2em;
+  padding: 0.6em;
   border: 2px solid #fff;
 }
 

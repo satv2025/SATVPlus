@@ -1,32 +1,32 @@
 <svg width="1280" height="1280" viewBox="0 0 1280 1280" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-hidden="true">
-  <!-- Estantería pegada al canvas -->
-  <rect x="26.667" y="26.667" width="1226.667" height="1226.667" rx="80" stroke="white" stroke-width="53.333"></rect>
+  <!-- Estantería -->
+  <rect x="80" y="80" width="1120" height="1120" rx="92" stroke="white" stroke-width="72"></rect>
 
   <!-- VHS rectos -->
   <g fill="white">
-    <rect x="213.333" y="240" width="126.667" height="800" rx="8"></rect>
-    <rect x="462.667" y="240" width="126.667" height="800" rx="8"></rect>
-    <rect x="712" y="240" width="126.667" height="800" rx="8"></rect>
+    <rect x="236" y="240" width="126.667" height="800" rx="38"></rect>
+    <rect x="472.667" y="240" width="126.667" height="800" rx="38"></rect>
+    <rect x="709.333" y="240" width="126.667" height="800" rx="38"></rect>
   </g>
 
   <!-- Detalles internos -->
   <g stroke="white" fill="none" stroke-linejoin="round" stroke-linecap="round">
-    <rect x="241.067" y="295.467" width="71.2" height="123.733" rx="5.333" stroke-width="21.333"></rect>
-    <rect x="241.067" y="468.267" width="71.2" height="421.333" rx="5.333" stroke-width="21.333"></rect>
+    <rect x="263.734" y="295.467" width="71.2" height="123.733" rx="10" stroke-width="21.333"></rect>
+    <rect x="263.734" y="468.267" width="71.2" height="421.333" rx="10" stroke-width="21.333"></rect>
 
-    <rect x="490.4" y="295.467" width="71.2" height="123.733" rx="5.333" stroke-width="21.333"></rect>
-    <rect x="490.4" y="468.267" width="71.2" height="421.333" rx="5.333" stroke-width="21.333"></rect>
+    <rect x="500.401" y="295.467" width="71.2" height="123.733" rx="10" stroke-width="21.333"></rect>
+    <rect x="500.401" y="468.267" width="71.2" height="421.333" rx="10" stroke-width="21.333"></rect>
 
-    <rect x="739.733" y="295.467" width="71.2" height="123.733" rx="5.333" stroke-width="21.333"></rect>
-    <rect x="739.733" y="468.267" width="71.2" height="421.333" rx="5.333" stroke-width="21.333"></rect>
+    <rect x="737.067" y="295.467" width="71.2" height="123.733" rx="10" stroke-width="21.333"></rect>
+    <rect x="737.067" y="468.267" width="71.2" height="421.333" rx="10" stroke-width="21.333"></rect>
   </g>
 
-  <!-- VHS inclinado del mismo tamaño -->
-  <g transform="rotate(17 1026.667 640)">
-    <rect x="963.333" y="240" width="126.667" height="800" rx="8" fill="white"></rect>
+  <!-- VHS inclinado -->
+  <g transform="rotate(17 973.333 640)">
+    <rect x="910" y="240" width="126.667" height="800" rx="38" fill="white"></rect>
     <g stroke="white" fill="none" stroke-linejoin="round" stroke-linecap="round">
-      <rect x="991.067" y="295.467" width="71.2" height="123.733" rx="5.333" stroke-width="21.333"></rect>
-      <rect x="991.067" y="468.267" width="71.2" height="421.333" rx="5.333" stroke-width="21.333"></rect>
+      <rect x="937.734" y="295.467" width="71.2" height="123.733" rx="10" stroke-width="21.333"></rect>
+      <rect x="937.734" y="468.267" width="71.2" height="421.333" rx="10" stroke-width="21.333"></rect>
     </g>
   </g>
 </svg>
