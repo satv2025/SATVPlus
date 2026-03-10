@@ -152,6 +152,26 @@ svg {
   -webkit-touch-callout: none;
 }
 
+.card-collection-overlay img {
+  width: 71px !important;
+  height: auto !important;
+    display: block;
+    object-fit: contain;
+}
+
+.card-collection-overlay {
+   position: absolute;
+    top: 10px;
+    right: 10px;
+    width: auto;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    pointer-events: none;
+}
+
 /* ================= CONTAINER ================= */
 /* Mantengo tu idea de 100% width, pero fluido y estable */
 .container {

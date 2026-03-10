@@ -712,33 +712,10 @@ export function cardHtml(
       <div
         class="card-collection-overlay"
         aria-hidden="true"
-        style="
-          position:absolute;
-          top:10px;
-          right:10px;
-          width:36px;
-          height:36px;
-          border-radius:999px;
-          background:rgba(0,0,0,.58);
-          backdrop-filter:blur(4px);
-          -webkit-backdrop-filter:blur(4px);
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          z-index:3;
-          pointer-events:none;
-          box-shadow:0 2px 10px rgba(0,0,0,.25);
-        "
       >
         <img
           src="/images/svg/collections.svg"
           alt=""
-          style="
-            width:20px;
-            height:20px;
-            display:block;
-            object-fit:contain;
-          "
         />
       </div>
     `
