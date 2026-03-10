@@ -514,6 +514,44 @@ export async function fetchMoreExcluding(movieId, limit = 24) {
   return (data || []).map(normalizeMovieMeta);
 }
 
+export async function fetchCollection(collectionId, limit = 200) {
+  if (!collectionId) return [];
+
+  const safeLimit = clampLimit(limit, 1, 500, 200);
+
+  const { data, error } = await supabase
+    .from("movies")
+    .select(`
+      id,
+      title,
+      description,
+      thumbnail_url,
+      banner_url,
+      m3u8_url,
+      vtt_url,
+      trailer_url,
+      category,
+      created_at,
+      release_year,
+      duration_minutes,
+      live_mode,
+      live_starts_at,
+      publish_state,
+      publish_state_text,
+      collection_id,
+      movie_meta!movie_id (
+        seasons_count,
+        episodes_count
+      )
+    `)
+    .eq("collection_id", collectionId)
+    .order("created_at", { ascending: true })
+    .limit(safeLimit);
+
+  if (error) throw error;
+  return (data || []).map(normalizeMovieMeta);
+}
+
 /* =========================================================
    CREATE MOVIE / EPISODE (UPLOAD ADMIN)
 ========================================================= */
