@@ -161,8 +161,8 @@ svg {
 
 .card-collection-overlay {
   position: absolute;
-  right: 8px;
-  bottom: 0;
+  right: 6px;
+  top: 6px;
   width: auto;
   height: auto;
   display: flex;
@@ -170,9 +170,10 @@ svg {
   justify-content: center;
   z-index: 3;
   pointer-events: none;
-  background: #0000003b;
+  background: #00000082;
   border-radius: 999px;
   padding: 0.2em;
+  border: 2px solid #fff;
 }
 
 /* ================= CONTAINER ================= */
