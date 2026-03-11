@@ -2,7 +2,8 @@
 // SATV+ Watch loader
 // - Soporta movie / episode / series
 // - Soporta collection + movie
-// - En collection mode, el modal del player usa una lista obtenida desde public.collections
+// - En collection mode, el modal del player usa una lista obtenida desde public.movies
+//   filtrando por movies.collection_id = collections.id
 //   y navega con /watch?collection=<uuid>&movie=<uuid>
 
 import { supabase } from "./supabaseClient.js";
@@ -55,7 +56,15 @@ const DB = {
     }
   },
   collections: {
-    table: "collections"
+    table: "collections",
+    cols: {
+      id: "id",
+      title: "title",
+      description: "description",
+      thumbnail: "thumbnail_url",
+      banner: "banner_url",
+      createdAt: "created_at"
+    }
   }
 };
 
@@ -262,10 +271,6 @@ function safeArray(v) {
   return Array.isArray(v) ? v : [];
 }
 
-function isMpdUrl(url) {
-  return /\.mpd(\?|#|$)/i.test(String(url || ""));
-}
-
 function isLikelyAbsoluteUrl(url) {
   return /^https?:\/\//i.test(String(url || ""));
 }
@@ -366,7 +371,7 @@ async function awaitAkiraReadyAfterRender(renderResult, opts = {}) {
  * Probes
  * ============================================================ */
 async function probeM3u8(url) {
-  if (!url || !isLikelyAbsoluteUrl(url) || (!/\.m3u8(\?|#|$)/i.test(url) && !/\.mpd(\?|#|$)/i.test(url))) return;
+  if (!url || !isLikelyAbsoluteUrl(url) || !/\.m3u8(\?|#|$)|\.mpd(\?|#|$)/i.test(url)) return;
 
   try {
     infoLog("[watch][probe] Probing stream:", url);
@@ -576,112 +581,80 @@ async function fetchRecommendations(currentContentId = null) {
   }));
 }
 
-/* ============================================================
- * COLLECTIONS TABLE
- * ============================================================ */
+async function fetchCollectionMetaById(collectionId) {
+  if (!collectionId) return null;
 
-function pickFirstNonEmpty(row, keys = []) {
-  for (const key of keys) {
-    const value = row?.[key];
-    if (value == null) continue;
-    const s = String(value).trim();
-    if (s) return value;
+  const c = DB.collections.cols;
+
+  try {
+    const { data, error } = await withTimeout(
+      supabase
+        .from(DB.collections.table)
+        .select([c.id, c.title, c.description, c.thumbnail, c.banner, c.createdAt].join(","))
+        .eq(c.id, collectionId)
+        .maybeSingle(),
+      15000,
+      "fetchCollectionMetaById"
+    );
+
+    if (error) {
+      warnLog("[watch] no se pudo leer metadata de collection:", error);
+      return null;
+    }
+
+    return data || null;
+  } catch (e) {
+    warnLog("[watch] excepción leyendo metadata de collection:", e);
+    return null;
   }
-  return null;
 }
 
-function normalizeCollectionRowToPlayerItem(row, index = 0) {
-  const id = pickFirstNonEmpty(row, ["movie_id", "content_id", "title_id", "item_id", "id"]);
-  if (!id) return null;
-
-  const title = pickFirstNonEmpty(row, ["title", "name", "label"]) || `Contenido ${index + 1}`;
-  const synopsis = pickFirstNonEmpty(row, ["description", "synopsis", "sinopsis", "summary"]) || null;
-  const thumb =
-    pickFirstNonEmpty(row, ["thumbnail_url", "thumbnail", "poster", "poster_url", "banner_url", "image_url"]) || null;
-
-  const durationMinutesRaw = pickFirstNonEmpty(row, ["duration_minutes", "duration"]);
-  const durationMinutes = durationMinutesRaw != null ? Number(durationMinutesRaw) : null;
-
-  const orderRaw =
-    pickFirstNonEmpty(row, ["sort_order", "position", "order_index", "index_order", "created_at"]) ?? index;
-
-  return {
-    id: String(id),
-    title: String(title),
-    synopsis: synopsis ? String(synopsis) : null,
-    thumbnail: thumb ? String(thumb) : null,
-    seasonNumber: 1,
-    episodeNumber: Number.isFinite(Number(orderRaw)) ? Number(orderRaw) + 1 : index + 1,
-    durationSeconds: Number.isFinite(durationMinutes) ? durationMinutes * 60 : null,
-    __sort: orderRaw
-  };
-}
-
-function sortCollectionItems(items) {
-  return [...items].sort((a, b) => {
-    const av = a.__sort;
-    const bv = b.__sort;
-
-    if (typeof av === "number" && typeof bv === "number") return av - bv;
-    return String(av ?? "").localeCompare(String(bv ?? ""));
-  });
-}
-
-async function fetchCollectionItemsFromCollectionsTable(collectionId, currentMovieId = null) {
+async function fetchCollectionItemsFromMovies(collectionId) {
   if (!collectionId) return [];
 
-  const attempts = [
-    {
-      label: "collections by collection_id",
-      query: () =>
-        supabase
-          .from(DB.collections.table)
-          .select("*")
-          .eq("collection_id", collectionId)
-          .limit(500)
-    },
-    {
-      label: "collections by id",
-      query: () =>
-        supabase
-          .from(DB.collections.table)
-          .select("*")
-          .eq("id", collectionId)
-          .limit(500)
-    }
-  ];
+  const m = DB.movies.cols;
 
-  let lastError = null;
-  let rows = [];
+  try {
+    const { data, error } = await withTimeout(
+      supabase
+        .from(DB.movies.table)
+        .select(
+          [
+            m.id,
+            m.title,
+            m.description,
+            m.thumbnail,
+            m.banner,
+            m.durationMinutes,
+            m.createdAt,
+            m.collectionId,
+            m.category
+          ].join(",")
+        )
+        .eq(m.collectionId, collectionId)
+        .order(m.createdAt, { ascending: true })
+        .limit(500),
+      15000,
+      "fetchCollectionItemsFromMovies"
+    );
 
-  for (const attempt of attempts) {
-    try {
-      const { data, error } = await withTimeout(attempt.query(), 15000, attempt.label);
-      if (error) {
-        lastError = error;
-        continue;
-      }
+    if (error) throw error;
 
-      const arr = safeArray(data);
-      if (arr.length) {
-        rows = arr;
-        break;
-      }
-    } catch (e) {
-      lastError = e;
-    }
+    return safeArray(data).map((row, index) => ({
+      id: String(row[m.id]),
+      title: row[m.title] || `Contenido ${index + 1}`,
+      synopsis: row[m.description] || null,
+      thumbnail: row[m.thumbnail] || row[m.banner] || null,
+      seasonNumber: 1,
+      episodeNumber: index + 1,
+      durationSeconds: Number.isFinite(Number(row[m.durationMinutes]))
+        ? Number(row[m.durationMinutes]) * 60
+        : null
+    }));
+  } catch (e) {
+    warnLog("[watch] no se pudieron leer items desde movies.collection_id:", e);
+    return [];
   }
-
-  if (!rows.length && lastError) {
-    warnLog("[watch] no se pudieron leer items desde collections:", lastError);
-  }
-
-  const normalized = rows
-    .map((row, index) => normalizeCollectionRowToPlayerItem(row, index))
-    .filter(Boolean)
-    .filter((item) => !currentMovieId || String(item.id) !== String(currentMovieId));
-
-  return sortCollectionItems(normalized).map(({ __sort, ...rest }) => rest);
 }
 
 /* ============================================================
@@ -730,7 +703,7 @@ function buildAkiraProps({
     episodes: safeArray(episodes),
     recommendationsLabel: "Te podría gustar",
 
-    playlistMode: !isCollectionMode,
+    playlistMode: true,
 
     isLiveMode: !!isLiveMode,
     liveStartsAt: liveStartsAt || null,
@@ -840,24 +813,31 @@ function collectionMovieToPlayerProps(
     collectionItems = [],
     recommendations = [],
     autoplay = true,
-    forceThumbsLocal = false
+    forceThumbsLocal = false,
+    collectionMeta = null
   } = {}
 ) {
   const m = DB.movies.cols;
+  const c = DB.collections.cols;
 
   const m3u8FromSupabase = movie[m.m3u8];
   const vttFromSupabase = movie[m.vtt];
   const isLiveMode = Boolean(movie[m.liveMode]);
   const liveStartsAt = movie[m.liveStartsAt] || null;
 
+  const posterFromCollection =
+    collectionMeta?.[c?.banner] ||
+    collectionMeta?.[c?.thumbnail] ||
+    null;
+
   const props = buildAkiraProps({
     srcUrl: m3u8FromSupabase,
-    poster: movie[m.banner] || movie[m.thumbnail],
+    poster: movie[m.banner] || movie[m.thumbnail] || posterFromCollection,
     autoplay,
     title: movie[m.title] || "SATV+",
     contentId: movie[m.id],
     seasonId: collectionId || null,
-    episodeId: null,
+    episodeId: movie[m.id],
     recommendations,
     episodes: collectionItems,
     vttUrlFromSupabase: vttFromSupabase,
@@ -865,7 +845,7 @@ function collectionMovieToPlayerProps(
     isLiveMode,
     liveStartsAt,
     isCollectionMode: true,
-    collectionLabel: "Colección",
+    collectionLabel: collectionMeta?.[c?.title] || "Colección",
     collectionId
   });
 
@@ -905,19 +885,12 @@ async function resolveRouteAndBuildProps() {
 
   const m = DB.movies.cols;
   const e = DB.episodes.cols;
+  const c = DB.collections.cols;
 
   // ?collection=<uuid>&movie=<uuid>
-  if (collectionId || (collectionId && movieId)) {
-    if (!collectionId) {
-      throw new Error("Falta ?collection=<uuid>");
-    }
-
+  if (collectionId && movieId) {
     if (!isUuid(collectionId)) {
       throw new Error("Parámetro ?collection inválido (UUID esperado)");
-    }
-
-    if (!movieId) {
-      throw new Error("Para colección debés usar ?collection=<uuid>&movie=<uuid>");
     }
 
     if (!isUuid(movieId)) {
@@ -928,10 +901,25 @@ async function resolveRouteAndBuildProps() {
     if (!movie) throw new Error("No se encontró el contenido de la colección");
     if (!movie[m.m3u8]) throw new Error("El contenido no tiene m3u8_url");
 
-    const [collectionItems, recommendations] = await Promise.all([
-      fetchCollectionItemsFromCollectionsTable(collectionId, movie[m.id]),
+    const [collectionMeta, collectionItems, recommendations] = await Promise.all([
+      fetchCollectionMetaById(collectionId),
+      fetchCollectionItemsFromMovies(collectionId),
       fetchRecommendations(movie[m.id])
     ]);
+
+    const safeCollectionItems = collectionItems.length
+      ? collectionItems
+      : [{
+        id: String(movie[m.id]),
+        title: movie[m.title] || "Contenido actual",
+        synopsis: movie[m.description] || null,
+        thumbnail: movie[m.thumbnail] || movie[m.banner] || null,
+        seasonNumber: 1,
+        episodeNumber: 1,
+        durationSeconds: Number.isFinite(Number(movie[m.durationMinutes]))
+          ? Number(movie[m.durationMinutes]) * 60
+          : null
+      }];
 
     if (probe) {
       probeM3u8(movie[m.m3u8]);
@@ -946,17 +934,18 @@ async function resolveRouteAndBuildProps() {
         liveStartsAtKey: m.liveStartsAt
       }),
       startsAt: liveStartsAtDate,
-      title: movie[m.title] || "Colección"
+      title: collectionMeta?.[c.title] || movie[m.title] || "Colección"
     };
 
     return {
-      title: movie[m.title] || "Colección",
+      title: collectionMeta?.[c.title] || movie[m.title] || "Colección",
       props: collectionMovieToPlayerProps(movie, {
         collectionId,
-        collectionItems,
+        collectionItems: safeCollectionItems,
         recommendations,
         autoplay,
-        forceThumbsLocal
+        forceThumbsLocal,
+        collectionMeta
       }),
       liveGate
     };
