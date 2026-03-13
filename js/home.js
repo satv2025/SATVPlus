@@ -832,6 +832,15 @@ function ensureCarouselWrapper(row) {
   return carousel;
 }
 
+/* =========================================================
+   ✅ NUEVO: helper para marcar visualmente cuando NO es slider
+========================================================= */
+
+function setCarouselCenteredState(carousel, enabled) {
+  if (!carousel) return;
+  carousel.classList.toggle("carousel-disabled", !!enabled);
+}
+
 function resetCarouselState(row) {
   if (!row) return;
 
@@ -846,6 +855,11 @@ function resetCarouselState(row) {
   delete row.__manualTimer;
   delete row.__rebuildRaf;
   delete row.__resizeHandler;
+
+  const carousel = row.closest(".carousel");
+  if (carousel) {
+    carousel.classList.remove("carousel-disabled");
+  }
 }
 
 function buildCarousel(row, { cloneRounds = 2 } = {}) {
@@ -867,21 +881,23 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   if (isRestrictedRow && itemCount < 6) {
     if (btnLeft) btnLeft.remove();
     if (btnRight) btnRight.remove();
-    carousel.classList.add("carousel-disabled");
+    setCarouselCenteredState(carousel, true);
     scheduleTwoLinesScan(carousel);
     return;
   } else {
-    carousel.classList.remove("carousel-disabled");
+    setCarouselCenteredState(carousel, false);
   }
 
   if (itemCount === 1) {
     if (btnLeft) btnLeft.style.display = "none";
     if (btnRight) btnRight.style.display = "none";
+    setCarouselCenteredState(carousel, true);
     scheduleTwoLinesScan(carousel);
     return;
   } else {
     if (btnLeft) btnLeft.style.display = "";
     if (btnRight) btnRight.style.display = "";
+    setCarouselCenteredState(carousel, false);
   }
 
   const gap = parseFloat(getComputedStyle(row).gap || "0");

@@ -1056,6 +1056,8 @@ media-player {
   padding-left: 0 !important;
   padding-right: 0 !important;
   padding: 6px 0 !important;
+  justify-content: center !important;
+  /* ✅ NUEVO: centrar cuando no es slider */
 }
 
 .carousel-disabled .row .card:first-child,
