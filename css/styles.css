@@ -698,13 +698,10 @@ a.pill.profile-link:hover {
   background: rgba(255, 255, 255, .03);
   border-radius: var(--radius) !important;
   overflow: hidden;
-  transition: transform 0.4s ease, background .18s ease, outline .18s ease;
-
   display: flex;
   flex-direction: column;
   height: auto;
   max-height: none !important;
-
   padding-bottom: 0.4em;
   position: relative;
   color: inherit;
