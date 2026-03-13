@@ -832,10 +832,6 @@ function ensureCarouselWrapper(row) {
   return carousel;
 }
 
-/* =========================================================
-   ✅ NUEVO: helper para marcar visualmente cuando NO es slider
-========================================================= */
-
 function setCarouselCenteredState(carousel, enabled) {
   if (!carousel) return;
   carousel.classList.toggle("carousel-disabled", !!enabled);
@@ -876,27 +872,13 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   const itemCount = originals.length;
   row.dataset.carouselReady = "1";
 
-  const isRestrictedRow = row.id === "series-row" || row.id === "continue-row";
-
-  if (isRestrictedRow && itemCount < 6) {
+  if (itemCount < 6) {
     if (btnLeft) btnLeft.remove();
     if (btnRight) btnRight.remove();
     setCarouselCenteredState(carousel, true);
     scheduleTwoLinesScan(carousel);
     return;
   } else {
-    setCarouselCenteredState(carousel, false);
-  }
-
-  if (itemCount === 1) {
-    if (btnLeft) btnLeft.style.display = "none";
-    if (btnRight) btnRight.style.display = "none";
-    setCarouselCenteredState(carousel, true);
-    scheduleTwoLinesScan(carousel);
-    return;
-  } else {
-    if (btnLeft) btnLeft.style.display = "";
-    if (btnRight) btnRight.style.display = "";
     setCarouselCenteredState(carousel, false);
   }
 
