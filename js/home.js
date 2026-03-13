@@ -554,7 +554,7 @@ function bindHeroMyListButton({ movie, userId }) {
 
       const added = toggleLocalMyList(currentId);
       setHeroMyListBtnState(btn, { contentId: currentId, added, pending: false, source: "local" });
-      toast?.(added ? "Agregado a Mi Lista (local)." : "Quitado de Mi Lista (local).", "success");
+      toast?.(added ? "Agregado a Mi Lista (local)." : "Quitado a Mi Lista (local).", "success");
     } catch (e) {
       console.warn("[home] toggle hero Mi Lista error:", e);
       try {
@@ -833,8 +833,19 @@ function ensureCarouselWrapper(row) {
 }
 
 function resetCarouselState(row) {
+  if (!row) return;
+
   delete row.dataset.carouselReady;
   delete row.dataset.carouselBlock;
+
+  if (row.__carouselCleanup && typeof row.__carouselCleanup === "function") {
+    try { row.__carouselCleanup(); } catch { }
+  }
+
+  delete row.__carouselCleanup;
+  delete row.__manualTimer;
+  delete row.__rebuildRaf;
+  delete row.__resizeHandler;
 }
 
 function buildCarousel(row, { cloneRounds = 2 } = {}) {
@@ -859,6 +870,8 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     carousel.classList.add("carousel-disabled");
     scheduleTwoLinesScan(carousel);
     return;
+  } else {
+    carousel.classList.remove("carousel-disabled");
   }
 
   if (itemCount === 1) {
@@ -866,6 +879,9 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     if (btnRight) btnRight.style.display = "none";
     scheduleTwoLinesScan(carousel);
     return;
+  } else {
+    if (btnLeft) btnLeft.style.display = "";
+    if (btnRight) btnRight.style.display = "";
   }
 
   const gap = parseFloat(getComputedStyle(row).gap || "0");
@@ -874,7 +890,7 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   const blockWidth = (cardW + gap) * itemCount;
   if (!blockWidth) return;
 
-  row.dataset.carouselBlock = blockWidth;
+  row.dataset.carouselBlock = String(blockWidth);
 
   const leftFrag = document.createDocumentFragment();
   const rightFrag = document.createDocumentFragment();
@@ -926,30 +942,102 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
     });
   }
 
-  row.addEventListener("scroll", () => {
-    if (wrapping || isManualScrolling) return;
-
+  function normalizeInfinitePosition() {
     const x = row.scrollLeft;
-    const leftLimit = base - blockWidth * 0.75;
-    const rightLimit = base + blockWidth * 0.75;
 
-    if (x < leftLimit) wrapTo(x + blockWidth);
-    else if (x > rightLimit) wrapTo(x - blockWidth);
-  }, { passive: true });
+    if (x < base) {
+      wrapTo(x + blockWidth);
+      return;
+    }
 
-  const moveAmount = () => Math.max(260, row.clientWidth * 0.9);
+    if (x >= base + blockWidth) {
+      wrapTo(x - blockWidth);
+    }
+  }
+
+  function getStepSize() {
+    const firstVisibleCard = row.querySelector(".card");
+    if (!firstVisibleCard) return row.clientWidth * 0.9;
+
+    const styles = getComputedStyle(row);
+    const gapValue = parseFloat(styles.gap || "0");
+    const cardWidth = firstVisibleCard.getBoundingClientRect().width;
+
+    return cardWidth + gapValue;
+  }
+
+  function getCardsPerView() {
+    const step = getStepSize();
+    if (!step) return 1;
+    return Math.max(1, Math.floor(row.clientWidth / step));
+  }
 
   function handleArrow(direction) {
     if (isManualScrolling) return;
+
+    const amount = getStepSize() * getCardsPerView();
     isManualScrolling = true;
 
-    row.scrollBy({ left: direction * moveAmount(), behavior: "smooth" });
+    row.scrollBy({ left: direction * amount, behavior: "smooth" });
 
-    setTimeout(() => { isManualScrolling = false; }, 450);
+    window.clearTimeout(row.__manualTimer);
+    row.__manualTimer = window.setTimeout(() => {
+      isManualScrolling = false;
+      normalizeInfinitePosition();
+    }, 520);
+  }
+
+  function onScroll() {
+    if (wrapping) return;
+
+    const x = row.scrollLeft;
+    const leftLimit = base - blockWidth * 0.5;
+    const rightLimit = base + blockWidth * 1.5;
+
+    if (!isManualScrolling) {
+      if (x < leftLimit) wrapTo(x + blockWidth);
+      else if (x > rightLimit) wrapTo(x - blockWidth);
+    }
   }
 
   if (btnRight) btnRight.onclick = () => handleArrow(1);
   if (btnLeft) btnLeft.onclick = () => handleArrow(-1);
+
+  row.addEventListener("scroll", onScroll, { passive: true });
+
+  function onResize() {
+    if (row.__rebuildRaf) cancelAnimationFrame(row.__rebuildRaf);
+
+    row.__rebuildRaf = requestAnimationFrame(() => {
+      row.__rebuildRaf = null;
+
+      const freshOriginals = [...row.children].filter((node) => !node.dataset.carouselClone);
+      if (!freshOriginals.length) return;
+
+      const html = freshOriginals.map((node) => node.outerHTML).join("");
+      row.innerHTML = html;
+
+      resetCarouselState(row);
+      buildCarousel(row, { cloneRounds });
+      scheduleTwoLinesScan(carousel);
+    });
+  }
+
+  row.__resizeHandler = onResize;
+  window.addEventListener("resize", onResize, { passive: true });
+
+  [...row.children].forEach((node, idx) => {
+    const isClone = idx < leftCloneCount || idx >= leftCloneCount + itemCount;
+    if (isClone) node.dataset.carouselClone = "1";
+  });
+
+  row.__carouselCleanup = () => {
+    window.clearTimeout(row.__manualTimer);
+    row.removeEventListener("scroll", onScroll);
+    if (row.__resizeHandler) {
+      window.removeEventListener("resize", row.__resizeHandler);
+    }
+  };
 }
 
 function setRow(el, html) {
