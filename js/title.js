@@ -717,6 +717,102 @@ function setWatchBtnLiveCountdown(watchBtn, movie) {
 window.addEventListener("beforeunload", clearLiveCountdownTimer);
 
 /* ===========================
+   TITLE HERO TRAILER VIDEO
+=========================== */
+
+const TITLE_VOLUME_ICON_MUTE = "https://satvplus.com.ar/images/svg/heromute.svg";
+const TITLE_VOLUME_ICON_UNMUTE = "https://satvplus.com.ar/images/svg/heroon.svg";
+
+function mountTitleHeroTrailerVideo(hero, movie) {
+    if (!hero || !movie?.id) return;
+
+    const trailerUrl = String(movie?.trailer_url || "").trim();
+    if (!trailerUrl) return;
+
+    const banner = movie.banner_url || movie.thumbnail_url || "";
+
+    hero.classList.remove("hero-video-ready");
+    hero.querySelectorAll(".title-hero-media").forEach((n) => n.remove());
+    hero.querySelectorAll(".title-hero-volume-btn").forEach((n) => n.remove());
+
+    const media = document.createElement("div");
+    media.className = "title-hero-media";
+
+    const video = document.createElement("video");
+    video.className = "title-hero-video";
+    video.src = trailerUrl;
+
+    if (banner) video.poster = banner;
+
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+
+    const shade = document.createElement("div");
+    shade.className = "title-hero-video-shade";
+
+    media.appendChild(video);
+    media.appendChild(shade);
+
+    hero.prepend(media);
+
+    const volBtn = document.createElement("button");
+    volBtn.type = "button";
+    volBtn.className = "title-hero-volume-btn";
+    volBtn.setAttribute("aria-label", "Activar sonido");
+    volBtn.setAttribute("aria-pressed", "false");
+
+    const volIcon = document.createElement("img");
+    volIcon.alt = "";
+    volIcon.decoding = "async";
+    volIcon.src = TITLE_VOLUME_ICON_MUTE;
+    volBtn.appendChild(volIcon);
+
+    function syncVolumeUi() {
+        const isMuted = !!video.muted;
+        volIcon.src = isMuted ? TITLE_VOLUME_ICON_MUTE : TITLE_VOLUME_ICON_UNMUTE;
+        volBtn.setAttribute("aria-label", isMuted ? "Activar sonido" : "Silenciar");
+        volBtn.setAttribute("aria-pressed", String(!isMuted));
+        volBtn.title = isMuted ? "Activar sonido" : "Silenciar";
+    }
+
+    volBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        video.muted = !video.muted;
+        syncVolumeUi();
+
+        const p = video.play?.();
+        if (p && typeof p.catch === "function") p.catch(() => { });
+    });
+
+    hero.appendChild(volBtn);
+    syncVolumeUi();
+
+    video.addEventListener("error", () => {
+        volBtn.remove();
+        media.remove();
+        hero.classList.remove("hero-video-ready");
+        console.warn("[title] trailer hero error:", trailerUrl);
+    }, { once: true });
+
+    const showVideo = () => hero.classList.add("hero-video-ready");
+    video.addEventListener("loadeddata", showVideo, { once: true });
+    video.addEventListener("canplay", showVideo, { once: true });
+
+    requestAnimationFrame(() => {
+        const p = video.play?.();
+        if (p && typeof p.catch === "function") {
+            p.catch((err) => console.warn("[title] autoplay trailer bloqueado:", err));
+        }
+    });
+}
+
+/* ===========================
    Continue Watching (watch_progress)
 =========================== */
 
@@ -1550,6 +1646,8 @@ async function main() {
 
     const banner = movie.banner_url || movie.thumbnail_url || "";
     if (hero && banner) hero.style.backgroundImage = `url("${banner}")`;
+
+    mountTitleHeroTrailerVideo(hero, movie);
 
     if (trailerBtn) trailerBtn.classList.add("hidden");
 

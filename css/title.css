@@ -114,6 +114,82 @@ span.meta-dropitem {
 }
 
 /* =========================
+   TITLE HERO VIDEO
+========================= */
+
+.title-hero.hero-video-ready::after {
+    display: none !important;
+}
+
+.title-hero .title-hero-media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.title-hero .title-hero-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    background: #000;
+    opacity: 0;
+    transition: opacity .35s ease;
+}
+
+.title-hero.hero-video-ready .title-hero-video {
+    opacity: 1;
+}
+
+.title-hero .title-hero-video-shade {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(to top, rgb(7 9 13 / 1) 0%, rgb(7 9 13 / 0.96) 8%, rgb(7 9 13 / 0.88) 16%, rgb(7 9 13 / 0.72) 28%, rgb(7 9 13 / 0.50) 42%, rgb(7 9 13 / 0.28) 58%, rgb(7 9 13 / 0.12) 74%, rgb(7 9 13 / 0.03) 88%, rgb(7 9 13 / 0) 100%);
+}
+
+.title-hero-inner {
+    position: absolute;
+    z-index: 2;
+}
+
+.title-hero-volume-btn {
+    position: absolute;
+    right: clamp(12px, 2vw, 28px);
+    bottom: clamp(12px, 2vw, 24px);
+    z-index: 3;
+
+    width: clamp(40px, 5vw, 64px);
+    height: clamp(40px, 5vw, 64px);
+    min-width: clamp(40px, 5vw, 64px);
+    min-height: clamp(40px, 5vw, 64px);
+
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+
+    display: grid;
+    place-items: center;
+    line-height: 0;
+}
+
+.title-hero-volume-btn img {
+    width: clamp(28px, 3.6vw, 46px);
+    height: clamp(28px, 3.6vw, 46px);
+    object-fit: contain;
+    display: block;
+    filter: brightness(0) invert(1);
+}
+
+/* =========================
    ACTIONS / BUTTONS
    ========================= */
 .title-actions {
@@ -546,7 +622,7 @@ a#watch-btn[data-mode="countdown"] {
 
 .episode-sub {
     margin: 0;
-    color: rgba(243, 244, 246, .88);
+    color: #fff;
     font-size: 12px;
     line-height: 1.2;
     display: block;
@@ -673,6 +749,20 @@ a#watch-btn[data-mode="countdown"] {
     .dropdown-menu {
         min-width: 180px;
     }
+
+    .title-hero-volume-btn {
+        right: 12px;
+        bottom: 12px;
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        min-height: 42px;
+    }
+
+    .title-hero-volume-btn img {
+        width: 30px;
+        height: 30px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -695,6 +785,20 @@ a#watch-btn[data-mode="countdown"] {
         -webkit-line-clamp: 4;
         line-clamp: 4;
     }
+
+    .title-hero-volume-btn {
+        right: 10px;
+        bottom: 10px;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    .title-hero-volume-btn img {
+        width: 28px;
+        height: 28px;
+    }
 }
 
 /* =========================
@@ -707,7 +811,8 @@ a#watch-btn[data-mode="countdown"] {
     .season-chip,
     .episode-card,
     .dropdown-btn,
-    .dropdown-item {
+    .dropdown-item,
+    .title-hero-video {
         transition: none !important;
     }
 
@@ -863,7 +968,7 @@ a#watch-btn[data-mode="status-clickable"] {
 #more-grid .more-card .more-card-synopsis {
     display: block;
     margin: 0;
-    color: rgba(243, 244, 246, .9);
+    color: #fff;
     font-size: 12px;
     line-height: 1.25;
     opacity: .92;
