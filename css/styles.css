@@ -1053,7 +1053,7 @@ media-player {
   padding-left: 0 !important;
   padding-right: 0 !important;
   padding: 6px 0 !important;
-  justify-content: center;
+  justify-content: center !important;
 }
 
 .carousel-disabled .row .card:first-child,
