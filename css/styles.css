@@ -2661,9 +2661,6 @@ body.lang-modal-open {
   cursor: text;
 }
 
-.topnav-search:hover,
-.topnav-search:focus-within {}
-
 .topnav-search-icon {
   width: 29px;
   min-width: 18px;
