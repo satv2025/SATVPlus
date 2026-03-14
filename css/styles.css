@@ -2604,3 +2604,241 @@ body.lang-modal-open {
     transition: none !important;
   }
 }
+
+/* =========================
+   TOPNAV SEARCH
+========================= */
+
+.nav-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.topnav-search-wrap {
+  width: 100%;
+  max-width: 560px;
+}
+
+.topnav-search {
+  width: 100%;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+  cursor: text;
+}
+
+.topnav-search:focus-within {
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04);
+}
+
+.topnav-search-icon {
+  width: 18px;
+  min-width: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: .82;
+  font-size: 14px;
+}
+
+.topnav-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+}
+
+.topnav-search-input::placeholder {
+  color: rgba(255, 255, 255, .60);
+}
+
+/* =========================
+   SEARCH OVERLAY FULLSCREEN
+========================= */
+
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.04), transparent 28%),
+    linear-gradient(180deg, rgba(7, 7, 10, 0.98), rgba(7, 7, 10, 0.985));
+  backdrop-filter: blur(8px);
+}
+
+.search-overlay-shell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-overlay-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 18px 22px 14px;
+  background: linear-gradient(180deg, rgba(7, 7, 10, 0.96), rgba(7, 7, 10, 0.72));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.search-overlay-inputbar {
+  width: min(980px, 100%);
+  margin: 0 auto;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.search-overlay-input-icon {
+  width: 18px;
+  min-width: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, .82);
+  font-size: 16px;
+}
+
+.search-overlay-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.search-overlay-input::placeholder {
+  color: rgba(255, 255, 255, .55);
+}
+
+.search-overlay-close {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  transition: background .18s ease, transform .18s ease;
+}
+
+.search-overlay-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: scale(1.03);
+}
+
+.search-overlay-content {
+  flex: 1;
+  overflow: auto;
+  width: min(1320px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 22px 0 44px;
+}
+
+.search-overlay-status {
+  min-height: 28px;
+  margin-bottom: 18px;
+  color: rgba(255, 255, 255, .82);
+  font-size: 15px;
+}
+
+.search-results-count {
+  opacity: .92;
+}
+
+.search-loading {
+  opacity: .82;
+}
+
+.search-empty-state {
+  padding: 16px 0;
+  color: rgba(255, 255, 255, .82);
+}
+
+.search-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 18px;
+}
+
+body.search-open {
+  overflow: hidden;
+}
+
+/* =========================
+   OPTIONAL CARD TUNE INSIDE SEARCH
+========================= */
+
+.search-results-grid .card {
+  transition: transform .18s ease, opacity .18s ease;
+}
+
+.search-results-grid .card:hover {
+  transform: translateY(-3px);
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 900px) {
+  .nav-center {
+    padding: 0 10px;
+  }
+
+  .topnav-search-wrap {
+    max-width: none;
+  }
+
+  .search-overlay-topbar {
+    padding: 12px 14px 12px;
+  }
+
+  .search-overlay-inputbar {
+    height: 50px;
+    padding: 0 14px;
+  }
+
+  .search-overlay-input {
+    font-size: 16px;
+  }
+
+  .search-overlay-content {
+    width: calc(100% - 24px);
+    padding-top: 16px;
+  }
+
+  .search-results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
+  }
+}

@@ -97,20 +97,25 @@ export function renderNav({ active = "home" } = {}) {
     </div>
 
     <div class="nav-center">
-      <form id="topnav-search-form" class="topnav-search" role="search" autocomplete="off">
-        <input
-          id="topnav-search-input"
-          class="topnav-search-input"
-          type="search"
-          name="q"
-          placeholder="Buscar películas, series..."
-          value="${escapeHtml(currentQuery)}"
-          aria-label="Buscar"
-          autocomplete="off"
-          enterkeyhint="search"
-        />
-        <button type="submit" class="btn ghost topnav-search-btn">Buscar</button>
-      </form>
+      <div class="topnav-search-wrap">
+        <label class="topnav-search" for="topnav-search-input" aria-label="Buscar">
+          <span class="topnav-search-icon" aria-hidden="true">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </span>
+          <input
+            id="topnav-search-input"
+            class="topnav-search-input"
+            type="search"
+            name="q"
+            placeholder="Buscar películas, series..."
+            value="${escapeHtml(currentQuery)}"
+            aria-label="Buscar películas o series"
+            autocomplete="off"
+            enterkeyhint="search"
+            spellcheck="false"
+          />
+        </label>
+      </div>
     </div>
 
     <div class="nav-right" id="nav-right"></div>
@@ -118,9 +123,7 @@ export function renderNav({ active = "home" } = {}) {
 }
 
 /* =========================
-   PERFIL / USERNAME (profiles.username)
-   - Lee username desde la tabla "profiles" (columna username / "Username")
-   - Soporta Supabase PostgREST directo (sin supabase-js)
+   PERFIL / USERNAME
 ========================= */
 
 function getUserIdFromSession(session) {
@@ -190,9 +193,7 @@ async function fetchProfileRowByUserId({ userId, accessToken } = {}) {
   }
 
   const res = await fetch(url, { method: "GET", headers });
-  if (!res.ok) {
-    return null;
-  }
+  if (!res.ok) return null;
 
   const data = await res.json();
   if (!Array.isArray(data) || data.length === 0) return null;
@@ -616,6 +617,8 @@ export function enableDataHrefNavigation() {
     const el = e.target.closest("[data-href]");
     if (!el) return;
 
+    if (e.target.closest("#search-overlay")) return;
+
     const href = el.dataset.href;
     if (!href) return;
 
@@ -731,14 +734,8 @@ export function cardHtml(
 
   const collectionOverlay = isCollection
     ? `
-      <div
-        class="card-collection-overlay"
-        aria-hidden="true"
-      >
-        <img
-          src="/images/svg/collections.svg"
-          alt=""
-        />
+      <div class="card-collection-overlay" aria-hidden="true">
+        <img src="/images/svg/collections.svg" alt=""/>
       </div>
     `
     : "";
@@ -757,13 +754,14 @@ export function cardHtml(
 }
 
 /* =========================
-   SEARCH
+   SEARCH OVERLAY FULLSCREEN
 ========================= */
 
 const SEARCH_OVERLAY_ID = "search-overlay";
 let __topnavSearchInit = false;
 let __searchExperienceInit = false;
 let __searchRequestSeq = 0;
+let __searchDebounceTimer = null;
 
 function normalizeSearchQuery(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -784,13 +782,15 @@ function buildSearchUrl(query) {
 
   url.pathname = "/search";
 
-  if (q) {
-    url.searchParams.set("q", q);
-  } else {
-    url.searchParams.delete("q");
-  }
+  if (q) url.searchParams.set("q", q);
+  else url.searchParams.delete("q");
 
   return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function replaceSearchUrl(query) {
+  const nextUrl = buildSearchUrl(query);
+  history.replaceState({ searchQuery: query }, "", nextUrl);
 }
 
 function dispatchSearchChange(query, extra = {}) {
@@ -819,57 +819,110 @@ function ensureSearchOverlay() {
   root.setAttribute("aria-hidden", "true");
 
   root.innerHTML = `
-    <div class="search-overlay-backdrop" data-search-close></div>
-    <div class="search-overlay-panel" role="dialog" aria-modal="true" aria-labelledby="search-overlay-title">
-      <div class="search-overlay-head">
-        <div class="search-overlay-head-copy">
-          <h3 id="search-overlay-title">Resultados de búsqueda</h3>
-          <div class="search-overlay-query" id="search-overlay-query"></div>
+    <div class="search-overlay-shell">
+      <div class="search-overlay-topbar">
+        <div class="search-overlay-inputbar">
+          <span class="search-overlay-input-icon" aria-hidden="true">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </span>
+          <input
+            id="search-overlay-input"
+            class="search-overlay-input"
+            type="search"
+            placeholder="Buscar películas, series..."
+            autocomplete="off"
+            enterkeyhint="search"
+            spellcheck="false"
+          />
+          <button
+            type="button"
+            class="search-overlay-close"
+            data-search-close
+            aria-label="Cerrar búsqueda"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
-        <button type="button" class="btn ghost" data-search-close>Cerrar</button>
       </div>
-      <div class="search-overlay-body">
-        <div id="search-results"></div>
+
+      <div class="search-overlay-content">
+        <div class="search-overlay-status" id="search-overlay-status"></div>
+        <div id="search-results" class="search-results-grid"></div>
       </div>
     </div>
   `;
 
   document.body.appendChild(root);
 
+  const closeBtn = root.querySelector("[data-search-close]");
+  const overlayInput = root.querySelector("#search-overlay-input");
+
+  closeBtn?.addEventListener("click", () => {
+    closeSearchOverlay({ clearQuery: true });
+  });
+
   root.addEventListener("click", (e) => {
-    if (e.target.closest("[data-search-close]")) {
-      closeSearchOverlay({ preserveUrl: true });
+    if (e.target === root) {
+      closeSearchOverlay({ clearQuery: true });
     }
   });
 
   document.addEventListener("keydown", (e) => {
-    const isOpen = !root.hidden;
-    if (!isOpen) return;
+    if (root.hidden) return;
+
     if (e.key === "Escape") {
       e.preventDefault();
-      closeSearchOverlay({ preserveUrl: true });
+      closeSearchOverlay({ clearQuery: true });
     }
+  });
+
+  overlayInput?.addEventListener("input", (e) => {
+    const q = normalizeSearchQuery(e.target.value || "");
+    syncSearchInputs(q);
+    replaceSearchUrl(q);
+    debouncedSearch(q, "overlay-input");
   });
 
   return root;
 }
 
-function setSearchOverlayQueryLabel(query) {
-  const label = document.getElementById("search-overlay-query");
-  if (!label) return;
-
-  const safeQuery = normalizeSearchQuery(query);
-  label.textContent = safeQuery ? `“${safeQuery}”` : "";
+function getSearchInputs() {
+  return [
+    document.getElementById("topnav-search-input"),
+    document.getElementById("search-overlay-input")
+  ].filter(Boolean);
 }
 
-export function openSearchOverlay() {
+function syncSearchInputs(query) {
+  const q = String(query || "");
+  for (const input of getSearchInputs()) {
+    if (input.value !== q) input.value = q;
+  }
+}
+
+function setSearchStatus(html) {
+  const el = document.getElementById("search-overlay-status");
+  if (el) el.innerHTML = html;
+}
+
+export function openSearchOverlay(query = "") {
   const root = ensureSearchOverlay();
   root.hidden = false;
   root.setAttribute("aria-hidden", "false");
   document.body.classList.add("search-open");
+  syncSearchInputs(query);
+
+  const overlayInput = document.getElementById("search-overlay-input");
+  requestAnimationFrame(() => {
+    overlayInput?.focus?.();
+    if (overlayInput && query) {
+      const len = overlayInput.value.length;
+      overlayInput.setSelectionRange(len, len);
+    }
+  });
 }
 
-export function closeSearchOverlay({ preserveUrl = true } = {}) {
+export function closeSearchOverlay({ clearQuery = false } = {}) {
   const root = document.getElementById(SEARCH_OVERLAY_ID);
   if (!root) return;
 
@@ -877,80 +930,108 @@ export function closeSearchOverlay({ preserveUrl = true } = {}) {
   root.setAttribute("aria-hidden", "true");
   document.body.classList.remove("search-open");
 
-  if (!preserveUrl) {
-    const url = new URL(window.location.href);
-    url.searchParams.delete("q");
-    history.replaceState({ searchQuery: "" }, "", `${url.pathname}${url.search}${url.hash}`);
+  if (clearQuery) {
+    syncSearchInputs("");
+    replaceSearchUrl("");
+    setSearchStatus("");
+    const results = document.getElementById("search-results");
+    if (results) results.innerHTML = "";
   }
 }
 
 function renderSearchMessage(html) {
-  const root = ensureSearchOverlay();
-  const host = root.querySelector("#search-results");
-  if (!host) return;
-  host.innerHTML = html;
+  const results = document.getElementById("search-results");
+  if (!results) return;
+  results.innerHTML = "";
+  setSearchStatus(html);
 }
 
 export function renderSearchResults(items = [], query = "") {
-  const root = ensureSearchOverlay();
-  const host = root.querySelector("#search-results");
+  const host = document.getElementById("search-results");
   if (!host) return;
 
   const safeQuery = normalizeSearchQuery(query);
-  setSearchOverlayQueryLabel(safeQuery);
 
   if (!safeQuery) {
-    host.innerHTML = `<p>Escribí algo para buscar.</p>`;
+    host.innerHTML = "";
+    setSearchStatus(`<div class="search-empty-state">Empezá a escribir para buscar.</div>`);
     return;
   }
 
   if (!Array.isArray(items) || !items.length) {
-    host.innerHTML = `<p>No encontramos resultados para <strong>${escapeHtml(safeQuery)}</strong>.</p>`;
+    host.innerHTML = "";
+    setSearchStatus(`
+      <div class="search-empty-state">
+        No encontramos resultados para <strong>${escapeHtml(safeQuery)}</strong>.
+      </div>
+    `);
     return;
   }
 
-  host.innerHTML = `
-    <div class="search-results-grid">
-      ${items.map((movie) =>
-    cardHtml(
-      movie,
-      null,
-      null,
-      null,
-      { showCollectionOverlay: true }
-    )
-  ).join("")}
+  setSearchStatus(`
+    <div class="search-results-count">
+      Resultados para <strong>${escapeHtml(safeQuery)}</strong> · ${items.length}
     </div>
-  `;
+  `);
+
+  host.innerHTML = items.map((movie) =>
+    cardHtml(movie, null, null, null, { showCollectionOverlay: true })
+  ).join("");
+}
+
+function debouncedSearch(query, source = "input") {
+  clearTimeout(__searchDebounceTimer);
+
+  __searchDebounceTimer = setTimeout(() => {
+    dispatchSearchChange(query, { source });
+  }, 220);
 }
 
 export function initTopnavSearch() {
   if (__topnavSearchInit) return;
   __topnavSearchInit = true;
 
-  document.addEventListener("submit", (e) => {
-    const form = e.target?.closest?.("#topnav-search-form");
-    if (!form) return;
+  ensureSearchOverlay();
 
-    e.preventDefault();
+  document.addEventListener("focusin", (e) => {
+    const input = e.target?.closest?.("#topnav-search-input");
+    if (!input) return;
 
-    const input = form.querySelector("#topnav-search-input");
-    const query = normalizeSearchQuery(input?.value || "");
-    const nextUrl = buildSearchUrl(query);
+    const q = normalizeSearchQuery(input.value || "");
+    openSearchOverlay(q);
+  });
 
-    history.pushState({ searchQuery: query }, "", nextUrl);
-    dispatchSearchChange(query, { source: "submit" });
+  document.addEventListener("input", (e) => {
+    const input = e.target?.closest?.("#topnav-search-input");
+    if (!input) return;
+
+    const q = normalizeSearchQuery(input.value || "");
+    openSearchOverlay(q);
+    syncSearchInputs(q);
+    replaceSearchUrl(q);
+    debouncedSearch(q, "topnav-input");
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const input = e.target?.closest?.("#topnav-search-input");
+    if (!input) return;
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeSearchOverlay({ clearQuery: true });
+    }
   });
 
   window.addEventListener("popstate", () => {
     const query = getCurrentSearchQueryFromUrl();
+    syncSearchInputs(query);
 
-    const input = document.getElementById("topnav-search-input");
-    if (input && input.value !== query) {
-      input.value = query;
+    if (query) {
+      openSearchOverlay(query);
+      dispatchSearchChange(query, { source: "popstate" });
+    } else {
+      closeSearchOverlay({ clearQuery: false });
     }
-
-    dispatchSearchChange(query, { source: "popstate" });
   });
 }
 
@@ -964,46 +1045,46 @@ export function initSearchExperience() {
     const query = normalizeSearchQuery(e?.detail?.query || "");
     const requestId = ++__searchRequestSeq;
 
-    const input = document.getElementById("topnav-search-input");
-    if (input && input.value !== query) {
-      input.value = query;
-    }
+    syncSearchInputs(query);
 
     if (!query) {
-      closeSearchOverlay({ preserveUrl: true });
+      const results = document.getElementById("search-results");
+      if (results) results.innerHTML = "";
+      setSearchStatus(`<div class="search-empty-state">Empezá a escribir para buscar.</div>`);
       return;
     }
 
-    openSearchOverlay();
-    setSearchOverlayQueryLabel(query);
-    renderSearchMessage(`<p>Buscando <strong>${escapeHtml(query)}</strong>...</p>`);
+    openSearchOverlay(query);
+    renderSearchMessage(`
+      <div class="search-loading">
+        Buscando <strong>${escapeHtml(query)}</strong>...
+      </div>
+    `);
 
     try {
-      const results = await searchMovies(query, 24);
-
+      const results = await searchMovies(query, 36);
       if (requestId !== __searchRequestSeq) return;
-
       renderSearchResults(results || [], query);
     } catch (error) {
       if (requestId !== __searchRequestSeq) return;
-
       console.error("[search] error:", error);
-      renderSearchMessage(`<p>Ocurrió un error al buscar <strong>${escapeHtml(query)}</strong>.</p>`);
+      renderSearchMessage(`
+        <div class="search-empty-state">
+          Ocurrió un error al buscar <strong>${escapeHtml(query)}</strong>.
+        </div>
+      `);
     }
   });
 
   const initialQuery = getCurrentSearchQueryFromUrl();
   if (initialQuery) {
+    openSearchOverlay(initialQuery);
     dispatchSearchChange(initialQuery, { source: "init" });
   }
 }
 
 /* =========================
    CSS DISFRAZADO
-   - URL visible: /url/css/satvplusClient.{id}.css
-   - Contenido real: /css/styles.css (via vercel.json rewrite)
-   Requisito en HTML:
-     <link id="app-style" rel="stylesheet" href="/css/styles.css" />
 ========================= */
 
 function setDisguisedCssHref(href, linkId = "app-style") {
@@ -1039,7 +1120,7 @@ export function applyDisguisedCssFromMovieId({
 }
 
 /* =========================
-   SET MOVIE TITLE (watch/title page)
+   SET MOVIE TITLE
 ========================= */
 
 export async function setMovieTitleFromUrl() {
