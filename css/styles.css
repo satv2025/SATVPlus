@@ -2633,7 +2633,7 @@ body.lang-modal-open {
 .nav-center {
   flex: 1 1 auto;
   min-width: 0;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .nav-right {
@@ -2643,7 +2643,7 @@ body.lang-modal-open {
 
 .topnav-search-wrap {
   width: 100%;
-  max-width: 640px;
+  max-width: 386px;
   cursor: default;
 }
 
@@ -2654,7 +2654,7 @@ body.lang-modal-open {
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  border-radius: 999px;
+  border-radius: .25em;
   background: rgb(0 0 0 / 48%);
   border: 1px solid rgb(255 255 255);
   transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
@@ -2665,17 +2665,20 @@ body.lang-modal-open {
 .topnav-search:focus-within {}
 
 .topnav-search-icon {
-  width: 18px;
+  width: 29px;
   min-width: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: rgba(255, 255, 255, .82);
-  font-size: 17px;
+  font-size: 19px;
   position: relative;
   right: 2px;
   cursor: pointer;
-  bottom: 1px;
+  bottom: 0px;
+  height: 100%;
+  border-left: 1px solid;
+  padding-left: 0.7em;
 }
 
 .topnav-search-input {
