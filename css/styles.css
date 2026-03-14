@@ -2698,10 +2698,7 @@ body.lang-modal-open {
   position: fixed;
   inset: 0;
   z-index: 99999;
-  background:
-    radial-gradient(circle at top center, rgba(255, 255, 255, 0.045), transparent 30%),
-    linear-gradient(180deg, rgba(8, 8, 11, 0.985), rgba(8, 8, 11, 0.992));
-  backdrop-filter: blur(8px);
+  background: #07090d;
 }
 
 .search-overlay-shell {
@@ -2811,7 +2808,7 @@ body.lang-modal-open {
 .search-results-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 22px;
+  gap: 13px;
   align-items: start;
 }
 
@@ -2826,13 +2823,18 @@ body.lang-modal-open {
   transition: transform .18s ease, opacity .18s ease;
 }
 
+div.card:hover {
+  border: 0 !important;
+}
+
 .search-results-grid .card:hover {
   transform: translateY(-4px);
+  outline: 0 !important;
 }
 
 .search-results-grid .thumb {
   width: 100%;
-  aspect-ratio: 2 / 3;
+  aspect-ratio: 16 / 9;
   border-radius: 16px;
   background-size: cover;
   background-position: center;
@@ -2841,7 +2843,7 @@ body.lang-modal-open {
 }
 
 .search-results-grid .card-title {
-  margin-top: 10px;
+  margin-top: -1px;
   font-size: 15px;
   line-height: 1.35;
   font-weight: 700;
@@ -2864,23 +2866,24 @@ body.lang-modal-open {
 .search-results-grid .card-badge {
   position: absolute;
   top: 10px;
-  left: 10px;
+  right: 10px;
   z-index: 2;
   padding: 6px 9px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
-  backdrop-filter: blur(8px);
+  width: fit-content;
+  display: inline-block;
 }
 
 .search-results-grid .card-collection-overlay {
   position: absolute;
   right: 10px;
   bottom: 10px;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   border-radius: 999px;
-  background: #07090d;
+  background: #07090d82;
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
