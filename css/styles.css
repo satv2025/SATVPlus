@@ -788,9 +788,11 @@ a.pill.profile-link:hover {
 label {
   display: block;
   font-size: 13px;
-  color: var(--muted);
+  color: #ffffff;
   margin: 10px 0 6px;
 }
+
+
 
 #season-dropdown-mount .dropdown label {
   display: none;
@@ -2642,6 +2644,7 @@ body.lang-modal-open {
 .topnav-search-wrap {
   width: 100%;
   max-width: 640px;
+  cursor: default;
 }
 
 .topnav-search {
@@ -2652,18 +2655,14 @@ body.lang-modal-open {
   gap: 10px;
   padding: 0 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgb(0 0 0 / 48%);
+  border: 1px solid rgb(255 255 255);
   transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
   cursor: text;
 }
 
 .topnav-search:hover,
-.topnav-search:focus-within {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.03);
-}
+.topnav-search:focus-within {}
 
 .topnav-search-icon {
   width: 18px;
@@ -2672,7 +2671,11 @@ body.lang-modal-open {
   align-items: center;
   justify-content: center;
   color: rgba(255, 255, 255, .82);
-  font-size: 14px;
+  font-size: 17px;
+  position: relative;
+  right: 2px;
+  cursor: pointer;
+  bottom: 1px;
 }
 
 .topnav-search-input {
@@ -2685,10 +2688,12 @@ body.lang-modal-open {
   color: #fff;
   font-size: 14px;
   font-weight: 500;
+  cursor: text;
+  width: 100%;
 }
 
 .topnav-search-input::placeholder {
-  color: rgba(255, 255, 255, .58);
+  color: rgb(255 255 255);
 }
 
 /* =========================
@@ -2965,4 +2970,30 @@ body.search-open {
   .search-results-grid .card-title {
     font-size: 14px;
   }
+}
+
+.fa-magnifying-glass:before,
+.fa-search:before {
+  content: "🔍" !important;
+  font-family: FONTAWESOME !important;
+}
+
+.topnav-search {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topnav-search-input {
+  flex: 1;
+  text-align: left;
+}
+
+.topnav-search-input::placeholder {
+  text-align: left;
+}
+
+.topnav-search-icon {
+  order: 2;
+  margin-left: 10px;
 }
