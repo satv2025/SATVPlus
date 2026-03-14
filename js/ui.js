@@ -7,7 +7,8 @@ import {
   upsertLanguagePreference,
   detectConnectionCountryCode,
   countryHasSpanishOfficialLanguage,
-  getPreferredDeviceLanguage
+  getPreferredDeviceLanguage,
+  searchMovies
 } from "./api.js";
 
 export function $(sel) { return document.querySelector(sel); }
@@ -84,6 +85,9 @@ export function renderNav({ active = "home" } = {}) {
   const nav = document.getElementById("topnav");
   if (!nav) return;
 
+  const url = new URL(window.location.href);
+  const currentQuery = url.searchParams.get("q") || "";
+
   nav.innerHTML = `
     <div class="nav-left">
       <a class="brand" href="/index.html">
@@ -91,6 +95,24 @@ export function renderNav({ active = "home" } = {}) {
       </a>
       <a class="navlink ${active === "home" ? "active" : ""}" href="/index.html">Inicio</a>
     </div>
+
+    <div class="nav-center">
+      <form id="topnav-search-form" class="topnav-search" role="search" autocomplete="off">
+        <input
+          id="topnav-search-input"
+          class="topnav-search-input"
+          type="search"
+          name="q"
+          placeholder="Buscar películas, series..."
+          value="${escapeHtml(currentQuery)}"
+          aria-label="Buscar"
+          autocomplete="off"
+          enterkeyhint="search"
+        />
+        <button type="submit" class="btn ghost topnav-search-btn">Buscar</button>
+      </form>
+    </div>
+
     <div class="nav-right" id="nav-right"></div>
   `;
 }
@@ -732,6 +754,248 @@ export function cardHtml(
       ${sub}
     </div>
   `;
+}
+
+/* =========================
+   SEARCH
+========================= */
+
+const SEARCH_OVERLAY_ID = "search-overlay";
+let __topnavSearchInit = false;
+let __searchExperienceInit = false;
+let __searchRequestSeq = 0;
+
+function normalizeSearchQuery(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function getCurrentSearchQueryFromUrl() {
+  try {
+    const url = new URL(window.location.href);
+    return normalizeSearchQuery(url.searchParams.get("q") || "");
+  } catch {
+    return "";
+  }
+}
+
+function buildSearchUrl(query) {
+  const q = normalizeSearchQuery(query);
+  const url = new URL(window.location.href);
+
+  url.pathname = "/search";
+
+  if (q) {
+    url.searchParams.set("q", q);
+  } else {
+    url.searchParams.delete("q");
+  }
+
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function dispatchSearchChange(query, extra = {}) {
+  const safeQuery = normalizeSearchQuery(query);
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent("app:searchchange", {
+        detail: {
+          query: safeQuery,
+          ...extra
+        }
+      })
+    );
+  } catch (_) { }
+}
+
+function ensureSearchOverlay() {
+  let root = document.getElementById(SEARCH_OVERLAY_ID);
+  if (root) return root;
+
+  root = document.createElement("div");
+  root.id = SEARCH_OVERLAY_ID;
+  root.className = "search-overlay";
+  root.hidden = true;
+  root.setAttribute("aria-hidden", "true");
+
+  root.innerHTML = `
+    <div class="search-overlay-backdrop" data-search-close></div>
+    <div class="search-overlay-panel" role="dialog" aria-modal="true" aria-labelledby="search-overlay-title">
+      <div class="search-overlay-head">
+        <div class="search-overlay-head-copy">
+          <h3 id="search-overlay-title">Resultados de búsqueda</h3>
+          <div class="search-overlay-query" id="search-overlay-query"></div>
+        </div>
+        <button type="button" class="btn ghost" data-search-close>Cerrar</button>
+      </div>
+      <div class="search-overlay-body">
+        <div id="search-results"></div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(root);
+
+  root.addEventListener("click", (e) => {
+    if (e.target.closest("[data-search-close]")) {
+      closeSearchOverlay({ preserveUrl: true });
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const isOpen = !root.hidden;
+    if (!isOpen) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeSearchOverlay({ preserveUrl: true });
+    }
+  });
+
+  return root;
+}
+
+function setSearchOverlayQueryLabel(query) {
+  const label = document.getElementById("search-overlay-query");
+  if (!label) return;
+
+  const safeQuery = normalizeSearchQuery(query);
+  label.textContent = safeQuery ? `“${safeQuery}”` : "";
+}
+
+export function openSearchOverlay() {
+  const root = ensureSearchOverlay();
+  root.hidden = false;
+  root.setAttribute("aria-hidden", "false");
+  document.body.classList.add("search-open");
+}
+
+export function closeSearchOverlay({ preserveUrl = true } = {}) {
+  const root = document.getElementById(SEARCH_OVERLAY_ID);
+  if (!root) return;
+
+  root.hidden = true;
+  root.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("search-open");
+
+  if (!preserveUrl) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("q");
+    history.replaceState({ searchQuery: "" }, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+}
+
+function renderSearchMessage(html) {
+  const root = ensureSearchOverlay();
+  const host = root.querySelector("#search-results");
+  if (!host) return;
+  host.innerHTML = html;
+}
+
+export function renderSearchResults(items = [], query = "") {
+  const root = ensureSearchOverlay();
+  const host = root.querySelector("#search-results");
+  if (!host) return;
+
+  const safeQuery = normalizeSearchQuery(query);
+  setSearchOverlayQueryLabel(safeQuery);
+
+  if (!safeQuery) {
+    host.innerHTML = `<p>Escribí algo para buscar.</p>`;
+    return;
+  }
+
+  if (!Array.isArray(items) || !items.length) {
+    host.innerHTML = `<p>No encontramos resultados para <strong>${escapeHtml(safeQuery)}</strong>.</p>`;
+    return;
+  }
+
+  host.innerHTML = `
+    <div class="search-results-grid">
+      ${items.map((movie) =>
+    cardHtml(
+      movie,
+      null,
+      null,
+      null,
+      { showCollectionOverlay: true }
+    )
+  ).join("")}
+    </div>
+  `;
+}
+
+export function initTopnavSearch() {
+  if (__topnavSearchInit) return;
+  __topnavSearchInit = true;
+
+  document.addEventListener("submit", (e) => {
+    const form = e.target?.closest?.("#topnav-search-form");
+    if (!form) return;
+
+    e.preventDefault();
+
+    const input = form.querySelector("#topnav-search-input");
+    const query = normalizeSearchQuery(input?.value || "");
+    const nextUrl = buildSearchUrl(query);
+
+    history.pushState({ searchQuery: query }, "", nextUrl);
+    dispatchSearchChange(query, { source: "submit" });
+  });
+
+  window.addEventListener("popstate", () => {
+    const query = getCurrentSearchQueryFromUrl();
+
+    const input = document.getElementById("topnav-search-input");
+    if (input && input.value !== query) {
+      input.value = query;
+    }
+
+    dispatchSearchChange(query, { source: "popstate" });
+  });
+}
+
+export function initSearchExperience() {
+  if (__searchExperienceInit) return;
+  __searchExperienceInit = true;
+
+  ensureSearchOverlay();
+
+  window.addEventListener("app:searchchange", async (e) => {
+    const query = normalizeSearchQuery(e?.detail?.query || "");
+    const requestId = ++__searchRequestSeq;
+
+    const input = document.getElementById("topnav-search-input");
+    if (input && input.value !== query) {
+      input.value = query;
+    }
+
+    if (!query) {
+      closeSearchOverlay({ preserveUrl: true });
+      return;
+    }
+
+    openSearchOverlay();
+    setSearchOverlayQueryLabel(query);
+    renderSearchMessage(`<p>Buscando <strong>${escapeHtml(query)}</strong>...</p>`);
+
+    try {
+      const results = await searchMovies(query, 24);
+
+      if (requestId !== __searchRequestSeq) return;
+
+      renderSearchResults(results || [], query);
+    } catch (error) {
+      if (requestId !== __searchRequestSeq) return;
+
+      console.error("[search] error:", error);
+      renderSearchMessage(`<p>Ocurrió un error al buscar <strong>${escapeHtml(query)}</strong>.</p>`);
+    }
+  });
+
+  const initialQuery = getCurrentSearchQueryFromUrl();
+  if (initialQuery) {
+    dispatchSearchChange(initialQuery, { source: "init" });
+  }
 }
 
 /* =========================

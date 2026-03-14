@@ -63,6 +63,14 @@ function getLanguageBase(value) {
   return normalizeLangCode(value).split("-")[0].toLowerCase();
 }
 
+function normalizeSearchQuery(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function escapeIlike(value) {
+  return String(value || "").replaceAll("%", "\\%").replaceAll("_", "\\_");
+}
+
 function getStorageItem(storage, key) {
   try {
     return storage.getItem(key);
@@ -549,6 +557,32 @@ export async function fetchCollection(collectionId, limit = 200) {
     .limit(safeLimit);
 
   if (error) throw error;
+  return (data || []).map(normalizeMovieMeta);
+}
+
+export async function searchMovies(query, limit = 24) {
+  const q = normalizeSearchQuery(query);
+  const safeLimit = clampLimit(limit, 1, 100, 24);
+
+  if (!q) return [];
+
+  const pattern = `%${escapeIlike(q)}%`;
+
+  const { data, error } = await supabase
+    .from("movies")
+    .select(`
+      ${MOVIE_CARD_FIELDS},
+      movie_meta!movie_id (
+        seasons_count,
+        episodes_count
+      )
+    `)
+    .or(`title.ilike.${pattern},description.ilike.${pattern}`)
+    .order("created_at", { ascending: false })
+    .limit(safeLimit);
+
+  if (error) throw error;
+
   return (data || []).map(normalizeMovieMeta);
 }
 
