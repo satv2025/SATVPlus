@@ -182,18 +182,20 @@ async function fetchProfileRowByUserId({ userId, accessToken } = {}) {
     `&select=username,full_name`;
 
   const headers = {
-    "apikey": anonKey,
-    "Accept": "application/json",
+    apikey: anonKey,
+    Accept: "application/json",
   };
 
   if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
+    headers.Authorization = `Bearer ${accessToken}`;
   } else {
-    headers["Authorization"] = `Bearer ${anonKey}`;
+    headers.Authorization = `Bearer ${anonKey}`;
   }
 
   const res = await fetch(url, { method: "GET", headers });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    return null;
+  }
 
   const data = await res.json();
   if (!Array.isArray(data) || data.length === 0) return null;
@@ -739,15 +741,15 @@ export function cardHtml(
     : "";
 
   return `
-    <div class="card no-select" role="link" tabindex="0" data-href="${href}">
+    <article class="card no-select" role="link" tabindex="0" data-href="${href}">
       <div class="thumb" style="background-image:url('${thumb}'); position:relative;">
         ${collectionOverlay}
         ${badge}
         ${pb}
       </div>
-      <div class="card-title">${title}</div>
+      <h3 class="card-title">${title}</h3>
       ${sub}
-    </div>
+    </article>
   `;
 }
 
@@ -756,11 +758,163 @@ export function cardHtml(
 ========================= */
 
 const SEARCH_OVERLAY_ID = "search-overlay";
+const SEARCH_MODE_STYLE_ID = "search-mode-style";
+
 let __topnavSearchInit = false;
 let __searchExperienceInit = false;
 let __searchRequestSeq = 0;
 let __searchDebounceTimer = null;
 let __searchBaseUrl = null;
+
+const SEARCH_MODE_CSS = `
+body.search-open {
+  overflow: hidden;
+}
+
+body.search-open .search-results-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 13px;
+  align-items: start;
+}
+
+body.search-open .search-results-grid .card {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  transition: transform .18s ease, opacity .18s ease;
+}
+
+body.search-open .search-results-grid .card:hover {
+  transform: translateY(-4px);
+  outline: 0 !important;
+}
+
+body.search-open article.card:hover,
+body.search-open div.card:hover {
+  border: 0 !important;
+}
+
+body.search-open .search-results-grid .thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .30);
+}
+
+body.search-open .search-results-grid .card-title {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #fff;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.7em;
+}
+
+body.search-open .search-results-grid .card-subtitle {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, .68);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+body.search-open .search-results-grid .card-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  width: fit-content;
+  display: inline-block;
+}
+
+body.search-open .search-results-grid .card-collection-overlay {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: #07090d82;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.search-open .search-results-grid .card-collection-overlay img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+body.search-open .search-results-grid .progressbar {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .15);
+}
+
+body.search-open .search-results-grid .progressfill {
+  height: 100%;
+  border-radius: inherit;
+  background: #fff;
+}
+
+@media (max-width: 1280px) {
+  body.search-open .search-results-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  body.search-open .search-results-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+}
+
+@media (max-width: 720px) {
+  body.search-open .search-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  body.search-open .search-results-grid .card-title {
+    font-size: 14px;
+  }
+}
+`;
+
+function ensureSearchModeStyle() {
+  let style = document.getElementById(SEARCH_MODE_STYLE_ID);
+  if (style) return style;
+
+  style = document.createElement("style");
+  style.id = SEARCH_MODE_STYLE_ID;
+  style.textContent = SEARCH_MODE_CSS;
+  document.head.appendChild(style);
+  return style;
+}
+
+function removeSearchModeStyle() {
+  const style = document.getElementById(SEARCH_MODE_STYLE_ID);
+  if (style) style.remove();
+}
 
 function normalizeSearchQuery(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -871,7 +1025,7 @@ function ensureSearchOverlay() {
 
       <div class="search-overlay-content">
         <div class="search-overlay-status" id="search-overlay-status"></div>
-        <div id="search-results" class="search-results-grid"></div>
+        <section id="search-results" class="search-results-grid" aria-label="Resultados de búsqueda"></section>
       </div>
     </div>
   `;
@@ -939,6 +1093,8 @@ function setSearchStatus(html) {
 
 export function openSearchOverlay(query = "") {
   const root = ensureSearchOverlay();
+
+  ensureSearchModeStyle();
   root.hidden = false;
   root.setAttribute("aria-hidden", "false");
   document.body.classList.add("search-open");
@@ -956,11 +1112,18 @@ export function openSearchOverlay(query = "") {
 
 export function closeSearchOverlay({ clearQuery = false } = {}) {
   const root = document.getElementById(SEARCH_OVERLAY_ID);
-  if (!root) return;
 
-  root.hidden = true;
-  root.setAttribute("aria-hidden", "true");
+  if (clearQuery) {
+    syncSearchInputs("");
+  }
+
+  if (root) {
+    root.hidden = true;
+    root.setAttribute("aria-hidden", "true");
+  }
+
   document.body.classList.remove("search-open");
+  removeSearchModeStyle();
 
   const results = document.getElementById("search-results");
   if (results) results.innerHTML = "";
@@ -969,11 +1132,15 @@ export function closeSearchOverlay({ clearQuery = false } = {}) {
   clearTimeout(__searchDebounceTimer);
   __searchRequestSeq++;
 
-  if (clearQuery) {
-    syncSearchInputs("");
-  }
+  const queryAfterClose = normalizeSearchQuery(
+    document.getElementById("topnav-search-input")?.value || ""
+  );
 
-  history.replaceState({ searchQuery: "" }, "", getFallbackBaseUrl());
+  if (!queryAfterClose) {
+    history.replaceState({ searchQuery: "" }, "", getFallbackBaseUrl());
+  } else {
+    replaceSearchUrl(queryAfterClose);
+  }
 
   dispatchSearchChange("", { source: "close" });
 }
@@ -1077,7 +1244,7 @@ export function initTopnavSearch() {
       openSearchOverlay(query);
       dispatchSearchChange(query, { source: "popstate" });
     } else {
-      closeSearchOverlay({ clearQuery: false });
+      closeSearchOverlay({ clearQuery: true });
     }
   });
 }
