@@ -123,7 +123,7 @@ export function renderNav({ active = "home" } = {}) {
 }
 
 /* =========================
-   PERFIL / USERNAME (profiles.username)
+   PERFIL / USERNAME
 ========================= */
 
 function getUserIdFromSession(session) {
@@ -182,20 +182,18 @@ async function fetchProfileRowByUserId({ userId, accessToken } = {}) {
     `&select=username,full_name`;
 
   const headers = {
-    apikey: anonKey,
-    Accept: "application/json",
+    "apikey": anonKey,
+    "Accept": "application/json",
   };
 
   if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
+    headers["Authorization"] = `Bearer ${accessToken}`;
   } else {
-    headers.Authorization = `Bearer ${anonKey}`;
+    headers["Authorization"] = `Bearer ${anonKey}`;
   }
 
   const res = await fetch(url, { method: "GET", headers });
-  if (!res.ok) {
-    return null;
-  }
+  if (!res.ok) return null;
 
   const data = await res.json();
   if (!Array.isArray(data) || data.length === 0) return null;
@@ -212,13 +210,13 @@ async function getUsernameFromProfilesTable(session) {
   try {
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) return cached;
-  } catch (_) { }
+  } catch (_) {}
 
   const row = await fetchProfileRowByUserId({ userId, accessToken });
   const username = row?.username ? String(row.username) : null;
 
   if (username) {
-    try { sessionStorage.setItem(cacheKey, username); } catch (_) { }
+    try { sessionStorage.setItem(cacheKey, username); } catch (_) {}
     return username;
   }
 
@@ -293,7 +291,7 @@ function applyLanguagePreference(langCode) {
 
   try {
     localStorage.setItem(APP_LANG_STORAGE_KEY, safe);
-  } catch (_) { }
+  } catch (_) {}
 
   document.documentElement.lang = safe;
   window.__APP_LANG__ = safe;
@@ -304,7 +302,7 @@ function applyLanguagePreference(langCode) {
         detail: { langCode: safe }
       })
     );
-  } catch (_) { }
+  } catch (_) {}
 }
 
 function getRegionDisplayName(countryCode, locale = "es") {
@@ -411,7 +409,7 @@ function showLanguagePromptModal({ regionName, suggestedLang }) {
       closeBtn.removeEventListener("click", onDecline);
 
       window.setTimeout(() => {
-        try { previousFocused?.focus?.(); } catch (_) { }
+        try { previousFocused?.focus?.(); } catch (_) {}
         resolve(accepted);
       }, 180);
     };
@@ -525,7 +523,7 @@ async function maybeSuggestLanguageChange(session) {
   try {
     if (sessionStorage.getItem(promptKey) === "1") return;
     sessionStorage.setItem(promptKey, "1");
-  } catch (_) { }
+  } catch (_) {}
 
   const regionName =
     getRegionDisplayName(detectedCountry, "es") ||
@@ -619,6 +617,8 @@ export function enableDataHrefNavigation() {
     const el = e.target.closest("[data-href]");
     if (!el) return;
 
+    if (e.target.closest("#search-overlay")) return;
+
     const href = el.dataset.href;
     if (!href) return;
 
@@ -710,8 +710,8 @@ export function cardHtml(
   const href = hrefOverride
     ? hrefOverride
     : buildTitleUrl(movie?.id, {
-      collectionId: movie?.collection_id || null
-    });
+        collectionId: movie?.collection_id || null
+      });
 
   const sub = subtitle
     ? `<div class="card-subtitle">${escapeHtml(subtitle)}</div>`
@@ -741,15 +741,15 @@ export function cardHtml(
     : "";
 
   return `
-    <article class="card no-select" role="link" tabindex="0" data-href="${href}">
+    <div class="card no-select" role="link" tabindex="0" data-href="${href}">
       <div class="thumb" style="background-image:url('${thumb}'); position:relative;">
         ${collectionOverlay}
         ${badge}
         ${pb}
       </div>
-      <h3 class="card-title">${title}</h3>
+      <div class="card-title">${title}</div>
       ${sub}
-    </article>
+    </div>
   `;
 }
 
@@ -758,163 +758,10 @@ export function cardHtml(
 ========================= */
 
 const SEARCH_OVERLAY_ID = "search-overlay";
-const SEARCH_MODE_STYLE_ID = "search-mode-style";
-
 let __topnavSearchInit = false;
 let __searchExperienceInit = false;
 let __searchRequestSeq = 0;
 let __searchDebounceTimer = null;
-let __searchBaseUrl = null;
-
-const SEARCH_MODE_CSS = `
-body.search-open {
-  overflow: hidden;
-}
-
-body.search-open .search-results-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 13px;
-  align-items: start;
-}
-
-body.search-open .search-results-grid .card {
-  width: 100%;
-  min-width: 0;
-  background: transparent;
-  transition: transform .18s ease, opacity .18s ease;
-}
-
-body.search-open .search-results-grid .card:hover {
-  transform: translateY(-4px);
-  outline: 0 !important;
-}
-
-body.search-open article.card:hover,
-body.search-open div.card:hover {
-  border: 0 !important;
-}
-
-body.search-open .search-results-grid .thumb {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 16px;
-  background-size: cover;
-  background-position: center;
-  overflow: hidden;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .30);
-}
-
-body.search-open .search-results-grid .card-title {
-  margin-top: 10px;
-  font-size: 15px;
-  line-height: 1.35;
-  font-weight: 700;
-  color: #fff;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  min-height: 2.7em;
-}
-
-body.search-open .search-results-grid .card-subtitle {
-  margin-top: 4px;
-  color: rgba(255, 255, 255, .68);
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-body.search-open .search-results-grid .card-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-  padding: 6px 9px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  width: fit-content;
-  display: inline-block;
-}
-
-body.search-open .search-results-grid .card-collection-overlay {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-  background: #07090d82;
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-body.search-open .search-results-grid .card-collection-overlay img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-}
-
-body.search-open .search-results-grid .progressbar {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  height: 5px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, .15);
-}
-
-body.search-open .search-results-grid .progressfill {
-  height: 100%;
-  border-radius: inherit;
-  background: #fff;
-}
-
-@media (max-width: 1280px) {
-  body.search-open .search-results-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 980px) {
-  body.search-open .search-results-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-  }
-}
-
-@media (max-width: 720px) {
-  body.search-open .search-results-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  body.search-open .search-results-grid .card-title {
-    font-size: 14px;
-  }
-}
-`;
-
-function ensureSearchModeStyle() {
-  let style = document.getElementById(SEARCH_MODE_STYLE_ID);
-  if (style) return style;
-
-  style = document.createElement("style");
-  style.id = SEARCH_MODE_STYLE_ID;
-  style.textContent = SEARCH_MODE_CSS;
-  document.head.appendChild(style);
-  return style;
-}
-
-function removeSearchModeStyle() {
-  const style = document.getElementById(SEARCH_MODE_STYLE_ID);
-  if (style) style.remove();
-}
 
 function normalizeSearchQuery(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -929,46 +776,21 @@ function getCurrentSearchQueryFromUrl() {
   }
 }
 
-function getCurrentNonSearchUrl() {
+function buildSearchUrl(query) {
+  const q = normalizeSearchQuery(query);
   const url = new URL(window.location.href);
+
+  url.pathname = "/search";
+
+  if (q) url.searchParams.set("q", q);
+  else url.searchParams.delete("q");
+
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-function rememberSearchBaseUrl() {
-  if (__searchBaseUrl) return;
-
-  const url = new URL(window.location.href);
-  if (!url.searchParams.get("q")) {
-    __searchBaseUrl = `${url.pathname}${url.search}${url.hash}`;
-  }
-}
-
-function getFallbackBaseUrl() {
-  return __searchBaseUrl || "/index.html";
-}
-
-function buildSearchUrl(query) {
-  const q = normalizeSearchQuery(query);
-
-  if (!q) {
-    return getFallbackBaseUrl();
-  }
-
-  const base = new URL(window.location.origin + getFallbackBaseUrl());
-  base.searchParams.set("q", q);
-
-  return `${base.pathname}${base.search}${base.hash}`;
-}
-
 function replaceSearchUrl(query) {
-  const safeQuery = normalizeSearchQuery(query);
-
-  if (safeQuery) {
-    rememberSearchBaseUrl();
-  }
-
-  const nextUrl = buildSearchUrl(safeQuery);
-  history.replaceState({ searchQuery: safeQuery }, "", nextUrl);
+  const nextUrl = buildSearchUrl(query);
+  history.replaceState({ searchQuery: query }, "", nextUrl);
 }
 
 function dispatchSearchChange(query, extra = {}) {
@@ -983,7 +805,7 @@ function dispatchSearchChange(query, extra = {}) {
         }
       })
     );
-  } catch (_) { }
+  } catch (_) {}
 }
 
 function ensureSearchOverlay() {
@@ -1025,7 +847,7 @@ function ensureSearchOverlay() {
 
       <div class="search-overlay-content">
         <div class="search-overlay-status" id="search-overlay-status"></div>
-        <section id="search-results" class="search-results-grid" aria-label="Resultados de búsqueda"></section>
+        <div id="search-results" class="search-results-grid"></div>
       </div>
     </div>
   `;
@@ -1057,14 +879,6 @@ function ensureSearchOverlay() {
   overlayInput?.addEventListener("input", (e) => {
     const q = normalizeSearchQuery(e.target.value || "");
     syncSearchInputs(q);
-
-    if (!q) {
-      closeSearchOverlay({ clearQuery: true });
-      clearTimeout(__searchDebounceTimer);
-      return;
-    }
-
-    rememberSearchBaseUrl();
     replaceSearchUrl(q);
     debouncedSearch(q, "overlay-input");
   });
@@ -1093,8 +907,6 @@ function setSearchStatus(html) {
 
 export function openSearchOverlay(query = "") {
   const root = ensureSearchOverlay();
-
-  ensureSearchModeStyle();
   root.hidden = false;
   root.setAttribute("aria-hidden", "false");
   document.body.classList.add("search-open");
@@ -1112,37 +924,19 @@ export function openSearchOverlay(query = "") {
 
 export function closeSearchOverlay({ clearQuery = false } = {}) {
   const root = document.getElementById(SEARCH_OVERLAY_ID);
+  if (!root) return;
+
+  root.hidden = true;
+  root.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("search-open");
 
   if (clearQuery) {
     syncSearchInputs("");
+    replaceSearchUrl("");
+    setSearchStatus("");
+    const results = document.getElementById("search-results");
+    if (results) results.innerHTML = "";
   }
-
-  if (root) {
-    root.hidden = true;
-    root.setAttribute("aria-hidden", "true");
-  }
-
-  document.body.classList.remove("search-open");
-  removeSearchModeStyle();
-
-  const results = document.getElementById("search-results");
-  if (results) results.innerHTML = "";
-
-  setSearchStatus("");
-  clearTimeout(__searchDebounceTimer);
-  __searchRequestSeq++;
-
-  const queryAfterClose = normalizeSearchQuery(
-    document.getElementById("topnav-search-input")?.value || ""
-  );
-
-  if (!queryAfterClose) {
-    history.replaceState({ searchQuery: "" }, "", getFallbackBaseUrl());
-  } else {
-    replaceSearchUrl(queryAfterClose);
-  }
-
-  dispatchSearchChange("", { source: "close" });
 }
 
 function renderSearchMessage(html) {
@@ -1204,7 +998,7 @@ export function initTopnavSearch() {
     if (!input) return;
 
     const q = normalizeSearchQuery(input.value || "");
-    if (q) openSearchOverlay(q);
+    openSearchOverlay(q);
   });
 
   document.addEventListener("input", (e) => {
@@ -1212,16 +1006,8 @@ export function initTopnavSearch() {
     if (!input) return;
 
     const q = normalizeSearchQuery(input.value || "");
-    syncSearchInputs(q);
-
-    if (!q) {
-      closeSearchOverlay({ clearQuery: true });
-      clearTimeout(__searchDebounceTimer);
-      return;
-    }
-
-    rememberSearchBaseUrl();
     openSearchOverlay(q);
+    syncSearchInputs(q);
     replaceSearchUrl(q);
     debouncedSearch(q, "topnav-input");
   });
@@ -1244,7 +1030,7 @@ export function initTopnavSearch() {
       openSearchOverlay(query);
       dispatchSearchChange(query, { source: "popstate" });
     } else {
-      closeSearchOverlay({ clearQuery: true });
+      closeSearchOverlay({ clearQuery: false });
     }
   });
 }
@@ -1255,11 +1041,6 @@ export function initSearchExperience() {
 
   ensureSearchOverlay();
 
-  const currentUrl = getCurrentNonSearchUrl();
-  if (!__searchBaseUrl && !new URL(window.location.href).searchParams.get("q")) {
-    __searchBaseUrl = currentUrl;
-  }
-
   window.addEventListener("app:searchchange", async (e) => {
     const query = normalizeSearchQuery(e?.detail?.query || "");
     const requestId = ++__searchRequestSeq;
@@ -1267,9 +1048,9 @@ export function initSearchExperience() {
     syncSearchInputs(query);
 
     if (!query) {
-      const host = document.getElementById("search-results");
-      if (host) host.innerHTML = "";
-      setSearchStatus("");
+      const results = document.getElementById("search-results");
+      if (results) results.innerHTML = "";
+      setSearchStatus(`<div class="search-empty-state">Empezá a escribir para buscar.</div>`);
       return;
     }
 
