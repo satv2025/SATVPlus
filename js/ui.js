@@ -781,8 +781,10 @@ function getCurrentNonSearchUrl() {
 }
 
 function rememberSearchBaseUrl() {
+  if (__searchBaseUrl) return;
+
   const url = new URL(window.location.href);
-  if (url.pathname !== "/search") {
+  if (!url.searchParams.get("q")) {
     __searchBaseUrl = `${url.pathname}${url.search}${url.hash}`;
   }
 }
@@ -799,9 +801,6 @@ function buildSearchUrl(query) {
   }
 
   const base = new URL(window.location.origin + getFallbackBaseUrl());
-  base.pathname = "/search";
-  base.search = "";
-  base.hash = "";
   base.searchParams.set("q", q);
 
   return `${base.pathname}${base.search}${base.hash}`;
@@ -906,7 +905,7 @@ function ensureSearchOverlay() {
     syncSearchInputs(q);
 
     if (!q) {
-      closeSearchOverlay({ clearQuery: false });
+      closeSearchOverlay({ clearQuery: true });
       clearTimeout(__searchDebounceTimer);
       return;
     }
@@ -967,17 +966,16 @@ export function closeSearchOverlay({ clearQuery = false } = {}) {
   if (results) results.innerHTML = "";
 
   setSearchStatus("");
+  clearTimeout(__searchDebounceTimer);
+  __searchRequestSeq++;
 
   if (clearQuery) {
     syncSearchInputs("");
-    history.replaceState({ searchQuery: "" }, "", getFallbackBaseUrl());
-    return;
   }
 
-  const q = normalizeSearchQuery(document.getElementById("topnav-search-input")?.value || "");
-  if (!q) {
-    history.replaceState({ searchQuery: "" }, "", getFallbackBaseUrl());
-  }
+  history.replaceState({ searchQuery: "" }, "", getFallbackBaseUrl());
+
+  dispatchSearchChange("", { source: "close" });
 }
 
 function renderSearchMessage(html) {
@@ -1050,7 +1048,7 @@ export function initTopnavSearch() {
     syncSearchInputs(q);
 
     if (!q) {
-      closeSearchOverlay({ clearQuery: false });
+      closeSearchOverlay({ clearQuery: true });
       clearTimeout(__searchDebounceTimer);
       return;
     }
@@ -1091,7 +1089,7 @@ export function initSearchExperience() {
   ensureSearchOverlay();
 
   const currentUrl = getCurrentNonSearchUrl();
-  if (!__searchBaseUrl && !currentUrl.startsWith("/search")) {
+  if (!__searchBaseUrl && !new URL(window.location.href).searchParams.get("q")) {
     __searchBaseUrl = currentUrl;
   }
 
@@ -1102,7 +1100,9 @@ export function initSearchExperience() {
     syncSearchInputs(query);
 
     if (!query) {
-      closeSearchOverlay({ clearQuery: false });
+      const host = document.getElementById("search-results");
+      if (host) host.innerHTML = "";
+      setSearchStatus("");
       return;
     }
 
