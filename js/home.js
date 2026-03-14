@@ -789,6 +789,61 @@ function renderHomeHeroItem(movie, { userId } = {}) {
    CAROUSEL
 ========================================================= */
 
+function getCarouselCards(row) {
+  return [...row.querySelectorAll(".card")];
+}
+
+function getRowCenterX(row) {
+  return row.scrollLeft + row.clientWidth / 2;
+}
+
+function getCardCenterX(card) {
+  return card.offsetLeft + card.offsetWidth / 2;
+}
+
+function centerCard(row, card, behavior = "smooth") {
+  if (!row || !card) return;
+
+  const target = card.offsetLeft - (row.clientWidth / 2) + (card.offsetWidth / 2);
+
+  row.scrollTo({
+    left: Math.max(0, target),
+    behavior
+  });
+}
+
+function getClosestCenteredCard(row) {
+  const cards = getCarouselCards(row);
+  if (!cards.length) return null;
+
+  const rowCenter = getRowCenterX(row);
+
+  let closest = null;
+  let minDist = Infinity;
+
+  for (const card of cards) {
+    const dist = Math.abs(getCardCenterX(card) - rowCenter);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = card;
+    }
+  }
+
+  return closest;
+}
+
+function moveToAdjacentCard(row, direction = 1) {
+  const cards = getCarouselCards(row);
+  if (!cards.length) return;
+
+  const current = getClosestCenteredCard(row) || cards[0];
+  const index = cards.indexOf(current);
+  if (index < 0) return;
+
+  const nextIndex = Math.max(0, Math.min(cards.length - 1, index + direction));
+  centerCard(row, cards[nextIndex], "smooth");
+}
+
 function ensureCarouselWrapper(row) {
   if (!row) return null;
 
@@ -841,24 +896,23 @@ function resetCarouselState(row) {
   if (!row) return;
 
   delete row.dataset.carouselReady;
-  delete row.dataset.carouselBlock;
 
   if (row.__carouselCleanup && typeof row.__carouselCleanup === "function") {
     try { row.__carouselCleanup(); } catch { }
   }
 
   delete row.__carouselCleanup;
-  delete row.__manualTimer;
-  delete row.__rebuildRaf;
   delete row.__resizeHandler;
+  delete row.__snapTimer;
 
   const carousel = row.closest(".carousel");
   if (carousel) {
     carousel.classList.remove("carousel-disabled");
+    carousel.classList.remove("no-arrows");
   }
 }
 
-function buildCarousel(row, { cloneRounds = 2 } = {}) {
+function buildCarousel(row) {
   if (!row) return;
   if (row.dataset.carouselReady === "1") return;
 
@@ -869,154 +923,61 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   const btnLeft = carousel.querySelector(".carousel-btn.left");
   const btnRight = carousel.querySelector(".carousel-btn.right");
 
-  const itemCount = originals.length;
   row.dataset.carouselReady = "1";
 
-  if (itemCount < 6) {
-    if (btnLeft) btnLeft.remove();
-    if (btnRight) btnRight.remove();
+  const showArrows = row.dataset.arrows !== "0";
+  carousel.classList.toggle("no-arrows", !showArrows);
+
+  if (originals.length <= 1) {
+    carousel.classList.add("no-arrows");
     setCarouselCenteredState(carousel, true);
-    scheduleTwoLinesScan(carousel);
-    return;
   } else {
     setCarouselCenteredState(carousel, false);
   }
 
-  const gap = parseFloat(getComputedStyle(row).gap || "0");
-  const firstCard = row.querySelector(".card");
-  const cardW = firstCard ? firstCard.getBoundingClientRect().width : 0;
-  const blockWidth = (cardW + gap) * itemCount;
-  if (!blockWidth) return;
+  let snapTimer = null;
+  let isSnapping = false;
 
-  row.dataset.carouselBlock = String(blockWidth);
+  function snapToClosest(behavior = "smooth") {
+    if (isSnapping) return;
 
-  const leftFrag = document.createDocumentFragment();
-  const rightFrag = document.createDocumentFragment();
+    const closest = getClosestCenteredCard(row);
+    if (!closest) return;
 
-  for (let r = 0; r < cloneRounds; r++) {
-    for (let i = 0; i < itemCount; i++) leftFrag.appendChild(originals[i].cloneNode(true));
-  }
-  for (let r = 0; r < cloneRounds; r++) {
-    for (let i = 0; i < itemCount; i++) rightFrag.appendChild(originals[i].cloneNode(true));
-  }
+    isSnapping = true;
+    centerCard(row, closest, behavior);
 
-  row.prepend(leftFrag);
-  row.append(rightFrag);
-
-  const oldVis = row.style.visibility;
-  const oldBehavior = row.style.scrollBehavior;
-
-  row.style.visibility = "hidden";
-  row.style.scrollBehavior = "auto";
-
-  const leftCloneCount = itemCount * cloneRounds;
-  const firstOriginal = row.children[leftCloneCount];
-  if (!firstOriginal) return;
-
-  row.scrollLeft = firstOriginal.offsetLeft;
-
-  requestAnimationFrame(() => {
-    row.style.visibility = oldVis || "";
-    row.style.scrollBehavior = oldBehavior || "";
-    scheduleTwoLinesScan(carousel);
-  });
-
-  const base = firstOriginal.offsetLeft;
-
-  let wrapping = false;
-  let isManualScrolling = false;
-
-  function wrapTo(value) {
-    if (wrapping) return;
-    wrapping = true;
-
-    const old = row.style.scrollBehavior;
-    row.style.scrollBehavior = "auto";
-    row.scrollLeft = value;
-
-    requestAnimationFrame(() => {
-      row.style.scrollBehavior = old || "";
-      wrapping = false;
-    });
-  }
-
-  function normalizeInfinitePosition() {
-    const x = row.scrollLeft;
-
-    if (x < base) {
-      wrapTo(x + blockWidth);
-      return;
-    }
-
-    if (x >= base + blockWidth) {
-      wrapTo(x - blockWidth);
-    }
-  }
-
-  function getStepSize() {
-    const firstVisibleCard = row.querySelector(".card");
-    if (!firstVisibleCard) return row.clientWidth * 0.9;
-
-    const styles = getComputedStyle(row);
-    const gapValue = parseFloat(styles.gap || "0");
-    const cardWidth = firstVisibleCard.getBoundingClientRect().width;
-
-    return cardWidth + gapValue;
-  }
-
-  function getCardsPerView() {
-    const step = getStepSize();
-    if (!step) return 1;
-    return Math.max(1, Math.floor(row.clientWidth / step));
-  }
-
-  function handleArrow(direction) {
-    if (isManualScrolling) return;
-
-    const amount = getStepSize() * getCardsPerView();
-    isManualScrolling = true;
-
-    row.scrollBy({ left: direction * amount, behavior: "smooth" });
-
-    window.clearTimeout(row.__manualTimer);
-    row.__manualTimer = window.setTimeout(() => {
-      isManualScrolling = false;
-      normalizeInfinitePosition();
-    }, 520);
+    window.clearTimeout(snapTimer);
+    snapTimer = window.setTimeout(() => {
+      isSnapping = false;
+    }, 220);
   }
 
   function onScroll() {
-    if (wrapping) return;
+    if (isSnapping) return;
 
-    const x = row.scrollLeft;
-    const leftLimit = base - blockWidth * 0.5;
-    const rightLimit = base + blockWidth * 1.5;
-
-    if (!isManualScrolling) {
-      if (x < leftLimit) wrapTo(x + blockWidth);
-      else if (x > rightLimit) wrapTo(x - blockWidth);
-    }
+    window.clearTimeout(snapTimer);
+    snapTimer = window.setTimeout(() => {
+      snapToClosest("smooth");
+    }, 100);
   }
 
-  if (btnRight) btnRight.onclick = () => handleArrow(1);
-  if (btnLeft) btnLeft.onclick = () => handleArrow(-1);
+  if (btnLeft) {
+    btnLeft.onclick = () => moveToAdjacentCard(row, -1);
+  }
+
+  if (btnRight) {
+    btnRight.onclick = () => moveToAdjacentCard(row, 1);
+  }
 
   row.addEventListener("scroll", onScroll, { passive: true });
 
   function onResize() {
-    if (row.__rebuildRaf) cancelAnimationFrame(row.__rebuildRaf);
+    const current = getClosestCenteredCard(row) || row.querySelector(".card");
+    if (!current) return;
 
-    row.__rebuildRaf = requestAnimationFrame(() => {
-      row.__rebuildRaf = null;
-
-      const freshOriginals = [...row.children].filter((node) => !node.dataset.carouselClone);
-      if (!freshOriginals.length) return;
-
-      const html = freshOriginals.map((node) => node.outerHTML).join("");
-      row.innerHTML = html;
-
-      resetCarouselState(row);
-      buildCarousel(row, { cloneRounds });
+    requestAnimationFrame(() => {
+      centerCard(row, current, "auto");
       scheduleTwoLinesScan(carousel);
     });
   }
@@ -1024,18 +985,21 @@ function buildCarousel(row, { cloneRounds = 2 } = {}) {
   row.__resizeHandler = onResize;
   window.addEventListener("resize", onResize, { passive: true });
 
-  [...row.children].forEach((node, idx) => {
-    const isClone = idx < leftCloneCount || idx >= leftCloneCount + itemCount;
-    if (isClone) node.dataset.carouselClone = "1";
-  });
-
   row.__carouselCleanup = () => {
-    window.clearTimeout(row.__manualTimer);
+    window.clearTimeout(snapTimer);
     row.removeEventListener("scroll", onScroll);
     if (row.__resizeHandler) {
       window.removeEventListener("resize", row.__resizeHandler);
     }
   };
+
+  requestAnimationFrame(() => {
+    const firstCard = row.querySelector(".card");
+    if (firstCard) {
+      centerCard(row, firstCard, "auto");
+    }
+    scheduleTwoLinesScan(carousel);
+  });
 }
 
 function setRow(el, html) {
@@ -1150,7 +1114,7 @@ async function init() {
           }).join("")
         );
 
-        buildCarousel(contRow, { cloneRounds: 2 });
+        buildCarousel(contRow);
       } else {
         contWrap.classList.add("hidden");
       }
@@ -1170,17 +1134,17 @@ async function init() {
     const latest = await fetchLatest(24);
     setRow(latestRow, latest.map((m) => homeCatalogCardHtml(m)).join(""));
     promoteCatalogCardBadges(latestRow);
-    buildCarousel(latestRow, { cloneRounds: 2 });
+    buildCarousel(latestRow);
 
     const movies = await fetchByCategory("movie", 24);
     setRow(moviesRow, movies.map((m) => homeCatalogCardHtml(m)).join(""));
     promoteCatalogCardBadges(moviesRow);
-    buildCarousel(moviesRow, { cloneRounds: 2 });
+    buildCarousel(moviesRow);
 
     const series = await fetchByCategory("series", 24);
     setRow(seriesRow, series.map((m) => homeCatalogCardHtml(m)).join(""));
     promoteCatalogCardBadges(seriesRow);
-    buildCarousel(seriesRow, { cloneRounds: 2 });
+    buildCarousel(seriesRow);
 
     const heroPoolMap = new Map();
     [...latest, ...movies, ...series].forEach((item) => {

@@ -6,6 +6,7 @@
    (MISMAS FEATURES / SELECTORES, SIN SACAR NADA)
    + HERO NUEVO: LEFT / RIGHT / VIDEO / VOLUME SLOT
    + AJUSTE: CARRUSEL FULL WIDTH REAL SIN TAPAS / BORDES NEGROS
+   + AJUSTE NUEVO: SLIDE CENTRADO / EXTREMOS RECORTADOS / FLECHAS OPCIONALES
    ========================================================= */
 
 /* ================= TOKENS ================= */
@@ -579,6 +580,7 @@ a.pill.profile-link:hover {
    ✅ CAROUSEL WRAPPER
    - FULL WIDTH REAL
    - SIN TAPAS / BORDES / MÁRGENES NEGROS
+   - SLIDE CENTRADO
    ========================================================= */
 .carousel {
   position: relative;
@@ -644,6 +646,10 @@ a.pill.profile-link:hover {
   height: clamp(16px, 1.7vw, 22px);
 }
 
+.carousel.no-arrows .carousel-btn {
+  display: none !important;
+}
+
 /* =========================================================
    ROWS + CARDS
    ========================================================= */
@@ -654,10 +660,8 @@ a.pill.profile-link:hover {
   overflow-y: hidden;
   padding: 6px 0;
   scroll-snap-type: x mandatory;
-  scroll-padding-left: 0 !important;
-  scroll-padding-right: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  scroll-padding-left: 50%;
+  scroll-padding-right: 50%;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
@@ -691,7 +695,8 @@ a.pill.profile-link:hover {
   width: clamp(220px, 25vw, 320px);
 
   flex: 0 0 auto;
-  scroll-snap-align: start;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
   background: rgba(255, 255, 255, .03);
   border-radius: var(--radius) !important;
   overflow: hidden;
@@ -791,8 +796,6 @@ label {
   color: #ffffff;
   margin: 10px 0 6px;
 }
-
-
 
 #season-dropdown-mount .dropdown label {
   display: none;
@@ -1052,7 +1055,9 @@ media-player {
   padding-left: 0 !important;
   padding-right: 0 !important;
   padding: 6px 0 !important;
-  justify-content: center !important;
+  justify-content: flex-start !important;
+  scroll-padding-left: 50% !important;
+  scroll-padding-right: 50% !important;
 }
 
 .carousel-disabled .row .card:first-child,
@@ -1689,8 +1694,8 @@ media-player {
   }
 
   .row {
-    scroll-padding-left: 0 !important;
-    scroll-padding-right: 0 !important;
+    scroll-padding-left: 50% !important;
+    scroll-padding-right: 50% !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
   }
@@ -1894,7 +1899,7 @@ media-player {
     max-width: min(86vw, 320px) !important;
     height: auto;
     margin-bottom: 0;
-    scroll-snap-align: start;
+    scroll-snap-align: center;
   }
 
   .carousel-btn {
@@ -1915,6 +1920,8 @@ media-player {
   .row {
     gap: 10px;
     padding: 6px 0 8px;
+    scroll-padding-left: 50%;
+    scroll-padding-right: 50%;
   }
 
   .progressbar {
@@ -2157,6 +2164,8 @@ media-player {
 
   .row {
     gap: 8px;
+    scroll-padding-left: 50%;
+    scroll-padding-right: 50%;
   }
 
   .card-title {
@@ -2261,8 +2270,8 @@ media-player {
   }
 
   .home-hero-volume-btn img {
-    width: calc(var(--hero-vol-size) * var(--hero-vol-icon-scale)) !important;
-    height: calc(var(--hero-vol-size) * var(--hero-vol-icon-scale)) !important;
+    width: var(--hero-vol-icon-w) !important;
+    height: var(--hero-vol-icon-h) !important;
   }
 }
 
