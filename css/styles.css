@@ -2609,17 +2609,38 @@ body.lang-modal-open {
    TOPNAV SEARCH
 ========================= */
 
-.nav-center {
-  flex: 1;
-  min-width: 0;
+.topnav .nav-inner {
   display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.nav-left,
+.nav-center,
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+.nav-left {
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.nav-center {
+  flex: 1 1 auto;
+  min-width: 0;
   justify-content: center;
-  padding: 0 16px;
+}
+
+.nav-right {
+  flex: 0 0 auto;
+  gap: 10px;
 }
 
 .topnav-search-wrap {
   width: 100%;
-  max-width: 560px;
+  max-width: 640px;
 }
 
 .topnav-search {
@@ -2632,14 +2653,15 @@ body.lang-modal-open {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
   cursor: text;
 }
 
+.topnav-search:hover,
 .topnav-search:focus-within {
-  background: rgba(255, 255, 255, 0.11);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.03);
 }
 
 .topnav-search-icon {
@@ -2648,7 +2670,7 @@ body.lang-modal-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: .82;
+  color: rgba(255, 255, 255, .82);
   font-size: 14px;
 }
 
@@ -2656,19 +2678,20 @@ body.lang-modal-open {
   flex: 1;
   min-width: 0;
   height: 100%;
+  background: transparent;
   border: 0;
   outline: 0;
-  background: transparent;
   color: #fff;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .topnav-search-input::placeholder {
-  color: rgba(255, 255, 255, .60);
+  color: rgba(255, 255, 255, .58);
 }
 
 /* =========================
-   SEARCH OVERLAY FULLSCREEN
+   SEARCH OVERLAY
 ========================= */
 
 .search-overlay {
@@ -2676,8 +2699,8 @@ body.lang-modal-open {
   inset: 0;
   z-index: 99999;
   background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.04), transparent 28%),
-    linear-gradient(180deg, rgba(7, 7, 10, 0.98), rgba(7, 7, 10, 0.985));
+    radial-gradient(circle at top center, rgba(255, 255, 255, 0.045), transparent 30%),
+    linear-gradient(180deg, rgba(8, 8, 11, 0.985), rgba(8, 8, 11, 0.992));
   backdrop-filter: blur(8px);
 }
 
@@ -2692,13 +2715,13 @@ body.lang-modal-open {
   position: sticky;
   top: 0;
   z-index: 3;
-  padding: 18px 22px 14px;
-  background: linear-gradient(180deg, rgba(7, 7, 10, 0.96), rgba(7, 7, 10, 0.72));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px 24px 14px;
+  background: linear-gradient(180deg, rgba(8, 8, 11, 0.96), rgba(8, 8, 11, 0.76));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .search-overlay-inputbar {
-  width: min(980px, 100%);
+  width: min(1080px, 100%);
   margin: 0 auto;
   height: 58px;
   display: flex;
@@ -2708,7 +2731,7 @@ body.lang-modal-open {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.34);
 }
 
 .search-overlay-input-icon {
@@ -2717,7 +2740,7 @@ body.lang-modal-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, .82);
+  color: rgba(255, 255, 255, .84);
   font-size: 16px;
 }
 
@@ -2725,16 +2748,16 @@ body.lang-modal-open {
   flex: 1;
   min-width: 0;
   height: 100%;
+  background: transparent;
   border: 0;
   outline: 0;
-  background: transparent;
   color: #fff;
   font-size: 18px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .search-overlay-input::placeholder {
-  color: rgba(255, 255, 255, .55);
+  color: rgba(255, 255, 255, .54);
 }
 
 .search-overlay-close {
@@ -2742,11 +2765,11 @@ body.lang-modal-open {
   height: 38px;
   border: 0;
   border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
   cursor: pointer;
   transition: background .18s ease, transform .18s ease;
 }
@@ -2759,9 +2782,9 @@ body.lang-modal-open {
 .search-overlay-content {
   flex: 1;
   overflow: auto;
-  width: min(1320px, calc(100% - 48px));
+  width: min(1440px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 22px 0 44px;
+  padding: 24px 0 40px;
 }
 
 .search-overlay-status {
@@ -2771,23 +2794,120 @@ body.lang-modal-open {
   font-size: 15px;
 }
 
-.search-results-count {
-  opacity: .92;
-}
-
-.search-loading {
-  opacity: .82;
+.search-results-count,
+.search-loading,
+.search-empty-state {
+  color: rgba(255, 255, 255, .84);
 }
 
 .search-empty-state {
-  padding: 16px 0;
-  color: rgba(255, 255, 255, .82);
+  padding: 12px 0;
 }
+
+/* =========================
+   SEARCH RESULTS GRID
+========================= */
 
 .search-results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 22px;
+  align-items: start;
+}
+
+/* =========================
+   CARD TUNING IN SEARCH
+========================= */
+
+.search-results-grid .card {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  transition: transform .18s ease, opacity .18s ease;
+}
+
+.search-results-grid .card:hover {
+  transform: translateY(-4px);
+}
+
+.search-results-grid .thumb {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 16px;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .30);
+}
+
+.search-results-grid .card-title {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #fff;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.7em;
+}
+
+.search-results-grid .card-subtitle {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, .68);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.search-results-grid .card-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+
+.search-results-grid .card-collection-overlay {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #07090d;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-results-grid .card-collection-overlay img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.search-results-grid .progressbar {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .15);
+}
+
+.search-results-grid .progressfill {
+  height: 100%;
+  border-radius: inherit;
+  background: #fff;
 }
 
 body.search-open {
@@ -2795,32 +2915,33 @@ body.search-open {
 }
 
 /* =========================
-   OPTIONAL CARD TUNE INSIDE SEARCH
+   RESPONSIVE
 ========================= */
 
-.search-results-grid .card {
-  transition: transform .18s ease, opacity .18s ease;
+@media (max-width: 1280px) {
+  .search-results-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
-.search-results-grid .card:hover {
-  transform: translateY(-3px);
+@media (max-width: 980px) {
+  .topnav .nav-inner {
+    gap: 12px;
+  }
+
+  .search-overlay-content {
+    width: calc(100% - 32px);
+  }
+
+  .search-results-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
 }
 
-/* =========================
-   MOBILE
-========================= */
-
-@media (max-width: 900px) {
-  .nav-center {
-    padding: 0 10px;
-  }
-
-  .topnav-search-wrap {
-    max-width: none;
-  }
-
+@media (max-width: 720px) {
   .search-overlay-topbar {
-    padding: 12px 14px 12px;
+    padding: 12px 14px;
   }
 
   .search-overlay-inputbar {
@@ -2832,13 +2953,12 @@ body.search-open {
     font-size: 16px;
   }
 
-  .search-overlay-content {
-    width: calc(100% - 24px);
-    padding-top: 16px;
+  .search-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
 
-  .search-results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 14px;
+  .search-results-grid .card-title {
+    font-size: 14px;
   }
 }

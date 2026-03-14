@@ -123,7 +123,7 @@ export function renderNav({ active = "home" } = {}) {
 }
 
 /* =========================
-   PERFIL / USERNAME
+   PERFIL / USERNAME (profiles.username)
 ========================= */
 
 function getUserIdFromSession(session) {
@@ -193,7 +193,9 @@ async function fetchProfileRowByUserId({ userId, accessToken } = {}) {
   }
 
   const res = await fetch(url, { method: "GET", headers });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    return null;
+  }
 
   const data = await res.json();
   if (!Array.isArray(data) || data.length === 0) return null;
@@ -617,8 +619,6 @@ export function enableDataHrefNavigation() {
     const el = e.target.closest("[data-href]");
     if (!el) return;
 
-    if (e.target.closest("#search-overlay")) return;
-
     const href = el.dataset.href;
     if (!href) return;
 
@@ -879,6 +879,13 @@ function ensureSearchOverlay() {
   overlayInput?.addEventListener("input", (e) => {
     const q = normalizeSearchQuery(e.target.value || "");
     syncSearchInputs(q);
+
+    if (!q) {
+      closeSearchOverlay({ clearQuery: false });
+      clearTimeout(__searchDebounceTimer);
+      return;
+    }
+
     replaceSearchUrl(q);
     debouncedSearch(q, "overlay-input");
   });
@@ -930,12 +937,19 @@ export function closeSearchOverlay({ clearQuery = false } = {}) {
   root.setAttribute("aria-hidden", "true");
   document.body.classList.remove("search-open");
 
+  const results = document.getElementById("search-results");
+  if (results) results.innerHTML = "";
+
+  setSearchStatus("");
+
   if (clearQuery) {
     syncSearchInputs("");
     replaceSearchUrl("");
-    setSearchStatus("");
-    const results = document.getElementById("search-results");
-    if (results) results.innerHTML = "";
+  } else {
+    const q = normalizeSearchQuery(document.getElementById("topnav-search-input")?.value || "");
+    if (!q) {
+      replaceSearchUrl("");
+    }
   }
 }
 
@@ -998,7 +1012,7 @@ export function initTopnavSearch() {
     if (!input) return;
 
     const q = normalizeSearchQuery(input.value || "");
-    openSearchOverlay(q);
+    if (q) openSearchOverlay(q);
   });
 
   document.addEventListener("input", (e) => {
@@ -1006,8 +1020,15 @@ export function initTopnavSearch() {
     if (!input) return;
 
     const q = normalizeSearchQuery(input.value || "");
-    openSearchOverlay(q);
     syncSearchInputs(q);
+
+    if (!q) {
+      closeSearchOverlay({ clearQuery: false });
+      clearTimeout(__searchDebounceTimer);
+      return;
+    }
+
+    openSearchOverlay(q);
     replaceSearchUrl(q);
     debouncedSearch(q, "topnav-input");
   });
@@ -1048,9 +1069,7 @@ export function initSearchExperience() {
     syncSearchInputs(query);
 
     if (!query) {
-      const results = document.getElementById("search-results");
-      if (results) results.innerHTML = "";
-      setSearchStatus(`<div class="search-empty-state">Empezá a escribir para buscar.</div>`);
+      closeSearchOverlay({ clearQuery: false });
       return;
     }
 
