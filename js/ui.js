@@ -193,9 +193,7 @@ async function fetchProfileRowByUserId({ userId, accessToken } = {}) {
   }
 
   const res = await fetch(url, { method: "GET", headers });
-  if (!res.ok) {
-    return null;
-  }
+  if (!res.ok) return null;
 
   const data = await res.json();
   if (!Array.isArray(data) || data.length === 0) return null;
@@ -762,6 +760,7 @@ let __topnavSearchInit = false;
 let __searchExperienceInit = false;
 let __searchRequestSeq = 0;
 let __searchDebounceTimer = null;
+let __searchBaseUrl = null;
 
 function normalizeSearchQuery(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -776,21 +775,47 @@ function getCurrentSearchQueryFromUrl() {
   }
 }
 
-function buildSearchUrl(query) {
-  const q = normalizeSearchQuery(query);
+function getCurrentNonSearchUrl() {
   const url = new URL(window.location.href);
-
-  url.pathname = "/search";
-
-  if (q) url.searchParams.set("q", q);
-  else url.searchParams.delete("q");
-
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
+function rememberSearchBaseUrl() {
+  const url = new URL(window.location.href);
+  if (url.pathname !== "/search") {
+    __searchBaseUrl = `${url.pathname}${url.search}${url.hash}`;
+  }
+}
+
+function getFallbackBaseUrl() {
+  return __searchBaseUrl || "/index.html";
+}
+
+function buildSearchUrl(query) {
+  const q = normalizeSearchQuery(query);
+
+  if (!q) {
+    return getFallbackBaseUrl();
+  }
+
+  const base = new URL(window.location.origin + getFallbackBaseUrl());
+  base.pathname = "/search";
+  base.search = "";
+  base.hash = "";
+  base.searchParams.set("q", q);
+
+  return `${base.pathname}${base.search}${base.hash}`;
+}
+
 function replaceSearchUrl(query) {
-  const nextUrl = buildSearchUrl(query);
-  history.replaceState({ searchQuery: query }, "", nextUrl);
+  const safeQuery = normalizeSearchQuery(query);
+
+  if (safeQuery) {
+    rememberSearchBaseUrl();
+  }
+
+  const nextUrl = buildSearchUrl(safeQuery);
+  history.replaceState({ searchQuery: safeQuery }, "", nextUrl);
 }
 
 function dispatchSearchChange(query, extra = {}) {
@@ -886,6 +911,7 @@ function ensureSearchOverlay() {
       return;
     }
 
+    rememberSearchBaseUrl();
     replaceSearchUrl(q);
     debouncedSearch(q, "overlay-input");
   });
@@ -944,12 +970,13 @@ export function closeSearchOverlay({ clearQuery = false } = {}) {
 
   if (clearQuery) {
     syncSearchInputs("");
-    replaceSearchUrl("");
-  } else {
-    const q = normalizeSearchQuery(document.getElementById("topnav-search-input")?.value || "");
-    if (!q) {
-      replaceSearchUrl("");
-    }
+    history.replaceState({ searchQuery: "" }, "", getFallbackBaseUrl());
+    return;
+  }
+
+  const q = normalizeSearchQuery(document.getElementById("topnav-search-input")?.value || "");
+  if (!q) {
+    history.replaceState({ searchQuery: "" }, "", getFallbackBaseUrl());
   }
 }
 
@@ -1028,6 +1055,7 @@ export function initTopnavSearch() {
       return;
     }
 
+    rememberSearchBaseUrl();
     openSearchOverlay(q);
     replaceSearchUrl(q);
     debouncedSearch(q, "topnav-input");
@@ -1061,6 +1089,11 @@ export function initSearchExperience() {
   __searchExperienceInit = true;
 
   ensureSearchOverlay();
+
+  const currentUrl = getCurrentNonSearchUrl();
+  if (!__searchBaseUrl && !currentUrl.startsWith("/search")) {
+    __searchBaseUrl = currentUrl;
+  }
 
   window.addEventListener("app:searchchange", async (e) => {
     const query = normalizeSearchQuery(e?.detail?.query || "");
