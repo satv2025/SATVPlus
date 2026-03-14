@@ -193,9 +193,7 @@ async function fetchProfileRowByUserId({ userId, accessToken } = {}) {
   }
 
   const res = await fetch(url, { method: "GET", headers });
-  if (!res.ok) {
-    return null;
-  }
+  if (!res.ok) return null;
 
   const data = await res.json();
   if (!Array.isArray(data) || data.length === 0) return null;
@@ -758,163 +756,11 @@ export function cardHtml(
 ========================= */
 
 const SEARCH_OVERLAY_ID = "search-overlay";
-const SEARCH_MODE_STYLE_ID = "search-mode-style";
-
 let __topnavSearchInit = false;
 let __searchExperienceInit = false;
 let __searchRequestSeq = 0;
 let __searchDebounceTimer = null;
 let __searchBaseUrl = null;
-
-const SEARCH_MODE_CSS = `
-body.search-open {
-  overflow: hidden;
-}
-
-body.search-open .search-results-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 13px;
-  align-items: start;
-}
-
-body.search-open .search-results-grid .card {
-  width: 100%;
-  min-width: 0;
-  background: transparent;
-  transition: transform .18s ease, opacity .18s ease;
-}
-
-body.search-open .search-results-grid .card:hover {
-  transform: translateY(-4px);
-  outline: 0 !important;
-}
-
-body.search-open div.card:hover {
-  border: 0 !important;
-}
-
-body.search-open .search-results-grid .thumb {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 16px;
-  background-size: cover;
-  background-position: center;
-  overflow: hidden;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .30);
-}
-
-body.search-open .search-results-grid .card-title {
-  margin-top: -1px;
-  font-size: 15px;
-  line-height: 1.35;
-  font-weight: 700;
-  color: #fff;
-  display: -webkit-box;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  min-height: 2.7em;
-}
-
-body.search-open .search-results-grid .card-subtitle {
-  margin-top: 4px;
-  color: rgba(255, 255, 255, .68);
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-body.search-open .search-results-grid .card-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-  padding: 6px 9px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  width: fit-content;
-  display: inline-block;
-}
-
-body.search-open .search-results-grid .card-collection-overlay {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-  background: #07090d82;
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-body.search-open .search-results-grid .card-collection-overlay img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-}
-
-body.search-open .search-results-grid .progressbar {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  height: 5px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, .15);
-}
-
-body.search-open .search-results-grid .progressfill {
-  height: 100%;
-  border-radius: inherit;
-  background: #fff;
-}
-
-@media (max-width: 1280px) {
-  body.search-open .search-results-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 980px) {
-  body.search-open .search-results-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-  }
-}
-
-@media (max-width: 720px) {
-  body.search-open .search-results-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  body.search-open .search-results-grid .card-title {
-    font-size: 14px;
-  }
-}
-`;
-
-function ensureSearchModeStyle() {
-  let style = document.getElementById(SEARCH_MODE_STYLE_ID);
-  if (style) return style;
-
-  style = document.createElement("style");
-  style.id = SEARCH_MODE_STYLE_ID;
-  style.textContent = SEARCH_MODE_CSS;
-  document.head.appendChild(style);
-  return style;
-}
-
-function removeSearchModeStyle() {
-  const style = document.getElementById(SEARCH_MODE_STYLE_ID);
-  if (style) style.remove();
-}
 
 function normalizeSearchQuery(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
@@ -935,10 +781,8 @@ function getCurrentNonSearchUrl() {
 }
 
 function rememberSearchBaseUrl() {
-  if (__searchBaseUrl) return;
-
   const url = new URL(window.location.href);
-  if (!url.searchParams.get("q")) {
+  if (url.pathname !== "/search") {
     __searchBaseUrl = `${url.pathname}${url.search}${url.hash}`;
   }
 }
@@ -955,6 +799,9 @@ function buildSearchUrl(query) {
   }
 
   const base = new URL(window.location.origin + getFallbackBaseUrl());
+  base.pathname = "/search";
+  base.search = "";
+  base.hash = "";
   base.searchParams.set("q", q);
 
   return `${base.pathname}${base.search}${base.hash}`;
@@ -1059,7 +906,7 @@ function ensureSearchOverlay() {
     syncSearchInputs(q);
 
     if (!q) {
-      closeSearchOverlay({ clearQuery: true });
+      closeSearchOverlay({ clearQuery: false });
       clearTimeout(__searchDebounceTimer);
       return;
     }
@@ -1093,8 +940,6 @@ function setSearchStatus(html) {
 
 export function openSearchOverlay(query = "") {
   const root = ensureSearchOverlay();
-
-  ensureSearchModeStyle();
   root.hidden = false;
   root.setAttribute("aria-hidden", "false");
   document.body.classList.add("search-open");
@@ -1117,14 +962,11 @@ export function closeSearchOverlay({ clearQuery = false } = {}) {
   root.hidden = true;
   root.setAttribute("aria-hidden", "true");
   document.body.classList.remove("search-open");
-  removeSearchModeStyle();
 
   const results = document.getElementById("search-results");
   if (results) results.innerHTML = "";
 
   setSearchStatus("");
-  clearTimeout(__searchDebounceTimer);
-  __searchRequestSeq++;
 
   if (clearQuery) {
     syncSearchInputs("");
@@ -1208,7 +1050,7 @@ export function initTopnavSearch() {
     syncSearchInputs(q);
 
     if (!q) {
-      closeSearchOverlay({ clearQuery: true });
+      closeSearchOverlay({ clearQuery: false });
       clearTimeout(__searchDebounceTimer);
       return;
     }
@@ -1237,7 +1079,7 @@ export function initTopnavSearch() {
       openSearchOverlay(query);
       dispatchSearchChange(query, { source: "popstate" });
     } else {
-      closeSearchOverlay({ clearQuery: true });
+      closeSearchOverlay({ clearQuery: false });
     }
   });
 }
@@ -1249,7 +1091,7 @@ export function initSearchExperience() {
   ensureSearchOverlay();
 
   const currentUrl = getCurrentNonSearchUrl();
-  if (!__searchBaseUrl && !new URL(window.location.href).searchParams.get("q")) {
+  if (!__searchBaseUrl && !currentUrl.startsWith("/search")) {
     __searchBaseUrl = currentUrl;
   }
 
@@ -1260,9 +1102,7 @@ export function initSearchExperience() {
     syncSearchInputs(query);
 
     if (!query) {
-      const host = document.getElementById("search-results");
-      if (host) host.innerHTML = "";
-      setSearchStatus("");
+      closeSearchOverlay({ clearQuery: false });
       return;
     }
 
@@ -1290,7 +1130,6 @@ export function initSearchExperience() {
 
   const initialQuery = getCurrentSearchQueryFromUrl();
   if (initialQuery) {
-    rememberSearchBaseUrl();
     openSearchOverlay(initialQuery);
     dispatchSearchChange(initialQuery, { source: "init" });
   }
