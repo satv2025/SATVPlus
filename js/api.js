@@ -42,15 +42,6 @@ function normalizeEmbeddedOne(value) {
   return value || null;
 }
 
-function normalizeMovieMeta(row) {
-  if (!row) return row;
-  const mm = Array.isArray(row.movie_meta)
-    ? (row.movie_meta[0] || null)
-    : (row.movie_meta || null);
-
-  return { ...row, movie_meta: mm };
-}
-
 function normalizeCountryCode(value) {
   return String(value || "").trim().toUpperCase().slice(0, 2);
 }
@@ -69,20 +60,6 @@ function normalizeSearchQuery(value) {
 
 function escapeIlike(value) {
   return String(value || "").replaceAll("%", "\\%").replaceAll("_", "\\_");
-}
-
-function getStorageItem(storage, key) {
-  try {
-    return storage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function setStorageItem(storage, key, value) {
-  try {
-    storage.setItem(key, value);
-  } catch { }
 }
 
 function getCachedJson(storage, key, ttlMs) {
@@ -162,6 +139,71 @@ function getBrowserRegionFallback() {
 }
 
 /* =========================================================
+   DURATION HELPERS
+========================================================= */
+
+export function formatDurationMinutes(minutes) {
+  const total = Number(minutes);
+
+  if (!Number.isFinite(total) || total <= 0) return "";
+
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+
+  if (hours <= 0) return `${mins} min`;
+  if (mins <= 0) return `${hours} h`;
+
+  return `${hours} h ${mins} min`;
+}
+
+function withFormattedMovieDuration(row) {
+  if (!row) return row;
+
+  return {
+    ...row,
+    duration_text: formatDurationMinutes(row.duration_minutes)
+  };
+}
+
+function withFormattedEpisodeDuration(row) {
+  if (!row) return row;
+
+  return {
+    ...row,
+    duration_text: formatDurationMinutes(row.epduration)
+  };
+}
+
+function normalizeMovieMeta(row) {
+  if (!row) return row;
+
+  const mm = Array.isArray(row.movie_meta)
+    ? (row.movie_meta[0] || null)
+    : (row.movie_meta || null);
+
+  return withFormattedMovieDuration({
+    ...row,
+    movie_meta: mm
+  });
+}
+
+function normalizeContinueWatchingRow(row) {
+  if (!row) return row;
+
+  const movie = withFormattedMovieDuration(normalizeEmbeddedOne(row.movies));
+  const episode = withFormattedEpisodeDuration(normalizeEmbeddedOne(row.episodes));
+
+  return {
+    ...row,
+    movies: movie,
+    episodes: episode,
+    progress_duration_text: formatDurationMinutes(
+      Number(row.duration_seconds) > 0 ? Math.round(Number(row.duration_seconds) / 60) : 0
+    )
+  };
+}
+
+/* =========================================================
    LANGUAGE / COUNTRY
 ========================================================= */
 
@@ -209,6 +251,7 @@ export async function fetchCountryLanguageMeta(countryCode) {
 
   const cacheKey = `${COUNTRY_META_CACHE_PREFIX}:${cc}`;
   const cached = getCachedJson(sessionStorage, cacheKey, COUNTRY_META_CACHE_TTL_MS);
+
   if (cached?.countryCode) {
     return {
       countryCode: cached.countryCode,
@@ -376,6 +419,7 @@ export async function fetchContinueWatching(userId, limit = 24) {
       season,
       episode_number,
       title,
+      epduration,
       created_at
     )
   `;
@@ -396,6 +440,7 @@ export async function fetchContinueWatching(userId, limit = 24) {
       season,
       episode_number,
       title,
+      epduration,
       created_at
     )
   `;
@@ -421,11 +466,7 @@ export async function fetchContinueWatching(userId, limit = 24) {
 
   if (error) throw error;
 
-  return (data || []).map((row) => ({
-    ...row,
-    movies: normalizeEmbeddedOne(row.movies),
-    episodes: normalizeEmbeddedOne(row.episodes)
-  }));
+  return (data || []).map(normalizeContinueWatchingRow);
 }
 
 /* =========================================================
@@ -442,7 +483,7 @@ export async function fetchLatest(limit = 24) {
     .limit(safeLimit);
 
   if (error) throw error;
-  return data || [];
+  return (data || []).map(withFormattedMovieDuration);
 }
 
 export async function fetchByCategory(category, limit = 24) {
@@ -456,7 +497,7 @@ export async function fetchByCategory(category, limit = 24) {
     .limit(safeLimit);
 
   if (error) throw error;
-  return data || [];
+  return (data || []).map(withFormattedMovieDuration);
 }
 
 export async function fetchMovie(movieId) {
@@ -614,7 +655,7 @@ export async function createEpisode(payload) {
 
 /* =========================================================
    EPISODES
-   TU COLUMNA ES: "thumbnails-episode" (con guión)
+   COLUMNA REAL: "thumbnails-episode"
 ========================================================= */
 
 export async function fetchSeasonCount(seriesId) {
@@ -649,14 +690,20 @@ export async function fetchEpisodes(seriesId) {
       title,
       m3u8_url,
       vtt_url,
+      epduration,
       created_at,
       sinopsis,
-      thumbnails-episode
+      thumbnail_episode:"thumbnails-episode"
     `)
     .eq("series_id", seriesId)
     .order("season", { ascending: true })
     .order("episode_number", { ascending: true });
 
   if (error) throw error;
-  return data || [];
+
+  return (data || []).map((row) =>
+    withFormattedEpisodeDuration({
+      ...row
+    })
+  );
 }
