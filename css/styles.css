@@ -91,6 +91,10 @@
 
 /* ================= RESET / BASE ================= */
 * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
   box-sizing: border-box;
   font-family: "HBOMaxSans" !important;
 }
@@ -754,9 +758,7 @@ a.pill.profile-link:hover {
   position: absolute;
   left: 10px;
   right: 10px;
-
-  bottom: max(-3.6em, -29%);
-
+  bottom: max(-3.6em, -32%);
   height: 0.25em;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 0;
@@ -1082,13 +1084,15 @@ media-player {
   justify-content: space-between;
   gap: 10px;
   padding: 12px;
-  border-radius: 14px;
+  border-radius: .25em;
   border: 1px solid var(--line);
   background: rgba(0, 0, 0, .25);
   cursor: pointer;
   transition: border .2s ease, background .2s ease;
-
   min-height: var(--control-h);
+  width: 143px;
+  position: relative;
+  right: -65px;
 }
 
 .dropdown-selected:hover {
@@ -1131,24 +1135,20 @@ media-player {
 .dropdown-options {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+  left: -5px;
   right: 0;
-
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
-
+  border-radius: .25em;
   overflow: hidden;
   z-index: 30;
-
   max-height: min(40vh, 320px);
   overflow-y: auto;
-
   opacity: 0;
   transform: translateY(-6px);
   pointer-events: none;
-
   transition: opacity .18s ease, transform .18s ease;
+  width: 13.3em;
 }
 
 .dropdown.open .dropdown-options {
@@ -1173,6 +1173,36 @@ media-player {
   cursor: pointer;
   transition: background .15s ease;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+  line-height: 1.25;
+  font-weight: 700;
+  width: 17em;
+}
+
+.dropdown-option-main {
+  font-weight: 700;
+  min-width: 0;
+}
+
+.dropdown-option-count {
+  font-weight: 400;
+  opacity: .92;
+  min-width: 0;
+}
+
+.dropdown-option-main,
+.dropdown-option-count {
+  display: inline;
+}
+
+.dropdown-separator {
+  height: 1px;
+  margin: 8px 0;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .dropdown-option:hover {
@@ -1180,7 +1210,7 @@ media-player {
 }
 
 .dropdown-option+.dropdown-option {
-  border-top: 1px solid rgba(255, 255, 255, .05);
+  border-top: aliceblue;
 }
 
 /* =========================================================
@@ -1435,13 +1465,7 @@ media-player {
   inset: -1px;
   z-index: 1;
   pointer-events: none;
-
-  background: linear-gradient(to top,
-      color-mix(in srgb, var(--hero-overlay) 100%, transparent) 0%,
-      color-mix(in srgb, var(--hero-overlay) 94%, transparent) 28%,
-      color-mix(in srgb, var(--hero-overlay) 66%, transparent) 55%,
-      color-mix(in srgb, var(--hero-overlay) 22%, transparent) 78%,
-      color-mix(in srgb, var(--hero-overlay) 0%, transparent) 100%) !important;
+  background: linear-gradient(to top, #07090d 0%, rgba(7, 9, 13, 0.9) 30%, rgba(7, 9, 13, 0.5) 65%, rgba(7, 9, 13, 0) 100%) !important;
 
   /* antes: height:21em + margin-top:39em (rompía) */
   top: auto !important;
@@ -1544,7 +1568,7 @@ media-player {
   }
 
   .dropdown {
-    width: 18em;
+    width: 13em;
   }
 
   .video-wrap {
@@ -3005,4 +3029,803 @@ body.search-open {
 .topnav-search-icon {
   order: 2;
   margin-left: 10px;
+}
+
+/* =========================
+   TITLE OVERLAY — FULL PAGE FEEL / NO INTERNAL SCROLL
+========================= */
+
+html.title-overlay-open,
+body.title-overlay-open {
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+}
+
+#title-overlay-root[hidden] {
+  display: none !important;
+}
+
+#title-overlay-root.title-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10040;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding:
+    max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgba(7, 9, 13, 0.941);
+  display: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+#title-overlay-root.title-overlay-backdrop[aria-hidden="false"] {
+  display: block;
+}
+
+#title-overlay-root .title-overlay-modal {
+  position: relative;
+  width: min(1180px, 100%);
+  min-height: calc(100dvh - 40px);
+  margin: 0 auto;
+  background: #0b0f17;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: .25em;
+  overflow: visible !important;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+#title-overlay-root .title-overlay-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.56);
+  color: #fff;
+  cursor: pointer;
+  z-index: 3;
+}
+
+#title-overlay-root .title-overlay-media {
+  position: relative;
+  min-height: clamp(320px, 44vw, 560px);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: .25em .25em 0 0;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+}
+
+#title-overlay-root .title-overlay-media-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top,
+      #0b0f17 0%,
+      rgba(11, 15, 23, 0.92) 28%,
+      rgba(11, 15, 23, 0.58) 58%,
+      rgba(11, 15, 23, 0.16) 80%,
+      rgba(11, 15, 23, 0.02) 100%);
+}
+
+#title-overlay-root .title-overlay-hero-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: clamp(18px, 3vw, 34px);
+}
+
+#title-overlay-root .title-overlay-pillrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.fa-close:before,
+.fa-multiply:before,
+.fa-remove:before,
+.fa-times:before,
+.fa-xmark:before {
+  content: "\f00d" !important;
+  font-family: 'FontAwesome' !important;
+  font-size: 26px;
+}
+
+#title-overlay-root .title-overlay-pill {
+  display: none;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#title-overlay-root .title-overlay-pill.is-accent {
+  background: #fff;
+  color: #000;
+}
+
+#title-overlay-root .title-overlay-title {
+  margin: 0;
+  font-size: clamp(28px, 3.2vw, 40px);
+  line-height: 0.98;
+  font-weight: 900;
+  max-width: min(820px, 100%);
+}
+
+#title-overlay-root .title-overlay-meta {
+  margin-top: 5px;
+  margin-bottom: -9px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  line-height: 1.4;
+  display: none;
+}
+
+#title-overlay-root .title-overlay-description {
+  margin: 2px 0 0 0;
+  max-width: min(500px, 100%);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+#title-overlay-root .title-overlay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+#title-overlay-root .title-overlay-body {
+  padding: clamp(18px, 3vw, 30px);
+  overflow: visible !important;
+}
+
+#title-overlay-root .title-overlay-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.7fr);
+  gap: 20px;
+  align-items: start;
+}
+
+#title-overlay-root .title-overlay-main,
+#title-overlay-root .title-overlay-side {
+  min-width: 0;
+}
+
+#title-overlay-root .title-overlay-block {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: .25em;
+  padding: 16px;
+}
+
+#title-overlay-root .title-overlay-block+.title-overlay-block {
+  margin-bottom: 16px;
+}
+
+#title-overlay-root .title-overlay-block-title {
+  margin: 0 0 14px 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+}
+
+#title-overlay-root .title-overlay-episodes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 13px;
+}
+
+#title-overlay-root .title-overlay-season-filter {
+  min-width: 220px;
+  max-width: 280px;
+  margin-bottom: 16px;
+  margin-left: auto;
+}
+
+#title-overlay-root .title-overlay-episodes-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+#title-overlay-root .title-overlay-episode-card {
+  display: grid;
+  grid-template-columns: clamp(120px, 22vw, 180px) minmax(0, 1fr);
+  gap: clamp(6px, 1vw, 10px);
+  align-items: center;
+  padding: clamp(31px, 1vw, 17px);
+  border-radius: .25em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background .18s ease, transform .18s ease, border-color .18s ease;
+  margin-top: clamp(-12px, -0.7vw, -6px);
+}
+
+#title-overlay-root .title-overlay-episodes-grid>.title-overlay-episode-card:first-child {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+#title-overlay-root .title-overlay-episode-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+#title-overlay-root .title-overlay-episode-thumb-wrap {
+  position: relative;
+  border-radius: .25em;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: #121826;
+  width: 100%;
+  max-width: 153px;
+}
+
+#title-overlay-root .title-overlay-episode-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  aspect-ratio: 16 / 9;
+}
+
+#title-overlay-root .title-overlay-episode-progress {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+#title-overlay-root .title-overlay-episode-progress-bar {
+  height: 100%;
+  background: #fff;
+  border-radius: inherit;
+}
+
+#title-overlay-root .title-overlay-episode-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-top: clamp(-2px, -0.15vw, -1px);
+  margin-left: clamp(-6px, -0.45vw, -3px);
+}
+
+#title-overlay-root .title-overlay-episode-title {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+}
+
+#title-overlay-root .title-overlay-episode-synopsis {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+#title-overlay-root .title-overlay-episodes-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+#title-overlay-root .title-overlay-info {
+  display: grid;
+  gap: 10px;
+}
+
+#title-overlay-root .title-overlay-info-row {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+#title-overlay-root .title-overlay-info-label {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#title-overlay-root .title-overlay-info-value {
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+#title-overlay-root .title-overlay-side-list {
+  display: grid;
+  gap: 10px;
+}
+
+#title-overlay-root .title-overlay-side-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: .25em;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+#title-overlay-root .title-overlay-side-k {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#title-overlay-root .title-overlay-side-v {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: right;
+}
+
+#title-overlay-root .title-overlay-empty {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* dropdown option styling */
+.dropdown-option {
+  padding: 12px;
+  cursor: pointer;
+  transition: background .15s ease;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.dropdown-option-main {
+  font-weight: 700;
+  min-width: 0;
+}
+
+.dropdown-option-count {
+  font-weight: 400;
+  opacity: .92;
+  min-width: 0;
+}
+
+.dropdown-option:hover {
+  background: rgba(255, 255, 255, .06);
+}
+
+.dropdown-option+.dropdown-option {
+  border-top: 1px solid rgba(255, 255, 255, .05);
+}
+
+/* =========================
+   <= 980px
+========================= */
+
+@media (max-width: 980px) {
+  #title-overlay-root .title-overlay-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #title-overlay-root .title-overlay-side {
+    order: 2;
+  }
+
+  #title-overlay-root .title-overlay-main {
+    order: 1;
+  }
+}
+
+/* =========================
+   <= 768px
+========================= */
+
+@media (max-width: 768px) {
+  #title-overlay-root.title-overlay-backdrop {
+    padding:
+      max(12px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  }
+
+  #title-overlay-root .title-overlay-modal {
+    min-height: calc(100dvh - 24px);
+    border-radius: 14px;
+  }
+
+  #title-overlay-root .title-overlay-media {
+    min-height: 280px;
+    border-radius: 14px 14px 0 0;
+  }
+
+  #title-overlay-root .title-overlay-hero-content {
+    padding: 16px;
+  }
+
+  #title-overlay-root .title-overlay-title {
+    font-size: clamp(24px, 7vw, 34px);
+  }
+
+  #title-overlay-root .title-overlay-body {
+    padding: 14px;
+  }
+
+  #title-overlay-root .title-overlay-block {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  #title-overlay-root .title-overlay-episode-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  #title-overlay-root .title-overlay-episode-thumb-wrap {
+    max-width: 100%;
+  }
+
+  #title-overlay-root .title-overlay-info-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  #title-overlay-root .title-overlay-season-filter {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  #title-overlay-root .title-overlay-episodes-head {
+    align-items: stretch;
+  }
+
+  #title-overlay-root .title-overlay-actions .btn,
+  #title-overlay-root .title-overlay-actions .pill,
+  #title-overlay-root .title-overlay-episodes-more .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* =========================
+   <= 480px
+========================= */
+
+@media (max-width: 480px) {
+  #title-overlay-root .title-overlay-close {
+    width: 38px;
+    height: 38px;
+    top: 8px;
+    right: 8px;
+  }
+
+  #title-overlay-root .title-overlay-title {
+    line-height: 1.02;
+  }
+
+  #title-overlay-root .title-overlay-meta {
+    margin-bottom: 0;
+  }
+
+  #title-overlay-root .title-overlay-description {
+    max-width: 100%;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  #title-overlay-root .title-overlay-episode-title {
+    font-size: 15px;
+  }
+
+  #title-overlay-root .title-overlay-episode-synopsis {
+    font-size: 13px;
+  }
+
+  #title-overlay-root .title-overlay-side-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #title-overlay-root .title-overlay-side-v {
+    text-align: left;
+  }
+}
+
+/* =========================
+   REDUCED MOTION
+========================= */
+
+@media (prefers-reduced-motion: reduce) {
+  #title-overlay-root .title-overlay-episode-card {
+    transition: none !important;
+  }
+}
+
+/* =========================
+   RESPONSIVE ONLY — SIN TOCAR ESTÉTICA / PADDINGS BASE
+========================= */
+
+/* <= 1100px */
+@media (max-width: 1100px) {
+  #title-overlay-root .title-overlay-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 0.78fr);
+  }
+
+  #title-overlay-root .title-overlay-title,
+  #title-overlay-root .title-overlay-description,
+  #title-overlay-root .title-overlay-meta,
+  #title-overlay-root .title-overlay-episode-title,
+  #title-overlay-root .title-overlay-episode-synopsis,
+  #title-overlay-root .title-overlay-info-value,
+  #title-overlay-root .title-overlay-side-v {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+/* <= 980px */
+@media (max-width: 980px) {
+  #title-overlay-root .title-overlay-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #title-overlay-root .title-overlay-side {
+    order: 2;
+  }
+
+  #title-overlay-root .title-overlay-main {
+    order: 1;
+  }
+
+  #title-overlay-root .title-overlay-season-filter {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  #title-overlay-root .title-overlay-side-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* <= 768px */
+@media (max-width: 768px) {
+  #title-overlay-root .title-overlay-episode-card {
+    grid-template-columns: 140px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  #title-overlay-root .title-overlay-episode-thumb-wrap {
+    max-width: 100%;
+  }
+
+  #title-overlay-root .title-overlay-info-row {
+    grid-template-columns: 110px minmax(0, 1fr);
+  }
+
+  #title-overlay-root .title-overlay-episodes-head {
+    align-items: stretch;
+  }
+
+  #title-overlay-root .title-overlay-season-filter {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* <= 560px */
+@media (max-width: 560px) {
+  #title-overlay-root .title-overlay-episode-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  #title-overlay-root .title-overlay-info-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  #title-overlay-root .title-overlay-side-list {
+    grid-template-columns: 1fr;
+  }
+
+  #title-overlay-root .title-overlay-episode-thumb-wrap {
+    max-width: 100%;
+  }
+
+  #title-overlay-root .title-overlay-actions .btn,
+  #title-overlay-root .title-overlay-actions .pill,
+  #title-overlay-root .title-overlay-episodes-more .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* <= 480px */
+@media (max-width: 480px) {
+  #title-overlay-root .title-overlay-title {
+    max-width: 100%;
+  }
+
+  #title-overlay-root .title-overlay-description {
+    max-width: 100%;
+  }
+
+  #title-overlay-root .title-overlay-side-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #title-overlay-root .title-overlay-side-v {
+    text-align: left;
+  }
+}
+
+/* =========================
+   OVERLAY EPISODE HOVER STATE
+========================= */
+
+#title-overlay-root .title-overlay-episode-card {
+  position: relative;
+  border-top: 1px solid transparent;
+}
+
+#title-overlay-root .title-overlay-episodes-grid>.title-overlay-episode-card:first-child {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* el episodio hovered/focused gana top border */
+#title-overlay-root .title-overlay-episode-card.is-hovered,
+#title-overlay-root .title-overlay-episode-card:hover,
+#title-overlay-root .title-overlay-episode-card:focus-visible,
+#title-overlay-root .title-overlay-episode-card:focus-within {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* el episodio anterior al hovered pierde su bottom border */
+#title-overlay-root .title-overlay-episode-card.is-before-hover {
+  border-bottom-color: transparent;
+}
+
+/* thumb wrapper para pseudo-elementos */
+#title-overlay-root .title-overlay-episode-thumb-wrap {
+  position: relative;
+  isolation: isolate;
+}
+
+/* overlay oscuro */
+#title-overlay-root .title-overlay-episode-thumb-wrap::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: .25em;
+  opacity: 0;
+  transition: opacity .2s ease-in;
+  pointer-events: none;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+/* icono play */
+#title-overlay-root .title-overlay-episode-thumb-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: .25em;
+  opacity: 0;
+  transition: opacity .2s ease-in;
+  pointer-events: none;
+  z-index: 3;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 65px 59px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'><circle cx='24' cy='24' r='23.5' fill='rgba(30,30,20,0.5)' stroke='white' stroke-width='1'/><g transform='translate(8 8) scale(1.35)'><path fill='white' d='M5 2.7a1 1 0 0 1 1.48-.88l16.93 9.3a1 1 0 0 1 0 1.76l-16.93 9.3A1 1 0 0 1 5 21.31z'/></g></svg>");
+}
+
+/* activar before/after en hover/focus */
+#title-overlay-root .title-overlay-episode-card.is-hovered .title-overlay-episode-thumb-wrap::before,
+#title-overlay-root .title-overlay-episode-card.is-hovered .title-overlay-episode-thumb-wrap::after,
+#title-overlay-root .title-overlay-episode-card:hover .title-overlay-episode-thumb-wrap::before,
+#title-overlay-root .title-overlay-episode-card:hover .title-overlay-episode-thumb-wrap::after,
+#title-overlay-root .title-overlay-episode-card:focus-visible .title-overlay-episode-thumb-wrap::before,
+#title-overlay-root .title-overlay-episode-card:focus-visible .title-overlay-episode-thumb-wrap::after,
+#title-overlay-root .title-overlay-episode-card:focus-within .title-overlay-episode-thumb-wrap::before,
+#title-overlay-root .title-overlay-episode-card:focus-within .title-overlay-episode-thumb-wrap::after {
+  opacity: 1;
+}
+
+.title-overlay-related-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 1100px) {
+  .title-overlay-related-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.title-overlay-related-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: .25em;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+  outline: none;
+}
+
+.title-overlay-related-card:hover,
+.title-overlay-related-card:focus-visible {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+}
+
+.title-overlay-related-thumb-wrap {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.title-overlay-related-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.title-overlay-related-body {
+  padding: 12px;
+}
+
+.title-overlay-related-category {
+  font-size: 12px;
+  opacity: .75;
+  margin-bottom: 6px;
+}
+
+.title-overlay-related-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+
+.title-overlay-related-meta {
+  font-size: 13px;
+  opacity: .8;
 }

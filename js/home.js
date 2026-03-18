@@ -8,7 +8,8 @@ import {
   formatTime,
   enableDataHrefNavigation,
   applyDisguisedCssFromId,
-  buildTitleUrl
+  buildTitleUrl,
+  initTitleCardOverlay
 } from "./ui.js";
 
 import { getSession, requireAuthOrRedirect } from "./auth.js";
@@ -1065,6 +1066,7 @@ async function init() {
   });
 
   enableDataHrefNavigation();
+  initTitleCardOverlay();
 
   renderNav({ active: "home" });
   await renderAuthButtons();
