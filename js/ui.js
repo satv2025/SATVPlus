@@ -614,14 +614,18 @@ export function enableDataHrefNavigation() {
   __dataHrefNavEnabled = true;
 
   document.addEventListener("click", (e) => {
+    if (e.defaultPrevented) return;
+
+    const interactive = e.target.closest(
+      "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist"
+    );
+    if (interactive) return;
+
     const el = e.target.closest("[data-href]");
     if (!el) return;
 
     const href = el.dataset.href;
     if (!href) return;
-
-    const tag = e.target?.tagName?.toLowerCase?.() || "";
-    if (tag === "button" || tag === "input" || tag === "select" || tag === "textarea") return;
 
     if (e.ctrlKey || e.metaKey) {
       window.open(href, "_blank", "noopener");
@@ -632,6 +636,11 @@ export function enableDataHrefNavigation() {
   });
 
   document.addEventListener("keydown", (e) => {
+    const interactive = e.target.closest(
+      "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist"
+    );
+    if (interactive) return;
+
     const el = e.target.closest("[data-href]");
     if (!el) return;
 

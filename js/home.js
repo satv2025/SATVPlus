@@ -8,11 +8,13 @@ import {
   formatTime,
   enableDataHrefNavigation,
   applyDisguisedCssFromId,
-  buildTitleUrl
+  buildTitleUrl,
+  initTopnavSearch,
+  initSearchExperience
 } from "./ui.js";
 
 import { getSession, requireAuthOrRedirect } from "./auth.js";
-import { fetchContinueWatching, fetchLatest, fetchByCategory } from "./api.js";
+import { fetchContinueWatching, fetchLatest, fetchByCategory, fetchMovie } from "./api.js";
 import { supabase } from "./supabaseClient.js";
 
 /* =========================================================
@@ -173,6 +175,310 @@ const HOME_HERO_STORAGE_PREFIX = "homeHeroSelection:v1";
 
 const HERO_VOLUME_ICON_MUTE = "https://satvplus.com.ar/images/svg/heromute.svg";
 const HERO_VOLUME_ICON_UNMUTE = "https://satvplus.com.ar/images/svg/heroon.svg";
+
+/* =========================================================
+   CARD QUICK MODAL (+ en cards del carrusel)
+========================================================= */
+
+let __quickModalRoot = null;
+let __quickModalLastFocus = null;
+let __quickModalInstalled = false;
+
+function getQuickModalRoot() {
+  if (__quickModalRoot && document.body.contains(__quickModalRoot)) {
+    return __quickModalRoot;
+  }
+
+  const root = document.createElement("div");
+  root.id = "card-quick-modal-root";
+  root.className = "card-quick-modal-backdrop";
+  root.hidden = true;
+  root.setAttribute("aria-hidden", "true");
+
+  document.body.appendChild(root);
+  __quickModalRoot = root;
+  return root;
+}
+
+function closeQuickCardModal() {
+  const root = getQuickModalRoot();
+
+  try {
+    root.querySelectorAll("video").forEach((video) => {
+      try {
+        video.pause();
+        video.removeAttribute("src");
+        video.load?.();
+      } catch { }
+    });
+  } catch { }
+
+  root.hidden = true;
+  root.setAttribute("aria-hidden", "true");
+  root.innerHTML = "";
+  document.body.classList.remove("card-quick-modal-open");
+
+  if (__quickModalLastFocus && typeof __quickModalLastFocus.focus === "function") {
+    try { __quickModalLastFocus.focus(); } catch { }
+  }
+}
+
+function installQuickModalGlobalEvents() {
+  if (__quickModalInstalled) return;
+  __quickModalInstalled = true;
+
+  document.addEventListener("keydown", (ev) => {
+    const root = getQuickModalRoot();
+    if (!root.hidden && ev.key === "Escape") {
+      ev.preventDefault();
+      closeQuickCardModal();
+    }
+  });
+}
+
+function syncQuickModalVolumeUi(video, btn, icon) {
+  const isMuted = !!video.muted;
+  icon.src = isMuted ? HERO_VOLUME_ICON_MUTE : HERO_VOLUME_ICON_UNMUTE;
+  btn.setAttribute("aria-label", isMuted ? "Activar sonido" : "Silenciar");
+  btn.setAttribute("aria-pressed", String(!isMuted));
+  btn.title = isMuted ? "Activar sonido" : "Silenciar";
+}
+
+function buildQuickModalPoster(posterUrl, title = "") {
+  const posterWrap = document.createElement("div");
+  posterWrap.className = "card-quick-modal-poster";
+
+  if (posterUrl) {
+    const img = document.createElement("img");
+    img.className = "card-quick-modal-poster-img";
+    img.src = posterUrl;
+    img.alt = title ? `Poster de ${title}` : "Poster";
+    img.decoding = "async";
+    img.loading = "eager";
+    posterWrap.appendChild(img);
+  }
+
+  const shade = document.createElement("div");
+  shade.className = "card-quick-modal-shade";
+  posterWrap.appendChild(shade);
+
+  return posterWrap;
+}
+
+function mountQuickModalTrailer(container, movie) {
+  if (!container || !movie) return;
+
+  const trailerUrl = String(movie.trailer_url || "").trim();
+  const poster = movie.banner_url || movie.thumbnail_url || "";
+  const title = movie.title || "";
+
+  if (!trailerUrl) {
+    container.appendChild(buildQuickModalPoster(poster, title));
+    return;
+  }
+
+  const media = document.createElement("div");
+  media.className = "card-quick-modal-media";
+
+  const video = document.createElement("video");
+  video.className = "card-quick-modal-video";
+  video.src = trailerUrl;
+  if (poster) video.poster = poster;
+
+  video.autoplay = true;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+
+  const shade = document.createElement("div");
+  shade.className = "card-quick-modal-shade";
+
+  const volBtn = document.createElement("button");
+  volBtn.type = "button";
+  volBtn.className = "card-quick-modal-volume-btn";
+  volBtn.setAttribute("aria-label", "Activar sonido");
+  volBtn.setAttribute("aria-pressed", "false");
+
+  const volIcon = document.createElement("img");
+  volIcon.alt = "";
+  volIcon.decoding = "async";
+  volIcon.src = HERO_VOLUME_ICON_MUTE;
+  volBtn.appendChild(volIcon);
+
+  function playVideo() {
+    const p = video.play?.();
+    if (p && typeof p.catch === "function") p.catch(() => { });
+  }
+
+  volBtn.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    video.muted = !video.muted;
+    syncQuickModalVolumeUi(video, volBtn, volIcon);
+    playVideo();
+  });
+
+  const onReady = () => media.classList.add("is-ready");
+  video.addEventListener("loadeddata", onReady, { once: true });
+  video.addEventListener("canplay", onReady, { once: true });
+
+  video.addEventListener(
+    "error",
+    () => {
+      container.innerHTML = "";
+      container.appendChild(buildQuickModalPoster(poster, title));
+    },
+    { once: true }
+  );
+
+  media.appendChild(video);
+  media.appendChild(shade);
+  media.appendChild(volBtn);
+  container.appendChild(media);
+
+  syncQuickModalVolumeUi(video, volBtn, volIcon);
+
+  requestAnimationFrame(playVideo);
+}
+
+async function openQuickCardModal(movieId, triggerEl = null) {
+  if (!movieId) return;
+
+  installQuickModalGlobalEvents();
+  __quickModalLastFocus = triggerEl || document.activeElement || null;
+
+  const root = getQuickModalRoot();
+  root.hidden = false;
+  root.setAttribute("aria-hidden", "false");
+  document.body.classList.add("card-quick-modal-open");
+
+  root.innerHTML = `
+    <div class="card-quick-modal" role="dialog" aria-modal="true" aria-label="Vista rápida">
+      <button class="card-quick-modal-close" type="button" aria-label="Cerrar">
+        <span aria-hidden="true">×</span>
+      </button>
+
+      <div class="card-quick-modal-media-wrap">
+        <div class="card-quick-modal-loading">Cargando…</div>
+      </div>
+
+      <div class="card-quick-modal-body">
+        <h3 class="card-quick-modal-title">Cargando…</h3>
+        <p class="card-quick-modal-synopsis"></p>
+      </div>
+    </div>
+  `;
+
+  const modal = root.querySelector(".card-quick-modal");
+  const closeBtn = root.querySelector(".card-quick-modal-close");
+
+  closeBtn?.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    closeQuickCardModal();
+  });
+
+  root.onclick = (ev) => {
+    if (ev.target === root) closeQuickCardModal();
+  };
+
+  modal?.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+  });
+
+  try {
+    const movie = await fetchMovie(movieId);
+    if (!movie) throw new Error("No se encontró el contenido");
+
+    const mediaWrap = root.querySelector(".card-quick-modal-media-wrap");
+    const titleNode = root.querySelector(".card-quick-modal-title");
+    const synopsisNode = root.querySelector(".card-quick-modal-synopsis");
+
+    if (titleNode) titleNode.textContent = movie.title || "Sin título";
+    if (synopsisNode) synopsisNode.textContent = movie.description || movie.sinopsis || "Sin sinopsis disponible.";
+
+    if (mediaWrap) {
+      mediaWrap.innerHTML = "";
+      mountQuickModalTrailer(mediaWrap, movie);
+    }
+  } catch (e) {
+    console.error("[home] quick modal error:", e);
+
+    const mediaWrap = root.querySelector(".card-quick-modal-media-wrap");
+    const titleNode = root.querySelector(".card-quick-modal-title");
+    const synopsisNode = root.querySelector(".card-quick-modal-synopsis");
+
+    if (mediaWrap) {
+      mediaWrap.innerHTML = `<div class="card-quick-modal-loading">No se pudo cargar el trailer.</div>`;
+    }
+    if (titleNode) titleNode.textContent = "Error";
+    if (synopsisNode) synopsisNode.textContent = "No se pudo cargar la información del contenido.";
+  }
+}
+
+function buildCardQuickPlusButton(movieId) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "card-quick-plus-btn";
+  btn.setAttribute("aria-label", "Abrir vista rápida");
+  btn.dataset.movieId = String(movieId);
+
+  btn.innerHTML = `
+    <svg class="card-quick-plus-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1920" aria-hidden="true" focusable="false">
+      <path d="M866.332 213v653.332H213v186.666h653.332v653.332h186.666v-653.332h653.332V866.332h-653.332V213z" fill-rule="evenodd"></path>
+    </svg>
+  `;
+
+  btn.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    openQuickCardModal(movieId, btn);
+  });
+
+  return btn;
+}
+
+function enhanceCarouselCardsWithQuickPlus(scope = document) {
+  const cards =
+    scope?.classList?.contains("card")
+      ? [scope]
+      : Array.from(scope.querySelectorAll(".card"));
+
+  cards.forEach((card) => {
+    if (card.querySelector(".card-quick-plus-btn")) return;
+
+    let movieId =
+      card.dataset.movieId ||
+      card.getAttribute("data-movie-id") ||
+      "";
+
+    if (!movieId) {
+      const href = String(card.dataset.href || "");
+      try {
+        const url = new URL(href, window.location.origin);
+        movieId = url.searchParams.get("title") || "";
+      } catch { }
+    }
+
+    if (!movieId) return;
+
+    card.dataset.movieId = String(movieId);
+
+    const thumb = card.querySelector(".thumb") || card;
+    thumb.appendChild(buildCardQuickPlusButton(movieId));
+  });
+}
+
+function addMovieIdToCardHtml(html, movieId) {
+  if (!html || !movieId) return html || "";
+
+  return String(html).replace(
+    /<div\s+class="([^"]*\bcard\b[^"]*)"/,
+    `<div class="$1" data-movie-id="${String(movieId)}"`
+  );
+}
 
 function mountHomeHeroTrailerVideo(hero, movie) {
   if (!hero || !movie?.id) return;
@@ -676,15 +982,15 @@ function homeCatalogCardHtml(movie) {
     collectionId: getMovieCollectionId(movie)
   });
 
-  if (stateLabel) {
-    return cardHtml(movie, href, stateLabel, null, {
+  const html = stateLabel
+    ? cardHtml(movie, href, stateLabel, null, {
+      showCollectionOverlay: true
+    })
+    : cardHtml(movie, href, null, null, {
       showCollectionOverlay: true
     });
-  }
 
-  return cardHtml(movie, href, null, null, {
-    showCollectionOverlay: true
-  });
+  return addMovieIdToCardHtml(html, movie?.id);
 }
 
 /* =========================================================
@@ -1006,6 +1312,7 @@ function setRow(el, html) {
   if (!el) return;
   resetCarouselState(el);
   el.innerHTML = html;
+  enhanceCarouselCardsWithQuickPlus(el);
   scheduleTwoLinesScan(el);
 }
 
@@ -1065,6 +1372,10 @@ async function init() {
   });
 
   enableDataHrefNavigation();
+  initTopnavSearch();
+  initSearchExperience();
+
+  installQuickModalGlobalEvents();
 
   renderNav({ active: "home" });
   await renderAuthButtons();
@@ -1108,9 +1419,12 @@ async function init() {
             const subtitle = buildContinueSubtitle(r);
             const pct = buildContinuePct(r);
 
-            return cardHtml(m, href, subtitle, pct, {
-              showCollectionOverlay: true
-            });
+            return addMovieIdToCardHtml(
+              cardHtml(m, href, subtitle, pct, {
+                showCollectionOverlay: true
+              }),
+              m?.id
+            );
           }).join("")
         );
 
