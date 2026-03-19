@@ -78,13 +78,10 @@ function getCachedJson(storage, key, ttlMs) {
 
 function setCachedJson(storage, key, value) {
   try {
-    storage.setItem(
-      key,
-      JSON.stringify({
-        ...value,
-        ts: Date.now()
-      })
-    );
+    storage.setItem(key, JSON.stringify({
+      ...value,
+      ts: Date.now()
+    }));
   } catch { }
 }
 
@@ -501,52 +498,6 @@ export async function fetchByCategory(category, limit = 24) {
 
   if (error) throw error;
   return (data || []).map(withFormattedMovieDuration);
-}
-
-/**
- * Trae TODO el catálogo en tandas.
- * excludeMovieId: excluye el título actualmente abierto.
- */
-export async function fetchMovies({ excludeMovieId = null, pageSize = 500 } = {}) {
-  const safePageSize = clampLimit(pageSize, 1, 1000, 500);
-  const all = [];
-  let from = 0;
-
-  while (true) {
-    let query = supabase
-      .from("movies")
-      .select(`
-        ${MOVIE_CARD_FIELDS},
-        movie_meta!movie_id (
-          created_by,
-          fullcast,
-          fullscript,
-          fullgenres,
-          fulltitletype,
-          fullage,
-          seasons_count,
-          episodes_count
-        )
-      `)
-      .order("created_at", { ascending: false })
-      .range(from, from + safePageSize - 1);
-
-    if (excludeMovieId) {
-      query = query.neq("id", excludeMovieId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    const rows = Array.isArray(data) ? data : [];
-    all.push(...rows);
-
-    if (rows.length < safePageSize) break;
-    from += safePageSize;
-  }
-
-  return all.map(normalizeMovieMeta);
 }
 
 export async function fetchMovie(movieId) {
