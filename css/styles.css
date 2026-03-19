@@ -1073,7 +1073,7 @@ media-player {
    ========================================================= */
 .dropdown {
   position: relative;
-  width: min(100%, 18em);
+  width: auto !important;
   user-select: none;
 }
 
@@ -1086,13 +1086,13 @@ media-player {
   padding: 12px;
   border-radius: .25em;
   border: 1px solid var(--line);
-  background: rgba(0, 0, 0, .25);
+  background: #0e1420;
   cursor: pointer;
   transition: border .2s ease, background .2s ease;
   min-height: var(--control-h);
-  width: 143px;
+  width: auto;
   position: relative;
-  right: -65px;
+  right: 1px;
 }
 
 .dropdown-selected:hover {
@@ -1100,14 +1100,15 @@ media-player {
 }
 
 .dropdown.open .dropdown-selected {
-  border-color: rgba(37, 99, 235, .6);
-  background: rgba(255, 255, 255, .06);
+  border-color: var(--line);
+  background: #0e1420;
 }
 
 /* Texto */
 .dropdown-text {
   font-size: 14px;
   color: var(--text);
+  font-weight: 700;
 }
 
 /* Flecha */
@@ -1135,7 +1136,6 @@ media-player {
 .dropdown-options {
   position: absolute;
   top: calc(100% + 6px);
-  left: -5px;
   right: 0;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -1148,7 +1148,9 @@ media-player {
   transform: translateY(-6px);
   pointer-events: none;
   transition: opacity .18s ease, transform .18s ease;
-  width: 13.3em;
+  width: 236px;
+  padding-top: 1em;
+  padding-bottom: 1em;
 }
 
 .dropdown.open .dropdown-options {
@@ -1180,7 +1182,8 @@ media-player {
   min-width: 0;
   line-height: 1.25;
   font-weight: 700;
-  width: 17em;
+  width: auto;
+  justify-content: left;
 }
 
 .dropdown-option-main {
@@ -1201,7 +1204,7 @@ media-player {
 
 .dropdown-separator {
   height: 1px;
-  margin: 8px 0;
+  margin: 1em 0;
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -3071,7 +3074,6 @@ body.title-overlay-open {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: .25em;
   overflow: visible !important;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
 }
 
 #title-overlay-root .title-overlay-close {
@@ -3082,7 +3084,7 @@ body.title-overlay-open {
   height: 42px;
   border: 0;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.56);
+  background: #0e1420a1;
   color: #fff;
   cursor: pointer;
   z-index: 3;
@@ -3097,17 +3099,29 @@ body.title-overlay-open {
   border-radius: .25em .25em 0 0;
   overflow: hidden;
   aspect-ratio: 16 / 9;
+  background-image: none !important;
 }
 
 #title-overlay-root .title-overlay-media-shade {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 23em;
+  height: 19em;
+  pointer-events: none;
+  z-index: 2;
   background: linear-gradient(to top,
-      #0b0f17 0%,
-      rgba(11, 15, 23, 0.92) 28%,
-      rgba(11, 15, 23, 0.58) 58%,
-      rgba(11, 15, 23, 0.16) 80%,
-      rgba(11, 15, 23, 0.02) 100%);
+      rgb(11 15 23 / 1) 0%,
+      rgb(11 15 23 / 0.995) 10%,
+      rgb(11 15 23 / 0.97) 18%,
+      rgb(11 15 23 / 0.92) 28%,
+      rgb(11 15 23 / 0.82) 40%,
+      rgb(11 15 23 / 0.66) 54%,
+      rgb(11 15 23 / 0.46) 68%,
+      rgb(11 15 23 / 0.26) 80%,
+      rgb(11 15 23 / 0.12) 90%,
+      rgb(11 15 23 / 0.04) 96%,
+      rgb(11 15 23 / 0) 100%);
 }
 
 #title-overlay-root .title-overlay-hero-content {
@@ -3116,7 +3130,7 @@ body.title-overlay-open {
   right: 0;
   bottom: 0;
   z-index: 2;
-  padding: clamp(18px, 3vw, 34px);
+  padding: 0 3em clamp(18px, 3vw, 34px);
 }
 
 #title-overlay-root .title-overlay-pillrow {
@@ -3157,7 +3171,7 @@ body.title-overlay-open {
 #title-overlay-root .title-overlay-title {
   margin: 0;
   font-size: clamp(28px, 3.2vw, 40px);
-  line-height: 0.98;
+  line-height: 1.1;
   font-weight: 900;
   max-width: min(820px, 100%);
 }
@@ -3187,7 +3201,7 @@ body.title-overlay-open {
 }
 
 #title-overlay-root .title-overlay-body {
-  padding: clamp(18px, 3vw, 30px);
+  padding: 0 3em clamp(18px, 3vw, 30px);
   overflow: visible !important;
 }
 
@@ -3204,10 +3218,17 @@ body.title-overlay-open {
 }
 
 #title-overlay-root .title-overlay-block {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgb(255 255 255 / 0%);
   border-radius: .25em;
-  padding: 16px;
+}
+
+.episodios {
+  margin-bottom: 23px;
+}
+
+.inforapida,
+.episodios {
+  padding: 16px !important;
 }
 
 #title-overlay-root .title-overlay-block+.title-overlay-block {
@@ -3231,8 +3252,6 @@ body.title-overlay-open {
 }
 
 #title-overlay-root .title-overlay-season-filter {
-  min-width: 220px;
-  max-width: 280px;
   margin-bottom: 16px;
   margin-left: auto;
 }
@@ -3260,11 +3279,6 @@ body.title-overlay-open {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-#title-overlay-root .title-overlay-episode-card:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.14);
-}
-
 #title-overlay-root .title-overlay-episode-thumb-wrap {
   position: relative;
   border-radius: .25em;
@@ -3287,17 +3301,24 @@ body.title-overlay-open {
   position: absolute;
   left: 10px;
   right: 10px;
-  bottom: 10px;
-  height: 5px;
-  border-radius: 999px;
+  bottom: 5px;
+  height: 3px;
+  border-radius: .25em;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 #title-overlay-root .title-overlay-episode-progress-bar {
   height: 100%;
-  background: #fff;
   border-radius: inherit;
+  transition: width .25s ease;
+
+  background: linear-gradient(90deg, #00eaff, #2563eb);
+  box-shadow:
+    0 0 4px #00eaff,
+    0 0 8px #00eaff,
+    0 0 16px #2563eb,
+    0 0 24px #2563eb;
 }
 
 #title-overlay-root .title-overlay-episode-body {
@@ -3306,7 +3327,7 @@ body.title-overlay-open {
   flex-direction: column;
   justify-content: center;
   margin-top: clamp(-2px, -0.15vw, -1px);
-  margin-left: clamp(-6px, -0.45vw, -3px);
+  margin-left: clamp(-19px, -1.5vw, -14px);
 }
 
 #title-overlay-root .title-overlay-episode-title {
@@ -3332,6 +3353,18 @@ body.title-overlay-open {
 #title-overlay-root .title-overlay-info {
   display: grid;
   gap: 10px;
+}
+
+aside,
+.inforapida,
+.otroseps,
+.episodios {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+aside,
+.otroseps {
+  padding: 16px !important;
 }
 
 #title-overlay-root .title-overlay-info-row {
@@ -3398,9 +3431,9 @@ body.title-overlay-open {
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
-  min-width: 0;
   line-height: 1.25;
   font-weight: 700;
+  border: 0 !important;
 }
 
 .dropdown-option-main {
@@ -3730,7 +3763,7 @@ body.title-overlay-open {
   transition: opacity .2s ease-in;
   pointer-events: none;
   z-index: 2;
-  background: rgba(0, 0, 0, 0.24);
+  background: rgb(0 0 0 / 0%);
 }
 
 /* icono play */
@@ -3828,4 +3861,154 @@ body.title-overlay-open {
 .title-overlay-related-meta {
   font-size: 13px;
   opacity: .8;
+}
+
+.alleps {
+  justify-content: center;
+  text-align: center;
+}
+
+/* =========================================================
+   TITLE OVERLAY — TRAILER VIDEO + BOTÓN VOLUMEN
+   override final basado en este stylesheet
+   ========================================================= */
+
+/* el media del modal necesita capas limpias */
+#title-overlay-root .title-overlay-media {
+  isolation: isolate;
+}
+
+/* capa del trailer */
+#title-overlay-root .title-overlay-media-video-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .35s ease;
+}
+
+/* mostrar video cuando cargó */
+#title-overlay-root .title-overlay-media.title-overlay-video-ready .title-overlay-media-video-layer {
+  opacity: 1;
+}
+
+/* video full cover */
+#title-overlay-root .title-overlay-media-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center center;
+  background: #000;
+}
+
+/* shade propio del video */
+#title-overlay-root .title-overlay-media-video-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  height: 15em;
+  top: 27em;
+  display: none !important;
+}
+
+/* tu shade existente queda arriba del video */
+#title-overlay-root .title-overlay-media-shade {
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* contenido arriba de todo */
+#title-overlay-root .title-overlay-hero-content {
+  z-index: 3;
+}
+
+/* =========================
+   🎬 TITLE OVERLAY — VOLUME BTN FIX (LAYOUT CORRECTO)
+========================= */
+
+/* Asegura contexto correcto */
+#title-overlay-root .title-overlay-media {
+  position: relative;
+}
+
+/* Botón volumen */
+#title-overlay-root .title-overlay-volume-btn {
+  position: absolute;
+
+  /* 🔥 CLAVE: alineación real con tu layout */
+  right: clamp(2.8em, 3.55vw, 3.55em);
+  bottom: clamp(2em, 2.5788vw, 2.5788em);
+  z-index: 5;
+  width: clamp(40px, 3.2vw, 46px);
+  height: clamp(40px, 3.2vw, 46px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  background: rgba(14, 20, 32, 0.55);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity .25s ease,
+    transform .25s ease,
+    background .18s ease,
+    border-color .18s ease;
+}
+
+/* aparece cuando el video está listo */
+#title-overlay-root .title-overlay-media.title-overlay-video-ready .title-overlay-volume-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* hover */
+#title-overlay-root .title-overlay-volume-btn:hover {
+  background: rgba(14, 20, 32, 0.85);
+  border-color: #fff;
+}
+
+/* active */
+#title-overlay-root .title-overlay-volume-btn:active {
+  transform: scale(.94);
+}
+
+/* focus accesible */
+#title-overlay-root .title-overlay-volume-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* icon */
+#title-overlay-root .title-overlay-volume-btn img {
+  width: clamp(16px, 1.4vw, 26px);
+  height: clamp(16px, 1.4vw, 20px);
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  filter: brightness(0) invert(1);
+}
+
+/* =========================
+   📱 MOBILE TUNING
+========================= */
+
+@media (max-width: 768px) {
+  #title-overlay-root .title-overlay-volume-btn {
+    right: 12px;
+    bottom: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  #title-overlay-root .title-overlay-volume-btn {
+    right: 10px;
+    bottom: 10px;
+  }
 }

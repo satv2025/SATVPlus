@@ -790,6 +790,352 @@ async function fetchEpisodeProgressMapForOverlay({ movieId }) {
   }
 }
 
+async function fetchContinueWatchingForOverlay({ movieId }) {
+  if (!movieId) return null;
+
+  try {
+    const supabase = await getAppSupabaseClientSafe();
+    if (!supabase) return null;
+
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr) {
+      console.warn("[ui][overlay] getUser error:", userErr);
+      return null;
+    }
+
+    const userId = userData?.user?.id;
+    if (!userId) return null;
+
+    let { data, error } = await supabase
+      .from("watch_progress")
+      .select(`
+        movie_id,
+        episode_id,
+        progress_seconds,
+        duration_seconds,
+        updated_at,
+        episodes:episodes!watch_progress_episode_id_fkey (
+          id,
+          season,
+          episode_number,
+          title
+        )
+      `)
+      .eq("user_id", userId)
+      .eq("movie_id", movieId)
+      .gt("progress_seconds", 0)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error && String(error.message || "").toLowerCase().includes("duration_seconds")) {
+      const retry = await supabase
+        .from("watch_progress")
+        .select(`
+          movie_id,
+          episode_id,
+          progress_seconds,
+          updated_at,
+          episodes:episodes!watch_progress_episode_id_fkey (
+            id,
+            season,
+            episode_number,
+            title
+          )
+        `)
+        .eq("user_id", userId)
+        .eq("movie_id", movieId)
+        .gt("progress_seconds", 0)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      data = retry.data;
+      error = retry.error;
+    }
+
+    if (error) {
+      console.warn("[ui][overlay] watch_progress query error:", error);
+      return null;
+    }
+
+    if (!data) return null;
+
+    const progressSeconds = Number(data?.progress_seconds || 0);
+    if (!Number.isFinite(progressSeconds) || progressSeconds <= 0) return null;
+
+    const ep = Array.isArray(data.episodes)
+      ? (data.episodes[0] || null)
+      : (data.episodes || null);
+
+    return {
+      ...data,
+      episodes: ep,
+      season: ep?.season ?? null,
+      episode_number: ep?.episode_number ?? null,
+      episode_title: ep?.title ?? null,
+      elapsed_seconds: progressSeconds
+    };
+  } catch (e) {
+    console.warn("[ui][overlay] fetchContinueWatchingForOverlay error:", e);
+    return null;
+  }
+}
+
+function formatElapsedOverlay(seconds) {
+  const s = Math.max(0, Math.floor(Number(seconds) || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+  return `${m}:${String(ss).padStart(2, "0")}`;
+}
+
+function setOverlayWatchBtnDisabled(btn, label = "No disponible") {
+  if (!btn) return;
+
+  btn.href = "#";
+  btn.dataset.mode = "disabled";
+  btn.setAttribute("aria-disabled", "true");
+  btn.setAttribute("aria-label", label);
+  btn.innerHTML = escapeHtml(label);
+
+  if (btn.__overlayWatchBound !== true) {
+    btn.__overlayWatchBound = true;
+    btn.addEventListener("click", (ev) => {
+      if (btn.dataset.mode === "disabled" || btn.dataset.mode === "loading") {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+    });
+  }
+}
+
+function setOverlayWatchBtnPlay(btn, movie, label = "Reproducir") {
+  if (!btn || !movie?.id) return;
+
+  btn.removeAttribute("aria-disabled");
+  btn.dataset.mode = "play";
+
+  if (movie.category === "series") {
+    btn.href = `/watch?series=${encodeURIComponent(movie.id)}`;
+  } else {
+    btn.href = `/watch?movie=${encodeURIComponent(movie.id)}`;
+  }
+
+  btn.setAttribute("aria-label", label);
+  btn.innerHTML = `${escapeHtml(label)} <span aria-hidden="true">▶</span>`;
+}
+
+function setOverlayWatchBtnResume(btn, movie, progress) {
+  if (!btn || !movie?.id || !progress) {
+    setOverlayWatchBtnPlay(btn, movie, "Reproducir");
+    return;
+  }
+
+  btn.removeAttribute("aria-disabled");
+  btn.dataset.mode = "resume";
+
+  const isSeries = movie.category === "series";
+  const ep = Array.isArray(progress.episodes)
+    ? (progress.episodes[0] || null)
+    : (progress.episodes || null);
+
+  const season = progress.season ?? ep?.season ?? "";
+  const epNum = progress.episode_number ?? ep?.episode_number ?? "";
+  const epTitle = progress.episode_title ?? ep?.title ?? "";
+  const elapsedSeconds = Number(
+    progress.progress_seconds ??
+    progress.elapsed_seconds ??
+    progress.elapsed ??
+    0
+  );
+  const elapsed = formatElapsedOverlay(elapsedSeconds);
+
+  const hasSeason = season !== "" && season != null;
+  const hasEpisode = epNum !== "" && epNum != null;
+
+  const tag = (hasSeason && hasEpisode)
+    ? `T${Number(season)}E${Number(epNum)}`
+    : "";
+
+  const meta = [tag, epTitle].filter(Boolean).join(" ").trim();
+
+  if (isSeries) {
+    btn.href = progress.episode_id
+      ? `/watch?series=${encodeURIComponent(movie.id)}&episode=${encodeURIComponent(progress.episode_id)}`
+      : `/watch?series=${encodeURIComponent(movie.id)}`;
+  } else {
+    btn.href = `/watch?movie=${encodeURIComponent(movie.id)}`;
+  }
+
+  btn.setAttribute("aria-label", "Reanudar");
+  btn.innerHTML =
+    `Reanudar <span aria-hidden="true">▶</span>` +
+    (meta || elapsed
+      ? ` <span class="watch-meta">${escapeHtml(meta)}${elapsed ? ` · ${escapeHtml(elapsed)}` : ""}</span>`
+      : "");
+}
+
+async function configureOverlayWatchButton(movie) {
+  const btn = document.getElementById("title-overlay-watch-btn");
+  if (!btn) return;
+
+  if (!movie?.id) {
+    setOverlayWatchBtnDisabled(btn, "No disponible");
+    return;
+  }
+
+  const publishState = String(movie?.publish_state || "public").toLowerCase();
+
+  if (publishState === "upcoming") {
+    const label = String(movie?.publish_state_text || "").trim() || "Próximamente";
+    setOverlayWatchBtnDisabled(btn, label);
+    return;
+  }
+
+  if (publishState === "live") {
+    const label = String(movie?.publish_state_text || "").trim() || "En Vivo";
+    setOverlayWatchBtnPlay(btn, movie, label);
+    return;
+  }
+
+  setOverlayWatchBtnPlay(btn, movie, "Reproducir");
+
+  try {
+    const progress = await fetchContinueWatchingForOverlay({ movieId: movie.id });
+    if (progress) {
+      setOverlayWatchBtnResume(btn, movie, progress);
+    }
+  } catch (e) {
+    console.warn("[ui][overlay] no se pudo configurar reanudar:", e);
+  }
+}
+
+/* =========================
+   TITLE OVERLAY TRAILER VIDEO
+========================= */
+
+const TITLE_OVERLAY_VOLUME_ICON_MUTE = "https://satvplus.com.ar/images/svg/heromute.svg";
+const TITLE_OVERLAY_VOLUME_ICON_UNMUTE = "https://satvplus.com.ar/images/svg/heroon.svg";
+
+function clearTitleOverlayTrailerVideo() {
+  const mediaRoot = document.getElementById("title-overlay-media");
+  if (!mediaRoot) return;
+
+  mediaRoot.classList.remove("title-overlay-video-ready");
+  mediaRoot.querySelectorAll(".title-overlay-media-video-layer").forEach((n) => n.remove());
+  mediaRoot.querySelectorAll(".title-overlay-volume-btn").forEach((n) => n.remove());
+}
+
+function mountTitleOverlayTrailerVideo(movie) {
+  const mediaRoot = document.getElementById("title-overlay-media");
+  if (!mediaRoot || !movie?.id) return;
+
+  const trailerUrl = String(movie?.trailer_url || "").trim();
+  const banner = movie?.banner_url || movie?.thumbnail_url || "";
+
+  clearTitleOverlayTrailerVideo();
+  mediaRoot.style.backgroundImage = banner ? `url("${banner}")` : "none";
+
+  if (!trailerUrl) {
+    return;
+  }
+
+  const layer = document.createElement("div");
+  layer.className = "title-overlay-media-video-layer";
+
+  const video = document.createElement("video");
+  video.className = "title-overlay-media-video";
+  video.src = trailerUrl;
+
+  if (banner) video.poster = banner;
+
+  video.autoplay = true;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+
+  const shade = document.createElement("div");
+  shade.className = "title-overlay-media-video-shade";
+
+  layer.appendChild(video);
+  layer.appendChild(shade);
+  mediaRoot.prepend(layer);
+
+  const volBtn = document.createElement("button");
+  volBtn.type = "button";
+  volBtn.className = "title-overlay-volume-btn";
+  volBtn.setAttribute("aria-label", "Activar sonido");
+  volBtn.setAttribute("aria-pressed", "false");
+
+  const volIcon = document.createElement("img");
+  volIcon.alt = "";
+  volIcon.decoding = "async";
+  volIcon.src = TITLE_OVERLAY_VOLUME_ICON_MUTE;
+  volBtn.appendChild(volIcon);
+
+  function syncVolumeUi() {
+    const isMuted = !!video.muted;
+
+    volIcon.src = isMuted
+      ? TITLE_OVERLAY_VOLUME_ICON_MUTE
+      : TITLE_OVERLAY_VOLUME_ICON_UNMUTE;
+
+    volBtn.setAttribute("aria-label", isMuted ? "Activar sonido" : "Silenciar");
+    volBtn.setAttribute("aria-pressed", String(!isMuted));
+    volBtn.title = isMuted ? "Activar sonido" : "Silenciar";
+  }
+
+  volBtn.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    video.muted = !video.muted;
+    syncVolumeUi();
+
+    const p = video.play?.();
+    if (p && typeof p.catch === "function") {
+      p.catch(() => { });
+    }
+  });
+
+  const heroContent = mediaRoot.querySelector(".title-overlay-hero-content");
+  (heroContent || mediaRoot).appendChild(volBtn);
+
+  syncVolumeUi();
+
+  video.addEventListener("error", () => {
+    volBtn.remove();
+    layer.remove();
+    mediaRoot.classList.remove("title-overlay-video-ready");
+    mediaRoot.style.backgroundImage = banner ? `url("${banner}")` : "none";
+    console.warn("[ui][overlay] trailer error:", trailerUrl);
+  }, { once: true });
+
+  const showVideo = () => {
+    mediaRoot.classList.add("title-overlay-video-ready");
+  };
+
+  video.addEventListener("loadeddata", showVideo, { once: true });
+  video.addEventListener("canplay", showVideo, { once: true });
+
+  requestAnimationFrame(() => {
+    const p = video.play?.();
+
+    if (p && typeof p.catch === "function") {
+      p.catch((err) => {
+        console.warn("[ui][overlay] autoplay trailer bloqueado:", err);
+        mediaRoot.classList.remove("title-overlay-video-ready");
+      });
+    }
+  });
+}
+
 /* =========================
    TITLE OVERLAY MODAL
 ========================= */
@@ -1501,7 +1847,7 @@ function renderOverlaySeasonDropdown({
     ? "Todos los episodios"
     : `Temporada ${String(currentSeason)}`;
 
-  const totalEpisodes = groupedEpisodes.reduce((acc, [, list]) => acc + list.length, 0);
+  const mountWidth = groupedEpisodes.reduce((acc, [, list]) => acc + list.length, 0);
 
   mount.innerHTML = `
     <div class="dropdown" data-overlay-season-dropdown="1">
@@ -1536,17 +1882,18 @@ function renderOverlaySeasonDropdown({
         <div class="dropdown-separator" role="separator" aria-hidden="true"></div>
 
         <div
-          class="dropdown-option"
+          class="dropdown-option alleps"
           role="button"
           tabindex="0"
           data-overlay-season="${TITLE_OVERLAY_ALL_EPISODES_VALUE}"
         >
           <span class="dropdown-option-main">Todos los episodios</span>
-          <span class="dropdown-option-count">(${totalEpisodes} episodios)</span>
         </div>
       </div>
     </div>
   `;
+
+  void mountWidth; // mantiene estructura sin warnings si no usás el total
 
   const dropdown = mount.querySelector(".dropdown");
   const selected = mount.querySelector(".dropdown-selected");
@@ -1717,6 +2064,41 @@ function renderTitleOverlayEpisodes(movie, episodes = [], progressMap = new Map(
   renderSeason(currentSeason);
 }
 
+function renderTitleOverlayFullInfo(movie) {
+  const info = document.getElementById("title-overlay-info");
+  if (!info) return;
+
+  const mm = movie?.movie_meta || null;
+  const durText = movie?.category === "movie"
+    ? formatDurationMinutes(movie?.duration_minutes)
+    : "";
+
+  function infoRow(label, value) {
+    const safe = String(value || "").trim();
+    if (!safe) return "";
+    return `
+      <div class="title-overlay-info-row">
+        <div class="title-overlay-info-label">${escapeHtml(label)}</div>
+        <div class="title-overlay-info-value">${escapeHtml(safe)}</div>
+      </div>
+    `;
+  }
+
+  const html = `
+    ${durText ? infoRow("Duración", durText) : ""}
+    ${infoRow("Creado por", mm?.created_by)}
+    ${infoRow("Elenco", mm?.fullcast)}
+    ${infoRow("Guion", mm?.fullscript)}
+    ${infoRow("Géneros", mm?.fullgenres)}
+    ${infoRow("Tipo", mm?.fulltitletype)}
+    ${infoRow("Edad", mm?.fullage)}
+  `;
+
+  info.innerHTML = html || `
+    <div class="title-overlay-empty">Sin información cargada todavía.</div>
+  `;
+}
+
 function ensureTitleOverlayModal() {
   let root = document.getElementById(TITLE_OVERLAY_ID);
   if (root) return root;
@@ -1751,8 +2133,8 @@ function ensureTitleOverlayModal() {
           <p class="title-overlay-description" id="title-overlay-description"></p>
 
           <div class="title-overlay-actions">
-            <a class="btn" id="title-overlay-open-full" href="#">
-              Ver ficha completa
+            <a class="btn" id="title-overlay-watch-btn" href="#">
+              Reproducir
             </a>
 
             <button
@@ -1774,7 +2156,7 @@ function ensureTitleOverlayModal() {
         <div class="title-overlay-grid">
           <div class="title-overlay-main">
             <section
-              class="title-overlay-block title-overlay-episodes-block"
+              class="title-overlay-block title-overlay-episodes-block episodios"
               id="title-overlay-episodes-block"
               hidden
             >
@@ -1804,16 +2186,21 @@ function ensureTitleOverlayModal() {
               </div>
             </section>
 
-            <section class="title-overlay-block">
+            <section class="title-overlay-block otroseps">
               <h3 class="title-overlay-block-title">Otros títulos</h3>
               <div class="title-overlay-related-grid" id="title-overlay-related-grid"></div>
             </section>
           </div>
 
+          <section class="title-overlay-block inforapida">
+            <h3 class="title-overlay-block-title">Info rápida</h3>
+            <div class="title-overlay-side-list" id="title-overlay-side-list"></div>
+          </section>
+
           <aside class="title-overlay-side">
             <section class="title-overlay-block">
-              <h3 class="title-overlay-block-title">Info rápida</h3>
-              <div class="title-overlay-side-list" id="title-overlay-side-list"></div>
+              <h3 class="title-overlay-block-title">Información completa</h3>
+              <div class="title-overlay-info" id="title-overlay-info"></div>
             </section>
           </aside>
         </div>
@@ -1879,7 +2266,8 @@ function setTitleOverlayLoadingState() {
   const relatedGrid = document.getElementById("title-overlay-related-grid");
   const side = document.getElementById("title-overlay-side-list");
   const pillrow = document.getElementById("title-overlay-pillrow");
-  const full = document.getElementById("title-overlay-open-full");
+  const watchBtn = document.getElementById("title-overlay-watch-btn");
+  const info = document.getElementById("title-overlay-info");
   const episodesBlock = document.getElementById("title-overlay-episodes-block");
   const episodesGrid = document.getElementById("title-overlay-episodes-grid");
   const seasonFilter = document.getElementById("title-overlay-season-filter");
@@ -1890,6 +2278,7 @@ function setTitleOverlayLoadingState() {
   closeOverlaySeasonDropdown();
   __titleOverlayEpisodesVisibleCount = TITLE_OVERLAY_EPISODES_PAGE_SIZE;
 
+  clearTitleOverlayTrailerVideo();
   if (media) media.style.backgroundImage = "none";
   if (title) title.textContent = "Cargando título…";
   if (meta) meta.textContent = "";
@@ -1897,7 +2286,13 @@ function setTitleOverlayLoadingState() {
   if (pillrow) pillrow.innerHTML = "";
   if (relatedGrid) relatedGrid.innerHTML = `<div class="title-overlay-empty">Estamos preparando la vista rápida.</div>`;
   if (side) side.innerHTML = "";
-  if (full) full.href = "#";
+  if (info) info.innerHTML = "";
+  if (watchBtn) {
+    watchBtn.href = "#";
+    watchBtn.innerHTML = "Cargando…";
+    watchBtn.dataset.mode = "loading";
+    watchBtn.setAttribute("aria-disabled", "true");
+  }
   if (episodesBlock) episodesBlock.hidden = true;
   if (episodesGrid) episodesGrid.innerHTML = "";
   if (seasonFilter) {
@@ -1920,7 +2315,7 @@ function setTitleOverlayLoadingState() {
   }
 }
 
-function renderTitleOverlayError({ href }) {
+function renderTitleOverlayError() {
   const media = document.getElementById("title-overlay-media");
   const title = document.getElementById("title-overlay-title");
   const meta = document.getElementById("title-overlay-meta");
@@ -1928,7 +2323,8 @@ function renderTitleOverlayError({ href }) {
   const relatedGrid = document.getElementById("title-overlay-related-grid");
   const side = document.getElementById("title-overlay-side-list");
   const pillrow = document.getElementById("title-overlay-pillrow");
-  const full = document.getElementById("title-overlay-open-full");
+  const watchBtn = document.getElementById("title-overlay-watch-btn");
+  const info = document.getElementById("title-overlay-info");
   const episodesBlock = document.getElementById("title-overlay-episodes-block");
   const episodesGrid = document.getElementById("title-overlay-episodes-grid");
   const seasonFilter = document.getElementById("title-overlay-season-filter");
@@ -1937,14 +2333,16 @@ function renderTitleOverlayError({ href }) {
 
   closeOverlaySeasonDropdown();
 
+  clearTitleOverlayTrailerVideo();
   if (media) media.style.backgroundImage = "none";
   if (title) title.textContent = "No pudimos abrir esta vista";
   if (meta) meta.textContent = "";
-  if (desc) desc.textContent = "Podés abrir la ficha completa para ver todos los detalles.";
+  if (desc) desc.textContent = "No se pudieron cargar los detalles del título.";
   if (pillrow) pillrow.innerHTML = "";
   if (relatedGrid) relatedGrid.innerHTML = `<div class="title-overlay-empty">No se pudieron cargar otros títulos.</div>`;
   if (side) side.innerHTML = "";
-  if (full) full.href = href || "#";
+  if (watchBtn) setOverlayWatchBtnDisabled(watchBtn, "No disponible");
+  if (info) info.innerHTML = `<div class="title-overlay-empty">No se pudo cargar la información completa.</div>`;
   if (episodesBlock) episodesBlock.hidden = true;
   if (episodesGrid) episodesGrid.innerHTML = "";
   if (seasonFilter) {
@@ -1958,7 +2356,7 @@ function renderTitleOverlayError({ href }) {
   }
 }
 
-async function renderTitleOverlayContent({ movie, episodes = [], progressMap = new Map(), href }) {
+async function renderTitleOverlayContent({ movie, episodes = [], progressMap = new Map() }) {
   const media = document.getElementById("title-overlay-media");
   const title = document.getElementById("title-overlay-title");
   const meta = document.getElementById("title-overlay-meta");
@@ -1966,7 +2364,6 @@ async function renderTitleOverlayContent({ movie, episodes = [], progressMap = n
   const relatedGrid = document.getElementById("title-overlay-related-grid");
   const side = document.getElementById("title-overlay-side-list");
   const pillrow = document.getElementById("title-overlay-pillrow");
-  const full = document.getElementById("title-overlay-open-full");
 
   const banner = movie?.banner_url || movie?.thumbnail_url || "";
   const categoryLabel = getMovieCategoryLabel(movie);
@@ -1978,6 +2375,7 @@ async function renderTitleOverlayContent({ movie, episodes = [], progressMap = n
   if (media) {
     media.style.backgroundImage = banner ? `url("${banner}")` : "none";
   }
+  mountTitleOverlayTrailerVideo(movie);
 
   if (title) title.textContent = movie?.title || "Sin título";
   if (meta) meta.textContent = metaLine;
@@ -2021,15 +2419,10 @@ async function renderTitleOverlayContent({ movie, episodes = [], progressMap = n
     `).join("");
   }
 
+  renderTitleOverlayFullInfo(movie);
   renderTitleOverlayEpisodes(movie, episodes, progressMap);
   await renderTitleOverlayRelatedTitles(movie);
-
-  if (full) {
-    full.href = href || buildTitleUrl(movie?.id, {
-      collectionId: movie?.collection_id || null
-    });
-  }
-
+  await configureOverlayWatchButton(movie);
   await bindOverlayMyListButton(movie);
 }
 
@@ -2061,6 +2454,7 @@ export function closeTitleOverlay() {
   if (!root) return;
 
   clearOverlaySeasonOutsideHandler();
+  clearTitleOverlayTrailerVideo();
 
   const focusTarget =
     __titleOverlayLastFocused && document.contains(__titleOverlayLastFocused)
@@ -2099,7 +2493,7 @@ export async function openTitleOverlayFromHref(href) {
     if (requestId !== __titleOverlayReq) return;
 
     if (!movie) {
-      renderTitleOverlayError({ href: parsed.href });
+      renderTitleOverlayError();
       return;
     }
 
@@ -2129,13 +2523,12 @@ export async function openTitleOverlayFromHref(href) {
     await renderTitleOverlayContent({
       movie,
       episodes: Array.isArray(episodes) ? episodes : [],
-      progressMap,
-      href: parsed.href
+      progressMap
     });
   } catch (error) {
     console.error("[ui][overlay] error:", error);
     if (requestId !== __titleOverlayReq) return;
-    renderTitleOverlayError({ href: parsed?.href || href });
+    renderTitleOverlayError();
   }
 }
 
