@@ -4012,3 +4012,7 @@ aside,
     bottom: 10px;
   }
 }
+
+.title-overlay-episodes-more[hidden] {
+  display: none !important;
+}

@@ -2019,12 +2019,22 @@ function renderTitleOverlayEpisodes(movie, episodes = [], progressMap = new Map(
 
     bindOverlayEpisodeCardNavigation(grid);
 
-    const hasMore = list.length > visibleItems.length;
-    const canCollapse =
-      list.length > TITLE_OVERLAY_EPISODES_PAGE_SIZE &&
-      __titleOverlayEpisodesVisibleCount >= list.length;
+    const total = list.length;
+    const hasPagination = total > TITLE_OVERLAY_EPISODES_PAGE_SIZE;
+    const hasMore = total > visibleItems.length;
+    const canCollapse = hasPagination && __titleOverlayEpisodesVisibleCount > TITLE_OVERLAY_EPISODES_PAGE_SIZE;
+
+    if (!hasPagination) {
+      moreWrap.hidden = true;
+      moreWrap.style.display = "none";
+      loadMoreBtn.disabled = true;
+      loadMoreBtn.textContent = "Cargar más episodios";
+      return;
+    }
 
     moreWrap.hidden = !(hasMore || canCollapse);
+    moreWrap.style.display = (hasMore || canCollapse) ? "" : "none";
+
     loadMoreBtn.disabled = false;
     loadMoreBtn.textContent = hasMore ? "Cargar más episodios" : "Cargar menos";
   };
