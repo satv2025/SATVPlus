@@ -335,7 +335,7 @@ function getMoreMetaLine(movie) {
 =========================== */
 
 function pickEpisodeThumb(ep) {
-    return ep?.["thumbnails-episode"] || ep?.thumb || "";
+    return ep?.thumbnail_episode || ep?.thumb || "";
 }
 
 function groupBySeason(episodes) {
