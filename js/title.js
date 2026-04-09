@@ -73,6 +73,7 @@ function renderTitleNotFound() {
     const moreSection = el("more-section");
     const moreGrid = el("more-grid");
     const extraEl = el("title-extra");
+    const collectionSection = document.getElementById("collection-section");
 
     if (hero) {
         hero.style.backgroundImage = "none";
@@ -137,6 +138,7 @@ function renderTitleNotFound() {
     }
 
     if (episodesSection) episodesSection.classList.add("hidden");
+    if (collectionSection) collectionSection.classList.add("hidden");
     if (moreSection) moreSection.classList.add("hidden");
     if (moreGrid) moreGrid.innerHTML = "";
     if (extraEl) {
@@ -193,6 +195,49 @@ function scheduleApplyCondensedFontToWrappedEpisodeTitles(root = document) {
             applyCondensedFontToWrappedEpisodeTitles(root);
         });
     });
+}
+
+/* ===========================
+   AKIRA VIDEO OVERRIDE
+=========================== */
+
+const AKIRA_SERIES_ID = "d54c717b-c713-41bb-91cb-a9a2a302d44a";
+const AKIRA_VIDEO_STYLE_ID = "akira-video-contain-override";
+
+function shouldApplyAkiraVideoContainOverride(currentId) {
+    return String(currentId || "").trim() === AKIRA_SERIES_ID;
+}
+
+function applyAkiraVideoContainOverrideIfNeeded(currentId) {
+    const styleId = AKIRA_VIDEO_STYLE_ID;
+    let styleEl = document.getElementById(styleId);
+
+    if (!shouldApplyAkiraVideoContainOverride(currentId)) {
+        if (styleEl) styleEl.remove();
+        return;
+    }
+
+    if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = styleId;
+        document.head.appendChild(styleEl);
+    }
+
+    styleEl.textContent = `
+      .akira-video {
+        object-fit: contain !important;
+      }
+    `;
+}
+
+function resolveAkiraOverrideTargetId() {
+    const fromSeries = qs("series");
+    if (fromSeries) return fromSeries;
+
+    const fromTitle = qs("title") || qs("movie");
+    if (fromTitle) return fromTitle;
+
+    return "";
 }
 
 /* ===========================
@@ -1447,56 +1492,6 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
     scheduleApplyCondensedFontToWrappedEpisodeTitles(moreGrid);
 }
 
-async function renderCollectionSectionBelowEpisodes({ api, esc, collectionId, currentMovieId }) {
-    const section = ensureSecondarySectionAfterEpisodes();
-    if (!section) return false;
-
-    const titleEl = section.querySelector("#collection-title");
-    const gridEl = section.querySelector("#collection-grid");
-
-    if (!titleEl || !gridEl) return false;
-
-    titleEl.textContent = "Colección completa";
-    gridEl.innerHTML = "";
-
-    let items = [];
-    try {
-        if (typeof api.fetchCollection === "function") {
-            items = await api.fetchCollection(collectionId, 200);
-        } else {
-            console.warn("[title] api.fetchCollection no existe");
-            items = [];
-        }
-    } catch (e) {
-        console.warn("[title] no se pudo cargar colección:", e);
-        items = [];
-    }
-
-    items = (items || []).filter((item) => item?.id && String(item.id) !== String(currentMovieId));
-
-    if (!items.length) {
-        gridEl.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
-        section.classList.remove("hidden");
-        return true;
-    }
-
-    gridEl.innerHTML = items.map((item) =>
-        renderCollectionCardHtml({ item, esc })
-    ).join("");
-
-    const itemsById = new Map(
-        items
-            .filter(item => item?.id)
-            .map(item => [String(item.id), item])
-    );
-
-    bindCollectionCardNavigation(gridEl, itemsById);
-    scheduleApplyCondensedFontToWrappedEpisodeTitles(gridEl);
-
-    section.classList.remove("hidden");
-    return true;
-}
-
 /* ===========================
    COLLECTION (cards tipo episodio, sin collections.svg)
 =========================== */
@@ -1527,7 +1522,7 @@ function ensureSecondarySectionAfterEpisodes() {
 
     section = document.createElement("section");
     section.id = "collection-section";
-    section.className = "episodes-section";
+    section.className = "episodes-section hidden";
 
     section.innerHTML = `
       <div class="episodes-head">
@@ -1617,6 +1612,56 @@ async function renderCollectionSection({ api, esc, collectionId, currentMovieId 
     return true;
 }
 
+async function renderCollectionSectionBelowEpisodes({ api, esc, collectionId, currentMovieId }) {
+    const section = ensureSecondarySectionAfterEpisodes();
+    if (!section) return false;
+
+    const titleEl = section.querySelector("#collection-title");
+    const gridEl = section.querySelector("#collection-grid");
+
+    if (!titleEl || !gridEl) return false;
+
+    titleEl.textContent = "Colección completa";
+    gridEl.innerHTML = "";
+
+    let items = [];
+    try {
+        if (typeof api.fetchCollection === "function") {
+            items = await api.fetchCollection(collectionId, 200);
+        } else {
+            console.warn("[title] api.fetchCollection no existe");
+            items = [];
+        }
+    } catch (e) {
+        console.warn("[title] no se pudo cargar colección:", e);
+        items = [];
+    }
+
+    items = (items || []).filter((item) => item?.id && String(item.id) !== String(currentMovieId));
+
+    if (!items.length) {
+        gridEl.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
+        section.classList.remove("hidden");
+        return true;
+    }
+
+    gridEl.innerHTML = items.map((item) =>
+        renderCollectionCardHtml({ item, esc })
+    ).join("");
+
+    const itemsById = new Map(
+        items
+            .filter(item => item?.id)
+            .map(item => [String(item.id), item])
+    );
+
+    bindCollectionCardNavigation(gridEl, itemsById);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(gridEl);
+
+    section.classList.remove("hidden");
+    return true;
+}
+
 /* ===========================
    MAIN
 =========================== */
@@ -1624,6 +1669,8 @@ async function renderCollectionSection({ api, esc, collectionId, currentMovieId 
 async function main() {
     const movieId = qs("title") || qs("movie");
     const collectionId = qs("collection");
+
+    applyAkiraVideoContainOverrideIfNeeded(resolveAkiraOverrideTargetId());
 
     await ensureSupabaseGlobal();
 
@@ -1685,10 +1732,12 @@ async function main() {
         return;
     }
 
+    applyAkiraVideoContainOverrideIfNeeded(movie.id);
+
     let episodes = [];
     let episodeProgressMap = new Map();
 
-    if (!collectionId && movie.category === "series" && typeof api.fetchEpisodes === "function") {
+    if (movie.category === "series" && typeof api.fetchEpisodes === "function") {
         try {
             episodes = await api.fetchEpisodes(movie.id);
         } catch (e) {
@@ -1816,6 +1865,16 @@ async function main() {
 
     if (!episodes?.length) {
         episodesGrid.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
+
+        if (collectionId) {
+            await renderCollectionSectionBelowEpisodes({
+                api,
+                esc,
+                collectionId,
+                currentMovieId: movie.id
+            });
+        }
+
         return;
     }
 
@@ -2041,6 +2100,7 @@ async function main() {
 
     renderSeasonSelector();
     renderEpisodesGrid();
+
     if (collectionId) {
         await renderCollectionSectionBelowEpisodes({
             api,
