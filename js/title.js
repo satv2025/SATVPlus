@@ -1,1414 +1,2114 @@
-// js/watch.js
-// SATV+ Watch loader
-// - Soporta movie / episode / series
-// - Soporta collection + movie
-// - En collection mode, el modal del player usa una lista obtenida desde public.movies
-//   filtrando por movies.collection_id = collections.id
-//   y navega con /watch?collection=<uuid>&movie=<uuid>
+function qs(key) { return new URLSearchParams(window.location.search).get(key); }
+function el(id) { return document.getElementById(id); }
 
-import { supabase } from "./supabaseClient.js";
+/* ===========================
+   Lazy load Supabase SDK (global)
+=========================== */
 
-/* ============================================================
- * Config
- * ============================================================ */
-const ROOT_ID = "akira-player-root";
-const DEFAULT_ASSET_BASE = "https://akira.satvplus.com.ar/assets";
-const NOW_URL = new URL(window.location.href);
-const DEBUG =
-  NOW_URL.searchParams.get("debug") === "1" ||
-  NOW_URL.searchParams.get("debug") === "true";
-
-/* ============================================================
- * Akira contain override
- * ============================================================ */
-const AKIRA_CONTAIN_SERIES_ID = "d54c717b-c713-41bb-91cb-a9a2a302d44a";
-const AKIRA_CONTAIN_STYLE_ID = "satv-akira-video-contain-style";
-
-let __akiraContainObserver = null;
-let __akiraContainEnabled = false;
-
-function shouldForceAkiraContain(seriesId) {
-  return String(seriesId || "").trim() === AKIRA_CONTAIN_SERIES_ID;
+function loadScriptOnce(src) {
+    return new Promise((resolve, reject) => {
+        const exists = [...document.scripts].some((s) => s.src === src);
+        if (exists) return resolve();
+        const s = document.createElement("script");
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error("No se pudo cargar: " + src));
+        document.head.appendChild(s);
+    });
 }
 
-function ensureAkiraContainStyleTag() {
-  let styleEl = document.getElementById(AKIRA_CONTAIN_STYLE_ID);
-  if (styleEl) return styleEl;
-
-  styleEl = document.createElement("style");
-  styleEl.id = AKIRA_CONTAIN_STYLE_ID;
-  document.head.appendChild(styleEl);
-  return styleEl;
+async function ensureSupabaseGlobal() {
+    if (window.supabase?.createClient) return;
+    await loadScriptOnce("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
+    if (!window.supabase?.createClient) throw new Error("Supabase SDK ok pero createClient no existe.");
 }
 
-function enableAkiraContainCss() {
-  const styleEl = ensureAkiraContainStyleTag();
-  styleEl.textContent = `
-    .akira-video {
-      object-fit: contain !important;
-    }
+/* ===========================
+   Utils
+=========================== */
 
-    #${ROOT_ID} .akira-video {
-      object-fit: contain !important;
-    }
+function plural(n, one, many) { return n === 1 ? one : many; }
 
-    #${ROOT_ID} video.akira-video {
-      object-fit: contain !important;
-    }
-  `;
+function formatDuration(minutes) {
+    const m = Number(minutes);
+    if (!Number.isFinite(m) || m <= 0) return "";
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60);
+    const rem = m % 60;
+    return rem === 0 ? `${h} h` : `${h} h ${rem} min`;
 }
 
-function disableAkiraContainCss() {
-  const styleEl = document.getElementById(AKIRA_CONTAIN_STYLE_ID);
-  if (styleEl) styleEl.remove();
+function formatElapsed(seconds) {
+    const s = Math.max(0, Math.floor(Number(seconds) || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+    return `${m}:${String(ss).padStart(2, "0")}`;
 }
 
-function applyContainInlineToMountedNodes() {
-  const root = getRootEl?.() || document;
-
-  const candidates = [
-    ...root.querySelectorAll(".akira-video"),
-    ...root.querySelectorAll("video.akira-video"),
-    ...root.querySelectorAll("video")
-  ];
-
-  candidates.forEach((node) => {
-    if (!(node instanceof HTMLElement)) return;
-    node.style.setProperty("object-fit", "contain", "important");
-  });
+function row(label, value, esc) {
+    if (!value) return "";
+    return `
+    <div class="title-extra-row">
+      <div class="title-extra-label">${esc(label)}</div>
+      <div class="title-extra-value">${esc(value)}</div>
+    </div>`;
 }
 
-function stopAkiraContainObserver() {
-  if (__akiraContainObserver) {
-    try {
-      __akiraContainObserver.disconnect();
-    } catch { }
-    __akiraContainObserver = null;
-  }
+function isPositiveIntegerLike(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 1 && Number.isInteger(n);
 }
 
-function startAkiraContainObserver() {
-  stopAkiraContainObserver();
-
-  const root = getRootEl?.() || document.body || document.documentElement;
-  if (!root) return;
-
-  __akiraContainObserver = new MutationObserver(() => {
-    if (!__akiraContainEnabled) return;
-    applyContainInlineToMountedNodes();
-  });
-
-  __akiraContainObserver.observe(root, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["class", "style"]
-  });
+function isUuidLike(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || "").trim());
 }
 
-function setAkiraContainMode(enabled) {
-  __akiraContainEnabled = !!enabled;
+function renderTitleNotFound() {
+    document.title = "Título no encontrado · SATV+";
 
-  if (!__akiraContainEnabled) {
-    stopAkiraContainObserver();
-    disableAkiraContainCss();
-    return;
-  }
+    const hero = el("hero");
+    const episodesSection = el("episodes-section");
+    const moreSection = el("more-section");
+    const moreGrid = el("more-grid");
+    const extraEl = el("title-extra");
+    const collectionSection = document.getElementById("collection-section");
 
-  enableAkiraContainCss();
-  applyContainInlineToMountedNodes();
-  startAkiraContainObserver();
-}
-
-function resolveSeriesIdForAkiraContain({
-  movieId = null,
-  episodeId = null,
-  seriesId = null
-} = {}) {
-  // La regla que pediste es por series=<uuid>
-  // pero también la aplicamos si estás viendo un episode de esa misma serie.
-  return seriesId || null;
-}
-
-/* ============================================================
- * Esquema DB
- * ============================================================ */
-const DB = {
-  movies: {
-    table: "movies",
-    cols: {
-      id: "id",
-      title: "title",
-      description: "description",
-      thumbnail: "thumbnail_url",
-      banner: "banner_url",
-      m3u8: "m3u8_url",
-      category: "category",
-      createdAt: "created_at",
-      vtt: "vtt_url",
-      durationMinutes: "duration_minutes",
-      releaseYear: "release_year",
-      liveMode: "live_mode",
-      liveStartsAt: "live_starts_at",
-      collectionId: "collection_id"
-    }
-  },
-  episodes: {
-    table: "episodes",
-    cols: {
-      id: "id",
-      seriesId: "series_id",
-      season: "season",
-      episodeNumber: "episode_number",
-      title: "title",
-      m3u8: "m3u8_url",
-      createdAt: "created_at",
-      vtt: "vtt_url",
-      sinopsis: "sinopsis"
-    }
-  },
-  collections: {
-    table: "collections",
-    cols: {
-      id: "id",
-      title: "title",
-      description: "description",
-      thumbnail: "thumbnail_url",
-      banner: "banner_url",
-      createdAt: "created_at"
-    }
-  }
-};
-
-/* ============================================================
- * Logs
- * ============================================================ */
-function debugLog(...args) {
-  if (DEBUG) console.log(...args);
-}
-function warnLog(...args) {
-  console.warn(...args);
-}
-function infoLog(...args) {
-  console.log(...args);
-}
-
-/* ============================================================
- * UI helpers
- * ============================================================ */
-function getRootEl() {
-  return document.getElementById(ROOT_ID) || document.body;
-}
-
-function showWatchLoadingOverlay(text = "") {
-  try {
-    if (typeof window.showWatchLoadingOverlay === "function") {
-      window.showWatchLoadingOverlay(text);
-      return true;
-    }
-  } catch { }
-  return false;
-}
-
-function hideWatchLoadingOverlay() {
-  try {
-    if (typeof window.hideWatchLoadingOverlay === "function") {
-      window.hideWatchLoadingOverlay();
-      return true;
-    }
-  } catch { }
-  return false;
-}
-
-function setLoading() {
-  const usedGlobalOverlay = showWatchLoadingOverlay("");
-
-  if (usedGlobalOverlay) {
-    const root = getRootEl();
-    if (root) root.innerHTML = "";
-    return;
-  }
-
-  const root = getRootEl();
-  root.innerHTML = `
-    <div style="
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:#000;
-      box-sizing:border-box;
-    ">
-      <div style="
+    if (hero) {
+        hero.style.backgroundImage = "none";
+        hero.innerHTML = `
+      <div class="title-not-found" style="
+        min-height: 52vh;
         display:flex;
-        flex-direction:column;
         align-items:center;
         justify-content:center;
-        gap:14px;
-        font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-        color:#2563eb;
+        padding:32px 20px;
       ">
         <div style="
-          width:84px;
-          height:84px;
-          border-radius:999px;
-          border:5px solid rgba(37, 100, 235, 0);
-          border-top-color:#2563eb;
-          animation:satv-spin .8s linear infinite;
-        "></div>
-        <div style="font-size:12px;opacity:.9;"></div>
+          width:min(720px, 100%);
+          text-align:center;
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          gap:16px;
+        ">
+          <h1 style="
+            margin:0;
+            font-size:clamp(28px, 4vw, 46px);
+            line-height:1.05;
+            font-weight:800;
+          ">Oops. Título no encontrado</h1>
+
+          <p style="
+            margin:0;
+            font-size:16px;
+            line-height:1.55;
+            opacity:.92;
+            max-width:560px;
+          ">
+            Puedes explorar nuestro catálogo haciendo click aquí.
+          </p>
+
+          <button
+            type="button"
+            id="title-not-found-btn"
+            style="
+              margin-top:8px;
+              border:0;
+              border-radius:999px;
+              padding:14px 22px;
+              font-size:15px;
+              font-weight:700;
+              cursor:pointer;
+            "
+          >
+            Ir al catálogo
+          </button>
+        </div>
       </div>
-    </div>
-    <style>
-      @keyframes satv-spin { to { transform: rotate(360deg); } }
-    </style>
+    `;
+
+        const btn = document.getElementById("title-not-found-btn");
+        if (btn) {
+            btn.onclick = () => {
+                window.location.href = "/index.html";
+            };
+        }
+    }
+
+    if (episodesSection) episodesSection.classList.add("hidden");
+    if (collectionSection) collectionSection.classList.add("hidden");
+    if (moreSection) moreSection.classList.add("hidden");
+    if (moreGrid) moreGrid.innerHTML = "";
+    if (extraEl) {
+        extraEl.innerHTML = "";
+        extraEl.classList.add("hidden");
+    }
+}
+
+/* ===========================
+   Episode title wrapped font helper
+=========================== */
+
+let __episodeTitleWrappedRaf = 0;
+
+function applyCondensedFontToWrappedEpisodeTitles(root = document) {
+    const titles = root.querySelectorAll("h4.episode-title");
+
+    titles.forEach((title) => {
+        title.classList.remove("episode-title--wrapped");
+        title.style.removeProperty("font-family");
+
+        const style = window.getComputedStyle(title);
+
+        let lineHeight = parseFloat(style.lineHeight);
+        if (!Number.isFinite(lineHeight) || lineHeight <= 0) {
+            const fontSize = parseFloat(style.fontSize) || 16;
+            lineHeight = fontSize * 1.2;
+        }
+
+        const scrollHeight = title.scrollHeight;
+        const clientHeight = title.clientHeight;
+        const rectHeight = title.getBoundingClientRect().height;
+        const renderedHeight = Math.max(scrollHeight, clientHeight, rectHeight);
+
+        if (!Number.isFinite(renderedHeight) || renderedHeight <= 0) return;
+
+        const isWrapped = renderedHeight > (lineHeight * 1.35);
+
+        if (isWrapped) {
+            title.classList.add("episode-title--wrapped");
+            title.style.setProperty("font-family", "HBOMaxSansCond", "important");
+        }
+    });
+}
+
+function scheduleApplyCondensedFontToWrappedEpisodeTitles(root = document) {
+    if (__episodeTitleWrappedRaf) {
+        cancelAnimationFrame(__episodeTitleWrappedRaf);
+    }
+
+    __episodeTitleWrappedRaf = requestAnimationFrame(() => {
+        __episodeTitleWrappedRaf = requestAnimationFrame(() => {
+            __episodeTitleWrappedRaf = 0;
+            applyCondensedFontToWrappedEpisodeTitles(root);
+        });
+    });
+}
+
+/* ===========================
+   AKIRA VIDEO OVERRIDE
+=========================== */
+
+const AKIRA_SERIES_ID = "d54c717b-c713-41bb-91cb-a9a2a302d44a";
+const AKIRA_VIDEO_STYLE_ID = "akira-video-contain-override";
+
+function shouldApplyAkiraVideoContainOverride(currentId) {
+    return String(currentId || "").trim() === AKIRA_SERIES_ID;
+}
+
+function applyAkiraVideoContainOverrideIfNeeded(currentId) {
+    const styleId = AKIRA_VIDEO_STYLE_ID;
+    let styleEl = document.getElementById(styleId);
+
+    if (!shouldApplyAkiraVideoContainOverride(currentId)) {
+        if (styleEl) styleEl.remove();
+        return;
+    }
+
+    if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = styleId;
+        document.head.appendChild(styleEl);
+    }
+
+    styleEl.textContent = `
+      .akira-video {
+        object-fit: contain !important;
+      }
+    `;
+}
+
+function resolveAkiraOverrideTargetId() {
+    const fromSeries = qs("series");
+    if (fromSeries) return fromSeries;
+
+    const fromTitle = qs("title") || qs("movie");
+    if (fromTitle) return fromTitle;
+
+    return "";
+}
+
+/* ===========================
+   PUBLISH STATE (movies.publish_state)
+=========================== */
+
+function getMoviePublishState(movie) {
+    const raw = String(movie?.publish_state || "public").toLowerCase();
+    if (["public", "upcoming", "live", "other"].includes(raw)) return raw;
+    return "public";
+}
+
+function getMoviePublishStateLabel(movie) {
+    const state = getMoviePublishState(movie);
+    const custom = String(movie?.publish_state_text || "").trim();
+
+    if (state === "public") return "Público";
+    if (state === "upcoming") return custom || "Próximamente";
+    if (state === "live") return "En Vivo";
+    if (state === "other") return custom || "Otro";
+
+    return "Público";
+}
+
+/* ===========================
+   SERIES COUNTS (robusto desde episodes)
+=========================== */
+
+function deriveSeriesCountsFromEpisodes(episodes) {
+    const list = Array.isArray(episodes) ? episodes : [];
+
+    const seasonSet = new Set();
+    let episodesCount = 0;
+
+    for (const ep of list) {
+        episodesCount += 1;
+
+        const seasonRaw = ep?.season;
+        if (seasonRaw !== null && seasonRaw !== undefined && seasonRaw !== "") {
+            seasonSet.add(String(seasonRaw));
+        }
+    }
+
+    return {
+        seasonsCount: seasonSet.size,
+        episodesCount
+    };
+}
+
+function resolveSeriesCounts(movie, episodes) {
+    const fromEpisodes = deriveSeriesCountsFromEpisodes(episodes);
+    const mm = movie?.movie_meta || null;
+
+    const metaSeasons = Number(mm?.seasons_count);
+    const metaEpisodes = Number(mm?.episodes_count);
+
+    const seasonsCount = fromEpisodes.seasonsCount >= 1
+        ? fromEpisodes.seasonsCount
+        : (isPositiveIntegerLike(metaSeasons) ? metaSeasons : 0);
+
+    const episodesCount = fromEpisodes.episodesCount >= 1
+        ? fromEpisodes.episodesCount
+        : (isPositiveIntegerLike(metaEpisodes) ? metaEpisodes : 0);
+
+    return {
+        seasonsCount,
+        episodesCount
+    };
+}
+
+function formatSeriesMetaFromCounts({ seasonsCount, episodesCount }) {
+    if (Number.isFinite(seasonsCount) && seasonsCount >= 2) {
+        return `${seasonsCount} ${plural(seasonsCount, "temporada", "temporadas")}`;
+    }
+
+    if (Number.isFinite(seasonsCount) && seasonsCount === 1) {
+        if (Number.isFinite(episodesCount) && episodesCount === 1) return "1 episodio";
+        if (Number.isFinite(episodesCount) && episodesCount >= 2) return `${episodesCount} episodios`;
+        return "";
+    }
+
+    if (Number.isFinite(episodesCount) && episodesCount === 1) return "1 episodio";
+    if (Number.isFinite(episodesCount) && episodesCount >= 2) return `${episodesCount} episodios`;
+
+    return "";
+}
+
+/* ===========================
+   TE PODRÍA GUSTAR: helpers
+=========================== */
+
+function shortenTitle(raw) {
+    const s = String(raw || "").trim();
+    if (!s) return "";
+
+    const m = s.match(/\s(?:-|—|:|\|)\s/);
+    if (!m) return s;
+
+    const idx = m.index ?? -1;
+    if (idx <= 0) return s;
+
+    const left = s.slice(0, idx).trim();
+    const right = s.slice(idx + m[0].length).trim();
+
+    const wordsLeft = left.split(/\s+/).filter(Boolean);
+    const wordsRight = right.split(/\s+/).filter(Boolean);
+
+    const leftLooksBrandish =
+        wordsLeft.length <= 1 ||
+        /[%]/.test(left) ||
+        /^[A-Z0-9%]+$/.test(left.replace(/\s+/g, ""));
+
+    const rightLooksSubtitle = wordsRight.length >= 3;
+
+    if (leftLooksBrandish || !rightLooksSubtitle) {
+        return s;
+    }
+
+    return left;
+}
+
+function formatSeriesMeta(movie) {
+    const counts = resolveSeriesCounts(movie, movie?.__episodes_for_meta || []);
+    return formatSeriesMetaFromCounts(counts);
+}
+
+function getMoreMetaLine(movie) {
+    const year = movie.release_year ? String(movie.release_year) : "";
+    let right = "";
+
+    if (movie.category === "movie") right = formatDuration(movie.duration_minutes);
+    else if (movie.category === "series") right = formatSeriesMeta(movie);
+    else right = formatDuration(movie.duration_minutes);
+
+    return [year, right].filter(Boolean).join(" · ");
+}
+
+/* ===========================
+   Episodes helpers
+=========================== */
+
+function pickEpisodeThumb(ep) {
+    return ep?.thumbnail_episode || ep?.thumb || "";
+}
+
+function groupBySeason(episodes) {
+    const map = new Map();
+
+    for (const ep of episodes || []) {
+        const seasonValue = ep?.season;
+        const s = (seasonValue !== null && seasonValue !== undefined) ? seasonValue : 1;
+
+        if (!map.has(s)) map.set(s, []);
+        map.get(s).push(ep);
+    }
+
+    for (const [, list] of map) {
+        list.sort((a, b) => (a.episode_number ?? 0) - (b.episode_number ?? 0));
+    }
+
+    return [...map.entries()].sort((a, b) => {
+        const na = Number(a[0]);
+        const nb = Number(b[0]);
+
+        if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+        return String(a[0]).localeCompare(String(b[0]), "es");
+    });
+}
+
+function clampSeason(seasons, desired) {
+    if (!seasons?.length) return seasons?.[0] ?? 1;
+    if (seasons.includes(desired)) return desired;
+    return seasons[0];
+}
+
+function scrollToEpisodes() {
+    const target = el("episodes-section");
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ===========================
+   Episode progress helpers
+=========================== */
+
+function clampProgressPercent(progressSeconds, durationSeconds) {
+    const progress = Number(progressSeconds || 0);
+    const duration = Number(durationSeconds || 0);
+
+    if (!Number.isFinite(progress) || !Number.isFinite(duration) || duration <= 0) {
+        return 0;
+    }
+
+    const pct = (progress / duration) * 100;
+    return Math.max(0, Math.min(100, pct));
+}
+
+async function fetchEpisodeProgressMapForTitle({ movieId }) {
+    if (!movieId) return new Map();
+
+    try {
+        const supabase = await getAppSupabaseClient();
+        if (!supabase) {
+            console.warn("[title] supabaseClient.js no devolvió supabase (episode progress map)");
+            return new Map();
+        }
+
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        if (userErr) {
+            console.warn("[title] getUser error (episode progress map):", userErr);
+            return new Map();
+        }
+
+        const userId = userData?.user?.id;
+        if (!userId) {
+            console.log("[title] sin sesión activa (episode progress map)");
+            return new Map();
+        }
+
+        const { data, error } = await supabase
+            .from("watch_progress")
+            .select(`
+                episode_id,
+                progress_seconds,
+                duration_seconds,
+                updated_at
+            `)
+            .eq("user_id", userId)
+            .eq("movie_id", movieId)
+            .not("episode_id", "is", null)
+            .gt("progress_seconds", 0)
+            .order("updated_at", { ascending: false });
+
+        if (error) {
+            console.warn("[title] watch_progress map query error:", error);
+            return new Map();
+        }
+
+        const map = new Map();
+
+        for (const row of data || []) {
+            const episodeId = row?.episode_id;
+            if (!episodeId) continue;
+            if (map.has(episodeId)) continue;
+
+            const percent = clampProgressPercent(row.progress_seconds, row.duration_seconds);
+
+            map.set(episodeId, {
+                episodeId,
+                progressSeconds: Number(row.progress_seconds || 0),
+                durationSeconds: Number(row.duration_seconds || 0),
+                percent,
+                updatedAt: row.updated_at || null
+            });
+        }
+
+        console.log("[title] progress map episodios:", map);
+        return map;
+    } catch (e) {
+        console.warn("[title] fetchEpisodeProgressMapForTitle error:", e);
+        return new Map();
+    }
+}
+
+/** Card HTML (episodes) */
+function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
+    const thumb = pickEpisodeThumb(ep) || fallbackThumb;
+
+    const s = ep.season ?? "";
+    const n = ep.episode_number ?? "";
+
+    const tag = (s !== "" && s != null && n !== "" && n != null)
+        ? `T${s}E${n}`
+        : (n !== "" && n != null)
+            ? `E${n}`
+            : (s !== "" && s != null)
+                ? `T${s}`
+                : "";
+
+    const epTitleText = tag ? `${tag} ${ep.title || ""}`.trim() : (ep.title || "");
+    const epTitle = esc(epTitleText);
+
+    const progress = progressMap?.get?.(ep.id) || null;
+    const progressPercent = Math.max(0, Math.min(100, Number(progress?.percent || 0)));
+    const hasProgress = progressPercent > 0;
+
+    return `
+    <article class="episode-card" tabindex="0" role="link" data-episode="${ep.id}">
+      <img class="episode-thumb" src="${esc(thumb)}" alt="">
+      ${hasProgress ? `
+        <div class="episode-progress" aria-hidden="true">
+          <div class="episode-progress-bar" style="width:${progressPercent}%;"></div>
+        </div>
+      ` : ""}
+      <div class="episode-body"> 
+        <h4 class="episode-title">${epTitle}</h4>
+        <span class="episode-sub">${esc(ep.sinopsis || "")}</span>
+      </div>
+    </article>
   `;
 }
 
-function setError(message, details = "") {
-  hideWatchLoadingOverlay();
-
-  const root = getRootEl();
-  root.innerHTML = `
-    <div style="
-      min-height:100vh;display:flex;align-items:center;justify-content:center;
-      background:#000;color:#fff;padding:24px;box-sizing:border-box;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    ">
-      <div style="
-        width:min(920px,100%);
-        background:rgba(120,20,20,.22);
-        border:1px solid rgba(255,80,80,.25);
-        border-radius:14px;padding:18px;
-      ">
-        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Error al cargar reproducción</div>
-        <div style="opacity:.95;margin-bottom:10px;">${escapeHtml(message)}</div>
-        ${details
-      ? `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;padding:12px;border-radius:10px;background:rgba(0,0,0);border:1px solid rgba(255,255,255,.08);font-size:12px;line-height:1.35;opacity:.95;">${escapeHtml(details)}</pre>`
-      : ""
-    }
-      </div>
-    </div>
-  `;
-}
-
-function escapeHtml(str) {
-  return String(str ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function setDocumentTitle(name) {
-  document.title = name ? `${name} · SATV+` : "SATV+";
-}
-
-function requireRenderBridge() {
-  if (typeof window.renderAkiraPlayer !== "function") {
-    throw new Error("No existe window.renderAkiraPlayer(props) en watch.html");
-  }
-}
-
-function getAssetBaseUrl() {
-  return (
-    document.body?.dataset?.assetBase ||
-    window.AKIRA_ASSET_BASE ||
-    DEFAULT_ASSET_BASE
-  );
-}
-
-/* ============================================================
- * LIVE helpers
- * ============================================================ */
-function getLiveStartDateFromRow(row, keyName = "live_starts_at") {
-  if (!row) return null;
-  const raw =
-    row[keyName] ??
-    row.live_starts_at ??
-    row.live_start_at ??
-    row.live_datetime ??
-    row.live_at ??
-    null;
-
-  if (!raw) return null;
-  const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function isUpcomingLiveFromRow(
-  row,
-  { liveModeKey = "live_mode", liveStartsAtKey = "live_starts_at" } = {}
-) {
-  const isLive = Boolean(row?.[liveModeKey] ?? row?.live_mode);
-  if (!isLive) return false;
-  const d = getLiveStartDateFromRow(row, liveStartsAtKey);
-  if (!d) return false;
-  return d.getTime() > Date.now();
-}
-
-/* ============================================================
- * Params / helpers
- * ============================================================ */
-function getParams() {
-  const url = new URL(window.location.href);
-  return {
-    movieId: url.searchParams.get("movie"),
-    episodeId: url.searchParams.get("episode"),
-    seriesId: url.searchParams.get("series"),
-    collectionId: url.searchParams.get("collection"),
-    autoplay: url.searchParams.get("autoplay") !== "0",
-    forceThumbsLocal: url.searchParams.get("forceThumbsLocal") === "1",
-    probe: url.searchParams.get("probe") !== "0"
-  };
-}
-
-function buildWatchUrl(params) {
-  const url = new URL(window.location.href);
-  url.search = "";
-  for (const [k, v] of Object.entries(params)) {
-    if (v != null && v !== "") url.searchParams.set(k, String(v));
-  }
-  return url.toString();
-}
-
-function isUuid(v) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    String(v || "")
-  );
-}
-
-function safeArray(v) {
-  return Array.isArray(v) ? v : [];
-}
-
-function isLikelyAbsoluteUrl(url) {
-  return /^https?:\/\//i.test(String(url || ""));
-}
-
-function proxifyRemoteUrl(url) {
-  if (!url) return undefined;
-  const s = String(url).trim();
-  return s || undefined;
-}
-
-function isThumbsVtt(url) {
-  const s = String(url || "").toLowerCase();
-  return (
-    s.includes("thumbs.vtt") || s.includes("thumbnail") || s.includes("thumbnails")
-  );
-}
-
-function isLocalhostPage() {
-  return location.hostname === "localhost" || location.hostname === "127.0.0.1";
-}
-
-function normalizeSubtitlesFromVtt(vttUrlFromSupabase) {
-  if (!vttUrlFromSupabase) return [];
-  if (isThumbsVtt(vttUrlFromSupabase)) return [];
-
-  const src = proxifyRemoteUrl(vttUrlFromSupabase);
-  if (!src) return [];
-
-  return [
-    {
-      src,
-      srclang: "es",
-      label: "Español",
-      default: true
-    }
-  ];
-}
-
-function computeThumbnailsVtt(vttUrlFromSupabase, { allowOnLocal = false } = {}) {
-  if (!vttUrlFromSupabase) return undefined;
-  if (!isThumbsVtt(vttUrlFromSupabase)) return undefined;
-
-  const canUse = allowOnLocal || !isLocalhostPage();
-  if (!canUse) return undefined;
-
-  return proxifyRemoteUrl(vttUrlFromSupabase);
-}
-
-function withTimeout(promise, ms, label = "Operación") {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} excedió ${ms}ms`)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-}
-
-/* ============================================================
- * Render/Ready bridge helpers
- * ============================================================ */
-function isPromiseLike(v) {
-  return (
-    !!v &&
-    (typeof v === "object" || typeof v === "function") &&
-    typeof v.then === "function"
-  );
-}
-
-async function awaitAkiraReadyAfterRender(renderResult, opts = {}) {
-  const waitOpts = {
-    timeoutMs: 45000,
-    autoplayRetry: true,
-    requireCustomReadyEvent: true,
-    ...opts
-  };
-
-  let readyPromise = null;
-
-  if (renderResult && isPromiseLike(renderResult.readyPromise)) {
-    readyPromise = renderResult.readyPromise;
-  } else if (isPromiseLike(renderResult)) {
-    readyPromise = renderResult;
-  } else if (typeof window.waitForCurrentAkiraPlaybackReady === "function") {
-    readyPromise = window.waitForCurrentAkiraPlaybackReady(waitOpts);
-  } else if (typeof window.waitForAkiraPlaybackReady === "function") {
-    readyPromise = window.waitForAkiraPlaybackReady(waitOpts);
-  }
-
-  if (!readyPromise) {
-    warnLog("[watch] No hay helper de wait READY disponible en watch.html");
-    return null;
-  }
-
-  const info = await readyPromise;
-  return info || null;
-}
-
-/* ============================================================
- * Probes
- * ============================================================ */
-async function probeM3u8(url) {
-  if (!url || !isLikelyAbsoluteUrl(url) || !/\.m3u8(\?|#|$)|\.mpd(\?|#|$)/i.test(url)) return;
-
-  try {
-    infoLog("[watch][probe] Probing stream:", url);
-
-    const res = await fetch(url, {
-      method: "GET",
-      mode: "cors",
-      cache: "no-store"
+/** Bind navigation (episodes) */
+function bindEpisodeCardNavigation(rootEl, movieId) {
+    rootEl.querySelectorAll(".episode-card").forEach(card => {
+        const go = () => {
+            const epId = card.dataset.episode;
+            window.location.href = `/watch?series=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(epId)}`;
+        };
+        card.addEventListener("click", go);
+        card.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); }
+        });
     });
-
-    const text = await res.text();
-    const lines = text.split("\n").slice(0, 10).join("\n");
-
-    infoLog("[watch][probe] stream response:", {
-      ok: res.ok,
-      status: res.status,
-      type: res.type,
-      redirected: res.redirected,
-      finalUrl: res.url,
-      contentType: res.headers.get("content-type"),
-      firstLines: lines
-    });
-  } catch (e) {
-    console.error("[watch][probe] stream fetch error:", {
-      message: e?.message || String(e),
-      name: e?.name || null,
-      url
-    });
-  }
 }
 
-async function probeVtt(url) {
-  if (!url || !isLikelyAbsoluteUrl(url)) return;
+/* ===========================
+   WATCH BUTTON: Reproducir / Reanudar / Countdown Live / Status
+=========================== */
 
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      mode: "cors",
-      cache: "no-store"
-    });
-    const text = await res.text();
+let __liveCountdownTimer = null;
+const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
 
-    infoLog("[watch][probe] vtt response:", {
-      url,
-      ok: res.ok,
-      status: res.status,
-      contentType: res.headers.get("content-type"),
-      firstLines: text.split("\n").slice(0, 6).join("\n")
-    });
-  } catch (e) {
-    console.error("[watch][probe] vtt fetch error:", {
-      message: e?.message || String(e),
-      name: e?.name || null,
-      url
-    });
-  }
-}
-
-/* ============================================================
- * Supabase queries
- * ============================================================ */
-async function fetchMovieById(movieId) {
-  const m = DB.movies.cols;
-  const { data, error } = await withTimeout(
-    supabase
-      .from(DB.movies.table)
-      .select(
-        [
-          m.id,
-          m.title,
-          m.description,
-          m.thumbnail,
-          m.banner,
-          m.m3u8,
-          m.category,
-          m.createdAt,
-          m.vtt,
-          m.durationMinutes,
-          m.releaseYear,
-          m.liveMode,
-          m.liveStartsAt,
-          m.collectionId
-        ].join(",")
-      )
-      .eq(m.id, movieId)
-      .single(),
-    15000,
-    "fetchMovieById"
-  );
-
-  if (error) throw error;
-  return data;
-}
-
-async function fetchSeriesById(seriesId) {
-  const m = DB.movies.cols;
-  const { data, error } = await withTimeout(
-    supabase
-      .from(DB.movies.table)
-      .select(
-        [
-          m.id,
-          m.title,
-          m.description,
-          m.thumbnail,
-          m.banner,
-          m.category,
-          m.vtt,
-          m.liveMode,
-          m.liveStartsAt
-        ].join(",")
-      )
-      .eq(m.id, seriesId)
-      .eq(m.category, "series")
-      .single(),
-    15000,
-    "fetchSeriesById"
-  );
-
-  if (error) throw error;
-  return data;
-}
-
-async function fetchEpisodeById(episodeId) {
-  const e = DB.episodes.cols;
-  const { data, error } = await withTimeout(
-    supabase
-      .from(DB.episodes.table)
-      .select(
-        [
-          e.id,
-          e.seriesId,
-          e.season,
-          e.episodeNumber,
-          e.title,
-          e.m3u8,
-          e.createdAt,
-          e.vtt,
-          e.sinopsis
-        ].join(",")
-      )
-      .eq(e.id, episodeId)
-      .single(),
-    15000,
-    "fetchEpisodeById"
-  );
-
-  if (error) throw error;
-  return data;
-}
-
-async function fetchEpisodesForSeries(seriesId) {
-  const e = DB.episodes.cols;
-  const { data, error } = await withTimeout(
-    supabase
-      .from(DB.episodes.table)
-      .select(
-        [e.id, e.seriesId, e.season, e.episodeNumber, e.title, e.m3u8, e.vtt, e.sinopsis].join(",")
-      )
-      .eq(e.seriesId, seriesId)
-      .order(e.season, { ascending: true })
-      .order(e.episodeNumber, { ascending: true })
-      .limit(500),
-    15000,
-    "fetchEpisodesForSeries"
-  );
-
-  if (error) throw error;
-
-  return safeArray(data).map((ep) => ({
-    id: ep[e.id],
-    title: ep[e.title] || `Episodio ${ep[e.episodeNumber] ?? ""}`.trim(),
-    synopsis: ep[e.sinopsis] || null,
-    thumbnail: null,
-    seasonNumber: ep[e.season] ?? null,
-    episodeNumber: ep[e.episodeNumber] ?? null,
-    durationSeconds: null
-  }));
-}
-
-async function fetchRecommendations(currentContentId = null) {
-  const m = DB.movies.cols;
-
-  let q = supabase
-    .from(DB.movies.table)
-    .select(
-      [m.id, m.title, m.description, m.thumbnail, m.banner, m.category, m.createdAt].join(",")
-    )
-    .order(m.createdAt, { ascending: false })
-    .limit(12);
-
-  if (currentContentId) q = q.neq(m.id, currentContentId);
-
-  const { data, error } = await withTimeout(q, 15000, "fetchRecommendations");
-
-  if (error) {
-    warnLog("[watch] recomendaciones fallback error:", error);
-    return [];
-  }
-
-  return safeArray(data).map((row) => ({
-    id: row[m.id],
-    title: row[m.title] || "Contenido",
-    poster: row[m.thumbnail] || row[m.banner] || null,
-    type: row[m.category] === "series" ? "series" : "movie",
-    synopsis: row[m.description] || null
-  }));
-}
-
-async function fetchCollectionMetaById(collectionId) {
-  if (!collectionId) return null;
-
-  const c = DB.collections.cols;
-
-  try {
-    const { data, error } = await withTimeout(
-      supabase
-        .from(DB.collections.table)
-        .select([c.id, c.title, c.description, c.thumbnail, c.banner, c.createdAt].join(","))
-        .eq(c.id, collectionId)
-        .maybeSingle(),
-      15000,
-      "fetchCollectionMetaById"
-    );
-
-    if (error) {
-      warnLog("[watch] no se pudo leer metadata de collection:", error);
-      return null;
+function clearLiveCountdownTimer() {
+    if (__liveCountdownTimer) {
+        clearInterval(__liveCountdownTimer);
+        __liveCountdownTimer = null;
     }
-
-    return data || null;
-  } catch (e) {
-    warnLog("[watch] excepción leyendo metadata de collection:", e);
-    return null;
-  }
 }
 
-async function fetchCollectionItemsFromMovies(collectionId) {
-  if (!collectionId) return [];
+function getLiveStartDate(movie) {
+    if (!movie) return null;
 
-  const m = DB.movies.cols;
+    const raw =
+        movie.live_starts_at ??
+        movie.live_start_at ??
+        movie.live_datetime ??
+        movie.live_at ??
+        null;
 
-  try {
-    const { data, error } = await withTimeout(
-      supabase
-        .from(DB.movies.table)
-        .select(
-          [
-            m.id,
-            m.title,
-            m.description,
-            m.thumbnail,
-            m.banner,
-            m.durationMinutes,
-            m.createdAt,
-            m.collectionId,
-            m.category
-          ].join(",")
-        )
-        .eq(m.collectionId, collectionId)
-        .order(m.createdAt, { ascending: true })
-        .limit(500),
-      15000,
-      "fetchCollectionItemsFromMovies"
-    );
+    if (!raw) return null;
 
-    if (error) throw error;
-
-    return safeArray(data).map((row, index) => ({
-      id: String(row[m.id]),
-      title: row[m.title] || `Contenido ${index + 1}`,
-      synopsis: row[m.description] || null,
-      thumbnail: row[m.thumbnail] || row[m.banner] || null,
-      seasonNumber: 1,
-      episodeNumber: index + 1,
-      durationSeconds: Number.isFinite(Number(row[m.durationMinutes]))
-        ? Number(row[m.durationMinutes]) * 60
-        : null
-    }));
-  } catch (e) {
-    warnLog("[watch] no se pudieron leer items desde movies.collection_id:", e);
-    return [];
-  }
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/* ============================================================
- * Mapping -> AkiraPlayer props
- * ============================================================ */
-function buildAkiraProps({
-  srcUrl,
-  poster,
-  autoplay,
-  title,
-  contentId,
-  seasonId,
-  episodeId,
-  recommendations = [],
-  episodes = [],
-  vttUrlFromSupabase,
-  allowThumbsOnLocal = false,
-  isLiveMode = false,
-  liveStartsAt = null,
-  isCollectionMode = false,
-  collectionLabel = "Colección",
-  collectionId = null
-}) {
-  const src = proxifyRemoteUrl(srcUrl);
-  const subtitles = normalizeSubtitlesFromVtt(vttUrlFromSupabase);
-  const thumbnailsVtt = computeThumbnailsVtt(vttUrlFromSupabase, {
-    allowOnLocal: allowThumbsOnLocal
-  });
-
-  const props = {
-    src,
-    poster: poster || undefined,
-    autoplay: !!autoplay,
-    title: title || "SATV+",
-    channelLabel: isLiveMode ? "SATVPlus · EN VIVO" : "SATVPlus",
-    assetBaseUrl: getAssetBaseUrl(),
-
-    contentId: contentId ?? "",
-    seasonId: seasonId ?? null,
-    episodeId: episodeId ?? null,
-
-    thumbnailsVtt,
-    subtitles,
-
-    recommendations: safeArray(recommendations),
-    episodes: safeArray(episodes),
-    recommendationsLabel: "Te podría gustar",
-
-    playlistMode: true,
-
-    isLiveMode: !!isLiveMode,
-    liveStartsAt: liveStartsAt || null,
-    streamType: isLiveMode ? "live" : "on-demand",
-    disableResumeForLive: !!isLiveMode,
-
-    isCollectionMode: !!isCollectionMode,
-    collectionLabel,
-    collectionId: collectionId || null
-  };
-
-  return props;
+function formatLiveDateEs(d) {
+    return new Intl.DateTimeFormat("es-AR", {
+        timeZone: LIVE_DISPLAY_TIMEZONE,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+    }).format(d);
 }
 
-function movieToPlayerProps(
-  movie,
-  { autoplay = true, recommendations = [], forceThumbsLocal = false } = {}
-) {
-  const m = DB.movies.cols;
-
-  const m3u8FromSupabase = movie[m.m3u8];
-  const vttFromSupabase = movie[m.vtt];
-  const isLiveMode = Boolean(movie[m.liveMode]);
-  const liveStartsAt = movie[m.liveStartsAt] || null;
-
-  const props = buildAkiraProps({
-    srcUrl: m3u8FromSupabase,
-    poster: movie[m.banner] || movie[m.thumbnail],
-    autoplay,
-    title: movie[m.title] || "SATV+",
-    contentId: movie[m.id],
-    seasonId: null,
-    episodeId: null,
-    recommendations,
-    episodes: [],
-    vttUrlFromSupabase: vttFromSupabase,
-    allowThumbsOnLocal: forceThumbsLocal,
-    isLiveMode,
-    liveStartsAt
-  });
-
-  props.onBack = () => window.history.back();
-
-  props.onSelectRecommendation = (item) => {
-    if (!item?.id) return;
-    window.location.href = buildWatchUrl(
-      item.type === "series" ? { series: item.id } : { movie: item.id }
-    );
-  };
-
-  return props;
+function formatLiveTimeEs(d) {
+    return new Intl.DateTimeFormat("es-AR", {
+        timeZone: LIVE_DISPLAY_TIMEZONE,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    }).format(d);
 }
 
-function episodeToPlayerProps(
-  episode,
-  { series, episodes, recommendations = [], autoplay = true, forceThumbsLocal = false } = {}
-) {
-  const e = DB.episodes.cols;
-  const m = DB.movies.cols;
+function formatCountdown(diffMs) {
+    const total = Math.max(0, Math.floor(diffMs / 1000));
+    const days = Math.floor(total / 86400);
+    const hours = Math.floor((total % 86400) / 3600);
+    const mins = Math.floor((total % 3600) / 60);
+    const secs = total % 60;
 
-  const seriesId = series?.[m.id] || episode[e.seriesId] || null;
-  const m3u8FromSupabase = episode[e.m3u8];
-  const vttFromSupabase = episode[e.vtt];
-  const isLiveMode = Boolean(series?.[m.liveMode]);
-  const liveStartsAt = series?.[m.liveStartsAt] || null;
+    const hh = String(hours).padStart(2, "0");
+    const mm = String(mins).padStart(2, "0");
+    const ss = String(secs).padStart(2, "0");
 
-  const props = buildAkiraProps({
-    srcUrl: m3u8FromSupabase,
-    poster: (series && (series[m.banner] || series[m.thumbnail])) || undefined,
-    autoplay,
-    title: episode[e.title] || series?.[m.title] || "SATV+",
-    contentId: seriesId || episode[e.id],
-    seasonId: episode[e.season] != null ? String(episode[e.season]) : null,
-    episodeId: episode[e.id],
-    recommendations,
-    episodes,
-    vttUrlFromSupabase: vttFromSupabase,
-    allowThumbsOnLocal: forceThumbsLocal,
-    isLiveMode,
-    liveStartsAt
-  });
-
-  props.onBack = () => window.history.back();
-
-  props.onSelectEpisode = (selectedEpisodeId) => {
-    if (!selectedEpisodeId) return;
-    window.location.href = buildWatchUrl({
-      series: seriesId,
-      episode: selectedEpisodeId
-    });
-  };
-
-  props.onSelectRecommendation = (item) => {
-    if (!item?.id) return;
-    window.location.href = buildWatchUrl(
-      item.type === "series" ? { series: item.id } : { movie: item.id }
-    );
-  };
-
-  return props;
+    return days > 0 ? `${days}d ${hh}:${mm}:${ss}` : `${hh}:${mm}:${ss}`;
 }
 
-function collectionMovieToPlayerProps(
-  movie,
-  {
-    collectionId,
-    collectionItems = [],
-    recommendations = [],
-    autoplay = true,
-    forceThumbsLocal = false,
-    collectionMeta = null
-  } = {}
-) {
-  const m = DB.movies.cols;
-  const c = DB.collections.cols;
+function ensureWatchBtnCountdownBlocker(watchBtn) {
+    if (!watchBtn || watchBtn.dataset.liveCountdownBlockerBound === "1") return;
 
-  const m3u8FromSupabase = movie[m.m3u8];
-  const vttFromSupabase = movie[m.vtt];
-  const isLiveMode = Boolean(movie[m.liveMode]);
-  const liveStartsAt = movie[m.liveStartsAt] || null;
-
-  const posterFromCollection =
-    collectionMeta?.[c?.banner] ||
-    collectionMeta?.[c?.thumbnail] ||
-    null;
-
-  const props = buildAkiraProps({
-    srcUrl: m3u8FromSupabase,
-    poster: movie[m.banner] || movie[m.thumbnail] || posterFromCollection,
-    autoplay,
-    title: movie[m.title] || "SATV+",
-    contentId: movie[m.id],
-    seasonId: collectionId || null,
-    episodeId: movie[m.id],
-    recommendations,
-    episodes: collectionItems,
-    vttUrlFromSupabase: vttFromSupabase,
-    allowThumbsOnLocal: forceThumbsLocal,
-    isLiveMode,
-    liveStartsAt,
-    isCollectionMode: true,
-    collectionLabel: collectionMeta?.[c?.title] || "Colección",
-    collectionId
-  });
-
-  props.onBack = () => window.history.back();
-
-  props.onSelectEpisode = (selectedMovieId) => {
-    if (!selectedMovieId || !collectionId) return;
-    window.location.href = buildWatchUrl({
-      collection: collectionId,
-      movie: selectedMovieId
-    });
-  };
-
-  props.onSelectRecommendation = (item) => {
-    if (!item?.id) return;
-    window.location.href = buildWatchUrl(
-      item.type === "series" ? { series: item.id } : { movie: item.id }
-    );
-  };
-
-  return props;
+    watchBtn.dataset.liveCountdownBlockerBound = "1";
+    watchBtn.addEventListener("click", (ev) => {
+        const mode = watchBtn.dataset.mode;
+        if (mode === "countdown" || mode === "status-disabled") {
+            ev.preventDefault();
+            ev.stopPropagation();
+        }
+    }, { passive: false });
 }
 
-/* ============================================================
- * Route resolver
- * ============================================================ */
-async function resolveRouteAndBuildProps() {
-  const {
-    movieId,
-    episodeId,
-    seriesId,
-    collectionId,
-    autoplay,
-    forceThumbsLocal,
-    probe
-  } = getParams();
-
-  const m = DB.movies.cols;
-  const e = DB.episodes.cols;
-  const c = DB.collections.cols;
-
-  // ?collection=<uuid>&movie=<uuid>
-  if (collectionId && movieId) {
-    if (!isUuid(collectionId)) {
-      throw new Error("Parámetro ?collection inválido (UUID esperado)");
-    }
-
-    if (!isUuid(movieId)) {
-      throw new Error("Parámetro ?movie inválido (UUID esperado)");
-    }
-
-    const movie = await fetchMovieById(movieId);
-    if (!movie) throw new Error("No se encontró el contenido de la colección");
-    if (!movie[m.m3u8]) throw new Error("El contenido no tiene m3u8_url");
-
-    const [collectionMeta, collectionItems, recommendations] = await Promise.all([
-      fetchCollectionMetaById(collectionId),
-      fetchCollectionItemsFromMovies(collectionId),
-      fetchRecommendations(movie[m.id])
-    ]);
-
-    const safeCollectionItems = collectionItems.length
-      ? collectionItems
-      : [{
-        id: String(movie[m.id]),
-        title: movie[m.title] || "Contenido actual",
-        synopsis: movie[m.description] || null,
-        thumbnail: movie[m.thumbnail] || movie[m.banner] || null,
-        seasonNumber: 1,
-        episodeNumber: 1,
-        durationSeconds: Number.isFinite(Number(movie[m.durationMinutes]))
-          ? Number(movie[m.durationMinutes]) * 60
-          : null
-      }];
-
-    if (probe) {
-      probeM3u8(movie[m.m3u8]);
-      if (movie[m.vtt]) probeVtt(movie[m.vtt]);
-    }
-
-    const liveStartsAtDate = getLiveStartDateFromRow(movie, m.liveStartsAt);
-    const liveGate = {
-      enabled: Boolean(movie[m.liveMode]),
-      isUpcoming: isUpcomingLiveFromRow(movie, {
-        liveModeKey: m.liveMode,
-        liveStartsAtKey: m.liveStartsAt
-      }),
-      startsAt: liveStartsAtDate,
-      title: collectionMeta?.[c.title] || movie[m.title] || "Colección"
-    };
-
-    return {
-      title: collectionMeta?.[c.title] || movie[m.title] || "Colección",
-      props: collectionMovieToPlayerProps(movie, {
-        collectionId,
-        collectionItems: safeCollectionItems,
-        recommendations,
-        autoplay,
-        forceThumbsLocal,
-        collectionMeta
-      }),
-      liveGate,
-      akiraContainSeriesId: null
-    };
-  }
-
-  // ?movie=<uuid>
-  if (movieId) {
-    if (!isUuid(movieId)) {
-      throw new Error("Parámetro ?movie inválido (UUID esperado)");
-    }
-
-    const movie = await fetchMovieById(movieId);
-    if (!movie) throw new Error("No se encontró la película");
-
-    if (movie[m.category] !== "movie") {
-      if (movie[m.category] === "series") {
-        window.location.replace(buildWatchUrl({ series: movie[m.id] }));
-        return null;
-      }
-      throw new Error("El contenido de ?movie no es una película");
-    }
-
-    if (!movie[m.m3u8]) throw new Error("La película no tiene m3u8_url");
-
-    const recommendations = await fetchRecommendations(movie[m.id]);
-
-    if (probe) {
-      probeM3u8(movie[m.m3u8]);
-      if (movie[m.vtt]) probeVtt(movie[m.vtt]);
-    }
-
-    const liveStartsAtDate = getLiveStartDateFromRow(movie, m.liveStartsAt);
-    const liveGate = {
-      enabled: Boolean(movie[m.liveMode]),
-      isUpcoming: isUpcomingLiveFromRow(movie, {
-        liveModeKey: m.liveMode,
-        liveStartsAtKey: m.liveStartsAt
-      }),
-      startsAt: liveStartsAtDate,
-      title: movie[m.title] || "Contenido en vivo"
-    };
-
-    return {
-      title: movie[m.title] || "Película",
-      props: movieToPlayerProps(movie, {
-        autoplay,
-        recommendations,
-        forceThumbsLocal
-      }),
-      liveGate,
-      akiraContainSeriesId: null
-    };
-  }
-
-  // ?episode=<uuid>
-  if (episodeId) {
-    if (!isUuid(episodeId)) {
-      throw new Error("Parámetro ?episode inválido (UUID esperado)");
-    }
-
-    const episode = await fetchEpisodeById(episodeId);
-
-    if (!episode) throw new Error("No se encontró el episodio");
-    if (!episode[e.m3u8]) throw new Error("El episodio no tiene m3u8_url");
-
-    const resolvedSeriesId = seriesId || episode[e.seriesId] || null;
-
-    let series = null;
-    let episodesList = [];
-
-    if (resolvedSeriesId && isUuid(resolvedSeriesId)) {
-      try {
-        series = await fetchSeriesById(resolvedSeriesId);
-      } catch (err) {
-        warnLog("[watch] No se pudo cargar serie:", err);
-      }
-
-      try {
-        episodesList = await fetchEpisodesForSeries(resolvedSeriesId);
-      } catch (err) {
-        warnLog("[watch] No se pudo cargar lista de episodios:", err);
-      }
-    }
-
-    const recommendations = await fetchRecommendations(resolvedSeriesId || null);
-
-    if (probe) {
-      probeM3u8(episode[e.m3u8]);
-      if (episode[e.vtt]) probeVtt(episode[e.vtt]);
-    }
-
-    const title = series?.[m.title]
-      ? `${series[m.title]} · ${episode[e.title] || `E${episode[e.episodeNumber] ?? ""}`}`
-      : episode[e.title] || "Episodio";
-
-    const liveStartsAtDate = series ? getLiveStartDateFromRow(series, m.liveStartsAt) : null;
-    const liveGate = series
-      ? {
-        enabled: Boolean(series[m.liveMode]),
-        isUpcoming: isUpcomingLiveFromRow(series, {
-          liveModeKey: m.liveMode,
-          liveStartsAtKey: m.liveStartsAt
-        }),
-        startsAt: liveStartsAtDate,
-        title: series[m.title] || title
-      }
-      : null;
-
-    return {
-      title,
-      props: episodeToPlayerProps(episode, {
-        series,
-        episodes: episodesList,
-        recommendations,
-        autoplay,
-        forceThumbsLocal
-      }),
-      liveGate,
-      akiraContainSeriesId: resolvedSeriesId || null
-    };
-  }
-
-  // ?series=<uuid>
-  if (seriesId) {
-    if (!isUuid(seriesId)) {
-      throw new Error("Parámetro ?series inválido (UUID esperado)");
-    }
-
-    await fetchSeriesById(seriesId);
-
-    const episodesList = await fetchEpisodesForSeries(seriesId);
-    if (!episodesList.length) {
-      throw new Error("La serie no tiene episodios cargados");
-    }
-
-    window.location.replace(
-      buildWatchUrl({
-        series: seriesId,
-        episode: episodesList[0].id
-      })
-    );
-    return null;
-  }
-
-  throw new Error("Ruta inválida. Usá ?movie=<uuid> o ?episode=<uuid> o ?series=<uuid> o ?collection=<uuid>&movie=<uuid>");
+function clearWatchBtnCountdownUI(watchBtn) {
+    if (!watchBtn) return;
+    watchBtn.removeAttribute("aria-disabled");
+    try { watchBtn.disabled = false; } catch { }
 }
 
-/* ============================================================
- * Post-render debug del <video>
- * ============================================================ */
-function mediaErrorName(code) {
-  return (
-    {
-      1: "MEDIA_ERR_ABORTED",
-      2: "MEDIA_ERR_NETWORK",
-      3: "MEDIA_ERR_DECODE",
-      4: "MEDIA_ERR_SRC_NOT_SUPPORTED"
-    }[code] || "UNKNOWN_MEDIA_ERROR"
-  );
+function setWatchBtnVerAhora(watchBtn, movie) {
+    if (!watchBtn || !movie?.id) return;
+
+    clearLiveCountdownTimer();
+    clearWatchBtnCountdownUI(watchBtn);
+
+    const isSeries = movie.category === "series";
+    watchBtn.href = isSeries
+        ? `/watch?series=${encodeURIComponent(movie.id)}`
+        : `/watch?movie=${encodeURIComponent(movie.id)}`;
+
+    watchBtn.setAttribute("aria-label", "Reproducir");
+    watchBtn.innerHTML = `Reproducir <span aria-hidden="true">▶</span>`;
+    watchBtn.dataset.mode = "now";
 }
 
-function networkStateName(v) {
-  return (
-    {
-      0: "NETWORK_EMPTY",
-      1: "NETWORK_IDLE",
-      2: "NETWORK_LOADING",
-      3: "NETWORK_NO_SOURCE"
-    }[v] || "UNKNOWN_NETWORK_STATE"
-  );
-}
+function setWatchBtnReanudar(watchBtn, movie, p) {
+    if (!watchBtn || !movie?.id || !p) return;
 
-function readyStateName(v) {
-  return (
-    {
-      0: "HAVE_NOTHING",
-      1: "HAVE_METADATA",
-      2: "HAVE_CURRENT_DATA",
-      3: "HAVE_FUTURE_DATA",
-      4: "HAVE_ENOUGH_DATA"
-    }[v] || "UNKNOWN_READY_STATE"
-  );
-}
+    clearLiveCountdownTimer();
+    clearWatchBtnCountdownUI(watchBtn);
 
-function getMediaErrorInfo(video) {
-  const err = video?.error;
-  if (!err) return null;
-  return {
-    code: err.code ?? null,
-    codeName: mediaErrorName(err.code),
-    message: err.message || null
-  };
-}
+    const isSeries = movie.category === "series";
+    const ep = Array.isArray(p.episodes) ? (p.episodes[0] || null) : (p.episodes || null);
 
-function inspectMountedVideoLater() {
-  setTimeout(() => {
-    const root = getRootEl();
-    const video = root?.querySelector?.("video");
-    if (!video) {
-      warnLog("[watch] No se encontró <video> tras render (t+2.5s)");
-      return;
-    }
+    const season = p.season ?? ep?.season ?? "";
+    const epNum = p.episode_number ?? ep?.episode_number ?? "";
+    const epTitle = p.episode_title ?? ep?.title ?? "";
+    const elapsedSeconds = Number(p.progress_seconds ?? p.elapsed_seconds ?? p.elapsed ?? 0);
+    const elapsed = formatElapsed(elapsedSeconds);
 
-    const info = {
-      currentSrc: video.currentSrc || null,
-      srcAttr: video.getAttribute("src"),
-      readyState: video.readyState,
-      readyStateName: readyStateName(video.readyState),
-      networkState: video.networkState,
-      networkStateName: networkStateName(video.networkState),
-      paused: video.paused,
-      muted: video.muted,
-      canPlayHlsNative: video.canPlayType?.("application/vnd.apple.mpegurl") || "",
-      mediaError: getMediaErrorInfo(video)
-    };
+    const hasSeason = season !== "" && season != null;
+    const hasEpisode = epNum !== "" && epNum != null;
 
-    console.log("[watch] video debug (t+2.5s)", info);
-  }, 2500);
-
-  setTimeout(() => {
-    const root = getRootEl();
-    const video = root?.querySelector?.("video");
-    if (!video) return;
-
-    const info = {
-      currentSrc: video.currentSrc || null,
-      srcAttr: video.getAttribute("src"),
-      readyState: video.readyState,
-      readyStateName: readyStateName(video.readyState),
-      networkState: video.networkState,
-      networkStateName: networkStateName(video.networkState),
-      paused: video.paused,
-      muted: video.muted,
-      mediaError: getMediaErrorInfo(video)
-    };
-
-    console.log("[watch] video debug (t+6s)", info);
-
-    if (info.networkState === 3 && info.readyState === 0) {
-      console.error("[watch] VIDEO_STUCK_NO_SOURCE", info);
-    }
-  }, 6000);
-}
-
-/* ============================================================
- * Render pipeline
- * ============================================================ */
-async function renderAndWaitPlayer(result) {
-  window.__SATV_WATCH_LAST_RESULT__ = result;
-  window.__SATV_WATCH_LAST_PROPS__ = result.props;
-
-  const akiraContainSeriesId = resolveSeriesIdForAkiraContain({
-    movieId: getParams().movieId,
-    episodeId: getParams().episodeId,
-    seriesId: result?.akiraContainSeriesId || getParams().seriesId
-  });
-
-  setAkiraContainMode(shouldForceAkiraContain(akiraContainSeriesId));
-
-  debugLog("[watch] props finales:", result.props);
-  debugLog("[watch] src final (Supabase):", result.props?.src);
-  debugLog("[watch] thumbnailsVtt:", result.props?.thumbnailsVtt);
-  debugLog("[watch] subtitles:", result.props?.subtitles);
-  debugLog("[watch] liveGate:", result?.liveGate || null);
-  debugLog("[watch] akiraContainSeriesId:", akiraContainSeriesId);
-  debugLog("[watch] akiraContainEnabled:", shouldForceAkiraContain(akiraContainSeriesId));
-
-  setDocumentTitle(result.title);
-
-  const root = getRootEl();
-  if (root) root.innerHTML = "";
-
-  const renderResult = window.renderAkiraPlayer(result.props);
-
-  // Aplicar de nuevo por si el renderer monta/reemplaza nodos luego del render
-  if (shouldForceAkiraContain(akiraContainSeriesId)) {
-    requestAnimationFrame(() => applyContainInlineToMountedNodes());
-    setTimeout(() => applyContainInlineToMountedNodes(), 50);
-    setTimeout(() => applyContainInlineToMountedNodes(), 250);
-    setTimeout(() => applyContainInlineToMountedNodes(), 1000);
-  }
-
-  try {
-    const readyInfo = await awaitAkiraReadyAfterRender(renderResult, {
-      timeoutMs: 45000,
-      autoplayRetry: true,
-      requireCustomReadyEvent: true
-    });
-
-    window.__SATV_WATCH_LAST_READY_INFO__ = readyInfo;
-    infoLog("[watch] Akira playback ready:", readyInfo);
-
-    if (shouldForceAkiraContain(akiraContainSeriesId)) {
-      applyContainInlineToMountedNodes();
-    }
-
-    hideWatchLoadingOverlay();
-  } catch (e) {
-    warnLog("[watch] wait READY del player timeout/fallo:", e);
-  }
-
-  inspectMountedVideoLater();
-}
-
-/* ============================================================
- * Boot
- * ============================================================ */
-async function boot() {
-  try {
-    setLoading();
-
-    requireRenderBridge();
-
-    if (!supabase || typeof supabase.from !== "function") {
-      throw new Error("Cliente Supabase inválido en supabaseClient.js");
-    }
-
-    const initialParams = getParams();
-    const initialContainSeriesId = resolveSeriesIdForAkiraContain(initialParams);
-    setAkiraContainMode(shouldForceAkiraContain(initialContainSeriesId));
-
-    const result = await resolveRouteAndBuildProps();
-    if (!result) return;
-
-    await renderAndWaitPlayer(result);
-  } catch (err) {
-    console.error("[watch] boot error:", err);
-
-    const msg = err?.message || "No se pudo cargar el contenido";
-    const details =
-      typeof err === "object" && err
-        ? JSON.stringify(
-          {
-            message: err.message,
-            details: err.details || null,
-            hint: err.hint || null,
-            code: err.code || null,
-            stack: err.stack || null
-          },
-          null,
-          2
-        )
+    const tag = (hasSeason && hasEpisode)
+        ? `T${Number(season)}E${Number(epNum)}`
         : "";
 
-    setError(msg, details);
-  }
+    const meta = [tag, epTitle].filter(Boolean).join(" ").trim();
+
+    if (isSeries) {
+        watchBtn.href = p.episode_id
+            ? `/watch?series=${encodeURIComponent(movie.id)}&episode=${encodeURIComponent(p.episode_id)}`
+            : `/watch?series=${encodeURIComponent(movie.id)}`;
+    } else {
+        watchBtn.href = `/watch?movie=${encodeURIComponent(movie.id)}`;
+    }
+
+    watchBtn.setAttribute("aria-label", "Reanudar");
+    watchBtn.innerHTML =
+        `Reanudar <span aria-hidden="true">▶</span>` +
+        (meta || elapsed ? ` <span class="watch-meta">${meta}${elapsed ? ` · ${elapsed}` : ""}</span>` : "");
+    watchBtn.dataset.mode = "resume";
 }
 
-window.addEventListener("beforeunload", () => {
-  stopAkiraContainObserver();
-});
+function setWatchBtnDisabledStatus(watchBtn, label) {
+    if (!watchBtn) return;
 
-boot();
+    clearLiveCountdownTimer();
+    ensureWatchBtnCountdownBlocker(watchBtn);
+
+    watchBtn.href = "#";
+    watchBtn.dataset.mode = "status-disabled";
+    watchBtn.setAttribute("aria-disabled", "true");
+    watchBtn.setAttribute("aria-label", label || "No disponible");
+    watchBtn.innerHTML = `${label || "No disponible"}`;
+}
+
+function setWatchBtnStatusClickable(watchBtn, movie, label) {
+    if (!watchBtn || !movie?.id) return;
+
+    clearLiveCountdownTimer();
+    clearWatchBtnCountdownUI(watchBtn);
+
+    const isSeries = movie.category === "series";
+    watchBtn.href = isSeries
+        ? `/watch?series=${encodeURIComponent(movie.id)}`
+        : `/watch?movie=${encodeURIComponent(movie.id)}`;
+
+    watchBtn.dataset.mode = "status-clickable";
+    watchBtn.setAttribute("aria-label", label || "Reproducir");
+    watchBtn.innerHTML = `${label || "Reproducir"} <span aria-hidden="true">▶</span>`;
+}
+
+function setWatchBtnLiveCountdown(watchBtn, movie) {
+    clearLiveCountdownTimer();
+
+    if (!watchBtn || !movie?.id || !Boolean(movie?.live_mode)) return false;
+
+    const liveStart = getLiveStartDate(movie);
+    if (!liveStart) return false;
+
+    const targetMs = liveStart.getTime();
+    ensureWatchBtnCountdownBlocker(watchBtn);
+
+    const render = () => {
+        const nowMs = Date.now();
+        const diff = targetMs - nowMs;
+
+        if (diff <= 0) {
+            clearLiveCountdownTimer();
+            setWatchBtnVerAhora(watchBtn, movie);
+            return;
+        }
+
+        const fecha = formatLiveDateEs(liveStart);
+        const hora = formatLiveTimeEs(liveStart);
+        const countdown = formatCountdown(diff);
+
+        watchBtn.href = "#";
+        watchBtn.dataset.mode = "countdown";
+        watchBtn.setAttribute("aria-disabled", "true");
+        watchBtn.setAttribute("aria-label", `Disponible el ${fecha} a las ${hora}`);
+
+        watchBtn.innerHTML = `
+      ${fecha} - ${hora}
+      <span class="watch-meta"> · Empieza en ${countdown}</span>
+    `;
+    };
+
+    render();
+    __liveCountdownTimer = setInterval(render, 1000);
+    return true;
+}
+
+window.addEventListener("beforeunload", clearLiveCountdownTimer);
+
+/* ===========================
+   TITLE HERO TRAILER VIDEO
+=========================== */
+
+const TITLE_VOLUME_ICON_MUTE = "https://satvplus.com.ar/images/svg/heromute.svg";
+const TITLE_VOLUME_ICON_UNMUTE = "https://satvplus.com.ar/images/svg/heroon.svg";
+
+function mountTitleHeroTrailerVideo(hero, movie) {
+    if (!hero || !movie?.id) return;
+
+    const trailerUrl = String(movie?.trailer_url || "").trim();
+    if (!trailerUrl) return;
+
+    const banner = movie.banner_url || movie.thumbnail_url || "";
+
+    hero.classList.remove("hero-video-ready");
+    hero.querySelectorAll(".title-hero-media").forEach((n) => n.remove());
+    hero.querySelectorAll(".title-hero-volume-btn").forEach((n) => n.remove());
+
+    const media = document.createElement("div");
+    media.className = "title-hero-media";
+
+    const video = document.createElement("video");
+    video.className = "title-hero-video";
+    video.src = trailerUrl;
+
+    if (banner) video.poster = banner;
+
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+
+    const shade = document.createElement("div");
+    shade.className = "title-hero-video-shade";
+
+    media.appendChild(video);
+    media.appendChild(shade);
+
+    hero.prepend(media);
+
+    const volBtn = document.createElement("button");
+    volBtn.type = "button";
+    volBtn.className = "title-hero-volume-btn";
+    volBtn.setAttribute("aria-label", "Activar sonido");
+    volBtn.setAttribute("aria-pressed", "false");
+
+    const volIcon = document.createElement("img");
+    volIcon.alt = "";
+    volIcon.decoding = "async";
+    volIcon.src = TITLE_VOLUME_ICON_MUTE;
+    volBtn.appendChild(volIcon);
+
+    function syncVolumeUi() {
+        const isMuted = !!video.muted;
+        volIcon.src = isMuted ? TITLE_VOLUME_ICON_MUTE : TITLE_VOLUME_ICON_UNMUTE;
+        volBtn.setAttribute("aria-label", isMuted ? "Activar sonido" : "Silenciar");
+        volBtn.setAttribute("aria-pressed", String(!isMuted));
+        volBtn.title = isMuted ? "Activar sonido" : "Silenciar";
+    }
+
+    volBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        video.muted = !video.muted;
+        syncVolumeUi();
+
+        const p = video.play?.();
+        if (p && typeof p.catch === "function") p.catch(() => { });
+    });
+
+    hero.appendChild(volBtn);
+    syncVolumeUi();
+
+    video.addEventListener("error", () => {
+        volBtn.remove();
+        media.remove();
+        hero.classList.remove("hero-video-ready");
+        console.warn("[title] trailer hero error:", trailerUrl);
+    }, { once: true });
+
+    const showVideo = () => hero.classList.add("hero-video-ready");
+    video.addEventListener("loadeddata", showVideo, { once: true });
+    video.addEventListener("canplay", showVideo, { once: true });
+
+    requestAnimationFrame(() => {
+        const p = video.play?.();
+        if (p && typeof p.catch === "function") {
+            p.catch((err) => console.warn("[title] autoplay trailer bloqueado:", err));
+        }
+    });
+}
+
+/* ===========================
+   Continue Watching (watch_progress)
+=========================== */
+
+async function getAppSupabaseClient() {
+    const mod = await import("./supabaseClient.js");
+    return mod?.supabase || null;
+}
+
+async function fetchContinueWatchingForTitle({ movieId }) {
+    if (!movieId) return null;
+
+    try {
+        const supabase = await getAppSupabaseClient();
+        if (!supabase) {
+            console.warn("[title] supabaseClient.js no devolvió supabase");
+            return null;
+        }
+
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        if (userErr) {
+            console.warn("[title] getUser error:", userErr);
+            return null;
+        }
+
+        const userId = userData?.user?.id;
+        if (!userId) {
+            console.log("[title] sin sesión activa");
+            return null;
+        }
+
+        let { data, error } = await supabase
+            .from("watch_progress")
+            .select(`
+                movie_id,
+                episode_id,
+                progress_seconds,
+                duration_seconds,
+                updated_at,
+                episodes:episodes!watch_progress_episode_id_fkey (
+                    id,
+                    season,
+                    episode_number,
+                    title
+                )
+            `)
+            .eq("user_id", userId)
+            .eq("movie_id", movieId)
+            .gt("progress_seconds", 0)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error && String(error.message || "").toLowerCase().includes("duration_seconds")) {
+            const retry = await supabase
+                .from("watch_progress")
+                .select(`
+                    movie_id,
+                    episode_id,
+                    progress_seconds,
+                    updated_at,
+                    episodes:episodes!watch_progress_episode_id_fkey (
+                        id,
+                        season,
+                        episode_number,
+                        title
+                    )
+                `)
+                .eq("user_id", userId)
+                .eq("movie_id", movieId)
+                .gt("progress_seconds", 0)
+                .order("updated_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            data = retry.data;
+            error = retry.error;
+        }
+
+        if (error) {
+            console.warn("[title] watch_progress query error:", error);
+            return null;
+        }
+
+        if (!data) {
+            console.log("[title] sin progreso previo para este título:", movieId);
+            return null;
+        }
+
+        const progressSeconds = Number(data.progress_seconds || 0);
+        if (!Number.isFinite(progressSeconds) || progressSeconds <= 0) {
+            console.log("[title] progreso inválido:", data);
+            return null;
+        }
+
+        const ep = Array.isArray(data.episodes) ? (data.episodes[0] || null) : (data.episodes || null);
+
+        const out = {
+            ...data,
+            episodes: ep,
+            season: ep?.season ?? null,
+            episode_number: ep?.episode_number ?? null,
+            episode_title: ep?.title ?? null,
+            elapsed_seconds: progressSeconds
+        };
+
+        console.log("[title] progreso detectado:", out);
+        return out;
+    } catch (e) {
+        console.warn("[title] fetchContinueWatchingForTitle error:", e);
+        return null;
+    }
+}
+
+/* ===========================
+   MI LISTA (Supabase REAL + fallback localStorage)
+=========================== */
+
+const MY_LIST_KEY = "satv_my_list_ids";
+
+function getMyListIds() {
+    try {
+        const raw = localStorage.getItem(MY_LIST_KEY);
+        const arr = JSON.parse(raw || "[]");
+        return Array.isArray(arr) ? arr.filter(Boolean) : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveMyListIds(ids) {
+    try {
+        localStorage.setItem(MY_LIST_KEY, JSON.stringify([...new Set(ids)]));
+    } catch (e) {
+        console.warn("[title] no se pudo guardar Mi Lista local:", e);
+    }
+}
+
+function isInMyListLocal(movieId) {
+    return getMyListIds().includes(movieId);
+}
+
+function setLocalMyListMembership(movieId, added) {
+    const ids = getMyListIds();
+    const exists = ids.includes(movieId);
+
+    let next = ids;
+    if (added && !exists) next = [...ids, movieId];
+    if (!added && exists) next = ids.filter(id => id !== movieId);
+
+    saveMyListIds(next);
+    return added;
+}
+
+function toggleMyListLocal(movieId) {
+    const ids = getMyListIds();
+    const exists = ids.includes(movieId);
+
+    const next = exists
+        ? ids.filter(id => id !== movieId)
+        : [...ids, movieId];
+
+    saveMyListIds(next);
+    return !exists;
+}
+
+function setMyListBtnState(btn, movieId, opts = {}) {
+    if (!btn || !movieId) return;
+
+    const {
+        added = false,
+        pending = false,
+        source = "unknown"
+    } = opts;
+
+    btn.classList.remove("hidden");
+    btn.setAttribute("type", "button");
+    btn.setAttribute("aria-pressed", String(added));
+    btn.setAttribute("aria-label", added ? "Quitar de Mi Lista" : "Agregar a Mi Lista");
+    btn.classList.toggle("is-active", !!added);
+
+    btn.dataset.myListState = added ? "in" : "out";
+    btn.dataset.myListSource = source;
+    btn.dataset.myListPending = pending ? "1" : "0";
+
+    try { btn.disabled = !!pending; } catch { }
+
+    const nextLabel = pending
+        ? "Actualizando…"
+        : (added ? "En Mi Lista" : "Mi Lista");
+
+    const labelSpan = btn.querySelector("span");
+    if (labelSpan) {
+        labelSpan.textContent = nextLabel;
+        return;
+    }
+
+    const textNode = [...btn.childNodes].find(
+        (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0
+    );
+
+    if (textNode) {
+        textNode.textContent = ` ${nextLabel}`;
+    } else {
+        btn.appendChild(document.createTextNode(` ${nextLabel}`));
+    }
+}
+
+async function getMyListAuthContext() {
+    try {
+        const supabase = await getAppSupabaseClient();
+        if (!supabase) return { supabase: null, profileId: null, isLoggedIn: false };
+
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+            console.warn("[title] getUser (Mi Lista) error:", error);
+            return { supabase, profileId: null, isLoggedIn: false, error };
+        }
+
+        const profileId = data?.user?.id || null;
+        return { supabase, profileId, isLoggedIn: !!profileId };
+    } catch (e) {
+        console.warn("[title] getMyListAuthContext error:", e);
+        return { supabase: null, profileId: null, isLoggedIn: false, error: e };
+    }
+}
+
+function buildMyListUrl(userId) {
+    if (!userId) return "/mylist";
+    const q = new URLSearchParams({
+        list: String(userId),
+        user: String(userId)
+    });
+    return `/mylist?${q.toString()}`;
+}
+
+function ensureMyListNavLink(userId) {
+    const topnav = document.getElementById("topnav");
+    if (!topnav) return;
+
+    const navLeft = topnav.querySelector(".nav-left");
+    if (!navLeft) return;
+
+    let link = topnav.querySelector("[data-mylist-nav='1']");
+    if (!link) {
+        link = document.createElement("a");
+        link.className = "navlink";
+        link.dataset.mylistNav = "1";
+        link.textContent = "Mi Lista";
+    }
+
+    link.href = buildMyListUrl(userId);
+
+    const navItems = [...navLeft.querySelectorAll("a, button")];
+    const inicio = navItems.find((n) => {
+        if (n === link) return false;
+        const t = (n.textContent || "").trim().toLowerCase();
+        return t === "inicio";
+    });
+
+    if (inicio && inicio.parentElement === navLeft) {
+        if (inicio.nextSibling !== link) {
+            navLeft.insertBefore(link, inicio.nextSibling);
+        } else if (link.parentElement !== navLeft) {
+            navLeft.insertBefore(link, inicio.nextSibling);
+        }
+    } else {
+        if (link.parentElement !== navLeft) navLeft.appendChild(link);
+    }
+}
+
+async function isInMyListSupabase({ supabase, profileId, contentId }) {
+    if (!supabase || !profileId || !contentId) return false;
+
+    const { data, error } = await supabase
+        .from("my_list")
+        .select("id")
+        .eq("profile_id", profileId)
+        .eq("content_id", contentId)
+        .limit(1)
+        .maybeSingle();
+
+    if (error) throw error;
+    return !!data;
+}
+
+async function addToMyListSupabase({ supabase, profileId, contentId }) {
+    if (!supabase || !profileId || !contentId) {
+        throw new Error("Faltan supabase/profileId/contentId para addToMyListSupabase");
+    }
+
+    const payload = {
+        profile_id: profileId,
+        content_id: contentId,
+        added_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+        .from("my_list")
+        .upsert(payload, {
+            onConflict: "profile_id,content_id",
+            ignoreDuplicates: false
+        });
+
+    if (error) throw error;
+    return true;
+}
+
+async function removeFromMyListSupabase({ supabase, profileId, contentId }) {
+    if (!supabase || !profileId || !contentId) {
+        throw new Error("Faltan supabase/profileId/contentId para removeFromMyListSupabase");
+    }
+
+    const { error } = await supabase
+        .from("my_list")
+        .delete()
+        .eq("profile_id", profileId)
+        .eq("content_id", contentId);
+
+    if (error) throw error;
+    return true;
+}
+
+async function resolveMyListState(contentId) {
+    const localAdded = isInMyListLocal(contentId);
+
+    const ctx = await getMyListAuthContext();
+    if (!ctx.supabase || !ctx.isLoggedIn || !ctx.profileId) {
+        return {
+            added: localAdded,
+            source: "local",
+            supabase: ctx.supabase || null,
+            profileId: null,
+            isLoggedIn: false
+        };
+    }
+
+    try {
+        const remoteAdded = await isInMyListSupabase({
+            supabase: ctx.supabase,
+            profileId: ctx.profileId,
+            contentId
+        });
+
+        setLocalMyListMembership(contentId, remoteAdded);
+
+        return {
+            added: remoteAdded,
+            source: "supabase",
+            supabase: ctx.supabase,
+            profileId: ctx.profileId,
+            isLoggedIn: true
+        };
+    } catch (e) {
+        console.warn("[title] resolveMyListState remote error; uso local:", e);
+        return {
+            added: localAdded,
+            source: "local",
+            supabase: ctx.supabase,
+            profileId: ctx.profileId,
+            isLoggedIn: !!ctx.profileId,
+            error: e
+        };
+    }
+}
+
+async function refreshMyListButtonState(btn, contentId) {
+    if (!btn || !contentId) return;
+
+    setMyListBtnState(btn, contentId, {
+        added: isInMyListLocal(contentId),
+        pending: true,
+        source: "unknown"
+    });
+
+    const state = await resolveMyListState(contentId);
+
+    setMyListBtnState(btn, contentId, {
+        added: state.added,
+        pending: false,
+        source: state.source
+    });
+
+    return state;
+}
+
+async function bindMyListButton(btn, movie) {
+    if (!btn || !movie?.id) return;
+
+    btn.onclick = null;
+    btn.dataset.myListMovieId = movie.id;
+
+    await refreshMyListButtonState(btn, movie.id);
+
+    if (btn.dataset.myListBound === "1") return;
+    btn.dataset.myListBound = "1";
+
+    btn.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+
+        if (btn.dataset.myListPending === "1") return;
+
+        const currentMovieId = btn.dataset.myListMovieId || movie.id;
+        const currentVisualAdded = btn.dataset.myListState === "in";
+
+        setMyListBtnState(btn, currentMovieId, {
+            added: currentVisualAdded,
+            pending: true,
+            source: btn.dataset.myListSource || "unknown"
+        });
+
+        try {
+            const state = await resolveMyListState(currentMovieId);
+
+            if (state.source === "supabase" && state.supabase && state.profileId) {
+                if (state.added) {
+                    await removeFromMyListSupabase({
+                        supabase: state.supabase,
+                        profileId: state.profileId,
+                        contentId: currentMovieId
+                    });
+
+                    setLocalMyListMembership(currentMovieId, false);
+
+                    setMyListBtnState(btn, currentMovieId, {
+                        added: false,
+                        pending: false,
+                        source: "supabase"
+                    });
+
+                    console.log("[title] quitado de Mi Lista (Supabase)");
+                } else {
+                    await addToMyListSupabase({
+                        supabase: state.supabase,
+                        profileId: state.profileId,
+                        contentId: currentMovieId
+                    });
+
+                    setLocalMyListMembership(currentMovieId, true);
+
+                    setMyListBtnState(btn, currentMovieId, {
+                        added: true,
+                        pending: false,
+                        source: "supabase"
+                    });
+
+                    console.log("[title] agregado a Mi Lista (Supabase)");
+                }
+
+                return;
+            }
+
+            const added = toggleMyListLocal(currentMovieId);
+            setMyListBtnState(btn, currentMovieId, {
+                added,
+                pending: false,
+                source: "local"
+            });
+
+            console.log(added
+                ? "[title] agregado a Mi Lista (local fallback)"
+                : "[title] quitado de Mi Lista (local fallback)");
+        } catch (e) {
+            console.warn("[title] toggle Mi Lista error:", e);
+
+            try {
+                await refreshMyListButtonState(btn, currentMovieId);
+            } catch {
+                setMyListBtnState(btn, currentMovieId, {
+                    added: isInMyListLocal(currentMovieId),
+                    pending: false,
+                    source: "local"
+                });
+            }
+        }
+    });
+}
+
+/* ===========================
+   TE PODRÍA GUSTAR (cards)
+=========================== */
+
+function getMoreCardBadgeLabel(movie) {
+    if (!movie) return "";
+
+    const publishState = getMoviePublishState(movie);
+    const customText = String(movie.publish_state_text || "").trim();
+
+    if (publishState === "upcoming") {
+        return customText || "Próximamente";
+    }
+
+    if (publishState === "other") {
+        return customText || "Otro";
+    }
+
+    if (Boolean(movie.live_mode)) {
+        const d = getLiveStartDate(movie);
+        if (d) return `${formatLiveDateEs(d)} - ${formatLiveTimeEs(d)}`;
+        if (publishState === "live") return "En Vivo";
+    }
+
+    if (publishState === "live") {
+        return "En Vivo";
+    }
+
+    return "";
+}
+
+async function renderMoreCardHtml({ item, esc, api }) {
+    const thumb = item.thumbnail_url || item.banner_url || "";
+    const title = esc(shortenTitle(item.title || ""));
+    let meta = "";
+    const synopsis = esc(item.description || item.sinopsis || "");
+
+    if (item.category === "series" && typeof api?.fetchEpisodes === "function") {
+        try {
+            const eps = await api.fetchEpisodes(item.id);
+            item.__episodes_for_meta = Array.isArray(eps) ? eps : [];
+        } catch {
+            item.__episodes_for_meta = [];
+        }
+    }
+
+    meta = esc(getMoreMetaLine(item));
+    const badgeLabel = getMoreCardBadgeLabel(item);
+
+    return `
+    <article class="episode-card more-card" tabindex="0" role="link" data-title="${esc(item.id)}">
+      <div class="more-card-thumb-wrap">
+        <img class="episode-thumb" src="${esc(thumb)}" alt="">
+        ${badgeLabel ? `<div class="card-badge card-badge-upcoming">${esc(badgeLabel)}</div>` : ``}
+      </div>
+      <div class="episode-body">
+        <h4 class="episode-title">${title}</h4>
+        ${meta ? `<p class="episode-sub more-card-meta">${meta}</p>` : ``}
+        ${synopsis ? `<p class="episode-sub more-card-synopsis">${synopsis}</p>` : ``}
+      </div>
+    </article>
+  `;
+}
+
+function bindMoreCardNavigation(rootEl, itemsById = new Map()) {
+    rootEl.querySelectorAll("[data-title]").forEach(card => {
+        const go = async () => {
+            const id = card.dataset.title;
+            const item = itemsById.get(id);
+
+            if (!id || !item) {
+                window.location.href = `/title?title=${encodeURIComponent(id || "")}`;
+                return;
+            }
+
+            try {
+                const progress = await fetchContinueWatchingForTitle({ movieId: id });
+
+                if (item.category === "series") {
+                    if (progress?.episode_id) {
+                        window.location.href = `/watch?series=${encodeURIComponent(id)}&episode=${encodeURIComponent(progress.episode_id)}`;
+                        return;
+                    }
+
+                    window.location.href = `/watch?series=${encodeURIComponent(id)}`;
+                    return;
+                }
+
+                window.location.href = `/watch?movie=${encodeURIComponent(id)}`;
+            } catch (e) {
+                console.warn("[title] more-grid reanudar fallback error:", e);
+
+                if (item.category === "series") {
+                    window.location.href = `/watch?series=${encodeURIComponent(id)}`;
+                    return;
+                }
+
+                window.location.href = `/watch?movie=${encodeURIComponent(id)}`;
+            }
+        };
+
+        card.addEventListener("click", go);
+        card.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter" || ev.key === " ") {
+                ev.preventDefault();
+                go();
+            }
+        });
+    });
+}
+
+async function renderMoreSection({ api, esc, currentMovieId }) {
+    const moreGrid = el("more-grid");
+    const moreSection = el("more-section");
+    if (!moreGrid || !moreSection) return;
+
+    moreGrid.innerHTML = "";
+
+    let list = [];
+    try {
+        if (typeof api.fetchMoreExcluding === "function") {
+            list = await api.fetchMoreExcluding(currentMovieId, 24);
+        } else if (typeof api.fetchLatest === "function") {
+            const tmp = await api.fetchLatest(60);
+            list = (tmp || []).filter(x => x?.id && x.id !== currentMovieId).slice(0, 24);
+        } else {
+            list = [];
+        }
+    } catch (e) {
+        console.warn("No se pudo cargar 'Te podría gustar':", e);
+        list = [];
+    }
+
+    if (!list.length) {
+        moreSection.classList.add("hidden");
+        return;
+    }
+
+    moreSection.classList.remove("hidden");
+
+    const htmlParts = [];
+    for (const item of list) {
+        htmlParts.push(await renderMoreCardHtml({ item, esc, api }));
+    }
+
+    moreGrid.innerHTML = htmlParts.join("");
+
+    const itemsById = new Map(
+        list
+            .filter(item => item?.id)
+            .map(item => [String(item.id), item])
+    );
+
+    bindMoreCardNavigation(moreGrid, itemsById);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(moreGrid);
+}
+
+/* ===========================
+   COLLECTION (cards tipo episodio, sin collections.svg)
+=========================== */
+
+function renderCollectionCardHtml({ item, esc }) {
+    const thumb = item.thumbnail_url || item.banner_url || "";
+    const synopsis = esc(item.description || item.sinopsis || "");
+
+    return `
+    <article class="episode-card more-card" tabindex="0" role="link" data-title="${esc(item.id)}">
+      <div class="more-card-thumb-wrap">
+        <img class="episode-thumb" src="${esc(thumb)}" alt="">
+      </div>
+      <div class="episode-body">
+        <h4 class="episode-title">${esc(item.title || "")}</h4>
+        ${synopsis ? `<p class="episode-sub more-card-synopsis">${synopsis}</p>` : ``}
+      </div>
+    </article>
+  `;
+}
+
+function ensureSecondarySectionAfterEpisodes() {
+    const episodesSection = el("episodes-section");
+    if (!episodesSection) return null;
+
+    let section = document.getElementById("collection-section");
+    if (section) return section;
+
+    section = document.createElement("section");
+    section.id = "collection-section";
+    section.className = "episodes-section hidden";
+
+    section.innerHTML = `
+      <div class="episodes-head">
+        <h2 id="collection-title">Colección completa</h2>
+      </div>
+      <div id="collection-grid" class="episodes-grid"></div>
+    `;
+
+    episodesSection.insertAdjacentElement("afterend", section);
+    return section;
+}
+
+function bindCollectionCardNavigation(rootEl, itemsById = new Map()) {
+    rootEl.querySelectorAll("[data-title]").forEach(card => {
+        const go = () => {
+            const id = card.dataset.title;
+            const item = itemsById.get(String(id));
+
+            if (!id || !item) {
+                window.location.href = `/title?title=${encodeURIComponent(id || "")}`;
+                return;
+            }
+
+            const params = new URLSearchParams();
+            if (item.collection_id) params.set("collection", item.collection_id);
+            params.set("title", item.id);
+
+            window.location.href = `/title?${params.toString()}`;
+        };
+
+        card.addEventListener("click", go);
+        card.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter" || ev.key === " ") {
+                ev.preventDefault();
+                go();
+            }
+        });
+    });
+}
+
+async function renderCollectionSection({ api, esc, collectionId, currentMovieId }) {
+    const episodesSection = el("episodes-section");
+    const episodesTitle = el("episodes-title");
+    const seasonFilter = el("season-filter");
+    const episodesGrid = el("episodes-grid");
+
+    if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) return true;
+
+    episodesSection.classList.remove("hidden");
+    episodesTitle.textContent = "Colección completa";
+    seasonFilter.classList.add("hidden");
+    seasonFilter.innerHTML = "";
+    episodesGrid.classList.remove("hidden");
+
+    let items = [];
+    try {
+        if (typeof api.fetchCollection === "function") {
+            items = await api.fetchCollection(collectionId, 200);
+        } else {
+            console.warn("[title] api.fetchCollection no existe");
+            items = [];
+        }
+    } catch (e) {
+        console.warn("[title] no se pudo cargar colección:", e);
+        items = [];
+    }
+
+    items = (items || []).filter((item) => item?.id && String(item.id) !== String(currentMovieId));
+
+    if (!items.length) {
+        episodesGrid.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
+        return true;
+    }
+
+    episodesGrid.innerHTML = items.map((item) =>
+        renderCollectionCardHtml({ item, esc })
+    ).join("");
+
+    const itemsById = new Map(
+        items
+            .filter(item => item?.id)
+            .map(item => [String(item.id), item])
+    );
+
+    bindCollectionCardNavigation(episodesGrid, itemsById);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);
+    return true;
+}
+
+async function renderCollectionSectionBelowEpisodes({ api, esc, collectionId, currentMovieId }) {
+    const section = ensureSecondarySectionAfterEpisodes();
+    if (!section) return false;
+
+    const titleEl = section.querySelector("#collection-title");
+    const gridEl = section.querySelector("#collection-grid");
+
+    if (!titleEl || !gridEl) return false;
+
+    titleEl.textContent = "Colección completa";
+    gridEl.innerHTML = "";
+
+    let items = [];
+    try {
+        if (typeof api.fetchCollection === "function") {
+            items = await api.fetchCollection(collectionId, 200);
+        } else {
+            console.warn("[title] api.fetchCollection no existe");
+            items = [];
+        }
+    } catch (e) {
+        console.warn("[title] no se pudo cargar colección:", e);
+        items = [];
+    }
+
+    items = (items || []).filter((item) => item?.id && String(item.id) !== String(currentMovieId));
+
+    if (!items.length) {
+        gridEl.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
+        section.classList.remove("hidden");
+        return true;
+    }
+
+    gridEl.innerHTML = items.map((item) =>
+        renderCollectionCardHtml({ item, esc })
+    ).join("");
+
+    const itemsById = new Map(
+        items
+            .filter(item => item?.id)
+            .map(item => [String(item.id), item])
+    );
+
+    bindCollectionCardNavigation(gridEl, itemsById);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(gridEl);
+
+    section.classList.remove("hidden");
+    return true;
+}
+
+/* ===========================
+   MAIN
+=========================== */
+
+async function main() {
+    const movieId = qs("title") || qs("movie");
+    const collectionId = qs("collection");
+
+    applyAkiraVideoContainOverrideIfNeeded(resolveAkiraOverrideTargetId());
+
+    await ensureSupabaseGlobal();
+
+    const ui = await import("./ui.js");
+    const api = await import("./api.js");
+
+    ui.setAppName?.();
+    ui.renderNav?.({ active: "home" });
+    await ui.renderAuthButtons?.();
+    ui.enableDataHrefNavigation?.();
+    ui.applyDisguisedCssFromMovieId?.();
+
+    try {
+        const navCtx = await getMyListAuthContext();
+        ensureMyListNavLink(navCtx?.profileId || null);
+    } catch (e) {
+        console.warn("[title] no se pudo preparar link Mi Lista en topnav:", e);
+        ensureMyListNavLink(null);
+    }
+
+    if (!movieId || !isUuidLike(movieId)) {
+        renderTitleNotFound();
+        return;
+    }
+
+    if (collectionId && !isUuidLike(collectionId)) {
+        renderTitleNotFound();
+        return;
+    }
+
+    const esc = ui.escapeHtml;
+
+    const hero = el("hero");
+    const titleEl = el("t-title");
+    const metaEl = el("t-meta");
+    const sinopsisEl = el("t-sinopsis");
+    const watchBtn = el("watch-btn");
+    const trailerBtn = el("trailer-btn");
+    const myListBtn = el("episodes-jump");
+
+    const episodesSection = el("episodes-section");
+    const episodesTitle = el("episodes-title");
+    const seasonFilter = el("season-filter");
+    const episodesGrid = el("episodes-grid");
+
+    const extraEl = el("title-extra");
+
+    let movie = null;
+    try {
+        movie = await api.fetchMovie(movieId);
+    } catch (e) {
+        console.warn("[title] fetchMovie error:", e);
+        renderTitleNotFound();
+        return;
+    }
+
+    if (!movie) {
+        renderTitleNotFound();
+        return;
+    }
+
+    applyAkiraVideoContainOverrideIfNeeded(movie.id);
+
+    let episodes = [];
+    let episodeProgressMap = new Map();
+
+    if (movie.category === "series" && typeof api.fetchEpisodes === "function") {
+        try {
+            episodes = await api.fetchEpisodes(movie.id);
+        } catch (e) {
+            console.warn("[title] no se pudieron cargar episodios para meta robusta:", e);
+            episodes = [];
+        }
+
+        try {
+            episodeProgressMap = await fetchEpisodeProgressMapForTitle({ movieId: movie.id });
+        } catch (e) {
+            console.warn("[title] no se pudo cargar progress map de episodios:", e);
+            episodeProgressMap = new Map();
+        }
+    }
+
+    movie.__episodes_for_meta = episodes;
+
+    document.title = `${movie.title || "Título"} · SATV+`;
+
+    await bindMyListButton(myListBtn, movie);
+
+    const NIVELX_ID = "0acf7d27-5a80-4682-873a-760dd1ffdb51";
+    document.body.classList.toggle("is-nivelx", movie.id === NIVELX_ID);
+
+    if (titleEl) titleEl.textContent = movie.title || "";
+    if (sinopsisEl) sinopsisEl.textContent = movie.description || "";
+
+    const banner = movie.banner_url || movie.thumbnail_url || "";
+    if (hero && banner) hero.style.backgroundImage = `url("${banner}")`;
+
+    mountTitleHeroTrailerVideo(hero, movie);
+
+    if (trailerBtn) trailerBtn.classList.add("hidden");
+
+    const publishState = getMoviePublishState(movie);
+    const publishStateLabel = getMoviePublishStateLabel(movie);
+
+    if (publishState === "upcoming") {
+        setWatchBtnDisabledStatus(watchBtn, publishStateLabel);
+    } else {
+        const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
+
+        if (!isUpcomingLiveCountdown) {
+            if (publishState === "live") {
+                setWatchBtnStatusClickable(watchBtn, movie, publishStateLabel);
+            } else {
+                setWatchBtnVerAhora(watchBtn, movie);
+            }
+
+            try {
+                const progress = await fetchContinueWatchingForTitle({ movieId: movie.id });
+                if (progress) setWatchBtnReanudar(watchBtn, movie, progress);
+            } catch (e) {
+                console.warn("No se pudo leer watch_progress:", e);
+            }
+        }
+    }
+
+    const year = movie.release_year ? String(movie.release_year) : "";
+    let right = "";
+    const mm = movie.movie_meta || null;
+
+    if (movie.category === "series") {
+        const counts = resolveSeriesCounts(movie, episodes);
+        right = formatSeriesMetaFromCounts(counts);
+    } else {
+        right = formatDuration(movie.duration_minutes);
+    }
+
+    if (metaEl) metaEl.textContent = [year, right].filter(Boolean).join(" · ");
+
+    await renderMoreSection({ api, esc, currentMovieId: movie.id });
+
+    if (extraEl) {
+        const durText = movie.category === "movie" ? formatDuration(movie.duration_minutes) : "";
+        const hasAny =
+            !!mm?.created_by ||
+            !!mm?.fullcast ||
+            !!mm?.fullscript ||
+            !!mm?.fullgenres ||
+            !!mm?.fulltitletype ||
+            !!mm?.fullage;
+
+        extraEl.innerHTML = `
+      <div class="title-extra-head">
+        <h2 class="title-extra-title">Información completa</h2>
+      </div>
+
+      <div class="title-extra-card">
+        ${durText ? row("Duración", durText, esc) : ""}
+
+        ${row("Creado por", mm?.created_by, esc)}
+        ${row("Elenco", mm?.fullcast, esc)}
+        ${row("Guion", mm?.fullscript, esc)}
+        ${row("Géneros", mm?.fullgenres, esc)}
+        ${row("Tipo", mm?.fulltitletype, esc)}
+        ${row("Edad", mm?.fullage, esc)}
+
+        ${hasAny ? "" : `<div class="title-extra-value">Sin información cargada todavía.</div>`}
+      </div>
+    `;
+        extraEl.classList.remove("hidden");
+    }
+
+    if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) return;
+
+    if (movie.category !== "series") {
+        if (collectionId) {
+            await renderCollectionSection({
+                api,
+                esc,
+                collectionId,
+                currentMovieId: movie.id
+            });
+        } else {
+            episodesSection.classList.add("hidden");
+        }
+        return;
+    }
+
+    episodesSection.classList.remove("hidden");
+    episodesTitle.textContent = "Episodios";
+    seasonFilter.classList.remove("hidden");
+    episodesGrid.classList.remove("hidden");
+
+    if (!episodes?.length) {
+        episodesGrid.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
+
+        if (collectionId) {
+            await renderCollectionSectionBelowEpisodes({
+                api,
+                esc,
+                collectionId,
+                currentMovieId: movie.id
+            });
+        }
+
+        return;
+    }
+
+    const grouped = groupBySeason(episodes);
+    const seasons = grouped.map(([s]) => s);
+
+    let currentSeason = clampSeason(seasons, seasons[0]);
+    let dropdownOpen = false;
+
+    function removeGeneratedAllNodes() {
+        const parent = episodesGrid.parentElement;
+        if (!parent) return;
+        parent.querySelectorAll("[data-generated='1']").forEach(n => n.remove());
+    }
+
+    function clearSeasonClassOnFirstGrid() {
+        episodesGrid.classList.forEach(c => {
+            if (c.startsWith("episodes-grid-s")) episodesGrid.classList.remove(c);
+        });
+    }
+
+    function setSeasonClassOnFirstGrid(seasonNum) {
+        clearSeasonClassOnFirstGrid();
+        episodesGrid.classList.add(`episodes-grid-s${String(seasonNum).replace(/[^\w-]/g, "_")}`);
+    }
+
+    function createTitleNode(seasonNum, count) {
+        const t = document.createElement("div");
+        t.dataset.generated = "1";
+        t.dataset.season = String(seasonNum);
+        t.className = "season-title";
+        t.textContent = `Temporada ${seasonNum}: ${count} ${plural(count, "episodio", "episodios")}`;
+        return t;
+    }
+
+    function createSiblingGridForSeason(seasonNum) {
+        const g = document.createElement("div");
+        g.className = `episodes-grid episodes-grid-s${String(seasonNum).replace(/[^\w-]/g, "_")}`;
+        g.dataset.generated = "1";
+        g.dataset.season = String(seasonNum);
+        return g;
+    }
+
+    function closeDropdown() {
+        dropdownOpen = false;
+        const menu = seasonFilter.querySelector(".dropdown-menu");
+        const btn = seasonFilter.querySelector(".dropdown-btn");
+        if (menu) menu.classList.add("hidden");
+        if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+
+    function openDropdown() {
+        dropdownOpen = true;
+        const menu = seasonFilter.querySelector(".dropdown-menu");
+        const btn = seasonFilter.querySelector(".dropdown-btn");
+        if (menu) menu.classList.remove("hidden");
+        if (btn) btn.setAttribute("aria-expanded", "true");
+    }
+
+    function toggleDropdown() {
+        if (dropdownOpen) closeDropdown();
+        else openDropdown();
+    }
+
+    function renderSeasonSelector() {
+        seasonFilter.innerHTML = "";
+
+        if (seasons.length === 1) {
+            seasonFilter.innerHTML = `
+        <div class="season-chip active" aria-current="true">
+          Temporada ${esc(String(seasons[0]))}
+        </div>
+      `;
+            return;
+        }
+
+        const currentLabel = (currentSeason === "all")
+            ? "Todos los episodios"
+            : `Temporada ${currentSeason}`;
+
+        seasonFilter.innerHTML = `
+      <div class="dropdown">
+        <div class="dropdown-btn"
+             role="button"
+             tabindex="0"
+             aria-haspopup="true"
+             aria-expanded="false">
+          ${esc(String(currentLabel))}
+        </div>
+
+        <div class="dropdown-menu hidden" role="menu">
+          ${grouped.map(([s, list]) => `
+            <div class="dropdown-item ${s === currentSeason ? "active" : ""}"
+                 role="menuitem"
+                 tabindex="0"
+                 data-season="${esc(String(s))}">
+              Temporada ${esc(String(s))}
+              <span class="meta-dropitem">(${list.length} ${plural(list.length, "episodio", "episodios")})</span>
+            </div>
+          `).join("")}
+
+          <div class="separator" aria-hidden="true"></div>
+
+          <div class="dropdown-item dropdown-all ${currentSeason === "all" ? "active" : ""}"
+               role="menuitem"
+               tabindex="0"
+               data-action="all">
+            Ver todos los episodios
+          </div>
+        </div>
+      </div>
+    `;
+
+        const btn = seasonFilter.querySelector(".dropdown-btn");
+        if (btn) {
+            btn.addEventListener("click", (e) => { e.preventDefault?.(); e.stopPropagation(); toggleDropdown(); });
+            btn.addEventListener("keydown", (ev) => {
+                if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ev.stopPropagation(); toggleDropdown(); }
+            });
+        }
+
+        seasonFilter.querySelectorAll(".dropdown-item").forEach(item => {
+            const pick = (e) => {
+                e.preventDefault?.();
+                e.stopPropagation();
+
+                const action = item.dataset.action;
+                if (action === "all") {
+                    currentSeason = "all";
+                    renderSeasonSelector();
+                    renderEpisodesGrid();
+                    closeDropdown();
+                    return;
+                }
+
+                const raw = item.dataset.season;
+                if (raw !== undefined) {
+                    const matched = seasons.find((s) => String(s) === String(raw));
+                    if (matched !== undefined) {
+                        currentSeason = matched;
+                        renderSeasonSelector();
+                        renderEpisodesGrid();
+                        closeDropdown();
+                    }
+                }
+            };
+
+            item.addEventListener("click", pick);
+            item.addEventListener("keydown", (ev) => {
+                if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ev.stopPropagation(); pick(ev); }
+            });
+        });
+    }
+
+    function renderEpisodesGrid() {
+        const fallbackThumb = movie.thumbnail_url || movie.banner_url || "";
+        const parent = episodesGrid.parentElement;
+        if (!parent) return;
+
+        removeGeneratedAllNodes();
+
+        if (currentSeason === "all") {
+            grouped.forEach(([s, list], idx) => {
+                const titleNode = createTitleNode(s, list.length);
+                const html = list.map(ep => renderEpisodeCardHtml({
+                    ep,
+                    fallbackThumb,
+                    esc,
+                    progressMap: episodeProgressMap
+                })).join("");
+
+                if (idx === 0) {
+                    setSeasonClassOnFirstGrid(s);
+                    parent.insertBefore(titleNode, episodesGrid);
+                    episodesGrid.innerHTML = html;
+                } else {
+                    const gridNode = createSiblingGridForSeason(s);
+                    gridNode.innerHTML = html;
+                    parent.insertBefore(titleNode, null);
+                    parent.insertBefore(gridNode, null);
+                }
+            });
+
+            bindEpisodeCardNavigation(parent, movie.id);
+            scheduleApplyCondensedFontToWrappedEpisodeTitles(parent);
+            return;
+        }
+
+        setSeasonClassOnFirstGrid(currentSeason);
+
+        const list = grouped.find(([s]) => String(s) === String(currentSeason))?.[1] || [];
+        episodesGrid.innerHTML = list.map(ep => renderEpisodeCardHtml({
+            ep,
+            fallbackThumb,
+            esc,
+            progressMap: episodeProgressMap
+        })).join("");
+
+        bindEpisodeCardNavigation(episodesGrid, movie.id);
+        scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);
+    }
+
+    document.addEventListener("click", (ev) => {
+        const dd = seasonFilter.querySelector(".dropdown");
+        if (!dd) return;
+        if (dd.contains(ev.target)) return;
+        closeDropdown();
+    });
+
+    document.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape") closeDropdown();
+    });
+
+    window.addEventListener("resize", () => {
+        scheduleApplyCondensedFontToWrappedEpisodeTitles(document);
+    });
+
+    if (document.fonts?.ready) {
+        document.fonts.ready.then(() => {
+            scheduleApplyCondensedFontToWrappedEpisodeTitles(document);
+        }).catch(() => { });
+    }
+
+    renderSeasonSelector();
+    renderEpisodesGrid();
+
+    if (collectionId) {
+        await renderCollectionSectionBelowEpisodes({
+            api,
+            esc,
+            collectionId,
+            currentMovieId: movie.id
+        });
+    }
+}
+
+main().catch(console.error);
