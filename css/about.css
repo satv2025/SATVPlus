@@ -114,6 +114,7 @@ a:hover {
     color: var(--muted);
     font-size: 13px;
     font-weight: 700;
+    flex-wrap: wrap;
 }
 
 .meta-sep {
@@ -128,6 +129,7 @@ a:hover {
 }
 
 .content {
+    min-width: 0;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .02)),
         var(--panel);
@@ -231,6 +233,7 @@ p {
     margin: 10px 0;
     color: rgba(245, 247, 251, .84);
     text-align: justify;
+    overflow-wrap: break-word;
 }
 
 .wiki-list {
@@ -280,6 +283,7 @@ p {
 .detail-value {
     color: var(--text);
     font-size: 14.5px;
+    min-width: 0;
 }
 
 .detail-value ul {
@@ -292,6 +296,7 @@ p {
 }
 
 .infobox {
+    min-width: 0;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .02)),
         var(--panel);
@@ -313,6 +318,7 @@ p {
     border-radius: var(--radius);
     margin-bottom: 10px;
     font-size: 15px;
+    overflow-wrap: break-word;
 }
 
 .ibox-media {
@@ -351,6 +357,7 @@ table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13.5px;
+    table-layout: fixed;
 }
 
 th,
@@ -359,6 +366,7 @@ td {
     padding: 9px 8px;
     text-align: left;
     vertical-align: top;
+    overflow-wrap: break-word;
 }
 
 th {
@@ -418,6 +426,7 @@ code {
 .ibox-wikivalue {
     color: var(--text);
     font-size: 14.5px;
+    min-width: 0;
 }
 
 .ibox-wikilista {
@@ -439,7 +448,9 @@ code {
 
 @media (max-width: 980px) {
     .wrap {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 32vw);
+        gap: 12px;
+        align-items: start;
     }
 
     .infobox {
@@ -452,9 +463,14 @@ code {
         padding: 12px 10px 50px;
     }
 
+    .wrap {
+        grid-template-columns: minmax(0, 1fr) minmax(140px, 38vw);
+        gap: 10px;
+    }
+
     .content,
     .infobox {
-        padding: 14px;
+        padding: 12px;
     }
 
     .topbar {
@@ -470,11 +486,95 @@ code {
 
     .ibox-media {
         height: auto;
-        min-height: 240px;
+        min-height: 180px;
+        padding: 10px;
     }
 
     .media-square {
-        width: min(200px, 100%);
+        width: 100%;
+        max-width: 170px;
+    }
+
+    table {
+        font-size: 12px;
+    }
+
+    th,
+    td {
+        padding: 7px 6px;
+    }
+}
+
+@media (max-width: 520px) {
+    .wrap {
+        grid-template-columns: minmax(0, 1fr) 120px;
+        gap: 8px;
+    }
+
+    .content,
+    .infobox {
+        padding: 10px;
+    }
+
+    .infobox-title {
+        font-size: 13px;
+        padding: 8px 6px;
+    }
+
+    .ibox-h2 {
+        font-size: 15px;
+    }
+
+    .ibox-wikilabel,
+    .ibox-wikivalue,
+    .detail-label,
+    .detail-value {
+        font-size: 12px;
+    }
+
+    .ibox-media {
+        min-height: 150px;
+        padding: 8px;
+    }
+
+    .media-square {
+        max-width: 120px;
+    }
+
+    h1 {
+        font-size: clamp(24px, 7vw, 34px);
+    }
+
+    h2 {
+        font-size: clamp(18px, 5vw, 22px);
+    }
+
+    .lead,
+    p,
+    .wiki-list li {
+        font-size: 13px;
+    }
+
+    .topbar-meta {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 420px) {
+    .wrap {
+        grid-template-columns: minmax(0, 1fr) 105px;
+    }
+
+    .media-square {
+        max-width: 105px;
+    }
+
+    .infobox-title {
+        font-size: 12px;
+    }
+
+    table {
+        font-size: 11px;
     }
 }
 
