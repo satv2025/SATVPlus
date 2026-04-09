@@ -20,9 +20,7 @@ function loadScriptOnce(src) {
 async function ensureSupabaseGlobal() {
     if (window.supabase?.createClient) return;
     await loadScriptOnce("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
-    if (!window.supabase?.createClient) {
-        throw new Error("Supabase SDK ok pero createClient no existe.");
-    }
+    if (!window.supabase?.createClient) throw new Error("Supabase SDK ok pero createClient no existe.");
 }
 
 /* ===========================
@@ -156,7 +154,6 @@ let __episodeTitleWrappedRaf = 0;
 
 function applyCondensedFontToWrappedEpisodeTitles(root = document) {
     const titles = root.querySelectorAll("h4.episode-title");
-
     titles.forEach((title) => {
         title.classList.remove("episode-title--wrapped");
         title.style.removeProperty("font-family");
@@ -177,7 +174,6 @@ function applyCondensedFontToWrappedEpisodeTitles(root = document) {
         if (!Number.isFinite(renderedHeight) || renderedHeight <= 0) return;
 
         const isWrapped = renderedHeight > (lineHeight * 1.35);
-
         if (isWrapped) {
             title.classList.add("episode-title--wrapped");
             title.style.setProperty("font-family", "HBOMaxSansCond", "important");
@@ -187,7 +183,6 @@ function applyCondensedFontToWrappedEpisodeTitles(root = document) {
 
 function scheduleApplyCondensedFontToWrappedEpisodeTitles(root = document) {
     if (__episodeTitleWrappedRaf) cancelAnimationFrame(__episodeTitleWrappedRaf);
-
     __episodeTitleWrappedRaf = requestAnimationFrame(() => {
         __episodeTitleWrappedRaf = requestAnimationFrame(() => {
             __episodeTitleWrappedRaf = 0;
@@ -222,16 +217,16 @@ function applyAkiraVideoContainOverrideIfNeeded(currentId) {
         document.head.appendChild(styleEl);
     }
 
-    styleEl.textContent = `
-    .akira-video { object-fit: contain !important; }
-  `;
+    styleEl.textContent = `.akira-video{object-fit:contain!important;}`;
 }
 
 function resolveAkiraOverrideTargetId() {
     const fromSeries = qs("series");
     if (fromSeries) return fromSeries;
+
     const fromTitle = qs("title") || qs("movie");
     if (fromTitle) return fromTitle;
+
     return "";
 }
 
@@ -257,7 +252,7 @@ function getMoviePublishStateLabel(movie) {
 }
 
 /* ===========================
-   Series counts
+   Series counts (robusto)
 =========================== */
 
 function deriveSeriesCountsFromEpisodes(episodes) {
@@ -268,9 +263,7 @@ function deriveSeriesCountsFromEpisodes(episodes) {
     for (const ep of list) {
         episodesCount += 1;
         const seasonRaw = ep?.season;
-        if (seasonRaw !== null && seasonRaw !== undefined && seasonRaw !== "") {
-            seasonSet.add(String(seasonRaw));
-        }
+        if (seasonRaw !== null && seasonRaw !== undefined && seasonRaw !== "") seasonSet.add(String(seasonRaw));
     }
 
     return { seasonsCount: seasonSet.size, episodesCount };
@@ -298,21 +291,18 @@ function formatSeriesMetaFromCounts({ seasonsCount, episodesCount }) {
     if (Number.isFinite(seasonsCount) && seasonsCount >= 2) {
         return `${seasonsCount} ${plural(seasonsCount, "temporada", "temporadas")}`;
     }
-
     if (Number.isFinite(seasonsCount) && seasonsCount === 1) {
         if (Number.isFinite(episodesCount) && episodesCount === 1) return "1 episodio";
         if (Number.isFinite(episodesCount) && episodesCount >= 2) return `${episodesCount} episodios`;
         return "";
     }
-
     if (Number.isFinite(episodesCount) && episodesCount === 1) return "1 episodio";
     if (Number.isFinite(episodesCount) && episodesCount >= 2) return `${episodesCount} episodios`;
-
     return "";
 }
 
 /* ===========================
-   Helpers
+   TE PODRÍA GUSTAR helpers
 =========================== */
 
 function shortenTitle(raw) {
@@ -362,19 +352,14 @@ function getMoreMetaLine(movie) {
    Episodes helpers
 =========================== */
 
-function pickEpisodeThumb(ep) {
-    return ep?.thumbnail_episode || ep?.thumb || "";
-}
+function pickEpisodeThumb(ep) { return ep?.thumbnail_episode || ep?.thumb || ""; }
 
 function groupBySeason(episodes) {
     const map = new Map();
 
     for (const ep of safeArray(episodes)) {
         const seasonValue = ep?.season;
-        const s = (seasonValue !== null && seasonValue !== undefined && seasonValue !== "")
-            ? seasonValue
-            : 1;
-
+        const s = (seasonValue !== null && seasonValue !== undefined && seasonValue !== "") ? seasonValue : 1;
         if (!map.has(s)) map.set(s, []);
         map.get(s).push(ep);
     }
@@ -397,8 +382,13 @@ function clampSeason(seasons, desired) {
     return seasons[0];
 }
 
+function scrollToEpisodes() {
+    const target = el("episodes-section");
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 /* ===========================
-   Episode progress helpers
+   Episode progress
 =========================== */
 
 function clampProgressPercent(progressSeconds, durationSeconds) {
@@ -431,12 +421,7 @@ async function fetchEpisodeProgressMapForTitle({ movieId }) {
 
         const { data, error } = await supabase
             .from("watch_progress")
-            .select(`
-        episode_id,
-        progress_seconds,
-        duration_seconds,
-        updated_at
-      `)
+            .select(`episode_id, progress_seconds, duration_seconds, updated_at`)
             .eq("user_id", userId)
             .eq("movie_id", movieId)
             .not("episode_id", "is", null)
@@ -446,14 +431,12 @@ async function fetchEpisodeProgressMapForTitle({ movieId }) {
         if (error) return new Map();
 
         const map = new Map();
-
         for (const row of data || []) {
             const episodeId = row?.episode_id;
             if (!episodeId) continue;
             if (map.has(episodeId)) continue;
 
             const percent = clampProgressPercent(row.progress_seconds, row.duration_seconds);
-
             map.set(episodeId, {
                 episodeId,
                 progressSeconds: Number(row.progress_seconds || 0),
@@ -524,22 +507,18 @@ function bindEpisodeCardNavigation(rootEl, movieId) {
 }
 
 /* ===========================
-   WATCH BUTTON
+   Watch button
 =========================== */
 
 let __liveCountdownTimer = null;
 const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
 
 function clearLiveCountdownTimer() {
-    if (__liveCountdownTimer) {
-        clearInterval(__liveCountdownTimer);
-        __liveCountdownTimer = null;
-    }
+    if (__liveCountdownTimer) { clearInterval(__liveCountdownTimer); __liveCountdownTimer = null; }
 }
 
 function getLiveStartDate(movie) {
     if (!movie) return null;
-
     const raw =
         movie.live_starts_at ??
         movie.live_start_at ??
@@ -586,7 +565,6 @@ function formatCountdown(diffMs) {
 
 function ensureWatchBtnCountdownBlocker(watchBtn) {
     if (!watchBtn || watchBtn.dataset.liveCountdownBlockerBound === "1") return;
-
     watchBtn.dataset.liveCountdownBlockerBound = "1";
     watchBtn.addEventListener("click", (ev) => {
         const mode = watchBtn.dataset.mode;
@@ -636,6 +614,7 @@ function setWatchBtnReanudar(watchBtn, movie, p) {
 
     const hasSeason = season !== "" && season != null;
     const hasEpisode = epNum !== "" && epNum != null;
+
     const tag = (hasSeason && hasEpisode) ? `T${Number(season)}E${Number(epNum)}` : "";
     const meta = [tag, epTitle].filter(Boolean).join(" ").trim();
 
@@ -651,7 +630,6 @@ function setWatchBtnReanudar(watchBtn, movie, p) {
     watchBtn.innerHTML =
         `Reanudar <span aria-hidden="true">▶</span>` +
         (meta || elapsed ? ` <span class="watch-meta">${meta}${elapsed ? ` · ${elapsed}` : ""}</span>` : "");
-
     watchBtn.dataset.mode = "resume";
 }
 
@@ -728,7 +706,7 @@ function setWatchBtnLiveCountdown(watchBtn, movie) {
 window.addEventListener("beforeunload", clearLiveCountdownTimer);
 
 /* ===========================
-   HERO TRAILER VIDEO
+   TITLE HERO TRAILER VIDEO
 =========================== */
 
 const TITLE_VOLUME_ICON_MUTE = "https://satvplus.com.ar/images/svg/heromute.svg";
@@ -752,7 +730,6 @@ function mountTitleHeroTrailerVideo(hero, movie) {
     const video = document.createElement("video");
     video.className = "title-hero-video";
     video.src = trailerUrl;
-
     if (banner) video.poster = banner;
 
     video.autoplay = true;
@@ -768,7 +745,6 @@ function mountTitleHeroTrailerVideo(hero, movie) {
 
     media.appendChild(video);
     media.appendChild(shade);
-
     hero.prepend(media);
 
     const volBtn = document.createElement("button");
@@ -794,10 +770,8 @@ function mountTitleHeroTrailerVideo(hero, movie) {
     volBtn.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-
         video.muted = !video.muted;
         syncVolumeUi();
-
         const p = video.play?.();
         if (p && typeof p.catch === "function") p.catch(() => { });
     });
@@ -850,10 +824,7 @@ async function fetchContinueWatchingForTitle({ movieId }) {
         duration_seconds,
         updated_at,
         episodes:episodes!watch_progress_episode_id_fkey (
-          id,
-          season,
-          episode_number,
-          title
+          id, season, episode_number, title
         )
       `)
             .eq("user_id", userId)
@@ -872,10 +843,7 @@ async function fetchContinueWatchingForTitle({ movieId }) {
           progress_seconds,
           updated_at,
           episodes:episodes!watch_progress_episode_id_fkey (
-            id,
-            season,
-            episode_number,
-            title
+            id, season, episode_number, title
           )
         `)
                 .eq("user_id", userId)
@@ -911,7 +879,7 @@ async function fetchContinueWatchingForTitle({ movieId }) {
 }
 
 /* ===========================
-   MI LISTA (Supabase REAL + fallback localStorage)
+   MI LISTA (Supabase + fallback localStorage)
 =========================== */
 
 const MY_LIST_KEY = "satv_my_list_ids";
@@ -934,9 +902,7 @@ function saveMyListIds(ids) {
     }
 }
 
-function isInMyListLocal(movieId) {
-    return getMyListIds().includes(movieId);
-}
+function isInMyListLocal(movieId) { return getMyListIds().includes(movieId); }
 
 function setLocalMyListMembership(movieId, added) {
     const ids = getMyListIds();
@@ -977,14 +943,10 @@ function setMyListBtnState(btn, movieId, opts = {}) {
     try { btn.disabled = !!pending; } catch { }
 
     const nextLabel = pending ? "Actualizando…" : (added ? "En Mi Lista" : "Mi Lista");
-
     const labelSpan = btn.querySelector("span");
     if (labelSpan) { labelSpan.textContent = nextLabel; return; }
 
-    const textNode = [...btn.childNodes].find(
-        (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0
-    );
-
+    const textNode = [...btn.childNodes].find((n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0);
     if (textNode) textNode.textContent = ` ${nextLabel}`;
     else btn.appendChild(document.createTextNode(` ${nextLabel}`));
 }
@@ -1058,35 +1020,22 @@ async function isInMyListSupabase({ supabase, profileId, contentId }) {
 }
 
 async function addToMyListSupabase({ supabase, profileId, contentId }) {
-    if (!supabase || !profileId || !contentId) {
-        throw new Error("Faltan supabase/profileId/contentId para addToMyListSupabase");
-    }
+    if (!supabase || !profileId || !contentId) throw new Error("Faltan supabase/profileId/contentId para addToMyListSupabase");
 
-    const payload = {
-        profile_id: profileId,
-        content_id: contentId,
-        added_at: new Date().toISOString()
-    };
-
-    const { error } = await supabase
-        .from("my_list")
-        .upsert(payload, { onConflict: "profile_id,content_id", ignoreDuplicates: false });
+    const payload = { profile_id: profileId, content_id: contentId, added_at: new Date().toISOString() };
+    const { error } = await supabase.from("my_list").upsert(payload, {
+        onConflict: "profile_id,content_id",
+        ignoreDuplicates: false
+    });
 
     if (error) throw error;
     return true;
 }
 
 async function removeFromMyListSupabase({ supabase, profileId, contentId }) {
-    if (!supabase || !profileId || !contentId) {
-        throw new Error("Faltan supabase/profileId/contentId para removeFromMyListSupabase");
-    }
+    if (!supabase || !profileId || !contentId) throw new Error("Faltan supabase/profileId/contentId para removeFromMyListSupabase");
 
-    const { error } = await supabase
-        .from("my_list")
-        .delete()
-        .eq("profile_id", profileId)
-        .eq("content_id", contentId);
-
+    const { error } = await supabase.from("my_list").delete().eq("profile_id", profileId).eq("content_id", contentId);
     if (error) throw error;
     return true;
 }
@@ -1100,14 +1049,8 @@ async function resolveMyListState(contentId) {
     }
 
     try {
-        const remoteAdded = await isInMyListSupabase({
-            supabase: ctx.supabase,
-            profileId: ctx.profileId,
-            contentId
-        });
-
+        const remoteAdded = await isInMyListSupabase({ supabase: ctx.supabase, profileId: ctx.profileId, contentId });
         setLocalMyListMembership(contentId, remoteAdded);
-
         return { added: remoteAdded, source: "supabase", supabase: ctx.supabase, profileId: ctx.profileId, isLoggedIn: true };
     } catch (e) {
         console.warn("[title] resolveMyListState remote error; uso local:", e);
@@ -1117,7 +1060,6 @@ async function resolveMyListState(contentId) {
 
 async function refreshMyListButtonState(btn, contentId) {
     if (!btn || !contentId) return;
-
     setMyListBtnState(btn, contentId, { added: isInMyListLocal(contentId), pending: true, source: "unknown" });
     const state = await resolveMyListState(contentId);
     setMyListBtnState(btn, contentId, { added: state.added, pending: false, source: state.source });
@@ -1142,7 +1084,11 @@ async function bindMyListButton(btn, movie) {
         const currentMovieId = btn.dataset.myListMovieId || movie.id;
         const currentVisualAdded = btn.dataset.myListState === "in";
 
-        setMyListBtnState(btn, currentMovieId, { added: currentVisualAdded, pending: true, source: btn.dataset.myListSource || "unknown" });
+        setMyListBtnState(btn, currentMovieId, {
+            added: currentVisualAdded,
+            pending: true,
+            source: btn.dataset.myListSource || "unknown"
+        });
 
         try {
             const state = await resolveMyListState(currentMovieId);
@@ -1165,9 +1111,7 @@ async function bindMyListButton(btn, movie) {
         } catch (e) {
             console.warn("[title] toggle Mi Lista error:", e);
             try { await refreshMyListButtonState(btn, currentMovieId); }
-            catch {
-                setMyListBtnState(btn, currentMovieId, { added: isInMyListLocal(currentMovieId), pending: false, source: "local" });
-            }
+            catch { setMyListBtnState(btn, currentMovieId, { added: isInMyListLocal(currentMovieId), pending: false, source: "local" }); }
         }
     });
 }
@@ -1233,29 +1177,19 @@ function bindMoreCardNavigation(rootEl, itemsById = new Map()) {
             const id = card.dataset.title;
             const item = itemsById.get(id);
 
-            if (!id || !item) {
-                window.location.href = `/title?title=${encodeURIComponent(id || "")}`;
-                return;
-            }
+            if (!id || !item) { window.location.href = `/title?title=${encodeURIComponent(id || "")}`; return; }
 
             try {
                 const progress = await fetchContinueWatchingForTitle({ movieId: id });
 
                 if (item.category === "series") {
-                    if (progress?.episode_id) {
-                        window.location.href = `/watch?series=${encodeURIComponent(id)}&episode=${encodeURIComponent(progress.episode_id)}`;
-                        return;
-                    }
-                    window.location.href = `/watch?series=${encodeURIComponent(id)}`;
-                    return;
+                    if (progress?.episode_id) { window.location.href = `/watch?series=${encodeURIComponent(id)}&episode=${encodeURIComponent(progress.episode_id)}`; return; }
+                    window.location.href = `/watch?series=${encodeURIComponent(id)}`; return;
                 }
 
                 window.location.href = `/watch?movie=${encodeURIComponent(id)}`;
             } catch {
-                if (item.category === "series") {
-                    window.location.href = `/watch?series=${encodeURIComponent(id)}`;
-                    return;
-                }
+                if (item.category === "series") { window.location.href = `/watch?series=${encodeURIComponent(id)}`; return; }
                 window.location.href = `/watch?movie=${encodeURIComponent(id)}`;
             }
         };
@@ -1287,30 +1221,25 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
         list = [];
     }
 
-    if (!list.length) {
-        moreSection.classList.add("hidden");
-        return;
-    }
+    if (!list.length) { moreSection.classList.add("hidden"); return; }
 
     moreSection.classList.remove("hidden");
 
     const htmlParts = [];
-    for (const item of list) {
-        htmlParts.push(await renderMoreCardHtml({ item, esc, api }));
-    }
+    for (const item of list) htmlParts.push(await renderMoreCardHtml({ item, esc, api }));
 
     moreGrid.innerHTML = htmlParts.join("");
 
-    const itemsById = new Map(
-        list.filter(item => item?.id).map(item => [String(item.id), item])
-    );
-
+    const itemsById = new Map(list.filter(item => item?.id).map(item => [String(item.id), item]));
     bindMoreCardNavigation(moreGrid, itemsById);
     scheduleApplyCondensedFontToWrappedEpisodeTitles(moreGrid);
 }
 
 /* ===========================
-   COLLECTION (reusa bloque EPISODIOS: solo cambia contenido)
+   COLLECTION
+   - NO crea #collection-section
+   - Serie: se inserta debajo del bloque de episodios
+   - Movie: se usa el bloque episodios para mostrar colección (solo colección)
 =========================== */
 
 function renderCollectionCardHtml({ item, esc }) {
@@ -1334,10 +1263,7 @@ function bindCollectionCardNavigation(rootEl, itemsById = new Map()) {
             const id = card.dataset.title;
             const item = itemsById.get(String(id));
 
-            if (!id || !item) {
-                window.location.href = `/title?title=${encodeURIComponent(id || "")}`;
-                return;
-            }
+            if (!id || !item) { window.location.href = `/title?title=${encodeURIComponent(id || "")}`; return; }
 
             const params = new URLSearchParams();
             if (item.collection_id) params.set("collection", item.collection_id);
@@ -1382,15 +1308,15 @@ function renderCollectionItemsIntoGrid(gridEl, items, esc) {
 
     gridEl.innerHTML = items.map((item) => renderCollectionCardHtml({ item, esc })).join("");
 
-    const itemsById = new Map(
-        items.filter(item => item?.id).map(item => [String(item.id), item])
-    );
-
+    const itemsById = new Map(items.filter(item => item?.id).map(item => [String(item.id), item]));
     bindCollectionCardNavigation(gridEl, itemsById);
     scheduleApplyCondensedFontToWrappedEpisodeTitles(gridEl);
 }
 
-async function renderCollectionInsideEpisodesBlock({ api, esc, collectionId, currentMovieId }) {
+/**
+ * Movie/No-series: renderiza colección dentro del bloque de episodios (reemplaza contenido).
+ */
+async function renderCollectionInEpisodesBlock({ api, esc, collectionId, currentMovieId }) {
     const episodesSection = el("episodes-section");
     const episodesTitle = el("episodes-title");
     const seasonFilter = el("season-filter");
@@ -1404,9 +1330,51 @@ async function renderCollectionInsideEpisodesBlock({ api, esc, collectionId, cur
     seasonFilter.innerHTML = "";
     episodesGrid.classList.remove("hidden");
 
+    // limpiar colección inline previa si existía
+    clearInlineCollectionTail(episodesSection);
+
     const items = await fetchCollectionItems({ api, collectionId, currentMovieId });
     renderCollectionItemsIntoGrid(episodesGrid, items, esc);
 
+    return true;
+}
+
+/**
+ * Serie: agrega colección debajo del bloque de episodios (sin IDs nuevos).
+ * Inserta dentro del mismo #episodes-section.
+ */
+function clearInlineCollectionTail(episodesSection) {
+    if (!episodesSection) return;
+    episodesSection.querySelectorAll("[data-inline-collection='1']").forEach(n => n.remove());
+}
+
+async function renderCollectionInlineAfterEpisodes({ api, esc, collectionId, currentMovieId }) {
+    const episodesSection = el("episodes-section");
+    const episodesTitle = el("episodes-title");
+    if (!episodesSection) return false;
+
+    clearInlineCollectionTail(episodesSection);
+
+    const head = document.createElement("div");
+    head.className = "episodes-head";
+    head.dataset.inlineCollection = "1";
+
+    const h2 = document.createElement("h2");
+    // copiar el look del título de episodios sin duplicar IDs
+    h2.className = (episodesTitle?.className || "");
+    h2.textContent = "Colección completa";
+
+    head.appendChild(h2);
+
+    const grid = document.createElement("div");
+    grid.className = "episodes-grid";
+    grid.dataset.inlineCollection = "1";
+
+    episodesSection.appendChild(head);
+    episodesSection.appendChild(grid);
+
+    const items = await fetchCollectionItems({ api, collectionId, currentMovieId });
+    renderCollectionItemsIntoGrid(grid, items, esc);
     return true;
 }
 
@@ -1556,7 +1524,7 @@ function buildSeasonDropdown({ seasonFilter, seasons, getCurrentSeason, onSeason
 function renderSeasonIntoMainGrid({ episodesGrid, episodes, movie, esc, episodeProgressMap }) {
     setSeasonClass(episodesGrid, movie?.season ?? 1);
 
-    episodesGrid.innerHTML = episodes.map((ep) =>
+    episodesGrid.innerHTML = safeArray(episodes).map((ep) =>
         renderEpisodeCardHtml({
             ep,
             fallbackThumb: movie?.thumbnail_url || movie?.banner_url || "",
@@ -1578,22 +1546,9 @@ function renderAllSeasonsStacked({ episodesGrid, grouped, movie, esc, episodePro
         return;
     }
 
-    const parent = episodesGrid.parentElement;
-
-    // Insertar títulos por temporada + grids
-    if (parent) {
-        // limpiar títulos previos
-        parent.querySelectorAll("[data-generated='1']").forEach(n => n.remove());
-    }
-
-    // Primer bloque usa episodesGrid existente
     const [firstSeason, firstList] = grouped[0];
 
-    if (parent) {
-        parent.insertBefore(createSeasonTitleNode(firstSeason, firstList.length), episodesGrid);
-    }
-
-    episodesGrid.classList.add(`episodes-grid-s${String(firstSeason).replace(/[^\w-]/g, "_")}`);
+    setSeasonClass(episodesGrid, firstSeason);
     episodesGrid.innerHTML = firstList.map((ep) =>
         renderEpisodeCardHtml({
             ep,
@@ -1605,9 +1560,16 @@ function renderAllSeasonsStacked({ episodesGrid, grouped, movie, esc, episodePro
 
     bindEpisodeCardNavigation(episodesGrid, movie.id);
 
+    const parent = episodesGrid.parentElement;
+    if (!parent) { scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid); return; }
+
+    if (grouped.length) {
+        const firstTitle = createSeasonTitleNode(firstSeason, firstList.length);
+        parent.insertBefore(firstTitle, episodesGrid);
+    }
+
     for (let i = 1; i < grouped.length; i += 1) {
         const [seasonNum, seasonEpisodes] = grouped[i];
-
         const titleNode = createSeasonTitleNode(seasonNum, seasonEpisodes.length);
         const grid = createSiblingGridForSeason(seasonNum);
 
@@ -1620,15 +1582,12 @@ function renderAllSeasonsStacked({ episodesGrid, grouped, movie, esc, episodePro
             })
         ).join("");
 
-        if (parent) {
-            parent.appendChild(titleNode);
-            parent.appendChild(grid);
-        }
-
+        parent.appendChild(titleNode);
+        parent.appendChild(grid);
         bindEpisodeCardNavigation(grid, movie.id);
     }
 
-    scheduleApplyCondensedFontToWrappedEpisodeTitles(parent || episodesGrid);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(parent);
 }
 
 /* ===========================
@@ -1640,7 +1599,6 @@ async function main() {
     const collectionId = qs("collection");
 
     applyAkiraVideoContainOverrideIfNeeded(resolveAkiraOverrideTargetId());
-
     await ensureSupabaseGlobal();
 
     const ui = await import("./ui.js");
@@ -1660,15 +1618,8 @@ async function main() {
         ensureMyListNavLink(null);
     }
 
-    if (!movieId || !isUuidLike(movieId)) {
-        renderTitleNotFound();
-        return;
-    }
-
-    if (collectionId && !isUuidLike(collectionId)) {
-        renderTitleNotFound();
-        return;
-    }
+    if (!movieId || !isUuidLike(movieId)) { renderTitleNotFound(); return; }
+    if (collectionId && !isUuidLike(collectionId)) { renderTitleNotFound(); return; }
 
     const esc = ui.escapeHtml;
 
@@ -1696,10 +1647,7 @@ async function main() {
         return;
     }
 
-    if (!movie) {
-        renderTitleNotFound();
-        return;
-    }
+    if (!movie) { renderTitleNotFound(); return; }
 
     applyAkiraVideoContainOverrideIfNeeded(movie.id);
 
@@ -1727,7 +1675,6 @@ async function main() {
     mountTitleHeroTrailerVideo(hero, movie);
     if (trailerBtn) trailerBtn.classList.add("hidden");
 
-    // watch btn states
     const publishState = getMoviePublishState(movie);
     const publishStateLabel = getMoviePublishStateLabel(movie);
 
@@ -1749,7 +1696,6 @@ async function main() {
         }
     }
 
-    // meta line
     const year = movie.release_year ? String(movie.release_year) : "";
     let right = "";
 
@@ -1764,7 +1710,6 @@ async function main() {
 
     await renderMoreSection({ api, esc, currentMovieId: movie.id });
 
-    // extra info
     if (extraEl) {
         const mm = movie.movie_meta || null;
         const durText = movie.category === "movie" ? formatDuration(movie.duration_minutes) : "";
@@ -1797,27 +1742,20 @@ async function main() {
 
     if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) return;
 
-    /* =========================================================
-       ✅ CLAVE: si hay collectionId, reusar BLOQUE EPISODIOS
-       (no crear section nueva, no ids/clases nuevas)
-    ========================================================= */
-    if (collectionId) {
-        await renderCollectionInsideEpisodesBlock({
-            api,
-            esc,
-            collectionId,
-            currentMovieId: movie.id
-        });
-        return;
-    }
+    // limpiar cualquier collection inline vieja al entrar
+    clearInlineCollectionTail(episodesSection);
 
-    // si no es serie y no hay collection: ocultar episodios
+    // MOVIE / NO SERIES
     if (movie.category !== "series") {
-        episodesSection.classList.add("hidden");
+        if (collectionId) {
+            await renderCollectionInEpisodesBlock({ api, esc, collectionId, currentMovieId: movie.id });
+        } else {
+            episodesSection.classList.add("hidden");
+        }
         return;
     }
 
-    // render episodios normales
+    // SERIES: EPISODIOS primero
     episodesSection.classList.remove("hidden");
     episodesTitle.textContent = "Episodios";
     seasonFilter.classList.remove("hidden");
@@ -1825,6 +1763,11 @@ async function main() {
 
     if (!episodes?.length) {
         episodesGrid.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
+
+        // aún si no hay episodios, si hay collection => abajo mostramos colección
+        if (collectionId) {
+            await renderCollectionInlineAfterEpisodes({ api, esc, collectionId, currentMovieId: movie.id });
+        }
         return;
     }
 
@@ -1870,6 +1813,7 @@ async function main() {
                 esc,
                 episodeProgressMap
             });
+
             return;
         }
 
@@ -1887,6 +1831,18 @@ async function main() {
     }
 
     renderSingleOrMultiSeasonUI();
+
+    // SERIES: COLECCIÓN abajo (si existe)
+    if (collectionId) {
+        await renderCollectionInlineAfterEpisodes({ api, esc, collectionId, currentMovieId: movie.id });
+    }
+
+    if (myListBtn) {
+        myListBtn.addEventListener("dblclick", (ev) => {
+            ev.preventDefault();
+            scrollToEpisodes();
+        });
+    }
 }
 
 main().catch((err) => {
