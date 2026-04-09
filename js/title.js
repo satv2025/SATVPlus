@@ -1447,6 +1447,56 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
     scheduleApplyCondensedFontToWrappedEpisodeTitles(moreGrid);
 }
 
+async function renderCollectionSectionBelowEpisodes({ api, esc, collectionId, currentMovieId }) {
+    const section = ensureSecondarySectionAfterEpisodes();
+    if (!section) return false;
+
+    const titleEl = section.querySelector("#collection-title");
+    const gridEl = section.querySelector("#collection-grid");
+
+    if (!titleEl || !gridEl) return false;
+
+    titleEl.textContent = "Colección completa";
+    gridEl.innerHTML = "";
+
+    let items = [];
+    try {
+        if (typeof api.fetchCollection === "function") {
+            items = await api.fetchCollection(collectionId, 200);
+        } else {
+            console.warn("[title] api.fetchCollection no existe");
+            items = [];
+        }
+    } catch (e) {
+        console.warn("[title] no se pudo cargar colección:", e);
+        items = [];
+    }
+
+    items = (items || []).filter((item) => item?.id && String(item.id) !== String(currentMovieId));
+
+    if (!items.length) {
+        gridEl.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
+        section.classList.remove("hidden");
+        return true;
+    }
+
+    gridEl.innerHTML = items.map((item) =>
+        renderCollectionCardHtml({ item, esc })
+    ).join("");
+
+    const itemsById = new Map(
+        items
+            .filter(item => item?.id)
+            .map(item => [String(item.id), item])
+    );
+
+    bindCollectionCardNavigation(gridEl, itemsById);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(gridEl);
+
+    section.classList.remove("hidden");
+    return true;
+}
+
 /* ===========================
    COLLECTION (cards tipo episodio, sin collections.svg)
 =========================== */
@@ -1466,6 +1516,28 @@ function renderCollectionCardHtml({ item, esc }) {
       </div>
     </article>
   `;
+}
+
+function ensureSecondarySectionAfterEpisodes() {
+    const episodesSection = el("episodes-section");
+    if (!episodesSection) return null;
+
+    let section = document.getElementById("collection-section");
+    if (section) return section;
+
+    section = document.createElement("section");
+    section.id = "collection-section";
+    section.className = "episodes-section";
+
+    section.innerHTML = `
+      <div class="episodes-head">
+        <h2 id="collection-title">Colección completa</h2>
+      </div>
+      <div id="collection-grid" class="episodes-grid"></div>
+    `;
+
+    episodesSection.insertAdjacentElement("afterend", section);
+    return section;
 }
 
 function bindCollectionCardNavigation(rootEl, itemsById = new Map()) {
