@@ -1795,18 +1795,17 @@ async function main() {
 
     if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) return;
 
-    if (collectionId) {
-        await renderCollectionSection({
-            api,
-            esc,
-            collectionId,
-            currentMovieId: movie.id
-        });
-        return;
-    }
-
     if (movie.category !== "series") {
-        episodesSection.classList.add("hidden");
+        if (collectionId) {
+            await renderCollectionSection({
+                api,
+                esc,
+                collectionId,
+                currentMovieId: movie.id
+            });
+        } else {
+            episodesSection.classList.add("hidden");
+        }
         return;
     }
 
@@ -2042,6 +2041,14 @@ async function main() {
 
     renderSeasonSelector();
     renderEpisodesGrid();
+    if (collectionId) {
+        await renderCollectionSectionBelowEpisodes({
+            api,
+            esc,
+            collectionId,
+            currentMovieId: movie.id
+        });
+    }
 }
 
 main().catch(console.error);
