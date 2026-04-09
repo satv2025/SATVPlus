@@ -9,7 +9,6 @@ function loadScriptOnce(src) {
     return new Promise((resolve, reject) => {
         const exists = [...document.scripts].some((s) => s.src === src);
         if (exists) return resolve();
-
         const s = document.createElement("script");
         s.src = src;
         s.onload = resolve;
@@ -30,15 +29,12 @@ async function ensureSupabaseGlobal() {
    Utils
 =========================== */
 
-function plural(n, one, many) {
-    return Number(n) === 1 ? one : many;
-}
+function plural(n, one, many) { return Number(n) === 1 ? one : many; }
 
 function formatDuration(minutes) {
     const m = Number(minutes);
     if (!Number.isFinite(m) || m <= 0) return "";
     if (m < 60) return `${m} min`;
-
     const h = Math.floor(m / 60);
     const rem = m % 60;
     return rem === 0 ? `${h} h` : `${h} h ${rem} min`;
@@ -49,7 +45,6 @@ function formatElapsed(seconds) {
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
     const ss = s % 60;
-
     if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
     return `${m}:${String(ss).padStart(2, "0")}`;
 }
@@ -76,10 +71,6 @@ function safeArray(value) {
     return Array.isArray(value) ? value : [];
 }
 
-function removeNode(node) {
-    if (node?.parentNode) node.parentNode.removeChild(node);
-}
-
 /* ===========================
    Not found
 =========================== */
@@ -92,7 +83,6 @@ function renderTitleNotFound() {
     const moreSection = el("more-section");
     const moreGrid = el("more-grid");
     const extraEl = el("title-extra");
-    const collectionSection = document.getElementById("collection-section");
 
     if (hero) {
         hero.style.backgroundImage = "none";
@@ -149,22 +139,13 @@ function renderTitleNotFound() {
     `;
 
         const btn = document.getElementById("title-not-found-btn");
-        if (btn) {
-            btn.onclick = () => {
-                window.location.href = "/index.html";
-            };
-        }
+        if (btn) btn.onclick = () => { window.location.href = "/index.html"; };
     }
 
     if (episodesSection) episodesSection.classList.add("hidden");
-    if (collectionSection) collectionSection.classList.add("hidden");
     if (moreSection) moreSection.classList.add("hidden");
     if (moreGrid) moreGrid.innerHTML = "";
-
-    if (extraEl) {
-        extraEl.innerHTML = "";
-        extraEl.classList.add("hidden");
-    }
+    if (extraEl) { extraEl.innerHTML = ""; extraEl.classList.add("hidden"); }
 }
 
 /* ===========================
@@ -205,9 +186,7 @@ function applyCondensedFontToWrappedEpisodeTitles(root = document) {
 }
 
 function scheduleApplyCondensedFontToWrappedEpisodeTitles(root = document) {
-    if (__episodeTitleWrappedRaf) {
-        cancelAnimationFrame(__episodeTitleWrappedRaf);
-    }
+    if (__episodeTitleWrappedRaf) cancelAnimationFrame(__episodeTitleWrappedRaf);
 
     __episodeTitleWrappedRaf = requestAnimationFrame(() => {
         __episodeTitleWrappedRaf = requestAnimationFrame(() => {
@@ -244,19 +223,15 @@ function applyAkiraVideoContainOverrideIfNeeded(currentId) {
     }
 
     styleEl.textContent = `
-      .akira-video {
-        object-fit: contain !important;
-      }
-    `;
+    .akira-video { object-fit: contain !important; }
+  `;
 }
 
 function resolveAkiraOverrideTargetId() {
     const fromSeries = qs("series");
     if (fromSeries) return fromSeries;
-
     const fromTitle = qs("title") || qs("movie");
     if (fromTitle) return fromTitle;
-
     return "";
 }
 
@@ -278,7 +253,6 @@ function getMoviePublishStateLabel(movie) {
     if (state === "upcoming") return custom || "Próximamente";
     if (state === "live") return "En Vivo";
     if (state === "other") return custom || "Otro";
-
     return "Público";
 }
 
@@ -293,17 +267,13 @@ function deriveSeriesCountsFromEpisodes(episodes) {
 
     for (const ep of list) {
         episodesCount += 1;
-
         const seasonRaw = ep?.season;
         if (seasonRaw !== null && seasonRaw !== undefined && seasonRaw !== "") {
             seasonSet.add(String(seasonRaw));
         }
     }
 
-    return {
-        seasonsCount: seasonSet.size,
-        episodesCount
-    };
+    return { seasonsCount: seasonSet.size, episodesCount };
 }
 
 function resolveSeriesCounts(movie, episodes) {
@@ -401,7 +371,9 @@ function groupBySeason(episodes) {
 
     for (const ep of safeArray(episodes)) {
         const seasonValue = ep?.season;
-        const s = (seasonValue !== null && seasonValue !== undefined && seasonValue !== "") ? seasonValue : 1;
+        const s = (seasonValue !== null && seasonValue !== undefined && seasonValue !== "")
+            ? seasonValue
+            : 1;
 
         if (!map.has(s)) map.set(s, []);
         map.get(s).push(ep);
@@ -414,7 +386,6 @@ function groupBySeason(episodes) {
     return [...map.entries()].sort((a, b) => {
         const na = Number(a[0]);
         const nb = Number(b[0]);
-
         if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
         return String(a[0]).localeCompare(String(b[0]), "es");
     });
@@ -426,11 +397,6 @@ function clampSeason(seasons, desired) {
     return seasons[0];
 }
 
-function scrollToEpisodes() {
-    const target = el("episodes-section");
-    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
 /* ===========================
    Episode progress helpers
 =========================== */
@@ -439,12 +405,15 @@ function clampProgressPercent(progressSeconds, durationSeconds) {
     const progress = Number(progressSeconds || 0);
     const duration = Number(durationSeconds || 0);
 
-    if (!Number.isFinite(progress) || !Number.isFinite(duration) || duration <= 0) {
-        return 0;
-    }
+    if (!Number.isFinite(progress) || !Number.isFinite(duration) || duration <= 0) return 0;
 
     const pct = (progress / duration) * 100;
     return Math.max(0, Math.min(100, pct));
+}
+
+async function getAppSupabaseClient() {
+    const mod = await import("./supabaseClient.js");
+    return mod?.supabase || null;
 }
 
 async function fetchEpisodeProgressMapForTitle({ movieId }) {
@@ -452,41 +421,29 @@ async function fetchEpisodeProgressMapForTitle({ movieId }) {
 
     try {
         const supabase = await getAppSupabaseClient();
-        if (!supabase) {
-            console.warn("[title] supabaseClient.js no devolvió supabase (episode progress map)");
-            return new Map();
-        }
+        if (!supabase) return new Map();
 
         const { data: userData, error: userErr } = await supabase.auth.getUser();
-        if (userErr) {
-            console.warn("[title] getUser error (episode progress map):", userErr);
-            return new Map();
-        }
+        if (userErr) return new Map();
 
         const userId = userData?.user?.id;
-        if (!userId) {
-            console.log("[title] sin sesión activa (episode progress map)");
-            return new Map();
-        }
+        if (!userId) return new Map();
 
         const { data, error } = await supabase
             .from("watch_progress")
             .select(`
-                episode_id,
-                progress_seconds,
-                duration_seconds,
-                updated_at
-            `)
+        episode_id,
+        progress_seconds,
+        duration_seconds,
+        updated_at
+      `)
             .eq("user_id", userId)
             .eq("movie_id", movieId)
             .not("episode_id", "is", null)
             .gt("progress_seconds", 0)
             .order("updated_at", { ascending: false });
 
-        if (error) {
-            console.warn("[title] watch_progress map query error:", error);
-            return new Map();
-        }
+        if (error) return new Map();
 
         const map = new Map();
 
@@ -506,10 +463,8 @@ async function fetchEpisodeProgressMapForTitle({ movieId }) {
             });
         }
 
-        console.log("[title] progress map episodios:", map);
         return map;
-    } catch (e) {
-        console.warn("[title] fetchEpisodeProgressMapForTitle error:", e);
+    } catch {
         return new Map();
     }
 }
@@ -561,19 +516,15 @@ function bindEpisodeCardNavigation(rootEl, movieId) {
             const epId = card.dataset.episode;
             window.location.href = `/watch?series=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(epId)}`;
         };
-
         card.addEventListener("click", go);
         card.addEventListener("keydown", (ev) => {
-            if (ev.key === "Enter" || ev.key === " ") {
-                ev.preventDefault();
-                go();
-            }
+            if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); }
         });
     });
 }
 
 /* ===========================
-   Watch button
+   WATCH BUTTON
 =========================== */
 
 let __liveCountdownTimer = null;
@@ -597,7 +548,6 @@ function getLiveStartDate(movie) {
         null;
 
     if (!raw) return null;
-
     const d = new Date(raw);
     return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -778,7 +728,7 @@ function setWatchBtnLiveCountdown(watchBtn, movie) {
 window.addEventListener("beforeunload", clearLiveCountdownTimer);
 
 /* ===========================
-   Trailer hero video
+   HERO TRAILER VIDEO
 =========================== */
 
 const TITLE_VOLUME_ICON_MUTE = "https://satvplus.com.ar/images/svg/heromute.svg";
@@ -875,51 +825,37 @@ function mountTitleHeroTrailerVideo(hero, movie) {
 }
 
 /* ===========================
-   Continue Watching
+   Continue Watching (watch_progress)
 =========================== */
-
-async function getAppSupabaseClient() {
-    const mod = await import("./supabaseClient.js");
-    return mod?.supabase || null;
-}
 
 async function fetchContinueWatchingForTitle({ movieId }) {
     if (!movieId) return null;
 
     try {
         const supabase = await getAppSupabaseClient();
-        if (!supabase) {
-            console.warn("[title] supabaseClient.js no devolvió supabase");
-            return null;
-        }
+        if (!supabase) return null;
 
         const { data: userData, error: userErr } = await supabase.auth.getUser();
-        if (userErr) {
-            console.warn("[title] getUser error:", userErr);
-            return null;
-        }
+        if (userErr) return null;
 
         const userId = userData?.user?.id;
-        if (!userId) {
-            console.log("[title] sin sesión activa");
-            return null;
-        }
+        if (!userId) return null;
 
         let { data, error } = await supabase
             .from("watch_progress")
             .select(`
-                movie_id,
-                episode_id,
-                progress_seconds,
-                duration_seconds,
-                updated_at,
-                episodes:episodes!watch_progress_episode_id_fkey (
-                    id,
-                    season,
-                    episode_number,
-                    title
-                )
-            `)
+        movie_id,
+        episode_id,
+        progress_seconds,
+        duration_seconds,
+        updated_at,
+        episodes:episodes!watch_progress_episode_id_fkey (
+          id,
+          season,
+          episode_number,
+          title
+        )
+      `)
             .eq("user_id", userId)
             .eq("movie_id", movieId)
             .gt("progress_seconds", 0)
@@ -931,17 +867,17 @@ async function fetchContinueWatchingForTitle({ movieId }) {
             const retry = await supabase
                 .from("watch_progress")
                 .select(`
-                    movie_id,
-                    episode_id,
-                    progress_seconds,
-                    updated_at,
-                    episodes:episodes!watch_progress_episode_id_fkey (
-                        id,
-                        season,
-                        episode_number,
-                        title
-                    )
-                `)
+          movie_id,
+          episode_id,
+          progress_seconds,
+          updated_at,
+          episodes:episodes!watch_progress_episode_id_fkey (
+            id,
+            season,
+            episode_number,
+            title
+          )
+        `)
                 .eq("user_id", userId)
                 .eq("movie_id", movieId)
                 .gt("progress_seconds", 0)
@@ -953,25 +889,15 @@ async function fetchContinueWatchingForTitle({ movieId }) {
             error = retry.error;
         }
 
-        if (error) {
-            console.warn("[title] watch_progress query error:", error);
-            return null;
-        }
-
-        if (!data) {
-            console.log("[title] sin progreso previo para este título:", movieId);
-            return null;
-        }
+        if (error) return null;
+        if (!data) return null;
 
         const progressSeconds = Number(data.progress_seconds || 0);
-        if (!Number.isFinite(progressSeconds) || progressSeconds <= 0) {
-            console.log("[title] progreso inválido:", data);
-            return null;
-        }
+        if (!Number.isFinite(progressSeconds) || progressSeconds <= 0) return null;
 
         const ep = Array.isArray(data.episodes) ? (data.episodes[0] || null) : (data.episodes || null);
 
-        const out = {
+        return {
             ...data,
             episodes: ep,
             season: ep?.season ?? null,
@@ -979,17 +905,13 @@ async function fetchContinueWatchingForTitle({ movieId }) {
             episode_title: ep?.title ?? null,
             elapsed_seconds: progressSeconds
         };
-
-        console.log("[title] progreso detectado:", out);
-        return out;
-    } catch (e) {
-        console.warn("[title] fetchContinueWatchingForTitle error:", e);
+    } catch {
         return null;
     }
 }
 
 /* ===========================
-   Mi Lista
+   MI LISTA (Supabase REAL + fallback localStorage)
 =========================== */
 
 const MY_LIST_KEY = "satv_my_list_ids";
@@ -1032,10 +954,7 @@ function toggleMyListLocal(movieId) {
     const ids = getMyListIds();
     const exists = ids.includes(movieId);
 
-    const next = exists
-        ? ids.filter(id => id !== movieId)
-        : [...ids, movieId];
-
+    const next = exists ? ids.filter(id => id !== movieId) : [...ids, movieId];
     saveMyListIds(next);
     return !exists;
 }
@@ -1043,11 +962,7 @@ function toggleMyListLocal(movieId) {
 function setMyListBtnState(btn, movieId, opts = {}) {
     if (!btn || !movieId) return;
 
-    const {
-        added = false,
-        pending = false,
-        source = "unknown"
-    } = opts;
+    const { added = false, pending = false, source = "unknown" } = opts;
 
     btn.classList.remove("hidden");
     btn.setAttribute("type", "button");
@@ -1061,25 +976,17 @@ function setMyListBtnState(btn, movieId, opts = {}) {
 
     try { btn.disabled = !!pending; } catch { }
 
-    const nextLabel = pending
-        ? "Actualizando…"
-        : (added ? "En Mi Lista" : "Mi Lista");
+    const nextLabel = pending ? "Actualizando…" : (added ? "En Mi Lista" : "Mi Lista");
 
     const labelSpan = btn.querySelector("span");
-    if (labelSpan) {
-        labelSpan.textContent = nextLabel;
-        return;
-    }
+    if (labelSpan) { labelSpan.textContent = nextLabel; return; }
 
     const textNode = [...btn.childNodes].find(
         (n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim().length > 0
     );
 
-    if (textNode) {
-        textNode.textContent = ` ${nextLabel}`;
-    } else {
-        btn.appendChild(document.createTextNode(` ${nextLabel}`));
-    }
+    if (textNode) textNode.textContent = ` ${nextLabel}`;
+    else btn.appendChild(document.createTextNode(` ${nextLabel}`));
 }
 
 async function getMyListAuthContext() {
@@ -1088,27 +995,18 @@ async function getMyListAuthContext() {
         if (!supabase) return { supabase: null, profileId: null, isLoggedIn: false };
 
         const { data, error } = await supabase.auth.getUser();
-        if (error) {
-            console.warn("[title] getUser (Mi Lista) error:", error);
-            return { supabase, profileId: null, isLoggedIn: false, error };
-        }
+        if (error) return { supabase, profileId: null, isLoggedIn: false, error };
 
         const profileId = data?.user?.id || null;
         return { supabase, profileId, isLoggedIn: !!profileId };
     } catch (e) {
-        console.warn("[title] getMyListAuthContext error:", e);
         return { supabase: null, profileId: null, isLoggedIn: false, error: e };
     }
 }
 
 function buildMyListUrl(userId) {
     if (!userId) return "/mylist";
-
-    const q = new URLSearchParams({
-        list: String(userId),
-        user: String(userId)
-    });
-
+    const q = new URLSearchParams({ list: String(userId), user: String(userId) });
     return `/mylist?${q.toString()}`;
 }
 
@@ -1137,11 +1035,8 @@ function ensureMyListNavLink(userId) {
     });
 
     if (inicio && inicio.parentElement === navLeft) {
-        if (inicio.nextSibling !== link) {
-            navLeft.insertBefore(link, inicio.nextSibling);
-        } else if (link.parentElement !== navLeft) {
-            navLeft.insertBefore(link, inicio.nextSibling);
-        }
+        if (inicio.nextSibling !== link) navLeft.insertBefore(link, inicio.nextSibling);
+        else if (link.parentElement !== navLeft) navLeft.insertBefore(link, inicio.nextSibling);
     } else {
         if (link.parentElement !== navLeft) navLeft.appendChild(link);
     }
@@ -1175,10 +1070,7 @@ async function addToMyListSupabase({ supabase, profileId, contentId }) {
 
     const { error } = await supabase
         .from("my_list")
-        .upsert(payload, {
-            onConflict: "profile_id,content_id",
-            ignoreDuplicates: false
-        });
+        .upsert(payload, { onConflict: "profile_id,content_id", ignoreDuplicates: false });
 
     if (error) throw error;
     return true;
@@ -1204,13 +1096,7 @@ async function resolveMyListState(contentId) {
     const ctx = await getMyListAuthContext();
 
     if (!ctx.supabase || !ctx.isLoggedIn || !ctx.profileId) {
-        return {
-            added: localAdded,
-            source: "local",
-            supabase: ctx.supabase || null,
-            profileId: null,
-            isLoggedIn: false
-        };
+        return { added: localAdded, source: "local", supabase: ctx.supabase || null, profileId: null, isLoggedIn: false };
     }
 
     try {
@@ -1222,43 +1108,19 @@ async function resolveMyListState(contentId) {
 
         setLocalMyListMembership(contentId, remoteAdded);
 
-        return {
-            added: remoteAdded,
-            source: "supabase",
-            supabase: ctx.supabase,
-            profileId: ctx.profileId,
-            isLoggedIn: true
-        };
+        return { added: remoteAdded, source: "supabase", supabase: ctx.supabase, profileId: ctx.profileId, isLoggedIn: true };
     } catch (e) {
         console.warn("[title] resolveMyListState remote error; uso local:", e);
-        return {
-            added: localAdded,
-            source: "local",
-            supabase: ctx.supabase,
-            profileId: ctx.profileId,
-            isLoggedIn: !!ctx.profileId,
-            error: e
-        };
+        return { added: localAdded, source: "local", supabase: ctx.supabase, profileId: ctx.profileId, isLoggedIn: !!ctx.profileId, error: e };
     }
 }
 
 async function refreshMyListButtonState(btn, contentId) {
     if (!btn || !contentId) return;
 
-    setMyListBtnState(btn, contentId, {
-        added: isInMyListLocal(contentId),
-        pending: true,
-        source: "unknown"
-    });
-
+    setMyListBtnState(btn, contentId, { added: isInMyListLocal(contentId), pending: true, source: "unknown" });
     const state = await resolveMyListState(contentId);
-
-    setMyListBtnState(btn, contentId, {
-        added: state.added,
-        pending: false,
-        source: state.source
-    });
-
+    setMyListBtnState(btn, contentId, { added: state.added, pending: false, source: state.source });
     return state;
 }
 
@@ -1275,89 +1137,43 @@ async function bindMyListButton(btn, movie) {
 
     btn.addEventListener("click", async (ev) => {
         ev.preventDefault();
-
         if (btn.dataset.myListPending === "1") return;
 
         const currentMovieId = btn.dataset.myListMovieId || movie.id;
         const currentVisualAdded = btn.dataset.myListState === "in";
 
-        setMyListBtnState(btn, currentMovieId, {
-            added: currentVisualAdded,
-            pending: true,
-            source: btn.dataset.myListSource || "unknown"
-        });
+        setMyListBtnState(btn, currentMovieId, { added: currentVisualAdded, pending: true, source: btn.dataset.myListSource || "unknown" });
 
         try {
             const state = await resolveMyListState(currentMovieId);
 
             if (state.source === "supabase" && state.supabase && state.profileId) {
                 if (state.added) {
-                    await removeFromMyListSupabase({
-                        supabase: state.supabase,
-                        profileId: state.profileId,
-                        contentId: currentMovieId
-                    });
-
+                    await removeFromMyListSupabase({ supabase: state.supabase, profileId: state.profileId, contentId: currentMovieId });
                     setLocalMyListMembership(currentMovieId, false);
-
-                    setMyListBtnState(btn, currentMovieId, {
-                        added: false,
-                        pending: false,
-                        source: "supabase"
-                    });
-
-                    console.log("[title] quitado de Mi Lista (Supabase)");
+                    setMyListBtnState(btn, currentMovieId, { added: false, pending: false, source: "supabase" });
                 } else {
-                    await addToMyListSupabase({
-                        supabase: state.supabase,
-                        profileId: state.profileId,
-                        contentId: currentMovieId
-                    });
-
+                    await addToMyListSupabase({ supabase: state.supabase, profileId: state.profileId, contentId: currentMovieId });
                     setLocalMyListMembership(currentMovieId, true);
-
-                    setMyListBtnState(btn, currentMovieId, {
-                        added: true,
-                        pending: false,
-                        source: "supabase"
-                    });
-
-                    console.log("[title] agregado a Mi Lista (Supabase)");
+                    setMyListBtnState(btn, currentMovieId, { added: true, pending: false, source: "supabase" });
                 }
-
                 return;
             }
 
             const added = toggleMyListLocal(currentMovieId);
-            setMyListBtnState(btn, currentMovieId, {
-                added,
-                pending: false,
-                source: "local"
-            });
-
-            console.log(
-                added
-                    ? "[title] agregado a Mi Lista (local fallback)"
-                    : "[title] quitado de Mi Lista (local fallback)"
-            );
+            setMyListBtnState(btn, currentMovieId, { added, pending: false, source: "local" });
         } catch (e) {
             console.warn("[title] toggle Mi Lista error:", e);
-
-            try {
-                await refreshMyListButtonState(btn, currentMovieId);
-            } catch {
-                setMyListBtnState(btn, currentMovieId, {
-                    added: isInMyListLocal(currentMovieId),
-                    pending: false,
-                    source: "local"
-                });
+            try { await refreshMyListButtonState(btn, currentMovieId); }
+            catch {
+                setMyListBtnState(btn, currentMovieId, { added: isInMyListLocal(currentMovieId), pending: false, source: "local" });
             }
         }
     });
 }
 
 /* ===========================
-   Te podría gustar
+   TE PODRÍA GUSTAR
 =========================== */
 
 function getMoreCardBadgeLabel(movie) {
@@ -1430,30 +1246,23 @@ function bindMoreCardNavigation(rootEl, itemsById = new Map()) {
                         window.location.href = `/watch?series=${encodeURIComponent(id)}&episode=${encodeURIComponent(progress.episode_id)}`;
                         return;
                     }
-
                     window.location.href = `/watch?series=${encodeURIComponent(id)}`;
                     return;
                 }
 
                 window.location.href = `/watch?movie=${encodeURIComponent(id)}`;
-            } catch (e) {
-                console.warn("[title] more-grid reanudar fallback error:", e);
-
+            } catch {
                 if (item.category === "series") {
                     window.location.href = `/watch?series=${encodeURIComponent(id)}`;
                     return;
                 }
-
                 window.location.href = `/watch?movie=${encodeURIComponent(id)}`;
             }
         };
 
         card.addEventListener("click", go);
         card.addEventListener("keydown", (ev) => {
-            if (ev.key === "Enter" || ev.key === " ") {
-                ev.preventDefault();
-                go();
-            }
+            if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); }
         });
     });
 }
@@ -1493,9 +1302,7 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
     moreGrid.innerHTML = htmlParts.join("");
 
     const itemsById = new Map(
-        list
-            .filter(item => item?.id)
-            .map(item => [String(item.id), item])
+        list.filter(item => item?.id).map(item => [String(item.id), item])
     );
 
     bindMoreCardNavigation(moreGrid, itemsById);
@@ -1503,8 +1310,7 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
 }
 
 /* ===========================
-   Collection
-   Debe verse/estructurarse como episodios
+   COLLECTION (reusa bloque EPISODIOS: solo cambia contenido)
 =========================== */
 
 function renderCollectionCardHtml({ item, esc }) {
@@ -1520,28 +1326,6 @@ function renderCollectionCardHtml({ item, esc }) {
       </div>
     </article>
   `;
-}
-
-function ensureSecondarySectionAfterEpisodes() {
-    const episodesSection = el("episodes-section");
-    if (!episodesSection) return null;
-
-    let section = document.getElementById("collection-section");
-    if (section) return section;
-
-    section = document.createElement("section");
-    section.id = "collection-section";
-    section.className = "episodes-section hidden";
-
-    section.innerHTML = `
-      <div class="episodes-head">
-        <h2 id="collection-title">Colección completa</h2>
-      </div>
-      <div id="collection-grid" class="episodes-grid"></div>
-    `;
-
-    episodesSection.insertAdjacentElement("afterend", section);
-    return section;
 }
 
 function bindCollectionCardNavigation(rootEl, itemsById = new Map()) {
@@ -1564,17 +1348,13 @@ function bindCollectionCardNavigation(rootEl, itemsById = new Map()) {
 
         card.addEventListener("click", go);
         card.addEventListener("keydown", (ev) => {
-            if (ev.key === "Enter" || ev.key === " ") {
-                ev.preventDefault();
-                go();
-            }
+            if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); }
         });
     });
 }
 
 async function fetchCollectionItems({ api, collectionId, currentMovieId }) {
     let items = [];
-
     try {
         if (typeof api.fetchCollection === "function") {
             items = await api.fetchCollection(collectionId, 200);
@@ -1593,27 +1373,24 @@ async function fetchCollectionItems({ api, collectionId, currentMovieId }) {
 }
 
 function renderCollectionItemsIntoGrid(gridEl, items, esc) {
-    if (!gridEl) return new Map();
+    if (!gridEl) return;
 
     if (!items.length) {
         gridEl.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
-        return new Map();
+        return;
     }
 
     gridEl.innerHTML = items.map((item) => renderCollectionCardHtml({ item, esc })).join("");
 
     const itemsById = new Map(
-        items
-            .filter(item => item?.id)
-            .map(item => [String(item.id), item])
+        items.filter(item => item?.id).map(item => [String(item.id), item])
     );
 
     bindCollectionCardNavigation(gridEl, itemsById);
     scheduleApplyCondensedFontToWrappedEpisodeTitles(gridEl);
-    return itemsById;
 }
 
-async function renderCollectionSection({ api, esc, collectionId, currentMovieId }) {
+async function renderCollectionInsideEpisodesBlock({ api, esc, collectionId, currentMovieId }) {
     const episodesSection = el("episodes-section");
     const episodesTitle = el("episodes-title");
     const seasonFilter = el("season-filter");
@@ -1629,38 +1406,18 @@ async function renderCollectionSection({ api, esc, collectionId, currentMovieId 
 
     const items = await fetchCollectionItems({ api, collectionId, currentMovieId });
     renderCollectionItemsIntoGrid(episodesGrid, items, esc);
-    return true;
-}
 
-async function renderCollectionSectionBelowEpisodes({ api, esc, collectionId, currentMovieId }) {
-    const section = ensureSecondarySectionAfterEpisodes();
-    if (!section) return false;
-
-    const titleEl = section.querySelector("#collection-title");
-    const gridEl = section.querySelector("#collection-grid");
-    if (!titleEl || !gridEl) return false;
-
-    titleEl.textContent = "Colección completa";
-    gridEl.innerHTML = "";
-
-    const items = await fetchCollectionItems({ api, collectionId, currentMovieId });
-    renderCollectionItemsIntoGrid(gridEl, items, esc);
-
-    section.classList.remove("hidden");
     return true;
 }
 
 /* ===========================
-   Seasons UI
+   Seasons UI (dropdown)
 =========================== */
 
 function clearSeasonClasses(gridEl) {
     if (!gridEl) return;
-
     [...gridEl.classList].forEach((c) => {
-        if (c.startsWith("episodes-grid-s")) {
-            gridEl.classList.remove(c);
-        }
+        if (c.startsWith("episodes-grid-s")) gridEl.classList.remove(c);
     });
 }
 
@@ -1718,32 +1475,21 @@ function toggleSeasonDropdown(seasonFilter) {
     else openSeasonDropdown(seasonFilter);
 }
 
-function buildSeasonDropdown({
-    seasonFilter,
-    seasons,
-    getCurrentSeason,
-    onSeasonChange
-}) {
+function buildSeasonDropdown({ seasonFilter, seasons, getCurrentSeason, onSeasonChange }) {
     if (!seasonFilter) return;
 
     seasonFilter.classList.remove("hidden");
     seasonFilter.dataset.open = "0";
 
     seasonFilter.innerHTML = `
-      <div class="dropdown">
-        <button
-          type="button"
-          class="dropdown-btn"
-          aria-haspopup="listbox"
-          aria-expanded="false"
-        >
-          <span class="dropdown-label"></span>
-          <span class="dropdown-caret" aria-hidden="true">▾</span>
-        </button>
-
-        <div class="dropdown-menu hidden" role="listbox"></div>
-      </div>
-    `;
+    <div class="dropdown">
+      <button type="button" class="dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+        <span class="dropdown-label"></span>
+        <span class="dropdown-caret" aria-hidden="true">▾</span>
+      </button>
+      <div class="dropdown-menu hidden" role="listbox"></div>
+    </div>
+  `;
 
     const btn = seasonFilter.querySelector(".dropdown-btn");
     const label = seasonFilter.querySelector(".dropdown-label");
@@ -1760,16 +1506,16 @@ function buildSeasonDropdown({
         menu.innerHTML = seasons.map((season) => {
             const active = String(season) === String(getCurrentSeason());
             return `
-              <button
-                type="button"
-                class="dropdown-item${active ? " is-active" : ""}"
-                data-season="${String(season)}"
-                role="option"
-                aria-selected="${active ? "true" : "false"}"
-              >
-                Temporada ${season}
-              </button>
-            `;
+        <button
+          type="button"
+          class="dropdown-item${active ? " is-active" : ""}"
+          data-season="${String(season)}"
+          role="option"
+          aria-selected="${active ? "true" : "false"}"
+        >
+          Temporada ${season}
+        </button>
+      `;
         }).join("");
 
         menu.querySelectorAll("[data-season]").forEach((itemBtn) => {
@@ -1789,9 +1535,7 @@ function buildSeasonDropdown({
     });
 
     document.addEventListener("click", (ev) => {
-        if (!seasonFilter.contains(ev.target)) {
-            closeSeasonDropdown(seasonFilter);
-        }
+        if (!seasonFilter.contains(ev.target)) closeSeasonDropdown(seasonFilter);
     });
 
     btn?.addEventListener("keydown", (ev) => {
@@ -1809,13 +1553,7 @@ function buildSeasonDropdown({
    Render seasons
 =========================== */
 
-function renderSeasonIntoMainGrid({
-    episodesGrid,
-    episodes,
-    movie,
-    esc,
-    episodeProgressMap
-}) {
+function renderSeasonIntoMainGrid({ episodesGrid, episodes, movie, esc, episodeProgressMap }) {
     setSeasonClass(episodesGrid, movie?.season ?? 1);
 
     episodesGrid.innerHTML = episodes.map((ep) =>
@@ -1831,13 +1569,7 @@ function renderSeasonIntoMainGrid({
     scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);
 }
 
-function renderAllSeasonsStacked({
-    episodesGrid,
-    grouped,
-    movie,
-    esc,
-    episodeProgressMap
-}) {
+function renderAllSeasonsStacked({ episodesGrid, grouped, movie, esc, episodeProgressMap }) {
     removeGeneratedAllNodes(episodesGrid);
     clearSeasonClasses(episodesGrid);
 
@@ -1846,9 +1578,22 @@ function renderAllSeasonsStacked({
         return;
     }
 
+    const parent = episodesGrid.parentElement;
+
+    // Insertar títulos por temporada + grids
+    if (parent) {
+        // limpiar títulos previos
+        parent.querySelectorAll("[data-generated='1']").forEach(n => n.remove());
+    }
+
+    // Primer bloque usa episodesGrid existente
     const [firstSeason, firstList] = grouped[0];
 
-    setSeasonClass(episodesGrid, firstSeason);
+    if (parent) {
+        parent.insertBefore(createSeasonTitleNode(firstSeason, firstList.length), episodesGrid);
+    }
+
+    episodesGrid.classList.add(`episodes-grid-s${String(firstSeason).replace(/[^\w-]/g, "_")}`);
     episodesGrid.innerHTML = firstList.map((ep) =>
         renderEpisodeCardHtml({
             ep,
@@ -1860,19 +1605,9 @@ function renderAllSeasonsStacked({
 
     bindEpisodeCardNavigation(episodesGrid, movie.id);
 
-    const parent = episodesGrid.parentElement;
-    if (!parent) {
-        scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);
-        return;
-    }
-
-    if (grouped.length) {
-        const firstTitle = createSeasonTitleNode(firstSeason, firstList.length);
-        parent.insertBefore(firstTitle, episodesGrid);
-    }
-
     for (let i = 1; i < grouped.length; i += 1) {
         const [seasonNum, seasonEpisodes] = grouped[i];
+
         const titleNode = createSeasonTitleNode(seasonNum, seasonEpisodes.length);
         const grid = createSiblingGridForSeason(seasonNum);
 
@@ -1885,16 +1620,19 @@ function renderAllSeasonsStacked({
             })
         ).join("");
 
-        parent.appendChild(titleNode);
-        parent.appendChild(grid);
+        if (parent) {
+            parent.appendChild(titleNode);
+            parent.appendChild(grid);
+        }
+
         bindEpisodeCardNavigation(grid, movie.id);
     }
 
-    scheduleApplyCondensedFontToWrappedEpisodeTitles(parent);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(parent || episodesGrid);
 }
 
 /* ===========================
-   Main
+   MAIN
 =========================== */
 
 async function main() {
@@ -1902,6 +1640,7 @@ async function main() {
     const collectionId = qs("collection");
 
     applyAkiraVideoContainOverrideIfNeeded(resolveAkiraOverrideTargetId());
+
     await ensureSupabaseGlobal();
 
     const ui = await import("./ui.js");
@@ -1945,10 +1684,10 @@ async function main() {
     const episodesTitle = el("episodes-title");
     const seasonFilter = el("season-filter");
     const episodesGrid = el("episodes-grid");
+
     const extraEl = el("title-extra");
 
     let movie = null;
-
     try {
         movie = await api.fetchMovie(movieId);
     } catch (e) {
@@ -1968,19 +1707,9 @@ async function main() {
     let episodeProgressMap = new Map();
 
     if (movie.category === "series" && typeof api.fetchEpisodes === "function") {
-        try {
-            episodes = await api.fetchEpisodes(movie.id);
-        } catch (e) {
-            console.warn("[title] no se pudieron cargar episodios para meta robusta:", e);
-            episodes = [];
-        }
-
-        try {
-            episodeProgressMap = await fetchEpisodeProgressMapForTitle({ movieId: movie.id });
-        } catch (e) {
-            console.warn("[title] no se pudo cargar progress map de episodios:", e);
-            episodeProgressMap = new Map();
-        }
+        try { episodes = await api.fetchEpisodes(movie.id); } catch { episodes = []; }
+        try { episodeProgressMap = await fetchEpisodeProgressMapForTitle({ movieId: movie.id }); }
+        catch { episodeProgressMap = new Map(); }
     }
 
     movie.__episodes_for_meta = episodes;
@@ -1989,9 +1718,6 @@ async function main() {
 
     await bindMyListButton(myListBtn, movie);
 
-    const NIVELX_ID = "0acf7d27-5a80-4682-873a-760dd1ffdb51";
-    document.body.classList.toggle("is-nivelx", movie.id === NIVELX_ID);
-
     if (titleEl) titleEl.textContent = movie.title || "";
     if (sinopsisEl) sinopsisEl.textContent = movie.description || "";
 
@@ -1999,9 +1725,9 @@ async function main() {
     if (hero && banner) hero.style.backgroundImage = `url("${banner}")`;
 
     mountTitleHeroTrailerVideo(hero, movie);
-
     if (trailerBtn) trailerBtn.classList.add("hidden");
 
+    // watch btn states
     const publishState = getMoviePublishState(movie);
     const publishStateLabel = getMoviePublishStateLabel(movie);
 
@@ -2011,11 +1737,8 @@ async function main() {
         const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
 
         if (!isUpcomingLiveCountdown) {
-            if (publishState === "live") {
-                setWatchBtnStatusClickable(watchBtn, movie, publishStateLabel);
-            } else {
-                setWatchBtnVerAhora(watchBtn, movie);
-            }
+            if (publishState === "live") setWatchBtnStatusClickable(watchBtn, movie, publishStateLabel);
+            else setWatchBtnVerAhora(watchBtn, movie);
 
             try {
                 const progress = await fetchContinueWatchingForTitle({ movieId: movie.id });
@@ -2026,9 +1749,9 @@ async function main() {
         }
     }
 
+    // meta line
     const year = movie.release_year ? String(movie.release_year) : "";
     let right = "";
-    const mm = movie.movie_meta || null;
 
     if (movie.category === "series") {
         const counts = resolveSeriesCounts(movie, episodes);
@@ -2041,7 +1764,9 @@ async function main() {
 
     await renderMoreSection({ api, esc, currentMovieId: movie.id });
 
+    // extra info
     if (extraEl) {
+        const mm = movie.movie_meta || null;
         const durText = movie.category === "movie" ? formatDuration(movie.duration_minutes) : "";
         const hasAny =
             !!mm?.created_by ||
@@ -2067,26 +1792,32 @@ async function main() {
         ${hasAny ? "" : `<div class="title-extra-value">Sin información cargada todavía.</div>`}
       </div>
     `;
-
         extraEl.classList.remove("hidden");
     }
 
     if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) return;
 
-    if (movie.category !== "series") {
-        if (collectionId) {
-            await renderCollectionSection({
-                api,
-                esc,
-                collectionId,
-                currentMovieId: movie.id
-            });
-        } else {
-            episodesSection.classList.add("hidden");
-        }
+    /* =========================================================
+       ✅ CLAVE: si hay collectionId, reusar BLOQUE EPISODIOS
+       (no crear section nueva, no ids/clases nuevas)
+    ========================================================= */
+    if (collectionId) {
+        await renderCollectionInsideEpisodesBlock({
+            api,
+            esc,
+            collectionId,
+            currentMovieId: movie.id
+        });
         return;
     }
 
+    // si no es serie y no hay collection: ocultar episodios
+    if (movie.category !== "series") {
+        episodesSection.classList.add("hidden");
+        return;
+    }
+
+    // render episodios normales
     episodesSection.classList.remove("hidden");
     episodesTitle.textContent = "Episodios";
     seasonFilter.classList.remove("hidden");
@@ -2094,16 +1825,6 @@ async function main() {
 
     if (!episodes?.length) {
         episodesGrid.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
-
-        if (collectionId) {
-            await renderCollectionSectionBelowEpisodes({
-                api,
-                esc,
-                collectionId,
-                currentMovieId: movie.id
-            });
-        }
-
         return;
     }
 
@@ -2149,7 +1870,6 @@ async function main() {
                 esc,
                 episodeProgressMap
             });
-
             return;
         }
 
@@ -2167,22 +1887,6 @@ async function main() {
     }
 
     renderSingleOrMultiSeasonUI();
-
-    if (collectionId) {
-        await renderCollectionSectionBelowEpisodes({
-            api,
-            esc,
-            collectionId,
-            currentMovieId: movie.id
-        });
-    }
-
-    if (myListBtn) {
-        myListBtn.addEventListener("dblclick", (ev) => {
-            ev.preventDefault();
-            scrollToEpisodes();
-        });
-    }
 }
 
 main().catch((err) => {
