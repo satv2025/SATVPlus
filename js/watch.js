@@ -1092,6 +1092,133 @@ async function resolveRouteAndBuildProps() {
 }
 
 /* ============================================================
+ * Aspect-ratio helpers (force contain for squarer videos)
+ * ============================================================ */
+const CONTAIN_MAX_ASPECT_RATIO = 1.55;
+// <= 1.55 => 1:1, 5:4, 4:3, 3:2 aprox => contain
+// >  1.55 => 16:10, 16:9, 21:9, etc => no contain
+
+let __satvAspectStyleInjected = false;
+
+function ensureAspectContainStyle() {
+  if (__satvAspectStyleInjected) return;
+  __satvAspectStyleInjected = true;
+
+  const style = document.createElement("style");
+  style.id = "satv-watch-aspect-style";
+  style.textContent = `
+    #${ROOT_ID}[data-force-video-contain="1"] .akira-video,
+    #${ROOT_ID}[data-force-video-contain="1"] video {
+      object-fit: contain !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function setForceVideoContain(enabled) {
+  const root = getRootEl();
+  if (!root) return;
+
+  ensureAspectContainStyle();
+
+  if (enabled) {
+    root.setAttribute("data-force-video-contain", "1");
+  } else {
+    root.removeAttribute("data-force-video-contain");
+  }
+}
+
+function getVideoAspectInfo(video) {
+  const width = Number(video?.videoWidth || 0);
+  const height = Number(video?.videoHeight || 0);
+
+  if (!width || !height) return null;
+
+  return {
+    width,
+    height,
+    ratio: width / height
+  };
+}
+
+function shouldForceContainByAspect(video) {
+  const info = getVideoAspectInfo(video);
+  if (!info) return false;
+
+  // fuerza contain para formatos "cuadrados" o casi cuadrados:
+  // 1:1, 5:4, 4:3, 3:2, etc.
+  return info.ratio <= CONTAIN_MAX_ASPECT_RATIO;
+}
+
+function applyAspectModeFromVideo(video) {
+  const info = getVideoAspectInfo(video);
+  if (!info) {
+    debugLog("[watch][aspect] metadata no disponible todavía");
+    return;
+  }
+
+  const forceContain = shouldForceContainByAspect(video);
+  setForceVideoContain(forceContain);
+
+  infoLog("[watch][aspect] resolución detectada:", {
+    width: info.width,
+    height: info.height,
+    ratio: Number(info.ratio.toFixed(4)),
+    mode: forceContain ? "contain" : "default"
+  });
+}
+
+function installAspectAutoDetection() {
+  const root = getRootEl();
+  if (!root) return;
+
+  ensureAspectContainStyle();
+
+  let lastVideo = null;
+
+  const bindVideo = (video) => {
+    if (!video || video === lastVideo) return;
+    lastVideo = video;
+
+    const reevaluate = () => applyAspectModeFromVideo(video);
+
+    video.addEventListener("loadedmetadata", reevaluate);
+    video.addEventListener("resize", reevaluate);
+
+    // por si metadata ya estaba disponible
+    if (video.videoWidth && video.videoHeight) {
+      reevaluate();
+    } else {
+      setTimeout(reevaluate, 300);
+      setTimeout(reevaluate, 1200);
+      setTimeout(reevaluate, 3000);
+    }
+  };
+
+  const tryFindVideo = () => {
+    const video =
+      root.querySelector(".akira-video") ||
+      root.querySelector("video");
+
+    if (video) bindVideo(video);
+  };
+
+  tryFindVideo();
+
+  const observer = new MutationObserver(() => {
+    tryFindVideo();
+  });
+
+  observer.observe(root, {
+    childList: true,
+    subtree: true
+  });
+
+  // opcional: guardarlo global para debug
+  window.__SATV_WATCH_ASPECT_OBSERVER__ = observer;
+}
+
+/* ============================================================
  * Post-render debug del <video>
  * ============================================================ */
 function mediaErrorName(code) {
@@ -1207,6 +1334,9 @@ async function renderAndWaitPlayer(result) {
   if (root) root.innerHTML = "";
 
   const renderResult = window.renderAkiraPlayer(result.props);
+
+  // NUEVO
+  installAspectAutoDetection();
 
   try {
     const readyInfo = await awaitAkiraReadyAfterRender(renderResult, {

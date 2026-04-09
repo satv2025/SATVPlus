@@ -353,7 +353,7 @@ a#watch-btn[data-mode="countdown"] {
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    max-width: 258px;
+    max-width: 1221px;
     border: 1px solid rgba(255, 255, 255, .08);
     background: rgb(3 19 55);
     padding: 16px 0;
@@ -361,7 +361,55 @@ a#watch-btn[data-mode="countdown"] {
     z-index: 50;
     box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
     overflow: hidden;
-    width: 100%;
+    width: 167%;
+    height: 214px;
+    overflow: auto;
+}
+
+/* WebKit: Chrome / Edge / Safari */
+.dropdown-menu::-webkit-scrollbar {
+    width: 8px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+    background: #052563;
+    border-radius: 4000px !important;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: #3e68c2;
+}
+
+.dropdown-menu::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Firefox */
+@supports (-moz-appearance: none) {
+    .-dropdown-menu {
+        scrollbar-width: thin;
+        scrollbar-color: #07090d transparent;
+    }
+
+    .-dropdown-menu:hover {
+        scrollbar-color: #111724 transparent;
+    }
+}
+
+/* Firefox legacy */
+@-moz-document url-prefix() {
+    .-dropdown-menu {
+        scrollbar-width: thin;
+        scrollbar-color: #07090d transparent;
+    }
+
+    .-dropdown-menu:hover {
+        scrollbar-color: #111724 transparent;
+    }
 }
 
 .dropdown-item {
