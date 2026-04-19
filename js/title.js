@@ -1763,8 +1763,6 @@ async function main() {
 
     if (metaEl) metaEl.textContent = [year, right].filter(Boolean).join(" · ");
 
-    await renderMoreSection({ api, esc, currentMovieId: movie.id });
-
     if (extraEl) {
         const durText = movie.category === "movie" ? formatDuration(movie.duration_minutes) : "";
         const hasAny =
@@ -1797,7 +1795,10 @@ async function main() {
         extraEl.classList.remove("hidden");
     }
 
-    if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) return;
+    if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) {
+        await renderMoreSection({ api, esc, currentMovieId: movie.id });
+        return;
+    }
 
     if (movie.category !== "series") {
         if (collectionId) {
@@ -1810,11 +1811,13 @@ async function main() {
         } else {
             episodesSection.classList.add("hidden");
         }
+
+        await renderMoreSection({ api, esc, currentMovieId: movie.id });
         return;
     }
 
     episodesSection.classList.remove("hidden");
-    episodesTitle.textContent = "Episodios";
+    episodesTitle.textContent = "Temporadas";
     seasonFilter.classList.remove("hidden");
     episodesGrid.classList.remove("hidden");
 
@@ -1830,6 +1833,7 @@ async function main() {
             });
         }
 
+        await renderMoreSection({ api, esc, currentMovieId: movie.id });
         return;
     }
 
@@ -2064,6 +2068,8 @@ async function main() {
             currentMovieId: movie.id
         });
     }
+
+    await renderMoreSection({ api, esc, currentMovieId: movie.id });
 }
 
 main().catch(console.error);
