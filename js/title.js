@@ -1453,7 +1453,7 @@ function buildSeasonDropdown({ seasonFilter, seasons, getCurrentSeason, onSeason
     <div class="dropdown">
       <button type="button" class="dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
         <span class="dropdown-label"></span>
-        <span class="dropdown-caret" aria-hidden="true">▾</span>
+        <span class="dropdown-caret" aria-hidden="true"></span>
       </button>
       <div class="dropdown-menu hidden" role="listbox"></div>
     </div>
