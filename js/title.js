@@ -2064,6 +2064,6 @@ async function main() {
             currentMovieId: movie.id
         });
     }
+}
 
 main().catch(console.error);
-}
