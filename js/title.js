@@ -21,18 +21,14 @@ function loadScriptOnce(src) {
 async function ensureSupabaseGlobal() {
     if (window.supabase?.createClient) return;
     await loadScriptOnce("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
-    if (!window.supabase?.createClient) {
-        throw new Error("Supabase SDK ok pero createClient no existe.");
-    }
+    if (!window.supabase?.createClient) throw new Error("Supabase SDK ok pero createClient no existe.");
 }
 
 /* ===========================
    Utils
 =========================== */
 
-function plural(n, one, many) {
-    return Number(n) === 1 ? one : many;
-}
+function plural(n, one, many) { return n === 1 ? one : many; }
 
 function formatDuration(minutes) {
     const m = Number(minutes);
@@ -71,18 +67,6 @@ function isPositiveIntegerLike(value) {
 function isUuidLike(value) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || "").trim());
 }
-
-function safeArray(value) {
-    return Array.isArray(value) ? value : [];
-}
-
-function removeNode(node) {
-    if (node?.parentNode) node.parentNode.removeChild(node);
-}
-
-/* ===========================
-   Not found
-=========================== */
 
 function renderTitleNotFound() {
     document.title = "Título no encontrado · SATV+";
@@ -261,7 +245,7 @@ function resolveAkiraOverrideTargetId() {
 }
 
 /* ===========================
-   Publish state
+   PUBLISH STATE (movies.publish_state)
 =========================== */
 
 function getMoviePublishState(movie) {
@@ -283,11 +267,12 @@ function getMoviePublishStateLabel(movie) {
 }
 
 /* ===========================
-   Series counts
+   SERIES COUNTS (robusto desde episodes)
 =========================== */
 
 function deriveSeriesCountsFromEpisodes(episodes) {
-    const list = safeArray(episodes);
+    const list = Array.isArray(episodes) ? episodes : [];
+
     const seasonSet = new Set();
     let episodesCount = 0;
 
@@ -321,7 +306,10 @@ function resolveSeriesCounts(movie, episodes) {
         ? fromEpisodes.episodesCount
         : (isPositiveIntegerLike(metaEpisodes) ? metaEpisodes : 0);
 
-    return { seasonsCount, episodesCount };
+    return {
+        seasonsCount,
+        episodesCount
+    };
 }
 
 function formatSeriesMetaFromCounts({ seasonsCount, episodesCount }) {
@@ -342,7 +330,7 @@ function formatSeriesMetaFromCounts({ seasonsCount, episodesCount }) {
 }
 
 /* ===========================
-   Helpers
+   TE PODRÍA GUSTAR: helpers
 =========================== */
 
 function shortenTitle(raw) {
@@ -368,7 +356,10 @@ function shortenTitle(raw) {
 
     const rightLooksSubtitle = wordsRight.length >= 3;
 
-    if (leftLooksBrandish || !rightLooksSubtitle) return s;
+    if (leftLooksBrandish || !rightLooksSubtitle) {
+        return s;
+    }
+
     return left;
 }
 
@@ -399,11 +390,9 @@ function pickEpisodeThumb(ep) {
 function groupBySeason(episodes) {
     const map = new Map();
 
-    for (const ep of safeArray(episodes)) {
+    for (const ep of episodes || []) {
         const seasonValue = ep?.season;
-        const s = (seasonValue !== null && seasonValue !== undefined && seasonValue !== "") ? seasonValue : 1;
-
-
+        const s = (seasonValue !== null && seasonValue !== undefined) ? seasonValue : 1;
 
         if (!map.has(s)) map.set(s, []);
         map.get(s).push(ep);
@@ -448,11 +437,6 @@ function clampProgressPercent(progressSeconds, durationSeconds) {
     const pct = (progress / duration) * 100;
     return Math.max(0, Math.min(100, pct));
 }
-
-
-
-
-
 
 async function fetchEpisodeProgressMapForTitle({ movieId }) {
     if (!movieId) return new Map();
@@ -521,9 +505,9 @@ async function fetchEpisodeProgressMapForTitle({ movieId }) {
     }
 }
 
-/* ===========================
-   Episode cards
-=========================== */
+/** Card HTML (episodes) */
+
+
 
 function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
     const thumb = pickEpisodeThumb(ep) || fallbackThumb;
@@ -547,14 +531,14 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
     const hasProgress = progressPercent > 0;
 
     return `
-    <article class="episode-card" tabindex="0" role="link" data-episode="${esc(ep.id)}">
+    <article class="episode-card" tabindex="0" role="link" data-episode="${ep.id}">
       <img class="episode-thumb" src="${esc(thumb)}" alt="">
       ${hasProgress ? `
         <div class="episode-progress" aria-hidden="true">
           <div class="episode-progress-bar" style="width:${progressPercent}%;"></div>
         </div>
       ` : ""}
-      <div class="episode-body">
+      <div class="episode-body"> 
         <h4 class="episode-title">${epTitle}</h4>
         <span class="episode-sub">${esc(ep.sinopsis || "")}</span>
       </div>
@@ -562,8 +546,9 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
   `;
 }
 
+/** Bind navigation (episodes) */
 function bindEpisodeCardNavigation(rootEl, movieId) {
-    rootEl.querySelectorAll(".episode-card[data-episode]").forEach(card => {
+    rootEl.querySelectorAll(".episode-card").forEach(card => {
         const go = () => {
             const epId = card.dataset.episode;
             window.location.href = `/watch?series=${encodeURIComponent(movieId)}&episode=${encodeURIComponent(epId)}`;
@@ -571,16 +556,16 @@ function bindEpisodeCardNavigation(rootEl, movieId) {
 
         card.addEventListener("click", go);
         card.addEventListener("keydown", (ev) => {
-            if (ev.key === "Enter" || ev.key === " ") {
-                ev.preventDefault();
-                go();
-            }
+            if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); }
+
+
+
         });
     });
 }
 
 /* ===========================
-   Watch button
+   WATCH BUTTON: Reproducir / Reanudar / Countdown Live / Status
 =========================== */
 
 let __liveCountdownTimer = null;
@@ -693,7 +678,11 @@ function setWatchBtnReanudar(watchBtn, movie, p) {
 
     const hasSeason = season !== "" && season != null;
     const hasEpisode = epNum !== "" && epNum != null;
-    const tag = (hasSeason && hasEpisode) ? `T${Number(season)}E${Number(epNum)}` : "";
+
+    const tag = (hasSeason && hasEpisode)
+        ? `T${Number(season)}E${Number(epNum)}`
+        : "";
+
     const meta = [tag, epTitle].filter(Boolean).join(" ").trim();
 
     if (isSeries) {
@@ -785,7 +774,7 @@ function setWatchBtnLiveCountdown(watchBtn, movie) {
 window.addEventListener("beforeunload", clearLiveCountdownTimer);
 
 /* ===========================
-   Trailer hero video
+   TITLE HERO TRAILER VIDEO
 =========================== */
 
 const TITLE_VOLUME_ICON_MUTE = "https://satvplus.com.ar/images/svg/heromute.svg";
@@ -882,7 +871,7 @@ function mountTitleHeroTrailerVideo(hero, movie) {
 }
 
 /* ===========================
-   Continue Watching
+   Continue Watching (watch_progress)
 =========================== */
 
 async function getAppSupabaseClient() {
@@ -996,7 +985,7 @@ async function fetchContinueWatchingForTitle({ movieId }) {
 }
 
 /* ===========================
-   Mi Lista
+   MI LISTA (Supabase REAL + fallback localStorage)
 =========================== */
 
 const MY_LIST_KEY = "satv_my_list_ids";
@@ -1208,6 +1197,7 @@ async function removeFromMyListSupabase({ supabase, profileId, contentId }) {
 
 async function resolveMyListState(contentId) {
     const localAdded = isInMyListLocal(contentId);
+
     const ctx = await getMyListAuthContext();
 
     if (!ctx.supabase || !ctx.isLoggedIn || !ctx.profileId) {
@@ -1342,11 +1332,11 @@ async function bindMyListButton(btn, movie) {
                 source: "local"
             });
 
-            console.log(
-                added
-                    ? "[title] agregado a Mi Lista (local fallback)"
-                    : "[title] quitado de Mi Lista (local fallback)"
-            );
+            console.log(added
+                ? "[title] agregado a Mi Lista (local fallback)"
+                : "[title] quitado de Mi Lista (local fallback)");
+
+
         } catch (e) {
             console.warn("[title] toggle Mi Lista error:", e);
 
@@ -1364,7 +1354,7 @@ async function bindMyListButton(btn, movie) {
 }
 
 /* ===========================
-   Te podría gustar
+   TE PODRÍA GUSTAR (cards)
 =========================== */
 
 function getMoreCardBadgeLabel(movie) {
@@ -1373,8 +1363,13 @@ function getMoreCardBadgeLabel(movie) {
     const publishState = getMoviePublishState(movie);
     const customText = String(movie.publish_state_text || "").trim();
 
-    if (publishState === "upcoming") return customText || "Próximamente";
-    if (publishState === "other") return customText || "Otro";
+    if (publishState === "upcoming") {
+        return customText || "Próximamente";
+    }
+
+    if (publishState === "other") {
+        return customText || "Otro";
+    }
 
     if (Boolean(movie.live_mode)) {
         const d = getLiveStartDate(movie);
@@ -1382,13 +1377,17 @@ function getMoreCardBadgeLabel(movie) {
         if (publishState === "live") return "En Vivo";
     }
 
-    if (publishState === "live") return "En Vivo";
+    if (publishState === "live") {
+        return "En Vivo";
+    }
+
     return "";
 }
 
 async function renderMoreCardHtml({ item, esc, api }) {
     const thumb = item.thumbnail_url || item.banner_url || "";
     const title = esc(shortenTitle(item.title || ""));
+    let meta = "";
     const synopsis = esc(item.description || item.sinopsis || "");
 
     if (item.category === "series" && typeof api?.fetchEpisodes === "function") {
@@ -1400,7 +1399,7 @@ async function renderMoreCardHtml({ item, esc, api }) {
         }
     }
 
-    const meta = esc(getMoreMetaLine(item));
+    meta = esc(getMoreMetaLine(item));
     const badgeLabel = getMoreCardBadgeLabel(item);
 
     return `
@@ -1478,7 +1477,9 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
             list = await api.fetchMoreExcluding(currentMovieId, 24);
         } else if (typeof api.fetchLatest === "function") {
             const tmp = await api.fetchLatest(60);
-            list = safeArray(tmp).filter(x => x?.id && x.id !== currentMovieId).slice(0, 24);
+            list = (tmp || []).filter(x => x?.id && x.id !== currentMovieId).slice(0, 24);
+        } else {
+            list = [];
         }
     } catch (e) {
         console.warn("No se pudo cargar 'Te podría gustar':", e);
@@ -1510,8 +1511,8 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
 }
 
 /* ===========================
-   Collection
-   Debe verse/estructurarse como episodios
+   COLLECTION (cards tipo episodio, sin collections.svg)
+
 =========================== */
 
 function renderCollectionCardHtml({ item, esc }) {
@@ -1519,11 +1520,13 @@ function renderCollectionCardHtml({ item, esc }) {
     const synopsis = esc(item.description || item.sinopsis || "");
 
     return `
-    <article class="episode-card" tabindex="0" role="link" data-title="${esc(item.id)}">
-      <img class="episode-thumb" src="${esc(thumb)}" alt="">
+    <article class="episode-card more-card" tabindex="0" role="link" data-title="${esc(item.id)}">
+      <div class="more-card-thumb-wrap">
+        <img class="episode-thumb" src="${esc(thumb)}" alt="">
+      </div>
       <div class="episode-body">
         <h4 class="episode-title">${esc(item.title || "")}</h4>
-        <span class="episode-sub">${synopsis}</span>
+        ${synopsis ? `<p class="episode-sub more-card-synopsis">${synopsis}</p>` : ``}
       </div>
     </article>
   `;
@@ -1579,47 +1582,6 @@ function bindCollectionCardNavigation(rootEl, itemsById = new Map()) {
     });
 }
 
-async function fetchCollectionItems({ api, collectionId, currentMovieId }) {
-    let items = [];
-
-    try {
-        if (typeof api.fetchCollection === "function") {
-            items = await api.fetchCollection(collectionId, 200);
-        } else {
-            console.warn("[title] api.fetchCollection no existe");
-            items = [];
-        }
-    } catch (e) {
-        console.warn("[title] no se pudo cargar colección:", e);
-        items = [];
-    }
-
-    return safeArray(items).filter(
-        (item) => item?.id && String(item.id) !== String(currentMovieId)
-    );
-}
-
-function renderCollectionItemsIntoGrid(gridEl, items, esc) {
-    if (!gridEl) return new Map();
-
-    if (!items.length) {
-        gridEl.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
-        return new Map();
-    }
-
-    gridEl.innerHTML = items.map((item) => renderCollectionCardHtml({ item, esc })).join("");
-
-    const itemsById = new Map(
-        items
-            .filter(item => item?.id)
-            .map(item => [String(item.id), item])
-    );
-
-    bindCollectionCardNavigation(gridEl, itemsById);
-    scheduleApplyCondensedFontToWrappedEpisodeTitles(gridEl);
-    return itemsById;
-}
-
 async function renderCollectionSection({ api, esc, collectionId, currentMovieId }) {
     const episodesSection = el("episodes-section");
     const episodesTitle = el("episodes-title");
@@ -1634,8 +1596,40 @@ async function renderCollectionSection({ api, esc, collectionId, currentMovieId 
     seasonFilter.innerHTML = "";
     episodesGrid.classList.remove("hidden");
 
-    const items = await fetchCollectionItems({ api, collectionId, currentMovieId });
-    renderCollectionItemsIntoGrid(episodesGrid, items, esc);
+    let items = [];
+
+    try {
+        if (typeof api.fetchCollection === "function") {
+            items = await api.fetchCollection(collectionId, 200);
+        } else {
+            console.warn("[title] api.fetchCollection no existe");
+            items = [];
+        }
+    } catch (e) {
+        console.warn("[title] no se pudo cargar colección:", e);
+        items = [];
+    }
+
+    items = (items || []).filter((item) => item?.id && String(item.id) !== String(currentMovieId));
+
+    if (!items.length) {
+        episodesGrid.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
+        return true;
+    }
+
+    episodesGrid.innerHTML = items.map((item) =>
+        renderCollectionCardHtml({ item, esc })
+    ).join("");
+
+    const itemsById = new Map(
+        items
+            .filter(item => item?.id)
+            .map(item => [String(item.id), item])
+    );
+
+    bindCollectionCardNavigation(episodesGrid, itemsById);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);
+
     return true;
 }
 
@@ -1645,280 +1639,61 @@ async function renderCollectionSectionBelowEpisodes({ api, esc, collectionId, cu
 
     const titleEl = section.querySelector("#collection-title");
     const gridEl = section.querySelector("#collection-grid");
+
     if (!titleEl || !gridEl) return false;
 
     titleEl.textContent = "Colección completa";
     gridEl.innerHTML = "";
 
-    const items = await fetchCollectionItems({ api, collectionId, currentMovieId });
-    renderCollectionItemsIntoGrid(gridEl, items, esc);
+    let items = [];
+    try {
+        if (typeof api.fetchCollection === "function") {
+            items = await api.fetchCollection(collectionId, 200);
+        } else {
+            console.warn("[title] api.fetchCollection no existe");
+            items = [];
+
+        }
+    } catch (e) {
+        console.warn("[title] no se pudo cargar colección:", e);
+        items = [];
+
+    }
+
+    items = (items || []).filter((item) => item?.id && String(item.id) !== String(currentMovieId));
+
+
+
+
+    if (!items.length) {
+        gridEl.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
+        section.classList.remove("hidden");
+        return true;
+    }
+
+    gridEl.innerHTML = items.map((item) =>
+        renderCollectionCardHtml({ item, esc })
+
+    ).join("");
+
+    const itemsById = new Map(
+        items
+            .filter(item => item?.id)
+            .map(item => [String(item.id), item])
+    );
+
+    bindCollectionCardNavigation(gridEl, itemsById);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(gridEl);
+
+
+
 
     section.classList.remove("hidden");
     return true;
 }
 
 /* ===========================
-   Seasons UI
-=========================== */
-
-function clearSeasonClasses(gridEl) {
-    if (!gridEl) return;
-
-    [...gridEl.classList].forEach((c) => {
-        if (c.startsWith("episodes-grid-s")) {
-            gridEl.classList.remove(c);
-        }
-    });
-}
-
-function setSeasonClass(gridEl, seasonNum) {
-    if (!gridEl) return;
-    clearSeasonClasses(gridEl);
-    gridEl.classList.add(`episodes-grid-s${String(seasonNum).replace(/[^\w-]/g, "_")}`);
-}
-
-function createSeasonTitleNode(seasonNum, count) {
-    const t = document.createElement("div");
-    t.dataset.generated = "1";
-    t.dataset.season = String(seasonNum);
-    t.className = "season-title";
-    t.textContent = `Temporada ${seasonNum}: ${count} ${plural(count, "episodio", "episodios")}`;
-    return t;
-}
-
-function createSiblingGridForSeason(seasonNum) {
-    const g = document.createElement("div");
-    g.className = `episodes-grid episodes-grid-s${String(seasonNum).replace(/[^\w-]/g, "_")}`;
-    g.dataset.generated = "1";
-    g.dataset.season = String(seasonNum);
-    return g;
-}
-
-function removeGeneratedAllNodes(episodesGrid) {
-    const parent = episodesGrid?.parentElement;
-    if (!parent) return;
-    parent.querySelectorAll("[data-generated='1']").forEach(n => n.remove());
-}
-
-function closeSeasonDropdown(seasonFilter) {
-    const menu = seasonFilter?.querySelector(".dropdown-menu");
-    const btn = seasonFilter?.querySelector(".dropdown-btn");
-    if (menu) menu.classList.add("hidden");
-    if (btn) btn.setAttribute("aria-expanded", "false");
-    if (seasonFilter) seasonFilter.dataset.open = "0";
-}
-
-function openSeasonDropdown(seasonFilter) {
-    const menu = seasonFilter?.querySelector(".dropdown-menu");
-    const btn = seasonFilter?.querySelector(".dropdown-btn");
-    if (menu) menu.classList.remove("hidden");
-    if (btn) btn.setAttribute("aria-expanded", "true");
-    if (seasonFilter) seasonFilter.dataset.open = "1";
-}
-
-function isSeasonDropdownOpen(seasonFilter) {
-    return seasonFilter?.dataset.open === "1";
-}
-
-function toggleSeasonDropdown(seasonFilter) {
-    if (isSeasonDropdownOpen(seasonFilter)) closeSeasonDropdown(seasonFilter);
-    else openSeasonDropdown(seasonFilter);
-}
-
-function buildSeasonDropdown({
-    seasonFilter,
-    seasons,
-    getCurrentSeason,
-    onSeasonChange
-}) {
-    if (!seasonFilter) return;
-
-    seasonFilter.classList.remove("hidden");
-    seasonFilter.dataset.open = "0";
-
-    seasonFilter.innerHTML = `
-      <div class="dropdown">
-        <button
-          type="button"
-          class="dropdown-btn"
-          aria-haspopup="listbox"
-          aria-expanded="false"
-        >
-          <span class="dropdown-label"></span>
-          <span class="dropdown-caret" aria-hidden="true">▾</span>
-        </button>
-
-        <div class="dropdown-menu hidden" role="listbox"></div>
-      </div>
-    `;
-
-    const btn = seasonFilter.querySelector(".dropdown-btn");
-    const label = seasonFilter.querySelector(".dropdown-label");
-    const menu = seasonFilter.querySelector(".dropdown-menu");
-
-    function syncLabel() {
-        if (!label) return;
-        label.textContent = `Temporada ${getCurrentSeason()}`;
-    }
-
-    function renderMenu() {
-        if (!menu) return;
-
-        menu.innerHTML = seasons.map((season) => {
-            const active = String(season) === String(getCurrentSeason());
-            return `
-              <button
-                type="button"
-                class="dropdown-item${active ? " is-active" : ""}"
-                data-season="${String(season)}"
-                role="option"
-                aria-selected="${active ? "true" : "false"}"
-              >
-                Temporada ${season}
-              </button>
-            `;
-        }).join("");
-
-        menu.querySelectorAll("[data-season]").forEach((itemBtn) => {
-            itemBtn.addEventListener("click", () => {
-                const nextSeason = itemBtn.dataset.season;
-                onSeasonChange(nextSeason);
-                syncLabel();
-                renderMenu();
-                closeSeasonDropdown(seasonFilter);
-            });
-        });
-    }
-
-    btn?.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        toggleSeasonDropdown(seasonFilter);
-    });
-
-    document.addEventListener("click", (ev) => {
-        if (!seasonFilter.contains(ev.target)) {
-            closeSeasonDropdown(seasonFilter);
-        }
-    });
-
-    btn?.addEventListener("keydown", (ev) => {
-        if (ev.key === "Escape") {
-            closeSeasonDropdown(seasonFilter);
-            btn.blur();
-        }
-    });
-
-    syncLabel();
-    renderMenu();
-}
-
-/* ===========================
-   Render seasons
-=========================== */
-
-function renderSeasonIntoMainGrid({
-    episodesGrid,
-    episodes,
-    movie,
-    esc,
-    episodeProgressMap
-}) {
-    setSeasonClass(episodesGrid, movie?.season ?? 1);
-
-    episodesGrid.innerHTML = episodes.map((ep) =>
-        renderEpisodeCardHtml({
-            ep,
-            fallbackThumb: movie?.thumbnail_url || movie?.banner_url || "",
-            esc,
-            progressMap: episodeProgressMap
-        })
-    ).join("");
-
-    bindEpisodeCardNavigation(episodesGrid, movie.id);
-    scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);
-}
-
-function renderAllSeasonsStacked({
-    episodesGrid,
-    grouped,
-    movie,
-    esc,
-    episodeProgressMap
-}) {
-    removeGeneratedAllNodes(episodesGrid);
-    clearSeasonClasses(episodesGrid);
-
-    if (!grouped.length) {
-        episodesGrid.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
-        return;
-    }
-
-
-
-
-
-
-
-
-
-
-    const [firstSeason, firstList] = grouped[0];
-
-    setSeasonClass(episodesGrid, firstSeason);
-
-
-
-
-    episodesGrid.innerHTML = firstList.map((ep) =>
-        renderEpisodeCardHtml({
-            ep,
-            fallbackThumb: movie?.thumbnail_url || movie?.banner_url || "",
-            esc,
-            progressMap: episodeProgressMap
-        })
-    ).join("");
-
-    bindEpisodeCardNavigation(episodesGrid, movie.id);
-
-    const parent = episodesGrid.parentElement;
-    if (!parent) {
-        scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);
-        return;
-    }
-
-    if (grouped.length) {
-        const firstTitle = createSeasonTitleNode(firstSeason, firstList.length);
-        parent.insertBefore(firstTitle, episodesGrid);
-    }
-
-    for (let i = 1; i < grouped.length; i += 1) {
-        const [seasonNum, seasonEpisodes] = grouped[i];
-
-        const titleNode = createSeasonTitleNode(seasonNum, seasonEpisodes.length);
-        const grid = createSiblingGridForSeason(seasonNum);
-
-        grid.innerHTML = seasonEpisodes.map((ep) =>
-            renderEpisodeCardHtml({
-                ep,
-                fallbackThumb: movie?.thumbnail_url || movie?.banner_url || "",
-                esc,
-                progressMap: episodeProgressMap
-            })
-        ).join("");
-
-        parent.appendChild(titleNode);
-        parent.appendChild(grid);
-
-
-
-        bindEpisodeCardNavigation(grid, movie.id);
-    }
-
-    scheduleApplyCondensedFontToWrappedEpisodeTitles(parent);
-}
-
-/* ===========================
-   Main
+   MAIN
 =========================== */
 
 async function main() {
@@ -2028,7 +1803,6 @@ async function main() {
 
     if (trailerBtn) trailerBtn.classList.add("hidden");
 
-
     const publishState = getMoviePublishState(movie);
     const publishStateLabel = getMoviePublishStateLabel(movie);
 
@@ -2053,7 +1827,6 @@ async function main() {
         }
     }
 
-
     const year = movie.release_year ? String(movie.release_year) : "";
     let right = "";
     const mm = movie.movie_meta || null;
@@ -2069,9 +1842,7 @@ async function main() {
 
     await renderMoreSection({ api, esc, currentMovieId: movie.id });
 
-
     if (extraEl) {
-
         const durText = movie.category === "movie" ? formatDuration(movie.duration_minutes) : "";
         const hasAny =
             !!mm?.created_by ||
@@ -2088,12 +1859,14 @@ async function main() {
 
       <div class="title-extra-card">
         ${durText ? row("Duración", durText, esc) : ""}
+
         ${row("Creado por", mm?.created_by, esc)}
         ${row("Elenco", mm?.fullcast, esc)}
         ${row("Guion", mm?.fullscript, esc)}
         ${row("Géneros", mm?.fullgenres, esc)}
         ${row("Tipo", mm?.fulltitletype, esc)}
         ${row("Edad", mm?.fullage, esc)}
+
         ${hasAny ? "" : `<div class="title-extra-value">Sin información cargada todavía.</div>`}
       </div>
     `;
@@ -2102,21 +1875,6 @@ async function main() {
     }
 
     if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) return;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     if (movie.category !== "series") {
         if (collectionId) {
@@ -2131,7 +1889,6 @@ async function main() {
         }
         return;
     }
-
 
     episodesSection.classList.remove("hidden");
     episodesTitle.textContent = "Episodios";
@@ -2155,64 +1912,226 @@ async function main() {
 
     const grouped = groupBySeason(episodes);
     const seasons = grouped.map(([s]) => s);
-    let currentSeason = clampSeason(seasons, seasons[0]);
 
-    function getEpisodesForSeason(seasonValue) {
-        const found = grouped.find(([s]) => String(s) === String(seasonValue));
-        return found ? found[1] : [];
+    let currentSeason = clampSeason(seasons, seasons[0]);
+    let dropdownOpen = false;
+
+    function removeGeneratedAllNodes() {
+        const parent = episodesGrid.parentElement;
+        if (!parent) return;
+        parent.querySelectorAll("[data-generated='1']").forEach(n => n.remove());
     }
 
-    function renderCurrentSeason() {
-        removeGeneratedAllNodes(episodesGrid);
-
-        const list = getEpisodesForSeason(currentSeason);
-        const normalizedMovie = { ...movie, season: currentSeason };
-
-        if (!list.length) {
-            clearSeasonClasses(episodesGrid);
-            episodesGrid.innerHTML = `<div class="muted">No hay episodios cargados para esta temporada.</div>`;
-            return;
-        }
-
-        renderSeasonIntoMainGrid({
-            episodesGrid,
-            episodes: list,
-            movie: normalizedMovie,
-            esc,
-            episodeProgressMap
+    function clearSeasonClassOnFirstGrid() {
+        episodesGrid.classList.forEach(c => {
+            if (c.startsWith("episodes-grid-s")) episodesGrid.classList.remove(c);
         });
     }
 
-    function renderSingleOrMultiSeasonUI() {
-        if (seasons.length <= 1) {
-            seasonFilter.classList.add("hidden");
-            seasonFilter.innerHTML = "";
+    function setSeasonClassOnFirstGrid(seasonNum) {
+        clearSeasonClassOnFirstGrid();
+        episodesGrid.classList.add(`episodes-grid-s${String(seasonNum).replace(/[^\w-]/g, "_")}`);
+    }
 
-            renderAllSeasonsStacked({
-                episodesGrid,
-                grouped,
-                movie,
-                esc,
-                episodeProgressMap
+    function createTitleNode(seasonNum, count) {
+        const t = document.createElement("div");
+        t.dataset.generated = "1";
+        t.dataset.season = String(seasonNum);
+        t.className = "season-title";
+        t.textContent = `Temporada ${seasonNum}: ${count} ${plural(count, "episodio", "episodios")}`;
+        return t;
+    }
+
+    function createSiblingGridForSeason(seasonNum) {
+        const g = document.createElement("div");
+        g.className = `episodes-grid episodes-grid-s${String(seasonNum).replace(/[^\w-]/g, "_")}`;
+        g.dataset.generated = "1";
+        g.dataset.season = String(seasonNum);
+        return g;
+    }
+
+    function closeDropdown() {
+        dropdownOpen = false;
+        const menu = seasonFilter.querySelector(".dropdown-menu");
+        const btn = seasonFilter.querySelector(".dropdown-btn");
+        if (menu) menu.classList.add("hidden");
+        if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+
+    function openDropdown() {
+        dropdownOpen = true;
+        const menu = seasonFilter.querySelector(".dropdown-menu");
+        const btn = seasonFilter.querySelector(".dropdown-btn");
+        if (menu) menu.classList.remove("hidden");
+        if (btn) btn.setAttribute("aria-expanded", "true");
+    }
+
+    function toggleDropdown() {
+        if (dropdownOpen) closeDropdown();
+        else openDropdown();
+    }
+
+    function renderSeasonSelector() {
+        seasonFilter.innerHTML = "";
+
+        if (seasons.length === 1) {
+            seasonFilter.innerHTML = `
+        <div class="season-chip active" aria-current="true">
+          Temporada ${esc(String(seasons[0]))}
+        </div>
+      `;
+            return;
+        }
+
+        const currentLabel = (currentSeason === "all")
+            ? "Todos los episodios"
+            : `Temporada ${currentSeason}`;
+
+        seasonFilter.innerHTML = `
+      <div class="dropdown">
+        <div class="dropdown-btn"
+             role="button"
+             tabindex="0"
+             aria-haspopup="true"
+             aria-expanded="false">
+          ${esc(String(currentLabel))}
+        </div>
+
+        <div class="dropdown-menu hidden" role="menu">
+          ${grouped.map(([s, list]) => `
+            <div class="dropdown-item ${s === currentSeason ? "active" : ""}"
+                 role="menuitem"
+                 tabindex="0"
+                 data-season="${esc(String(s))}">
+              Temporada ${esc(String(s))}
+              <span class="meta-dropitem">(${list.length} ${plural(list.length, "episodio", "episodios")})</span>
+            </div>
+          `).join("")}
+
+          <div class="separator" aria-hidden="true"></div>
+
+          <div class="dropdown-item dropdown-all ${currentSeason === "all" ? "active" : ""}"
+               role="menuitem"
+               tabindex="0"
+               data-action="all">
+            Ver todos los episodios
+          </div>
+        </div>
+      </div>
+    `;
+
+        const btn = seasonFilter.querySelector(".dropdown-btn");
+        if (btn) {
+            btn.addEventListener("click", (e) => { e.preventDefault?.(); e.stopPropagation(); toggleDropdown(); });
+            btn.addEventListener("keydown", (ev) => {
+                if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ev.stopPropagation(); toggleDropdown(); }
+            });
+        }
+
+        seasonFilter.querySelectorAll(".dropdown-item").forEach(item => {
+            const pick = (e) => {
+                e.preventDefault?.();
+                e.stopPropagation();
+
+                const action = item.dataset.action;
+                if (action === "all") {
+                    currentSeason = "all";
+                    renderSeasonSelector();
+                    renderEpisodesGrid();
+                    closeDropdown();
+                    return;
+                }
+
+                const raw = item.dataset.season;
+                if (raw !== undefined) {
+                    const matched = seasons.find((s) => String(s) === String(raw));
+                    if (matched !== undefined) {
+                        currentSeason = matched;
+                        renderSeasonSelector();
+                        renderEpisodesGrid();
+                        closeDropdown();
+                    }
+                }
+            };
+
+            item.addEventListener("click", pick);
+            item.addEventListener("keydown", (ev) => {
+                if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ev.stopPropagation(); pick(ev); }
+            });
+        });
+    }
+
+    function renderEpisodesGrid() {
+        const fallbackThumb = movie.thumbnail_url || movie.banner_url || "";
+        const parent = episodesGrid.parentElement;
+        if (!parent) return;
+
+        removeGeneratedAllNodes();
+
+        if (currentSeason === "all") {
+            grouped.forEach(([s, list], idx) => {
+                const titleNode = createTitleNode(s, list.length);
+                const html = list.map(ep => renderEpisodeCardHtml({
+                    ep,
+                    fallbackThumb,
+                    esc,
+                    progressMap: episodeProgressMap
+                })).join("");
+
+                if (idx === 0) {
+                    setSeasonClassOnFirstGrid(s);
+                    parent.insertBefore(titleNode, episodesGrid);
+                    episodesGrid.innerHTML = html;
+                } else {
+                    const gridNode = createSiblingGridForSeason(s);
+                    gridNode.innerHTML = html;
+                    parent.insertBefore(titleNode, null);
+                    parent.insertBefore(gridNode, null);
+                }
             });
 
+            bindEpisodeCardNavigation(parent, movie.id);
+            scheduleApplyCondensedFontToWrappedEpisodeTitles(parent);
             return;
         }
 
-        buildSeasonDropdown({
-            seasonFilter,
-            seasons,
-            getCurrentSeason: () => currentSeason,
-            onSeasonChange: (nextSeason) => {
-                currentSeason = clampSeason(seasons, nextSeason);
-                renderCurrentSeason();
-            }
-        });
+        setSeasonClassOnFirstGrid(currentSeason);
 
-        renderCurrentSeason();
+        const list = grouped.find(([s]) => String(s) === String(currentSeason))?.[1] || [];
+        episodesGrid.innerHTML = list.map(ep => renderEpisodeCardHtml({
+            ep,
+            fallbackThumb,
+            esc,
+            progressMap: episodeProgressMap
+        })).join("");
+
+        bindEpisodeCardNavigation(episodesGrid, movie.id);
+        scheduleApplyCondensedFontToWrappedEpisodeTitles(episodesGrid);
     }
 
-    renderSingleOrMultiSeasonUI();
+    document.addEventListener("click", (ev) => {
+        const dd = seasonFilter.querySelector(".dropdown");
+        if (!dd) return;
+        if (dd.contains(ev.target)) return;
+        closeDropdown();
+    });
+
+    document.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape") closeDropdown();
+    });
+
+    window.addEventListener("resize", () => {
+        scheduleApplyCondensedFontToWrappedEpisodeTitles(document);
+    });
+
+    if (document.fonts?.ready) {
+        document.fonts.ready.then(() => {
+            scheduleApplyCondensedFontToWrappedEpisodeTitles(document);
+        }).catch(() => { });
+    }
+
+    renderSeasonSelector();
+    renderEpisodesGrid();
 
     if (collectionId) {
         await renderCollectionSectionBelowEpisodes({
@@ -2222,16 +2141,6 @@ async function main() {
             currentMovieId: movie.id
         });
     }
-
-    if (myListBtn) {
-        myListBtn.addEventListener("dblclick", (ev) => {
-            ev.preventDefault();
-            scrollToEpisodes();
-        });
-    }
 }
 
-main().catch((err) => {
-    console.error("[title] fatal error:", err);
-    renderTitleNotFound() 
-});
+main().catch(console.error);
