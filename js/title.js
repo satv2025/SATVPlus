@@ -1331,6 +1331,7 @@ async function bindMyListButton(btn, movie) {
                 ? "[title] agregado a Mi Lista (local fallback)"
                 : "[title] quitado de Mi Lista (local fallback)");
 
+
         } catch (e) {
             console.warn("[title] toggle Mi Lista error:", e);
 
@@ -1459,20 +1460,10 @@ function bindMoreCardNavigation(rootEl, itemsById = new Map()) {
 }
 
 async function renderMoreSection({ api, esc, currentMovieId }) {
-    const moreSection = el("more-section");
-    if (!moreSection) return;
+    const { moreSection, moreGrid } = ensureTitleSectionsScaffold();
 
-    // Siempre visible (aunque no haya items)
-    moreSection.classList.remove("hidden");
-
-    // Asegurá que exista el grid (por si el HTML no lo trae)
-    let moreGrid = el("more-grid");
-    if (!moreGrid) {
-        moreGrid = document.createElement("div");
-        moreGrid.id = "more-grid";
-        moreGrid.className = "more-grid";
-        moreSection.appendChild(moreGrid);
-    }
+    if (moreSection) moreSection.classList.remove("hidden");
+    if (!moreGrid) return;
 
     moreGrid.innerHTML = "";
 
@@ -1619,49 +1610,87 @@ async function renderCollectionSection({ api, esc, collectionId, currentMovieId 
 }
 
 /* ===========================
-   COLLECTION (dedicada a #collection-section, siempre visible)
+   DOM SCAFFOLD: crea secciones si no existen
+   (episodes / collection / more)
 =========================== */
 
-function ensureCollectionDom() {
-    const section = el("collection-section");
-    if (!section) return null;
+function ensureTitleSectionsScaffold() {
+    let mount = document.getElementById("title-sections-mount");
+    if (!mount) {
+        mount = document.createElement("main");
+        mount.id = "title-sections-mount";
+        mount.className = "title-sections-mount";
 
-    section.classList.remove("hidden");
-
-    // Si el HTML no trae estos nodos, los creamos.
-    let titleEl = el("collection-title");
-    if (!titleEl) {
-        titleEl = document.createElement("h2");
-        titleEl.id = "collection-title";
-        // reutilizamos el estilo del título de episodios si existe
-        titleEl.className = "episodes-title";
-        section.prepend(titleEl);
+        const hero = document.getElementById("hero");
+        const topnav = document.getElementById("topnav");
+        if (hero?.parentNode) hero.parentNode.insertBefore(mount, hero.nextSibling);
+        else if (topnav?.parentNode) topnav.parentNode.insertBefore(mount, topnav.nextSibling);
+        else document.body.appendChild(mount);
     }
 
-    let gridEl = el("collection-grid");
-    if (!gridEl) {
-        gridEl = document.createElement("div");
-        gridEl.id = "collection-grid";
-        // mismo layout que episodios/cards
-        gridEl.className = "episodes-grid";
-        section.appendChild(gridEl);
-    }
+    const ensure = (tag, id, className, parent) => {
+        let node = document.getElementById(id);
+        if (!node) {
+            node = document.createElement(tag);
+            node.id = id;
+            if (className) node.className = className;
+        }
+        if (node.parentNode !== parent) parent.appendChild(node); // mueve si estaba en otro lado
+        return node;
+    };
 
-    return { section, titleEl, gridEl };
-}
+    // Creamos/movemos TODO al mount
+    const episodesSection = ensure("section", "episodes-section", "episodes-section", mount);
+    const episodesTitle = ensure("h2", "episodes-title", "episodes-title", episodesSection);
+    const seasonFilter = ensure("div", "season-filter", "season-filter", episodesSection);
+    const episodesGrid = ensure("div", "episodes-grid", "episodes-grid", episodesSection);
 
-async function renderCollectionSectionDedicated({ api, esc, collectionId, currentMovieId }) {
-    const dom = ensureCollectionDom();
-    if (!dom) return false;
+    const collectionSection = ensure("section", "collection-section", "collection-section", mount);
+    const collectionTitle = ensure("h2", "collection-title", "episodes-title", collectionSection);
+    const collectionGrid = ensure("div", "collection-grid", "episodes-grid", collectionSection);
 
-    const { titleEl, gridEl } = dom;
+    const moreSection = ensure("section", "more-section", "more-section", mount);
+    const moreTitle = ensure("h2", "more-title", "episodes-title", moreSection);
+    const moreGrid = ensure("div", "more-grid", "episodes-grid more-grid", moreSection);
 
-    titleEl.textContent = "Colección completa";
-    gridEl.innerHTML = "";
+    // Títulos por default
+    if (!episodesTitle.textContent.trim()) episodesTitle.textContent = "Episodios";
+    if (!collectionTitle.textContent.trim()) collectionTitle.textContent = "Colección completa";
+    if (!moreTitle.textContent.trim()) moreTitle.textContent = "Te podría gustar";
 
-    // Sin colección asociada → mostramos placeholder pero dejamos la sección visible
+    // 👇 ORDEN FORZADO: Episodes -> Collection -> More
+    mount.appendChild(episodesSection);
+    mount.appendChild(collectionSection);
+    mount.appendChild(moreSection);
+
+    // visibles
+    episodesSection.classList.remove("hidden");
+    collectionSection.classList.remove("hidden");
+    moreSection.classList.remove("hidden");
+
+    return {
+        mount,
+        episodesSection, episodesTitle, seasonFilter, episodesGrid,
+        collectionSection, collectionTitle, collectionGrid,
+        moreSection, moreTitle, moreGrid
+    };
+  }
+  
+/* ===========================
+   COLLECTION (sección dedicada: siempre visible)
+=========================== */
+
+async function renderCollectionStandalone({ api, esc, collectionId, currentMovieId }) {
+    const { collectionSection, collectionTitle, collectionGrid } = ensureTitleSectionsScaffold();
+
+    if (!collectionSection || !collectionTitle || !collectionGrid) return false;
+
+    collectionSection.classList.remove("hidden");
+    collectionTitle.textContent = "Colección completa";
+    collectionGrid.innerHTML = "";
+
     if (!collectionId) {
-        gridEl.innerHTML = `<div class="muted">No hay colección asociada a este título.</div>`;
+        collectionGrid.innerHTML = `<div class="muted">No hay colección asociada a este título.</div>`;
         return true;
     }
 
@@ -1684,11 +1713,11 @@ async function renderCollectionSectionDedicated({ api, esc, collectionId, curren
     );
 
     if (!items.length) {
-        gridEl.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
+        collectionGrid.innerHTML = `<div class="muted">No hay contenido cargado en esta colección.</div>`;
         return true;
     }
 
-    gridEl.innerHTML = items.map((item) =>
+    collectionGrid.innerHTML = items.map((item) =>
         renderCollectionCardHtml({ item, esc })
     ).join("");
 
@@ -1698,8 +1727,8 @@ async function renderCollectionSectionDedicated({ api, esc, collectionId, curren
             .map(item => [String(item.id), item])
     );
 
-    bindCollectionCardNavigation(gridEl, itemsById);
-    scheduleApplyCondensedFontToWrappedEpisodeTitles(gridEl);
+    bindCollectionCardNavigation(collectionGrid, itemsById);
+    scheduleApplyCondensedFontToWrappedEpisodeTitles(collectionGrid);
 
     return true;
 }
@@ -1710,7 +1739,7 @@ async function renderCollectionSectionDedicated({ api, esc, collectionId, curren
 
 async function main() {
     const movieId = qs("title") || qs("movie");
-    const collectionId = qs("collection");
+    let collectionId = qs("collection");
 
     applyAkiraVideoContainOverrideIfNeeded(resolveAkiraOverrideTargetId());
 
@@ -1724,6 +1753,9 @@ async function main() {
     await ui.renderAuthButtons?.();
     ui.enableDataHrefNavigation?.();
     ui.applyDisguisedCssFromMovieId?.();
+
+    // Crea las secciones si tu HTML no las trae
+    ensureTitleSectionsScaffold();
 
     try {
         const navCtx = await getMyListAuthContext();
@@ -1773,6 +1805,11 @@ async function main() {
     if (!movie) {
         renderTitleNotFound();
         return;
+    }
+
+    // Si no vino por URL, inferimos la colección desde el propio título
+    if (!collectionId && isUuidLike(movie?.collection_id)) {
+        collectionId = movie.collection_id;
     }
 
     applyAkiraVideoContainOverrideIfNeeded(movie.id);
@@ -1884,52 +1921,28 @@ async function main() {
         extraEl.classList.remove("hidden");
     }
 
-    // Si faltan nodos base, al menos garantizamos "Te podría gustar" visible
     if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) {
+        await renderCollectionStandalone({ api, esc, collectionId: collectionId || null, currentMovieId: movie.id });
         await renderMoreSection({ api, esc, currentMovieId: movie.id });
-        // Colección (si existe contenedor)
-        await renderCollectionSectionDedicated({
-            api,
-            esc,
-            collectionId: collectionId || null,
-            currentMovieId: movie.id
-        });
         return;
     }
 
     if (movie.category !== "series") {
-        // 1) Episodios (placeholder): siempre visible
+        // EPISODIOS: visible con placeholder (películas / especiales)
         episodesSection.classList.remove("hidden");
         episodesTitle.textContent = "Episodios";
+
         seasonFilter.classList.add("hidden");
         seasonFilter.innerHTML = "";
+
         episodesGrid.classList.remove("hidden");
         episodesGrid.innerHTML = `<div class="muted">Este título no tiene episodios.</div>`;
 
-        // 2) Colección: siempre visible (aunque esté vacía o no haya ?collection=)
-        const renderedDedicatedCollection = await renderCollectionSectionDedicated({
-            api,
-            esc,
-            collectionId: collectionId || null,
-            currentMovieId: movie.id
-        });
-
-        // Fallback si no existe #collection-section en el HTML: reutilizamos episodes-section cuando hay colección
-        if (!renderedDedicatedCollection && collectionId) {
-            await renderCollectionSection({
-                api,
-                esc,
-                collectionId,
-                currentMovieId: movie.id
-            });
-        }
-
-        // 3) Recomendados: siempre visible
+        await renderCollectionStandalone({ api, esc, collectionId: collectionId || null, currentMovieId: movie.id });
         await renderMoreSection({ api, esc, currentMovieId: movie.id });
         return;
     }
 
-    // SERIES
     episodesSection.classList.remove("hidden");
     episodesTitle.textContent = "Temporadas";
     seasonFilter.classList.remove("hidden");
@@ -1938,14 +1951,7 @@ async function main() {
     if (!episodes?.length) {
         episodesGrid.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
 
-        // Colección: siempre visible (placeholder si no hay ?collection=)
-        await renderCollectionSectionDedicated({
-            api,
-            esc,
-            collectionId: collectionId || null,
-            currentMovieId: movie.id
-        });
-
+        await renderCollectionStandalone({ api, esc, collectionId: collectionId || null, currentMovieId: movie.id });
         await renderMoreSection({ api, esc, currentMovieId: movie.id });
         return;
     }
@@ -2173,14 +2179,7 @@ async function main() {
     renderSeasonSelector();
     renderEpisodesGrid();
 
-    // Colección: siempre visible (placeholder si no hay ?collection=)
-    await renderCollectionSectionDedicated({
-        api,
-        esc,
-        collectionId: collectionId || null,
-        currentMovieId: movie.id
-    });
-
+    await renderCollectionStandalone({ api, esc, collectionId: collectionId || null, currentMovieId: movie.id });
     await renderMoreSection({ api, esc, currentMovieId: movie.id });
 }
 
