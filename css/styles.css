@@ -1,5 +1,5 @@
-/* ================= CUSTOM FONTS — HBOMaxSans ================= */
-@import url('fonts/hbomaxsans/hbomaxsans.css');
+/* ================= CUSTOM FONTS — satvplusfont ================= */
+@import url('fonts/satvplusfont/satvplusfont.css');
 
 /* =========================================================
    SATV / HBO-ish UI — FULL RESPONSIVE REWRITE
@@ -96,7 +96,7 @@
   -ms-user-select: none;
   user-select: none;
   box-sizing: border-box;
-  font-family: "HBOMaxSans" !important;
+  font-family: SATVPlus !important;
 }
 
 ::selection {

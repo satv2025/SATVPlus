@@ -1,4 +1,4 @@
-@import url('fonts/hbomaxsans/hbomaxsans.css');
+@import url('fonts/satvplusfont/satvplusfont.css');
 
 :root {
     --bg: #07090d;
@@ -22,7 +22,7 @@
 
 * {
     box-sizing: border-box;
-    font-family: "HBOMaxSans" !important;
+    font-family: SATVPlus !important;
 }
 
 ::selection {

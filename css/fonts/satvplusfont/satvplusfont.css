@@ -1,0 +1,159 @@
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-Black.woff2") format("woff2"),
+    url("./SATVPlus-Black.woff") format("woff"),
+    url("./SATVPlus-Black.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-BlackItalic.woff2") format("woff2"),
+    url("./SATVPlus-BlackItalic.woff") format("woff"),
+    url("./SATVPlus-BlackItalic.ttf") format("truetype");
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-Bold.woff2") format("woff2"),
+    url("./SATVPlus-Bold.woff") format("woff"),
+    url("./SATVPlus-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-BoldItalic.woff2") format("woff2"),
+    url("./SATVPlus-BoldItalic.woff") format("woff"),
+    url("./SATVPlus-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-ExtraBold.woff2") format("woff2"),
+    url("./SATVPlus-ExtraBold.woff") format("woff"),
+    url("./SATVPlus-ExtraBold.ttf") format("truetype");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-ExtraBoldItalic.woff2") format("woff2"),
+    url("./SATVPlus-ExtraBoldItalic.woff") format("woff"),
+    url("./SATVPlus-ExtraBoldItalic.ttf") format("truetype");
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-ExtraLight.woff2") format("woff2"),
+    url("./SATVPlus-ExtraLight.woff") format("woff"),
+    url("./SATVPlus-ExtraLight.ttf") format("truetype");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-ExtraLightItalic.woff2") format("woff2"),
+    url("./SATVPlus-ExtraLightItalic.woff") format("woff"),
+    url("./SATVPlus-ExtraLightItalic.ttf") format("truetype");
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-Light.woff2") format("woff2"),
+    url("./SATVPlus-Light.woff") format("woff"),
+    url("./SATVPlus-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-LightItalic.woff2") format("woff2"),
+    url("./SATVPlus-LightItalic.woff") format("woff"),
+    url("./SATVPlus-LightItalic.ttf") format("truetype");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-Medium.woff2") format("woff2"),
+    url("./SATVPlus-Medium.woff") format("woff"),
+    url("./SATVPlus-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-MediumItalic.woff2") format("woff2"),
+    url("./SATVPlus-MediumItalic.woff") format("woff"),
+    url("./SATVPlus-MediumItalic.ttf") format("truetype");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-Regular.woff2") format("woff2"),
+    url("./SATVPlus-Regular.woff") format("woff"),
+    url("./SATVPlus-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-Italic.woff2") format("woff2"),
+    url("./SATVPlus-Italic.woff") format("woff"),
+    url("./SATVPlus-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-Thin.woff2") format("woff2"),
+    url("./SATVPlus-Thin.woff") format("woff"),
+    url("./SATVPlus-Thin.ttf") format("truetype");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SATVPlus;
+  src: url("./SATVPlus-ThinItalic.woff2") format("woff2"),
+    url("./SATVPlus-ThinItalic.woff") format("woff"),
+    url("./SATVPlus-ThinItalic.ttf") format("truetype");
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}

@@ -1,4 +1,4 @@
-@import url('fonts/hbomaxsans/hbomaxsans.css');
+@import url('fonts/satvplusfont/satvplusfont.css');
 
 /* ================= TOKENS ================= */
 :root {
@@ -29,7 +29,7 @@
 
 * {
     box-sizing: border-box;
-    font-family: "HBOMaxSans" !important;
+    font-family: SATVPlus !important;
 }
 
 ::selection {
