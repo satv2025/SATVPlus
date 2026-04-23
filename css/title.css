@@ -86,12 +86,12 @@ span.meta-dropitem {
 #t-title {
     font-size: clamp(26px, 4vw, 44px);
     line-height: 1.08;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .title-meta {
     margin-top: 10px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: .2px;
     font-size: 16px;
     color: rgba(243, 244, 246, .92);
@@ -211,7 +211,7 @@ span.meta-dropitem {
     box-sizing: border-box;
     padding: 11px 14px;
     text-decoration: none;
-    font-weight: 900;
+    font-weight: 700;
     font-size: 16px;
     border-radius: var(--ep-radius);
     border: 1px solid transparent;
@@ -273,7 +273,7 @@ a#watch-btn[data-mode="countdown"] {
     border: 1px solid var(--line);
     background: rgba(255, 255, 255, .04);
     color: var(--text);
-    font-weight: 800;
+    font-weight: 700;
     font-size: 13px;
     cursor: pointer;
     transition: scale .2s ease, transform .2s ease, background .15s ease, border-color .2s ease;
@@ -306,7 +306,7 @@ a#watch-btn[data-mode="countdown"] {
     border-color: rgba(37, 99, 235, .55);
     background: rgba(37, 99, 235, .14);
     color: var(--text);
-    font-weight: 800;
+    font-weight: 700;
     font-size: 16px;
     cursor: pointer;
     display: inline-flex;
@@ -419,7 +419,7 @@ a#watch-btn[data-mode="countdown"] {
     border-radius: 0;
     background: transparent;
     color: rgba(243, 244, 246, .92);
-    font-weight: 800;
+    font-weight: 700;
     font-size: 16px;
     cursor: pointer;
     transition: background .12s ease, color .12s ease;
@@ -480,7 +480,7 @@ a#watch-btn[data-mode="countdown"] {
 
 .season-block-title {
     margin: 0 0 10px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: .2px;
     font-size: 18px;
     color: rgba(243, 244, 246, .95);
@@ -653,7 +653,7 @@ a#watch-btn[data-mode="countdown"] {
 
 .episode-title {
     margin: 0;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: .1px;
     font-size: 13px;
     line-height: 1.15;
@@ -698,7 +698,7 @@ a#watch-btn[data-mode="countdown"] {
 
 .title-extra-title {
     margin: 0;
-    font-weight: 900;
+    font-weight: 700;
     font-size: 20px;
 }
 
@@ -717,7 +717,7 @@ a#watch-btn[data-mode="countdown"] {
 }
 
 .title-extra-label {
-    font-weight: 900;
+    font-weight: 700;
     font-size: 12px;
     opacity: .85;
     letter-spacing: .2px;
@@ -1044,7 +1044,7 @@ a#watch-btn[data-mode="status-clickable"] {
 #collection-title {
     font-size: 20px;
     margin-bottom: -0.1em !important;
-    font-weight: 900;
+    font-weight: 700;
     line-height: 1.2;
     color: rgba(243, 244, 246, .95);
 }
@@ -1173,7 +1173,7 @@ a#watch-btn[data-mode="status-clickable"] {
 /* mismo título que episodios */
 #collection-grid .episode-title {
     margin: 0;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: .1px;
     font-size: 13px;
     line-height: 1.15;
