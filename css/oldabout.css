@@ -1,4 +1,5 @@
 @import url('fonts/satvplusfont/satvplusfont.css');
+@import url('https://fonts.googleapis.com/css2?family=Encode+Sans:wght@100..900&display=swap');
 
 /* ================= TOKENS ================= */
 :root {
@@ -29,7 +30,8 @@
 
 * {
     box-sizing: border-box;
-    font-family: SATVPlus !important;
+    font-family: 'Encode Sans !important;
+
 }
 
 ::selection {

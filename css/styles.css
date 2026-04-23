@@ -1,5 +1,6 @@
 /* ================= CUSTOM FONTS — SATVPlus Font ================= */
 @import url('fonts/satvplusfont/satvplusfont.css');
+@import url('https://fonts.googleapis.com/css2?family=Encode+Sans:wght@100..900&display=swap');
 
 /* =========================================================
    SATV / HBO-ish UI — FULL RESPONSIVE REWRITE
@@ -96,7 +97,8 @@
   -ms-user-select: none;
   user-select: none;
   box-sizing: border-box;
-  font-family: SATVPlus !important;
+  font-family: 'Encode Sans !important;
+
 }
 
 ::selection {
@@ -167,7 +169,7 @@ svg {
 
 .card-collection-overlay {
   position: absolute;
-  right: 6px;
+  left: 6px;
   top: 6px;
   width: 50px;
   height: auto;
