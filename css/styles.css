@@ -1,5 +1,5 @@
-/* ================= CUSTOM FONTS — satvplusfont ================= */
-@import url('fonts/satvplusfont/satvplusfont.css');
+/* ================= CUSTOM FONTS — HBOMaxSans ================= */
+@import url('fonts/hbomaxsans/hbomaxsans.css');
 
 /* =========================================================
    SATV / HBO-ish UI — FULL RESPONSIVE REWRITE
@@ -96,7 +96,7 @@
   -ms-user-select: none;
   user-select: none;
   box-sizing: border-box;
-  font-family: SATVPlus !important;
+  font-family: "HBOMaxSans" !important;
 }
 
 ::selection {
@@ -320,7 +320,7 @@ img.brand-logo,
 .btn {
   background: var(--satvblue);
   color: white;
-  border: none;
+  border: none !important;
   border-radius: var(--ep-radius);
   padding: 10px 12px;
   font-weight: 800;
@@ -330,12 +330,12 @@ img.brand-logo,
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .btn.ghost {
   background: rgba(255, 255, 255, .06);
-  border: 1px solid var(--line);
+  border: none !important;
 }
 
 .btn:hover {
