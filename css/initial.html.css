@@ -1,0 +1,202 @@
+/* home.css — overrides finales */
+
+:root {
+    --ui-pad-x: clamp(24px, 4vw, 54px) !important;
+    --hero-synopsis-maxw: clamp(320px, 66vw, 720px) !important;
+}
+
+.home-hero-inner {
+    padding: 0 clamp(1em, 2vw, 2em) !important;
+    width: 100% !important;
+    transform: scale(1.3) !important;
+    transform-origin: left bottom !important;
+}
+
+/* HEADER RESPONSIVE */
+.topnav .nav-inner {
+    display: grid !important;
+    grid-template-columns: auto minmax(220px, 386px) auto !important;
+    align-items: center !important;
+    gap: clamp(10px, 1.4vw, 18px) !important;
+    width: 100% !important;
+}
+
+.nav-left,
+.nav-center,
+.nav-right {
+    min-width: 0 !important;
+}
+
+.nav-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: clamp(8px, 1vw, 14px) !important;
+    flex-wrap: nowrap !important;
+}
+
+.nav-center {
+    display: flex !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+}
+
+.nav-right {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: clamp(8px, 1vw, 10px) !important;
+    min-width: 0 !important;
+}
+
+.topnav-search-wrap {
+    width: 100% !important;
+    max-width: 386px !important;
+    min-width: 0 !important;
+}
+
+.topnav-search,
+.topnav-search-input {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* HEADER + HERO FLOW */
+.topnav {
+    position: absolute !important;
+}
+
+main.container {
+    padding-top: 0 !important;
+}
+
+/* TABLET */
+@media (max-width: 980px) {
+    .topnav {
+        position: relative !important;
+    }
+
+    .topnav .nav-inner {
+        grid-template-columns: 1fr auto !important;
+        grid-template-areas:
+            "left right"
+            "center center" !important;
+    }
+
+    .nav-left {
+        grid-area: left !important;
+        flex-wrap: wrap !important;
+    }
+
+    .nav-center {
+        grid-area: center !important;
+        width: 100% !important;
+        justify-content: stretch !important;
+    }
+
+    .nav-right {
+        grid-area: right !important;
+    }
+
+    .topnav-search-wrap {
+        max-width: none !important;
+    }
+
+    .hero {
+        margin-top: 0 !important;
+    }
+
+    .carousel {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        margin-left: calc(50% - 50vw) !important;
+        margin-right: calc(50% - 50vw) !important;
+    }
+
+    .section {
+        margin-top: 18px !important;
+    }
+}
+
+/* MOBILE */
+@media (max-width: 640px) {
+    .topnav .nav-inner {
+        grid-template-columns: 1fr !important;
+        grid-template-areas:
+            "left"
+            "center"
+            "right" !important;
+        align-items: stretch !important;
+    }
+
+    .nav-left,
+    .nav-right {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+
+    .nav-center {
+        width: 100% !important;
+    }
+
+    .topnav-search {
+        height: 42px !important;
+    }
+
+    .topnav-search-input {
+        font-size: 14px !important;
+    }
+
+    .brand-logo {
+        width: clamp(110px, 42vw, 180px) !important;
+    }
+
+    .navlink,
+    .pill,
+    .btn {
+        font-size: 13px !important;
+    }
+
+    .hero {
+        margin-top: 0 !important;
+        height: clamp(360px, 86vw, 520px) !important;
+        min-height: clamp(360px, 86vw, 520px) !important;
+        padding-top: 18px !important;
+    }
+
+    .home-hero-inner {
+        transform: scale(1) !important;
+        zoom: 1 !important;
+        padding: 0 1em !important;
+    }
+
+    .home-hero-layout {
+        align-items: flex-end !important;
+    }
+
+    .home-hero-left,
+    .home-hero-synopsis {
+        max-width: 100% !important;
+    }
+
+    :root {
+        --hero-synopsis-maxw: 100% !important;
+    }
+}
+
+/* EXTRA CHICO */
+@media (max-width: 380px) {
+
+    .nav-left,
+    .nav-right {
+        gap: 6px !important;
+    }
+
+    .topnav-search {
+        padding: 0 10px !important;
+    }
+
+    .topnav-search-input::placeholder {
+        font-size: 12px !important;
+    }
+}
