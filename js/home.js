@@ -208,21 +208,20 @@ function lockQuickModalScroll() {
   document.body.classList.add("card-quick-modal-open");
 
   /*
-    Overlay real: NO tocamos position/top del body.
-    Así el catálogo queda visible atrás y no “desaparece”.
-    El bloqueo del scroll lo hace la clase CSS + eventos preventivos.
+    Overlay real: NO tocamos position/top del body y NO hacemos scrollTo.
+    El catálogo queda atrás exactamente donde estaba.
   */
   document.documentElement.style.scrollBehavior = "auto";
-  document.body.style.overflow = "hidden";
 }
 
 function unlockQuickModalScroll() {
   document.body.classList.remove("card-quick-modal-open");
-
-  document.body.style.overflow = "";
   document.documentElement.style.scrollBehavior = "";
 
-  window.scrollTo(0, __quickModalScrollY);
+  /*
+    Importante: NO window.scrollTo().
+    El modal no debe mover la página ni al abrir ni al cerrar.
+  */
 }
 
 function closeQuickCardModal() {
