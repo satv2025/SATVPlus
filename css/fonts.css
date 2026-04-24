@@ -1,0 +1,5 @@
+@import url('fonts/satvplusfont/satvplusfont.css');
+
+* {
+    font-family: SATVPlus !important;
+}

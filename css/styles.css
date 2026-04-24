@@ -3118,7 +3118,8 @@ body.search-open {
 /* ---------- QUICK MODAL ---------- */
 /* Cuando está abierto: bloquea scroll */
 body.card-quick-modal-open {
-  overflow: hidden;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
 }
 
 /* Root/backdrop: por defecto CERRADO */
