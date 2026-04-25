@@ -3160,14 +3160,11 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
 #card-quick-modal-root .card-quick-modal {
   position: relative;
   width: min(720px, calc(100vw - 24px));
-
   background: #0b0f17;
-  border: 1px solid rgba(255, 255, 255, .08);
+  border: none !important;
   border-radius: .25em;
   overflow: hidden;
-
   box-shadow: 0 18px 55px rgba(0, 0, 0, .34);
-
   transform: translateY(14px) scale(.985);
   opacity: 0;
   transition: transform .2s ease, opacity .2s ease;
@@ -3244,19 +3241,7 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   display: block;
 }
 
-#card-quick-modal-root .card-quick-modal-shade {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: clamp(120px, 40%, 220px);
-  pointer-events: none;
-  background: linear-gradient(to top,
-      rgba(7, 9, 13, 1) 0%,
-      rgba(7, 9, 13, .78) 38%,
-      rgba(7, 9, 13, .24) 72%,
-      rgba(7, 9, 13, 0) 100%);
-}
+
 
 /* Volume */
 #card-quick-modal-root .card-quick-modal-volume-btn {
