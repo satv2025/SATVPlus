@@ -362,7 +362,7 @@ a#watch-btn[data-mode="countdown"] {
     box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
     overflow: hidden;
     width: 167%;
-    height: 214px;
+    height: auto;
     overflow: auto;
 }
 
