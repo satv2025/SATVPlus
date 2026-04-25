@@ -3051,10 +3051,9 @@ body.search-open {
 /* Botón */
 .card-quick-plus-btn {
   position: absolute;
-  left: 10px;
+  right: 10px;
   bottom: 10px;
   z-index: 6;
-
   width: 42px;
   height: 42px;
   border-radius: 999px;
@@ -3062,16 +3061,12 @@ body.search-open {
   background: rgba(7, 9, 13, .68);
   backdrop-filter: blur(8px);
   color: #fff;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   cursor: pointer;
   touch-action: manipulation;
-
-  opacity: 0;
-  transform: translateY(6px) scale(.96);
+  opacity: 1;
   transition: opacity .18s ease, transform .18s ease, background .18s ease, border-color .18s ease;
 }
 

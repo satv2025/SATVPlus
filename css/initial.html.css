@@ -200,3 +200,243 @@ main.container {
         font-size: 12px !important;
     }
 }
+
+/* =========================================================
+   QUICK MODAL — TITLE ROW + (+) MYLIST + "Mas info"
+========================================================= */
+
+#card-quick-modal-root .card-quick-modal-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 10px 0;
+}
+
+/* Botón "+" dentro del modal (mismo ícono) */
+#card-quick-modal-root .card-quick-modal-mylist-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    background: rgba(14, 20, 32, .55);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+#card-quick-modal-root .card-quick-modal-mylist-btn:hover {
+    background: rgba(14, 20, 32, .88);
+    border-color: #fff;
+    transform: scale(1.06);
+}
+
+#card-quick-modal-root .card-quick-modal-mylist-btn:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/* Estado activo (en Mi Lista) */
+#card-quick-modal-root .card-quick-modal-mylist-btn.is-active,
+.card-mylist-plus-btn.is-active {
+    border: 1px solid rgba(255, 255, 255, .18);
+    background: rgba(14, 20, 32, .55);
+    color: #fff;
+}
+
+/* evita click "caído" en el path */
+#card-quick-modal-root .card-quick-modal-mylist-btn svg,
+#card-quick-modal-root .card-quick-modal-mylist-btn path {
+    pointer-events: none;
+}
+
+/* "Mas info" — recuadro blanco SIN fondo */
+#card-quick-modal-root .card-quick-modal-more-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-top: 14px;
+    padding: 10px 16px;
+
+    border-radius: var(--ep-radius);
+    border: 2px solid #fff;
+    background: transparent;
+
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    text-decoration: none;
+
+    min-height: var(--control-h);
+    line-height: 1;
+
+    transition: background .18s ease, transform .18s ease, opacity .18s ease;
+}
+
+#card-quick-modal-root .card-quick-modal-more-info:hover {
+    background: rgba(255, 255, 255, .10);
+    /* sigue siendo "sin fondo" (solo tinta suave) */
+    transform: scale(1.02);
+}
+
+#card-quick-modal-root .card-quick-modal-more-info:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/* Mobile tuning */
+@media (max-width: 768px) {
+    #card-quick-modal-root .card-quick-modal-mylist-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    #card-quick-modal-root .card-quick-modal-more-info {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+#card-quick-modal-root .card-quick-modal-mylist-float,
+#card-quick-modal-root .card-quick-modal-mylist-float svg,
+#card-quick-modal-root .card-quick-modal-mylist-float path {
+    color: #fff !important;
+    fill: #fff !important;
+}
+
+/* =========================================================
+   ✅ CARD: Botón "Mas info" (al lado del título) — bien estilizado
+   (sin fondo, borde blanco, pill, hover suave)
+========================================================= */
+
+.card .card-title .card-more-info-btn {
+    /* reset button */
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px solid #fff !important;
+    background: transparent !important;
+    color: #fff !important;
+
+    /* look */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: .25em;
+    /* pill */
+    font-weight: 800;
+    font-size: 12px;
+    line-height: 1;
+    letter-spacing: .02em;
+
+    /* comportamiento */
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    flex: 0 0 auto;
+
+    /* feel */
+    opacity: .92;
+    transform: translateZ(0);
+    transition: transform .18s ease, background .18s ease, opacity .18s ease;
+    top: 61% !important;
+}
+
+.card .card-title .card-more-info-btn:hover {
+    background: rgba(255, 255, 255, .10) !important;
+    /* sigue "sin fondo", solo tinta suave */
+    opacity: 1;
+    transform: scale(1.03);
+}
+
+.card .card-title .card-more-info-btn:active {
+    transform: scale(.98);
+}
+
+.card .card-title .card-more-info-btn:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/* Mobile tuning */
+@media (max-width: 768px) {
+    .card .card-title .card-more-info-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+}
+
+/* =========================================================
+   QUICK MODAL — MYLIST FLOAT (+ / -) ARRIBA DEL VOLUMEN
+   (JS crea: .card-quick-modal-mylist-float)
+========================================================= */
+
+/* Aseguramos que el contenedor sea referencia para absolute */
+#card-quick-modal-root .card-quick-modal-media-wrap {
+    position: relative !important;
+}
+
+/* El float de Mi Lista */
+#card-quick-modal-root .card-quick-modal-mylist-float {
+    position: absolute !important;
+    right: 14px !important;
+
+    /* volumen está en bottom:14px y mide ~44px, lo subimos arriba */
+    bottom: calc(14px + 44px + 10px) !important;
+
+    z-index: 9 !important;
+    /* arriba de video + shade + volumen */
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(255, 255, 255, .18) !important;
+    background: rgba(14, 20, 32, .55) !important;
+    backdrop-filter: blur(6px) !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    touch-action: manipulation !important;
+
+    color: #fff !important;
+    pointer-events: auto !important;
+}
+
+/* Hover */
+#card-quick-modal-root .card-quick-modal-mylist-float:hover {
+    background: rgba(14, 20, 32, .88) !important;
+    border-color: #fff !important;
+}
+
+/* Icono adentro */
+#card-quick-modal-root .card-quick-modal-mylist-float svg {
+    width: 18px !important;
+    height: 18px !important;
+    display: block !important;
+    fill: currentColor !important;
+}
+
+/* Evita que el click "caiga" al path */
+#card-quick-modal-root .card-quick-modal-mylist-float svg,
+#card-quick-modal-root .card-quick-modal-mylist-float path {
+    pointer-events: none !important;
+}
+
+/* Mobile tuning */
+@media (max-width: 768px) {
+    #card-quick-modal-root .card-quick-modal-mylist-float {
+        width: 40px !important;
+        height: 40px !important;
+        bottom: calc(10px + 40px + 10px) !important;
+        /* si tu volumen baja a 40 */
+        right: 10px !important;
+    }
+}

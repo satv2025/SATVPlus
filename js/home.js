@@ -65,20 +65,20 @@ function measureBaseLineRaw(el) {
   const style = el.style;
   const hadOur = el.dataset.twoLinesApplied === "1";
 
-  const famVal = style.getPropertyValue("font-family");
-  const famPr = style.getPropertyPriority("font-family");
+  const fsVal = style.getPropertyValue("font-size");
+  const fsPr = style.getPropertyPriority("font-size");
   const wVal = style.getPropertyValue("font-weight");
   const wPr = style.getPropertyPriority("font-weight");
 
   if (hadOur) {
-    style.removeProperty("font-family");
+    style.removeProperty("font-size");
     style.removeProperty("font-weight");
   }
 
   const raw = lineRawFromMetrics(el);
 
   if (hadOur) {
-    if (famVal) style.setProperty("font-family", famVal, famPr);
+    if (fsVal) style.setProperty("font-size", fsVal, fsPr);
     if (wVal) style.setProperty("font-weight", wVal, wPr);
   }
 
@@ -91,15 +91,15 @@ function isBaseExactlyTwoLines(el) {
 }
 
 function setCondensedInline(el, weight) {
-  el.style.setProperty("font-family", "HBOMaxSansCond", "important");
-  el.style.setProperty("font-weight", String(weight));
+  el.style.setProperty("font-size", "13px", "important");
+  el.style.setProperty("font-weight", String(weight), "important");
   el.dataset.twoLinesApplied = "1";
   el.dataset.twoLinesWeight = String(weight);
 }
 
 function clearCondensedInlineIfOurs(el) {
   if (el.dataset.twoLinesApplied !== "1") return;
-  el.style.removeProperty("font-family");
+  el.style.removeProperty("font-size");
   el.style.removeProperty("font-weight");
   delete el.dataset.twoLinesApplied;
   delete el.dataset.twoLinesWeight;
@@ -204,24 +204,13 @@ function getQuickModalRoot() {
 
 function lockQuickModalScroll() {
   __quickModalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
-
   document.body.classList.add("card-quick-modal-open");
-
-  /*
-    Overlay real: NO tocamos position/top del body y NO hacemos scrollTo.
-    El catálogo queda atrás exactamente donde estaba.
-  */
   document.documentElement.style.scrollBehavior = "auto";
 }
 
 function unlockQuickModalScroll() {
   document.body.classList.remove("card-quick-modal-open");
   document.documentElement.style.scrollBehavior = "";
-
-  /*
-    Importante: NO window.scrollTo().
-    El modal no debe mover la página ni al abrir ni al cerrar.
-  */
 }
 
 function closeQuickCardModal() {
@@ -242,12 +231,6 @@ function closeQuickCardModal() {
   root.innerHTML = "";
 
   unlockQuickModalScroll();
-
-  /*
-    Importante: NO restauramos focus al botón del card.
-    Ese focus() era lo que hacía que el navegador scrolleara de vuelta al card
-    y generara el efecto de scroll up/down.
-  */
   __quickModalLastFocus = null;
 }
 
@@ -372,324 +355,59 @@ function mountQuickModalTrailer(container, movie) {
   requestAnimationFrame(playVideo);
 }
 
-async function openQuickCardModal(movieId, triggerEl = null) {
-  if (!movieId) return;
+/* =========================================================
+   ✅ HOME SESSION CACHE (evita mil getSession)
+========================================================= */
 
-  installQuickModalGlobalEvents();
-  __quickModalLastFocus = triggerEl || document.activeElement || null;
+let __homeSessionCache = null;
+let __homeUserIdCache = null;
+let __homeSessionPromise = null;
 
-  const root = getQuickModalRoot();
+async function getHomeSessionCached() {
+  if (__homeSessionCache) return __homeSessionCache;
+  if (__homeSessionPromise) return __homeSessionPromise;
 
-  lockQuickModalScroll();
+  __homeSessionPromise = getSession()
+    .then((s) => {
+      __homeSessionCache = s || null;
+      __homeUserIdCache = s?.user?.id || null;
+      return __homeSessionCache;
+    })
+    .catch(() => null)
+    .finally(() => {
+      __homeSessionPromise = null;
+    });
 
-  root.hidden = false;
-  root.setAttribute("aria-hidden", "false");
-
-  root.innerHTML = `
-    <div class="card-quick-modal" role="dialog" aria-modal="true" aria-label="Vista rápida">
-      <button class="card-quick-modal-close" type="button" aria-label="Cerrar">
-        <span aria-hidden="true">×</span>
-      </button>
-
-      <div class="card-quick-modal-media-wrap">
-        <div class="card-quick-modal-loading">Cargando…</div>
-      </div>
-
-      <div class="card-quick-modal-body">
-        <h3 class="card-quick-modal-title">Cargando…</h3>
-        <p class="card-quick-modal-synopsis"></p>
-      </div>
-    </div>
-  `;
-
-  const modal = root.querySelector(".card-quick-modal");
-  const closeBtn = root.querySelector(".card-quick-modal-close");
-
-  closeBtn?.addEventListener("click", (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    closeQuickCardModal();
-  });
-
-  root.onclick = (ev) => {
-    if (ev.target === root) closeQuickCardModal();
-  };
-
-  modal?.addEventListener("click", (ev) => {
-    ev.stopPropagation();
-  });
-
-  try {
-    const movie = await fetchMovie(movieId);
-    if (!movie) throw new Error("No se encontró el contenido");
-
-    const mediaWrap = root.querySelector(".card-quick-modal-media-wrap");
-    const titleNode = root.querySelector(".card-quick-modal-title");
-    const synopsisNode = root.querySelector(".card-quick-modal-synopsis");
-
-    if (titleNode) titleNode.textContent = movie.title || "Sin título";
-    if (synopsisNode) synopsisNode.textContent = movie.description || movie.sinopsis || "Sin sinopsis disponible.";
-
-    if (mediaWrap) {
-      mediaWrap.innerHTML = "";
-      mountQuickModalTrailer(mediaWrap, movie);
-    }
-  } catch (e) {
-    console.error("[home] quick modal error:", e);
-
-    const mediaWrap = root.querySelector(".card-quick-modal-media-wrap");
-    const titleNode = root.querySelector(".card-quick-modal-title");
-    const synopsisNode = root.querySelector(".card-quick-modal-synopsis");
-
-    if (mediaWrap) {
-      mediaWrap.innerHTML = `<div class="card-quick-modal-loading">No se pudo cargar el trailer.</div>`;
-    }
-    if (titleNode) titleNode.textContent = "Error";
-    if (synopsisNode) synopsisNode.textContent = "No se pudo cargar la información del contenido.";
-  }
+  return __homeSessionPromise;
 }
 
-function buildCardQuickPlusButton(movieId) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "card-quick-plus-btn";
-  btn.setAttribute("aria-label", "Abrir vista rápida");
-  btn.dataset.movieId = String(movieId);
-
-  btn.innerHTML = `
-    <svg class="card-quick-plus-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1920" aria-hidden="true" focusable="false">
-      <path d="M866.332 213v653.332H213v186.666h653.332v653.332h186.666v-653.332h653.332V866.332h-653.332V213z" fill-rule="evenodd"></path>
-    </svg>
-  `;
-
-  btn.addEventListener("click", (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    openQuickCardModal(movieId, btn);
-  });
-
-  return btn;
-}
-
-function enhanceCarouselCardsWithQuickPlus(scope = document) {
-  const cards =
-    scope?.classList?.contains("card")
-      ? [scope]
-      : Array.from(scope.querySelectorAll(".card"));
-
-  cards.forEach((card) => {
-    if (card.querySelector(".card-quick-plus-btn")) return;
-
-    let movieId =
-      card.dataset.movieId ||
-      card.getAttribute("data-movie-id") ||
-      "";
-
-    if (!movieId) {
-      const href = String(card.dataset.href || "");
-      try {
-        const url = new URL(href, window.location.origin);
-        movieId = url.searchParams.get("title") || "";
-      } catch { }
-    }
-
-    if (!movieId) return;
-
-    card.dataset.movieId = String(movieId);
-
-    const thumb = card.querySelector(".thumb") || card;
-    thumb.appendChild(buildCardQuickPlusButton(movieId));
-  });
-}
-
-function addMovieIdToCardHtml(html, movieId) {
-  if (!html || !movieId) return html || "";
-
-  return String(html).replace(
-    /<div\s+class="([^"]*\bcard\b[^"]*)"/,
-    `<div class="$1" data-movie-id="${String(movieId)}"`
-  );
-}
-
-function mountHomeHeroTrailerVideo(hero, movie) {
-  if (!hero || !movie?.id) return;
-
-  const trailerUrl = String(movie?.trailer_url || "").trim();
-  if (!trailerUrl) return;
-
-  const banner = movie.banner_url || movie.thumbnail_url || "";
-
-  hero.classList.remove("hero-video-ready");
-  hero.querySelectorAll(".home-hero-media").forEach((n) => n.remove());
-  hero.querySelectorAll(".home-hero-volume-btn").forEach((n) => n.remove());
-
-  const media = document.createElement("div");
-  media.className = "home-hero-media";
-
-  const video = document.createElement("video");
-  video.className = "home-hero-video";
-  video.src = trailerUrl;
-  if (banner) video.poster = banner;
-
-  video.autoplay = true;
-  video.muted = true;
-  video.loop = true;
-  video.playsInline = true;
-  video.preload = "metadata";
-  video.setAttribute("playsinline", "");
-  video.setAttribute("webkit-playsinline", "");
-
-  const shade = document.createElement("div");
-  shade.className = "home-hero-video-shade";
-
-  media.appendChild(video);
-  media.appendChild(shade);
-  hero.prepend(media);
-
-  const volBtn = document.createElement("button");
-  volBtn.type = "button";
-  volBtn.className = "home-hero-volume-btn";
-  volBtn.setAttribute("aria-label", "Activar sonido");
-  volBtn.setAttribute("aria-pressed", "false");
-
-  const volIcon = document.createElement("img");
-  volIcon.alt = "";
-  volIcon.decoding = "async";
-  volIcon.src = HERO_VOLUME_ICON_MUTE;
-  volBtn.appendChild(volIcon);
-
-  function syncVolumeUi() {
-    const isMuted = !!video.muted;
-    volIcon.src = isMuted ? HERO_VOLUME_ICON_MUTE : HERO_VOLUME_ICON_UNMUTE;
-    volBtn.setAttribute("aria-label", isMuted ? "Activar sonido" : "Silenciar");
-    volBtn.setAttribute("aria-pressed", String(!isMuted));
-    volBtn.title = isMuted ? "Activar sonido" : "Silenciar";
-  }
-
-  volBtn.addEventListener("click", (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    video.muted = !video.muted;
-    syncVolumeUi();
-    const p = video.play?.();
-    if (p && typeof p.catch === "function") p.catch(() => { });
-  });
-
-  const rightSlot = hero.querySelector(".home-hero-right");
-  if (rightSlot) rightSlot.appendChild(volBtn);
-  else hero.appendChild(volBtn);
-
-  syncVolumeUi();
-
-  video.addEventListener(
-    "error",
-    () => {
-      volBtn.remove();
-      media.remove();
-      hero.classList.remove("hero-video-ready");
-      console.warn("[home] trailer hero error:", trailerUrl);
-    },
-    { once: true }
-  );
-
-  const showVideo = () => hero.classList.add("hero-video-ready");
-  video.addEventListener("loadeddata", showVideo, { once: true });
-  video.addEventListener("canplay", showVideo, { once: true });
-
-  requestAnimationFrame(() => {
-    const p = video.play?.();
-    if (p && typeof p.catch === "function") {
-      p.catch((err) => console.warn("[home] autoplay trailer bloqueado:", err));
-    }
-  });
-}
-
-function getHomeHeroStorageKey(userId) {
-  return `${HOME_HERO_STORAGE_PREFIX}:${userId || "guest"}`;
-}
-
-function readHomeHeroSelection(userId) {
-  try {
-    const raw = localStorage.getItem(getHomeHeroStorageKey(userId));
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeHomeHeroSelection(userId, data) {
-  try {
-    localStorage.setItem(getHomeHeroStorageKey(userId), JSON.stringify(data));
-  } catch { }
-}
-
-function clearHomeHeroSelection(userId) {
-  try {
-    localStorage.removeItem(getHomeHeroStorageKey(userId));
-  } catch { }
-}
-
-function pickStableHomeHero(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
-  const pool = (items || []).filter((x) => x?.id);
-  if (!pool.length) return null;
-
-  const now = Date.now();
-  const saved = readHomeHeroSelection(userId);
-
-  if (saved?.id && Number(saved.expiresAt) > now) {
-    const existing = pool.find((x) => String(x.id) === String(saved.id));
-    if (existing) return existing;
-  }
-
-  let next = pool[Math.floor(Math.random() * pool.length)];
-
-  if (pool.length > 1 && saved?.id) {
-    let guard = 0;
-    while (String(next?.id) === String(saved.id) && guard < 12) {
-      next = pool[Math.floor(Math.random() * pool.length)];
-      guard++;
-    }
-  }
-
-  writeHomeHeroSelection(userId, {
-    id: next.id,
-    chosenAt: now,
-    expiresAt: now + ttlMs
-  });
-
-  return next;
-}
-
-function scheduleHomeHeroRefresh(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
-  if (__homeHeroRotationTimer) {
-    clearTimeout(__homeHeroRotationTimer);
-    __homeHeroRotationTimer = null;
-  }
-
-  const saved = readHomeHeroSelection(userId);
-  const expiresAt = Number(saved?.expiresAt || 0);
-  const delay = Math.max(0, expiresAt - Date.now());
-  if (!delay) return;
-
-  __homeHeroRotationTimer = setTimeout(() => {
-    clearHomeHeroSelection(userId);
-    startHomeHeroRotation(items, { userId, ttlMs });
-  }, delay);
-}
-
-function startHomeHeroRotation(items, { userId, ttlMs = HOME_HERO_TTL_MS } = {}) {
-  const pool = (items || []).filter((x) => x?.id);
-  if (!pool.length) return;
-
-  const chosen = pickStableHomeHero(pool, { userId, ttlMs });
-  if (!chosen) return;
-
-  renderHomeHeroItem(chosen, { userId });
-  scheduleHomeHeroRefresh(pool, { userId, ttlMs });
+function getHomeUserIdCachedSync() {
+  return __homeUserIdCache || null;
 }
 
 /* =========================================================
-   MI LISTA (HOME HERO) - Supabase + fallback local
+   ✅ ICONOS (+ / -) PARA MI LISTA
+========================================================= */
+
+const MYLIST_ICON_PLUS = `
+  <svg class="card-quick-plus-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1920" aria-hidden="true" focusable="false">
+    <path d="M866.332 213v653.332H213v186.666h653.332v653.332h186.666v-653.332h653.332V866.332h-653.332V213z" fill-rule="evenodd"></path>
+  </svg>
+`;
+
+const MYLIST_ICON_MINUS = `
+  <svg class="card-quick-plus-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1920" aria-hidden="true" focusable="false">
+    <path d="M213 866.332h1493.332v186.666H213z" fill-rule="evenodd"></path>
+  </svg>
+`;
+
+function setMyListPlusMinusIcon(btn, added) {
+  if (!btn) return;
+  btn.innerHTML = added ? MYLIST_ICON_MINUS : MYLIST_ICON_PLUS;
+}
+
+/* =========================================================
+   MI LISTA - Supabase + fallback local
 ========================================================= */
 
 const MY_LIST_KEY = "satv_my_list_ids";
@@ -799,6 +517,173 @@ async function resolveHeroMyListState({ userId, contentId }) {
     return { added: localAdded, source: "local", isLoggedIn: true, error: e };
   }
 }
+
+/* =========================================================
+   ✅ BOTÓN GENÉRICO "MI LISTA" PARA ICONOS (+ / -)
+   - se usa en card y en modal
+========================================================= */
+
+function setMyListIconBtnState(btn, { contentId, added = false, pending = false, source = "unknown" } = {}) {
+  if (!btn || !contentId) return;
+
+  btn.dataset.myListContentId = String(contentId);
+  btn.dataset.myListState = added ? "in" : "out";
+  btn.dataset.myListPending = pending ? "1" : "0";
+  btn.dataset.myListSource = source;
+
+  btn.classList.toggle("is-active", !!added);
+  btn.setAttribute("aria-pressed", String(!!added));
+  btn.setAttribute("aria-label", added ? "Quitar de Mi Lista" : "Agregar a Mi Lista");
+
+  setMyListPlusMinusIcon(btn, !!added);
+
+  try { btn.disabled = !!pending; } catch { }
+}
+
+async function refreshMyListIconButton(btn, { userId, contentId }) {
+  if (!btn || !contentId) return null;
+
+  setMyListIconBtnState(btn, {
+    contentId,
+    added: isInMyListLocal(contentId),
+    pending: true,
+    source: "unknown"
+  });
+
+  const state = await resolveHeroMyListState({ userId, contentId });
+
+  setMyListIconBtnState(btn, {
+    contentId,
+    added: state.added,
+    pending: false,
+    source: state.source
+  });
+
+  return state;
+}
+
+function bindMyListIconButton(btn, { userId, contentId }) {
+  if (!btn || !contentId) return;
+  if (btn.dataset.myListBound === "1") return;
+  btn.dataset.myListBound = "1";
+
+  refreshMyListIconButton(btn, { userId, contentId }).catch(() => {
+    setMyListIconBtnState(btn, {
+      contentId,
+      added: isInMyListLocal(contentId),
+      pending: false,
+      source: "local"
+    });
+  });
+
+  btn.addEventListener("click", async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const currentId = btn.dataset.myListContentId || String(contentId);
+    if (!currentId) return;
+    if (btn.dataset.myListPending === "1") return;
+
+    setMyListIconBtnState(btn, {
+      contentId: currentId,
+      added: btn.dataset.myListState === "in",
+      pending: true,
+      source: btn.dataset.myListSource || "unknown"
+    });
+
+    try {
+      const session = __homeSessionCache || (await getHomeSessionCached());
+      const uid = userId || session?.user?.id || null;
+
+      const state = await resolveHeroMyListState({ userId: uid, contentId: currentId });
+
+      if (state.source === "supabase" && uid) {
+        if (state.added) {
+          await removeFromMyListRemote(uid, currentId);
+          setLocalMyListMembership(currentId, false);
+          setMyListIconBtnState(btn, { contentId: currentId, added: false, pending: false, source: "supabase" });
+          toast?.("Quitado de Mi Lista.", "success");
+        } else {
+          await addToMyListRemote(uid, currentId);
+          setLocalMyListMembership(currentId, true);
+          setMyListIconBtnState(btn, { contentId: currentId, added: true, pending: false, source: "supabase" });
+          toast?.("Agregado a Mi Lista.", "success");
+        }
+        return;
+      }
+
+      const added = toggleLocalMyList(currentId);
+      setMyListIconBtnState(btn, { contentId: currentId, added, pending: false, source: "local" });
+      toast?.(added ? "Agregado a Mi Lista." : "Quitado de Mi Lista.", "success");
+    } catch (e) {
+      console.warn("[home] toggle mylist icon error:", e);
+      try {
+        const session = __homeSessionCache || (await getHomeSessionCached());
+        const uid = userId || session?.user?.id || null;
+        await refreshMyListIconButton(btn, { userId: uid, contentId: currentId });
+      } catch {
+        setMyListIconBtnState(btn, {
+          contentId: currentId,
+          added: isInMyListLocal(currentId),
+          pending: false,
+          source: "local"
+        });
+      }
+      toast?.("No se pudo actualizar Mi Lista.", "error");
+    }
+  }, { passive: false });
+}
+
+/* =========================================================
+   ✅ "MAS INFO" (según ui.js): se inyecta dentro de .card-title
+   - NO toca ui.js
+   - NO navega; abre modal
+========================================================= */
+
+function buildCardMoreInfoButton(movieId) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "card-more-info-btn";
+  btn.textContent = "Mas información";
+  btn.setAttribute("aria-label", "Mas info");
+
+  btn.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    openQuickCardModal(movieId, btn);
+  });
+
+  return btn;
+}
+
+function ensureMoreInfoNextToTitle(card, movieId) {
+  const titleEl = card?.querySelector?.(".card-title");
+  if (!titleEl) return;
+
+  // ya existe
+  if (titleEl.querySelector(".card-more-info-btn")) return;
+
+  // 👇 respeta lo que arma ui.js: title es texto plano
+  // metemos el botón adentro del mismo nodo de título
+  const btn = buildCardMoreInfoButton(movieId);
+
+  // ✅ para que no rompa altura/medición: lo hacemos overlay a la derecha
+  // (no afecta el alto del título)
+  titleEl.style.position = titleEl.style.position || "relative";
+  titleEl.style.paddingRight = titleEl.style.paddingRight || "86px";
+
+  btn.style.position = "absolute";
+  btn.style.right = "10px";
+  btn.style.top = "50%";
+  btn.style.transform = "translateY(-50%)";
+  btn.style.zIndex = "2";
+
+  titleEl.appendChild(btn);
+}
+
+/* =========================================================
+   HERO MYLIST (tu implementación original)
+========================================================= */
 
 function setHeroMyListBtnState(btn, { contentId, added = false, pending = false, source = "unknown" } = {}) {
   if (!btn || !contentId) return;
@@ -935,117 +820,269 @@ function ensureMyListNavLink(userId) {
 }
 
 /* =========================================================
-   LIVE MODE (cards del home)
+   ✅ QUICK MODAL
+   - MyList (+/-) DENTRO del layout del video (arriba del volumen)
 ========================================================= */
 
-const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
+async function openQuickCardModal(movieId, triggerEl = null) {
+  if (!movieId) return;
 
-function getMovieLiveStartDate(movie) {
-  if (!movie) return null;
-  const raw = movie.live_starts_at ?? movie.live_start_at ?? movie.live_datetime ?? movie.live_at ?? null;
-  if (!raw) return null;
-  const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+  installQuickModalGlobalEvents();
+  __quickModalLastFocus = triggerEl || document.activeElement || null;
 
-function formatMovieLiveDateTime(movie, { timeZone = LIVE_DISPLAY_TIMEZONE } = {}) {
-  const d = getMovieLiveStartDate(movie);
-  if (!d) return "";
+  const root = getQuickModalRoot();
 
-  const fecha = new Intl.DateTimeFormat("es-AR", {
-    timeZone,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  }).format(d);
+  lockQuickModalScroll();
 
-  const hora = new Intl.DateTimeFormat("es-AR", {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(d);
+  root.hidden = false;
+  root.setAttribute("aria-hidden", "false");
 
-  return `${fecha} - ${hora}`;
+  root.innerHTML = `
+    <div class="card-quick-modal" role="dialog" aria-modal="true" aria-label="Vista rápida">
+      <button class="card-quick-modal-close" type="button" aria-label="Cerrar">
+        <span aria-hidden="true">×</span>
+      </button>
+
+      <div class="card-quick-modal-media-wrap">
+        <div class="card-quick-modal-loading">Cargando…</div>
+      </div>
+
+      <div class="card-quick-modal-body">
+        <h3 class="card-quick-modal-title">Cargando…</h3>
+        <p class="card-quick-modal-synopsis"></p>
+      </div>
+    </div>
+  `;
+
+  const modal = root.querySelector(".card-quick-modal");
+  const closeBtn = root.querySelector(".card-quick-modal-close");
+
+  closeBtn?.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    closeQuickCardModal();
+  });
+
+  root.onclick = (ev) => {
+    if (ev.target === root) closeQuickCardModal();
+  };
+
+  modal?.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+  });
+
+  try {
+    const movie = await fetchMovie(movieId);
+    if (!movie) throw new Error("No se encontró el contenido");
+
+    const mediaWrap = root.querySelector(".card-quick-modal-media-wrap");
+    const titleNode = root.querySelector(".card-quick-modal-title");
+    const synopsisNode = root.querySelector(".card-quick-modal-synopsis");
+
+    if (titleNode) titleNode.textContent = movie.title || "Sin título";
+    if (synopsisNode) synopsisNode.textContent = movie.description || movie.sinopsis || "Sin sinopsis disponible.";
+
+    if (mediaWrap) {
+      mediaWrap.innerHTML = "";
+      mountQuickModalTrailer(mediaWrap, movie);
+
+      const mediaInner = mediaWrap.querySelector(".card-quick-modal-media") || mediaWrap;
+
+      let myListFloat = mediaInner.querySelector(".card-quick-modal-mylist-float");
+      if (!myListFloat) {
+        myListFloat = document.createElement("button");
+        myListFloat.type = "button";
+        myListFloat.className = "card-quick-modal-mylist-float";
+        myListFloat.setAttribute("aria-label", "Agregar a Mi Lista");
+        myListFloat.setAttribute("aria-pressed", "false");
+        myListFloat.innerHTML = MYLIST_ICON_PLUS;
+        mediaInner.appendChild(myListFloat);
+      }
+
+      const session = __homeSessionCache || (await getHomeSessionCached());
+      const userId = session?.user?.id || null;
+      const contentId = String(movie.id);
+      bindMyListIconButton(myListFloat, { userId, contentId });
+    }
+  } catch (e) {
+    console.error("[home] quick modal error:", e);
+
+    const mediaWrap = root.querySelector(".card-quick-modal-media-wrap");
+    const titleNode = root.querySelector(".card-quick-modal-title");
+    const synopsisNode = root.querySelector(".card-quick-modal-synopsis");
+
+    if (mediaWrap) {
+      mediaWrap.innerHTML = `<div class="card-quick-modal-loading">No se pudo cargar el trailer.</div>`;
+    }
+    if (titleNode) titleNode.textContent = "Error";
+    if (synopsisNode) synopsisNode.textContent = "No se pudo cargar la información del contenido.";
+  }
 }
 
 /* =========================================================
-   ESTADO PUBLICACIÓN (cards del home)
+   CARDS: "+" (Mi Lista) + "Mas info" (junto al title)
 ========================================================= */
 
-function getMovieCardPublicLabel(movie) {
-  if (!movie) return "";
+function buildCardQuickPlusButton(movieId) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "card-quick-plus-btn card-mylist-plus-btn";
+  btn.setAttribute("aria-label", "Agregar a Mi Lista");
+  btn.setAttribute("aria-pressed", "false");
+  btn.dataset.movieId = String(movieId);
+  btn.innerHTML = MYLIST_ICON_PLUS;
+  return btn;
+}
 
-  const publishState = String(movie.publish_state || "public").toLowerCase();
-  const customText = String(movie.publish_state_text || "").trim();
+function enhanceCarouselCardsWithQuickPlus(scope = document) {
+  const cards =
+    scope?.classList?.contains("card")
+      ? [scope]
+      : Array.from(scope.querySelectorAll(".card"));
 
-  if (publishState === "upcoming") {
-    return customText || "Próximamente";
-  }
+  cards.forEach((card) => {
+    let movieId =
+      card.dataset.movieId ||
+      card.getAttribute("data-movie-id") ||
+      "";
 
-  if (publishState === "other") {
-    return customText || "Otro";
-  }
+    if (!movieId) {
+      const href = String(card.dataset.href || card.getAttribute("data-href") || "");
+      try {
+        const url = new URL(href, window.location.origin);
+        movieId = url.searchParams.get("title") || "";
+      } catch { }
+    }
 
-  if (Boolean(movie.live_mode)) {
-    const liveDate = formatMovieLiveDateTime(movie);
-    return liveDate || (publishState === "live" ? "En Vivo" : "");
-  }
+    if (!movieId) return;
 
-  if (publishState === "live") {
-    return "En Vivo";
-  }
+    card.dataset.movieId = String(movieId);
 
-  return "";
+    const thumb = card.querySelector(".thumb") || card;
+
+    // ✅ "+" / "-" Mi Lista en la thumb
+    let plusBtn = card.querySelector(".card-quick-plus-btn");
+    if (!plusBtn) {
+      plusBtn = buildCardQuickPlusButton(movieId);
+      thumb.appendChild(plusBtn);
+    }
+
+    const userId = getHomeUserIdCachedSync();
+    bindMyListIconButton(plusBtn, { userId, contentId: String(movieId) });
+
+    // ✅ "Mas info" al lado del title (según ui.js)
+    ensureMoreInfoNextToTitle(card, movieId);
+  });
+}
+
+function addMovieIdToCardHtml(html, movieId) {
+  if (!html || !movieId) return html || "";
+  return String(html).replace(
+    /<div\s+class="([^"]*\bcard\b[^"]*)"/,
+    `<div class="$1" data-movie-id="${String(movieId)}"`
+  );
 }
 
 /* =========================================================
-   COLLECTION HELPERS
+   HOME HERO VIDEO + resto (INTACTO)
 ========================================================= */
+
+function mountHomeHeroTrailerVideo(hero, movie) {
+  if (!hero || !movie?.id) return;
+
+  const trailerUrl = String(movie?.trailer_url || "").trim();
+  if (!trailerUrl) return;
+
+  const banner = movie.banner_url || movie.thumbnail_url || "";
+
+  hero.classList.remove("hero-video-ready");
+  hero.querySelectorAll(".home-hero-media").forEach((n) => n.remove());
+  hero.querySelectorAll(".home-hero-volume-btn").forEach((n) => n.remove());
+
+  const media = document.createElement("div");
+  media.className = "home-hero-media";
+
+  const video = document.createElement("video");
+  video.className = "home-hero-video";
+  video.src = trailerUrl;
+  if (banner) video.poster = banner;
+
+  video.autoplay = true;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+
+  const shade = document.createElement("div");
+  shade.className = "home-hero-video-shade";
+
+  media.appendChild(video);
+  media.appendChild(shade);
+  hero.prepend(media);
+
+  const volBtn = document.createElement("button");
+  volBtn.type = "button";
+  volBtn.className = "home-hero-volume-btn";
+  volBtn.setAttribute("aria-label", "Activar sonido");
+  volBtn.setAttribute("aria-pressed", "false");
+
+  const volIcon = document.createElement("img");
+  volIcon.alt = "";
+  volIcon.decoding = "async";
+  volIcon.src = HERO_VOLUME_ICON_MUTE;
+  volBtn.appendChild(volIcon);
+
+  function syncVolumeUi() {
+    const isMuted = !!video.muted;
+    volIcon.src = isMuted ? HERO_VOLUME_ICON_MUTE : HERO_VOLUME_ICON_UNMUTE;
+    volBtn.setAttribute("aria-label", isMuted ? "Activar sonido" : "Silenciar");
+    volBtn.setAttribute("aria-pressed", String(!isMuted));
+    volBtn.title = isMuted ? "Activar sonido" : "Silenciar";
+  }
+
+  volBtn.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    video.muted = !video.muted;
+    syncVolumeUi();
+    const p = video.play?.();
+    if (p && typeof p.catch === "function") p.catch(() => { });
+  });
+
+  const rightSlot = hero.querySelector(".home-hero-right");
+  if (rightSlot) rightSlot.appendChild(volBtn);
+  else hero.appendChild(volBtn);
+
+  syncVolumeUi();
+
+  video.addEventListener(
+    "error",
+    () => {
+      volBtn.remove();
+      media.remove();
+      hero.classList.remove("hero-video-ready");
+      console.warn("[home] trailer hero error:", trailerUrl);
+    },
+    { once: true }
+  );
+
+  const showVideo = () => hero.classList.add("hero-video-ready");
+  video.addEventListener("loadeddata", showVideo, { once: true });
+  video.addEventListener("canplay", showVideo, { once: true });
+
+  requestAnimationFrame(() => {
+    const p = video.play?.();
+    if (p && typeof p.catch === "function") {
+      p.catch((err) => console.warn("[home] autoplay trailer bloqueado:", err));
+    }
+  });
+}
 
 function getMovieCollectionId(movie) {
   return movie?.collection_id || null;
 }
-
-function homeCatalogCardHtml(movie) {
-  const stateLabel = getMovieCardPublicLabel(movie);
-  const href = buildTitleUrl(movie?.id, {
-    collectionId: getMovieCollectionId(movie)
-  });
-
-  const html = stateLabel
-    ? cardHtml(movie, href, stateLabel, null, {
-      showCollectionOverlay: true
-    })
-    : cardHtml(movie, href, null, null, {
-      showCollectionOverlay: true
-    });
-
-  return addMovieIdToCardHtml(html, movie?.id);
-}
-
-/* =========================================================
-   BADGES
-========================================================= */
-
-function promoteCatalogCardBadges(rootEl) {
-  if (!rootEl) return;
-
-  rootEl.querySelectorAll(".card .card-subtitle").forEach((node) => {
-    const text = String(node.textContent || "").trim();
-    if (!text) return;
-
-    const badge = document.createElement("div");
-    badge.className = "card-badge card-badge-upcoming";
-    badge.textContent = text;
-
-    node.replaceWith(badge);
-  });
-}
-
-/* =========================================================
-   HERO RENDER
-========================================================= */
 
 function homeHeroMeta(movie) {
   const year = movie?.release_year ? String(movie.release_year) : "";
@@ -1123,30 +1160,105 @@ function renderHomeHeroItem(movie, { userId } = {}) {
 }
 
 /* =========================================================
-   CAROUSEL
+   LIVE MODE / publish label / cards / carousel / init
+   (tu código intacto)
 ========================================================= */
 
-function getCarouselCards(row) {
-  return [...row.querySelectorAll(".card")];
+const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
+
+function getMovieLiveStartDate(movie) {
+  if (!movie) return null;
+  const raw = movie.live_starts_at ?? movie.live_start_at ?? movie.live_datetime ?? movie.live_at ?? null;
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function getRowCenterX(row) {
-  return row.scrollLeft + row.clientWidth / 2;
+function formatMovieLiveDateTime(movie, { timeZone = LIVE_DISPLAY_TIMEZONE } = {}) {
+  const d = getMovieLiveStartDate(movie);
+  if (!d) return "";
+
+  const fecha = new Intl.DateTimeFormat("es-AR", {
+    timeZone,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(d);
+
+  const hora = new Intl.DateTimeFormat("es-AR", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(d);
+
+  return `${fecha} - ${hora}`;
 }
 
-function getCardCenterX(card) {
-  return card.offsetLeft + card.offsetWidth / 2;
+function getMovieCardPublicLabel(movie) {
+  if (!movie) return "";
+
+  const publishState = String(movie.publish_state || "public").toLowerCase();
+  const customText = String(movie.publish_state_text || "").trim();
+
+  if (publishState === "upcoming") {
+    return customText || "Próximamente";
+  }
+
+  if (publishState === "other") {
+    return customText || "Otro";
+  }
+
+  if (Boolean(movie.live_mode)) {
+    const liveDate = formatMovieLiveDateTime(movie);
+    return liveDate || (publishState === "live" ? "En Vivo" : "");
+  }
+
+  if (publishState === "live") {
+    return "En Vivo";
+  }
+
+  return "";
 }
+
+function homeCatalogCardHtml(movie) {
+  const stateLabel = getMovieCardPublicLabel(movie);
+  const href = buildTitleUrl(movie?.id, {
+    collectionId: getMovieCollectionId(movie)
+  });
+
+  const html = stateLabel
+    ? cardHtml(movie, href, stateLabel, null, { showCollectionOverlay: true })
+    : cardHtml(movie, href, null, null, { showCollectionOverlay: true });
+
+  return addMovieIdToCardHtml(html, movie?.id);
+}
+
+function promoteCatalogCardBadges(rootEl) {
+  if (!rootEl) return;
+
+  rootEl.querySelectorAll(".card .card-subtitle").forEach((node) => {
+    const text = String(node.textContent || "").trim();
+    if (!text) return;
+
+    const badge = document.createElement("div");
+    badge.className = "card-badge card-badge-upcoming";
+    badge.textContent = text;
+
+    node.replaceWith(badge);
+  });
+}
+
+/* ================= CAROUSEL HELPERS (tu código) ================= */
+
+function getCarouselCards(row) { return [...row.querySelectorAll(".card")]; }
+function getRowCenterX(row) { return row.scrollLeft + row.clientWidth / 2; }
+function getCardCenterX(card) { return card.offsetLeft + card.offsetWidth / 2; }
 
 function centerCard(row, card, behavior = "smooth") {
   if (!row || !card) return;
-
   const target = card.offsetLeft - (row.clientWidth / 2) + (card.offsetWidth / 2);
-
-  row.scrollTo({
-    left: Math.max(0, target),
-    behavior
-  });
+  row.scrollTo({ left: Math.max(0, target), behavior });
 }
 
 function getClosestCenteredCard(row) {
@@ -1154,7 +1266,6 @@ function getClosestCenteredCard(row) {
   if (!cards.length) return null;
 
   const rowCenter = getRowCenterX(row);
-
   let closest = null;
   let minDist = Infinity;
 
@@ -1165,7 +1276,6 @@ function getClosestCenteredCard(row) {
       closest = card;
     }
   }
-
   return closest;
 }
 
@@ -1196,9 +1306,7 @@ function ensureCarouselWrapper(row) {
   leftBtn.setAttribute("aria-label", "Anterior");
   leftBtn.innerHTML = `
     <svg viewBox="0 0 24 24">
-      <path d="M15 6l-6 6 6 6"
-        stroke="white" stroke-width="2"
-        fill="none" stroke-linecap="round"/>
+      <path d="M15 6l-6 6 6 6" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
     </svg>
   `;
 
@@ -1208,9 +1316,7 @@ function ensureCarouselWrapper(row) {
   rightBtn.setAttribute("aria-label", "Siguiente");
   rightBtn.innerHTML = `
     <svg viewBox="0 0 24 24">
-      <path d="M9 6l6 6-6 6"
-        stroke="white" stroke-width="2"
-        fill="none" stroke-linecap="round"/>
+      <path d="M9 6l6 6-6 6" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
     </svg>
   `;
 
@@ -1277,7 +1383,6 @@ function buildCarousel(row) {
 
   function snapToClosest(behavior = "smooth") {
     if (isSnapping) return;
-
     const closest = getClosestCenteredCard(row);
     if (!closest) return;
 
@@ -1285,27 +1390,17 @@ function buildCarousel(row) {
     centerCard(row, closest, behavior);
 
     window.clearTimeout(snapTimer);
-    snapTimer = window.setTimeout(() => {
-      isSnapping = false;
-    }, 220);
+    snapTimer = window.setTimeout(() => { isSnapping = false; }, 220);
   }
 
   function onScroll() {
     if (isSnapping) return;
-
     window.clearTimeout(snapTimer);
-    snapTimer = window.setTimeout(() => {
-      snapToClosest("smooth");
-    }, 100);
+    snapTimer = window.setTimeout(() => { snapToClosest("smooth"); }, 100);
   }
 
-  if (btnLeft) {
-    btnLeft.onclick = () => moveToAdjacentCard(row, -1);
-  }
-
-  if (btnRight) {
-    btnRight.onclick = () => moveToAdjacentCard(row, 1);
-  }
+  if (btnLeft) btnLeft.onclick = () => moveToAdjacentCard(row, -1);
+  if (btnRight) btnRight.onclick = () => moveToAdjacentCard(row, 1);
 
   row.addEventListener("scroll", onScroll, { passive: true });
 
@@ -1325,16 +1420,12 @@ function buildCarousel(row) {
   row.__carouselCleanup = () => {
     window.clearTimeout(snapTimer);
     row.removeEventListener("scroll", onScroll);
-    if (row.__resizeHandler) {
-      window.removeEventListener("resize", row.__resizeHandler);
-    }
+    if (row.__resizeHandler) window.removeEventListener("resize", row.__resizeHandler);
   };
 
   requestAnimationFrame(() => {
     const firstCard = row.querySelector(".card");
-    if (firstCard) {
-      centerCard(row, firstCard, "auto");
-    }
+    if (firstCard) centerCard(row, firstCard, "auto");
     scheduleTwoLinesScan(carousel);
   });
 }
@@ -1343,13 +1434,12 @@ function setRow(el, html) {
   if (!el) return;
   resetCarouselState(el);
   el.innerHTML = html;
+
   enhanceCarouselCardsWithQuickPlus(el);
   scheduleTwoLinesScan(el);
 }
 
-/* =========================================================
-   CONTINUE WATCHING HELPERS
-========================================================= */
+/* ================= CONTINUE WATCHING HELPERS (tu código) ================= */
 
 function buildContinueHref(row) {
   const m = row?.movies;
@@ -1358,10 +1448,7 @@ function buildContinueHref(row) {
   const episodeId = row?.episode_id || row?.episodes?.id || null;
   const collectionId = m?.collection_id || null;
 
-  return buildTitleUrl(m.id, {
-    collectionId,
-    episodeId
-  });
+  return buildTitleUrl(m.id, { collectionId, episodeId });
 }
 
 function buildContinueSubtitle(row) {
@@ -1384,10 +1471,7 @@ function buildContinuePct(row) {
     totalSec = Number(m?.duration_minutes || 0) * 60;
   }
 
-  if (totalSec > 0) {
-    return Math.min(98, Math.max(2, Math.round((progressSec / totalSec) * 100)));
-  }
-
+  if (totalSec > 0) return Math.min(98, Math.max(2, Math.round((progressSec / totalSec) * 100)));
   return 8;
 }
 
@@ -1414,6 +1498,9 @@ async function init() {
   installTwoLinesObservers();
 
   const session = await getSession();
+  __homeSessionCache = session || null;
+  __homeUserIdCache = session?.user?.id || null;
+
   const userId = session?.user?.id || null;
   ensureMyListNavLink(userId);
 
@@ -1451,9 +1538,7 @@ async function init() {
             const pct = buildContinuePct(r);
 
             return addMovieIdToCardHtml(
-              cardHtml(m, href, subtitle, pct, {
-                showCollectionOverlay: true
-              }),
+              cardHtml(m, href, subtitle, pct, { showCollectionOverlay: true }),
               m?.id
             );
           }).join("")
@@ -1496,7 +1581,35 @@ async function init() {
       if (item?.id && !heroPoolMap.has(item.id)) heroPoolMap.set(item.id, item);
     });
 
-    startHomeHeroRotation([...heroPoolMap.values()], { userId });
+    // hero stable
+    const pool = [...heroPoolMap.values()];
+    if (pool.length) {
+      // pick stable
+      const now = Date.now();
+      const key = `${HOME_HERO_STORAGE_PREFIX}:${userId || "guest"}`;
+
+      let chosen = null;
+      try {
+        const raw = localStorage.getItem(key);
+        const saved = raw ? JSON.parse(raw) : null;
+        if (saved?.id && Number(saved.expiresAt) > now) {
+          chosen = pool.find((x) => String(x.id) === String(saved.id)) || null;
+        }
+      } catch { }
+
+      if (!chosen) {
+        chosen = pool[Math.floor(Math.random() * pool.length)];
+        try {
+          localStorage.setItem(key, JSON.stringify({
+            id: chosen.id,
+            chosenAt: now,
+            expiresAt: now + HOME_HERO_TTL_MS
+          }));
+        } catch { }
+      }
+
+      renderHomeHeroItem(chosen, { userId });
+    }
 
     scheduleTwoLinesScan();
   } catch (e) {
