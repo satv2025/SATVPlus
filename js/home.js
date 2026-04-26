@@ -91,7 +91,7 @@ function isBaseExactlyTwoLines(el) {
 }
 
 function setCondensedInline(el, weight) {
-  el.style.setProperty("font-size", "13px", "important");
+  el.style.setProperty("font-size", "12px", "important");
   el.style.setProperty("font-weight", String(weight), "important");
   el.dataset.twoLinesApplied = "1";
   el.dataset.twoLinesWeight = String(weight);
@@ -644,7 +644,7 @@ function buildCardMoreInfoButton(movieId) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "card-more-info-btn";
-  btn.textContent = "Mas información";
+  btn.innerHTML = `${MYLIST_ICON_PLUS}<span>Más</span>`;
   btn.setAttribute("aria-label", "Mas info");
 
   btn.addEventListener("click", (ev) => {

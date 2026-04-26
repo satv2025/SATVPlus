@@ -1,5 +1,7 @@
 @import url('fonts/satvplusfont/satvplusfont.css');
+@import url('fonts/discord/ggsans/GGSans.css');
+@import url('https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400..700;1,400..700&display=swap');
 
 * {
-    font-family: SATVPlus !important;
+    font-family: 'SATVPlus FONT' !important;
 }
