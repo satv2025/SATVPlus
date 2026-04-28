@@ -350,11 +350,16 @@ main.container {
     right: 4px !important;
 }
 
+.card-more-info-btn span {
+    margin-top: 0.1em;
+}
+
 .card .card-title .card-more-info-btn:hover {
-    background: rgba(255, 255, 255, .10) !important;
+    background: #fff !important;
     /* sigue "sin fondo", solo tinta suave */
     opacity: 1;
     transform: scale(1.03);
+    color: #000 !important;
 }
 
 .card .card-title .card-more-info-btn:active {
