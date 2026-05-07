@@ -350,6 +350,10 @@ main.container {
     right: 4px !important;
 }
 
+.card-more-info-btn {
+    display: none !important;
+}
+
 .card-more-info-btn span {
     margin-top: 0.1em;
 }
@@ -445,4 +449,108 @@ main.container {
         /* si tu volumen baja a 40 */
         right: 10px !important;
     }
+}
+
+/* =========================================================
+   FIX CARD TOP RADIUS
+   La card necesita overflow visible para el hover Prime,
+   entonces el radio lo tienen que aplicar los hijos visuales.
+========================================================= */
+
+/* Card base */
+.card {
+    border-radius: var(--radius) !important;
+}
+
+/* Miniatura normal */
+.card>.thumb {
+    border-radius: var(--radius) var(--radius) 0 0 !important;
+    overflow: hidden !important;
+}
+
+/* Si el background-image está en .thumb, esto ya alcanza.
+   Pero si adentro hay overlays/badges/progress, también quedan recortados. */
+.card>.thumb::before,
+.card>.thumb::after {
+    border-radius: inherit !important;
+}
+
+/* Overlay hover Prime */
+.card-hover-overlay {
+    border-radius: var(--radius) !important;
+    overflow: hidden !important;
+}
+
+/* Parte superior del overlay */
+.card-hover-overlay-inner {
+    border-radius: inherit !important;
+    overflow: hidden !important;
+}
+
+.card-hover-overlay-media {
+    border-radius: var(--radius) var(--radius) 0 0 !important;
+    overflow: hidden !important;
+}
+
+/* El wrapper que crea el JS para video/poster */
+.card-hover-overlay-media .card-quick-modal-media,
+.card-hover-overlay-media .card-quick-modal-poster {
+    border-radius: inherit !important;
+    overflow: hidden !important;
+}
+
+/* Video / poster */
+.card-hover-overlay-media .card-quick-modal-video,
+.card-hover-overlay-media .card-quick-modal-poster-img {
+    border-radius: inherit !important;
+    overflow: hidden !important;
+}
+
+/* Evita que el badge tape el borde superior derecho cuadrado */
+.card .card-badge {
+    border-top-right-radius: var(--radius) !important;
+}
+
+/* Evita que overlay de colección rompa visualmente el borde */
+.card .card-collection-overlay {
+    overflow: hidden !important;
+}
+
+/* =========================================================
+   FIX CONTINUE WATCHING PROGRESSBAR
+   El progressbar vive dentro de .thumb y sale hacia abajo.
+   No puede estar recortado por overflow:hidden.
+========================================================= */
+
+/* La thumb mantiene bordes redondeados, pero deja salir la barra */
+.card>.thumb {
+    border-radius: var(--radius) var(--radius) 0 0 !important;
+    overflow: visible !important;
+}
+
+/* El fondo de la thumb sigue respetando el radius aunque overflow sea visible */
+.card>.thumb {
+    background-clip: padding-box !important;
+}
+
+/* Progressbar visible sobre la card */
+.card .progressbar {
+    z-index: 8 !important;
+    overflow: hidden !important;
+}
+
+/* En Continuar viendo, aseguramos que no quede detrás ni cortada */
+#continue-row .card {
+    overflow: visible !important;
+}
+
+#continue-row .thumb {
+    overflow: visible !important;
+}
+
+#continue-row .progressbar {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 20 !important;
 }

@@ -726,7 +726,6 @@ a.pill.profile-link:hover {
 
 .card:hover {
   background: rgba(255, 255, 255, .06);
-  outline: 2px solid #fff;
 }
 
 /* 🔥 16:9 REAL SIN ALTURA FIJA */
@@ -3351,4 +3350,387 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 
 #card-quick-modal-root .card-quick-modal-media.is-ready .card-quick-modal-video {
   opacity: 1;
+}
+
+/* =========================================================
+   CARD HOVER OVERLAY tipo Prime Video
+   - overlay dentro de la card
+   - se abre como Prime Video
+   - no deja el carrusel bugueado
+   - overflow visible SOLO mientras hover está activo
+========================================================= */
+
+/* Estado base: carrusel normal, estable */
+.carousel {
+  position: relative;
+  overflow: hidden !important;
+}
+
+.row {
+  position: relative;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.section {
+  position: relative;
+  z-index: 1;
+}
+
+/* Estado temporal durante hover */
+.section.section-hover-open {
+  z-index: 80;
+}
+
+.carousel.carousel-hover-open {
+  overflow: visible !important;
+}
+
+.row.row-hover-open {
+  overflow: visible !important;
+}
+
+/* Card base */
+.card {
+  position: relative;
+  overflow: visible !important;
+  z-index: 1;
+}
+
+.card:hover {
+  outline: none !important;
+}
+
+.card.card-hover-overlay-host {
+  z-index: 200;
+}
+
+/* El + / - de Mi Lista solo vive en el overlay, nunca en la card base */
+.card>.thumb>.card-quick-plus-btn,
+.card>.thumb>.card-mylist-plus-btn {
+  display: none !important;
+}
+
+/* Oculta acciones propias de la card base mientras está el overlay */
+.card.card-hover-overlay-host .card-quick-plus-btn,
+.card.card-hover-overlay-host .card-mylist-plus-btn,
+.card.card-hover-overlay-host .card-more-info-btn {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* =========================================================
+   OVERLAY
+========================================================= */
+
+.card-hover-overlay {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  z-index: 12000;
+
+  width: min(430px, calc(100vw - 32px));
+
+  background: #07090d;
+  color: #fff;
+  border-radius: .32em;
+  overflow: hidden;
+
+  box-shadow:
+    0 20px 55px rgba(0, 0, 0, .58),
+    0 4px 18px rgba(0, 0, 0, .38);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  transform:
+    translate(calc(-50% + var(--card-hover-shift-x, 0px)), 0) scale(.62);
+
+  transform-origin: top center;
+
+  transition:
+    opacity .14s ease,
+    visibility .14s ease,
+    transform .22s cubic-bezier(.2, .85, .25, 1);
+}
+
+.card-hover-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+
+  transform:
+    translate(calc(-50% + var(--card-hover-shift-x, 0px)), -26px) scale(1);
+}
+
+.card-hover-overlay-inner {
+  width: 100%;
+  min-height: 100%;
+  background: #07090d;
+}
+
+/* =========================================================
+   MEDIA / TRAILER
+========================================================= */
+
+.card-hover-overlay-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #07090d;
+  overflow: hidden;
+}
+
+.card-hover-overlay-media .card-quick-modal-media,
+.card-hover-overlay-media .card-quick-modal-video,
+.card-hover-overlay-media .card-quick-modal-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.card-hover-overlay-media .card-quick-modal-video,
+.card-hover-overlay-media .card-quick-modal-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-hover-overlay-media .card-quick-modal-shade {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 44%;
+  pointer-events: none;
+  background: transparent !important;
+}
+
+/* Loading */
+.card-hover-overlay-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+
+  display: grid;
+  place-items: center;
+
+  font-size: 13px;
+  color: rgba(255, 255, 255, .78);
+  background: #07090d;
+}
+
+/* =========================================================
+   FLOATING BUTTONS: MI LISTA + VOLUMEN
+========================================================= */
+
+.card-hover-overlay-floating-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 58px;
+  z-index: 30;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  pointer-events: auto;
+}
+
+/* Mi Lista arriba del volumen */
+.card-hover-overlay-media .card-hover-mylist-btn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .28);
+
+  background: rgba(0, 0, 0, .55);
+  color: #fff;
+  backdrop-filter: blur(8px);
+
+  display: inline-grid;
+  place-items: center;
+
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+.card-hover-overlay-media .card-hover-mylist-btn:hover,
+.card-hover-overlay-media .card-hover-mylist-btn.is-active {
+  background: rgba(0, 0, 0, .82);
+  border-color: rgba(255, 255, 255, .86);
+}
+
+.card-hover-overlay-media .card-hover-mylist-btn .card-quick-plus-icon {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+}
+
+.card-hover-overlay-media .card-hover-mylist-btn svg,
+.card-hover-overlay-media .card-hover-mylist-btn path {
+  pointer-events: none !important;
+  fill: currentColor !important;
+}
+
+/* Volumen abajo */
+.card-hover-overlay-media .card-quick-modal-volume-btn {
+  position: absolute;
+  right: 12px !important;
+  bottom: 12px !important;
+  z-index: 25 !important;
+
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .24);
+
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(8px);
+
+  display: inline-grid;
+  place-items: center;
+
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.card-hover-overlay-media .card-quick-modal-volume-btn:hover {
+  background: rgba(0, 0, 0, .82);
+  border-color: rgba(255, 255, 255, .86);
+}
+
+.card-hover-overlay-media .card-quick-modal-volume-btn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: block;
+  filter: brightness(0) invert(1);
+}
+
+/* =========================================================
+   BODY
+========================================================= */
+
+.card-hover-overlay-body {
+  position: relative;
+  z-index: 5;
+
+  padding: 1em 1.5em;
+  background: #07090d;
+}
+
+/* Ya no usamos actions en el body */
+.card-hover-overlay-actions {
+  display: none !important;
+}
+
+/* Textos */
+.card-hover-overlay-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.15;
+
+  margin: 0 0 6px;
+
+  color: #fff;
+}
+
+.card-hover-overlay-meta {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+
+  margin: 0 0 8px;
+
+  color: #fff;
+}
+
+/* SINOPSIS SIEMPRE EN BLOCK, SIN CORTE */
+.card-hover-overlay-synopsis {
+  display: block !important;
+
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.42;
+
+  margin: 0;
+
+  color: #fff;
+
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  max-height: none !important;
+
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: initial !important;
+}
+
+/* =========================================================
+   Ajustes para cards cerca de los bordes
+========================================================= */
+
+.row .card:first-child .card-hover-overlay {
+  transform-origin: top left;
+}
+
+.row .card:last-child .card-hover-overlay {
+  transform-origin: top right;
+}
+
+/* =========================================================
+   Mobile / touch: sin hover
+========================================================= */
+
+@media (hover: none) and (pointer: coarse) {
+  .card-hover-overlay {
+    display: none !important;
+  }
+
+  .carousel.carousel-hover-open {
+    overflow: hidden !important;
+  }
+
+  .row.row-hover-open {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .card-hover-overlay {
+    display: none !important;
+  }
+
+  .carousel.carousel-hover-open {
+    overflow: hidden !important;
+  }
+
+  .row.row-hover-open {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+}
+
+/* =========================================================
+   Seguridad: elimina restos de versiones anteriores
+========================================================= */
+
+.card-hover-portal,
+.card-hover-preview {
+  display: none !important;
 }

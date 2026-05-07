@@ -1,4 +1,4 @@
-// /js/home.js
+//home.js
 import {
   renderNav,
   renderAuthButtons,
@@ -660,15 +660,10 @@ function ensureMoreInfoNextToTitle(card, movieId) {
   const titleEl = card?.querySelector?.(".card-title");
   if (!titleEl) return;
 
-  // ya existe
   if (titleEl.querySelector(".card-more-info-btn")) return;
 
-  // 👇 respeta lo que arma ui.js: title es texto plano
-  // metemos el botón adentro del mismo nodo de título
   const btn = buildCardMoreInfoButton(movieId);
 
-  // ✅ para que no rompa altura/medición: lo hacemos overlay a la derecha
-  // (no afecta el alto del título)
   titleEl.style.position = titleEl.style.position || "relative";
   titleEl.style.paddingRight = titleEl.style.paddingRight || "86px";
 
@@ -920,6 +915,655 @@ async function openQuickCardModal(movieId, triggerEl = null) {
 }
 
 /* =========================================================
+   CARD HOVER OVERLAY tipo Prime Video
+   - overlay absoluto DENTRO de la .card
+   - NO modifica el tamaño real de la card
+   - NO portal
+   - NO fixed
+   - habilita overflow visible SOLO durante hover
+   - corrige bug al pasar de una card a otra
+   - al salir borra TODO lo generado y limpia z-index/overflow
+   - trailer + mute + mi lista + meta + sinopsis
+========================================================= */
+
+const __cardHoverMovieCache = new Map();
+
+let __cardHoverActiveCard = null;
+let __cardHoverGlobalSeq = 0;
+let __cardHoverGlobalEventsInstalled = false;
+
+function buildMovieRuntimeText(movie = {}) {
+  const category = String(movie?.category || "").toLowerCase();
+  const mm = movie?.movie_meta || null;
+
+  if (category === "series") {
+    const seasonsCount = Number(mm?.seasons_count || movie?.seasons_count || 0);
+    const episodesCount = Number(mm?.episodes_count || movie?.episodes_count || 0);
+
+    if (seasonsCount > 2) {
+      return `${seasonsCount} temporadas`;
+    }
+
+    if (episodesCount > 0) {
+      return `${episodesCount} ${episodesCount === 1 ? "episodio" : "episodios"}`;
+    }
+
+    return "Serie";
+  }
+
+  if (movie?.duration_text) {
+    return String(movie.duration_text);
+  }
+
+  const mins = Number(movie?.duration_minutes || 0);
+  if (mins > 0) {
+    if (mins < 60) return `${mins} min`;
+
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+
+    return m ? `${h} h ${m} min` : `${h} h`;
+  }
+
+  return "";
+}
+
+function buildMovieMetaText(movie = {}) {
+  const parts = [];
+
+  if (movie.release_year) {
+    parts.push(String(movie.release_year));
+  }
+
+  const runtime = buildMovieRuntimeText(movie);
+  if (runtime) {
+    parts.push(runtime);
+  }
+
+  const age =
+    movie?.movie_meta?.fullage ||
+    movie?.fullage ||
+    "";
+
+  if (age) {
+    parts.push(String(age));
+  }
+
+  return parts.join("  •  ");
+}
+
+function isCardHoverDisabled() {
+  try {
+    return window.matchMedia?.("(hover: none), (pointer: coarse)")?.matches || window.innerWidth <= 768;
+  } catch {
+    return window.innerWidth <= 768;
+  }
+}
+
+function forceCardOverlaySynopsisBlock(node) {
+  if (!node) return;
+
+  node.style.setProperty("display", "block", "important");
+  node.style.setProperty("white-space", "normal", "important");
+  node.style.setProperty("overflow", "visible", "important");
+  node.style.setProperty("text-overflow", "clip", "important");
+  node.style.setProperty("max-height", "none", "important");
+  node.style.setProperty("-webkit-line-clamp", "unset", "important");
+  node.style.setProperty("-webkit-box-orient", "initial", "important");
+}
+
+function getCardHoverContext(card) {
+  return {
+    row: card?.closest?.(".row") || null,
+    carousel: card?.closest?.(".carousel") || null,
+    section: card?.closest?.(".section") || null
+  };
+}
+
+function setCardHoverContext(card, open) {
+  if (!card) return;
+
+  const { row, carousel, section } = getCardHoverContext(card);
+
+  if (open) {
+    card.classList.add("card-hover-overlay-host");
+
+    row?.classList.add("row-hover-open");
+    carousel?.classList.add("carousel-hover-open");
+    section?.classList.add("section-hover-open");
+
+    return;
+  }
+
+  card.classList.remove("card-hover-overlay-host");
+
+  requestAnimationFrame(() => {
+    if (row && !row.querySelector(".card-hover-overlay-host")) {
+      row.classList.remove("row-hover-open");
+    }
+
+    if (carousel && !carousel.querySelector(".card-hover-overlay-host")) {
+      carousel.classList.remove("carousel-hover-open");
+    }
+
+    if (section && !section.querySelector(".card-hover-overlay-host")) {
+      section.classList.remove("section-hover-open");
+    }
+
+    if (!document.querySelector(".card-hover-overlay-host")) {
+      document.querySelectorAll(".row-hover-open").forEach((el) => {
+        el.classList.remove("row-hover-open");
+      });
+
+      document.querySelectorAll(".carousel-hover-open").forEach((el) => {
+        el.classList.remove("carousel-hover-open");
+      });
+
+      document.querySelectorAll(".section-hover-open").forEach((el) => {
+        el.classList.remove("section-hover-open");
+      });
+    }
+  });
+}
+
+function stopAndResetCardHoverMedia(card) {
+  if (!card) return;
+
+  try {
+    card.querySelectorAll(".card-hover-overlay video").forEach((video) => {
+      try {
+        video.pause();
+        video.muted = true;
+        video.currentTime = 0;
+        video.removeAttribute("src");
+        video.load?.();
+      } catch { }
+    });
+  } catch { }
+}
+
+function removeCardHoverOverlay(card) {
+  if (!card) return;
+
+  stopAndResetCardHoverMedia(card);
+
+  try {
+    card.querySelectorAll(".card-hover-overlay").forEach((node) => {
+      try {
+        node.remove();
+      } catch { }
+    });
+  } catch { }
+}
+
+function hardResetCardHover(card, { removeOverlay = true } = {}) {
+  if (!card) return;
+
+  clearTimeout(card.__hoverOpenTimer);
+  clearTimeout(card.__hoverCloseTimer);
+
+  card.dataset.hoverSeq = "";
+
+  card.classList.remove(
+    "card-hover-overlay-open",
+    "card-hover-overlay-host"
+  );
+
+  stopAndResetCardHoverMedia(card);
+
+  const overlay = card.querySelector(".card-hover-overlay");
+  if (overlay) {
+    overlay.classList.remove("is-open");
+    overlay.setAttribute("aria-hidden", "true");
+
+    if (removeOverlay) {
+      try {
+        overlay.remove();
+      } catch { }
+    }
+  }
+
+  setCardHoverContext(card, false);
+}
+
+function hardResetAllCardHovers({ except = null } = {}) {
+  const cards = new Set();
+
+  document
+    .querySelectorAll(".card-hover-overlay-host, .card-hover-overlay-open")
+    .forEach((card) => cards.add(card));
+
+  document.querySelectorAll(".card-hover-overlay").forEach((overlay) => {
+    const card = overlay.closest(".card");
+    if (card) cards.add(card);
+    else {
+      try {
+        overlay.remove();
+      } catch { }
+    }
+  });
+
+  cards.forEach((card) => {
+    if (except && card === except) return;
+    hardResetCardHover(card, { removeOverlay: true });
+  });
+
+  if (!except) {
+    __cardHoverActiveCard = null;
+  }
+
+  requestAnimationFrame(() => {
+    if (!document.querySelector(".card-hover-overlay-host")) {
+      document.querySelectorAll(".row-hover-open").forEach((el) => {
+        el.classList.remove("row-hover-open");
+      });
+
+      document.querySelectorAll(".carousel-hover-open").forEach((el) => {
+        el.classList.remove("carousel-hover-open");
+      });
+
+      document.querySelectorAll(".section-hover-open").forEach((el) => {
+        el.classList.remove("section-hover-open");
+      });
+    }
+  });
+}
+
+function ensureCardHoverOverlay(card, movieId) {
+  if (!card || !movieId) return null;
+
+  removeCardHoverOverlay(card);
+
+  const overlay = document.createElement("div");
+  overlay.className = "card-hover-overlay";
+  overlay.setAttribute("aria-hidden", "true");
+
+  overlay.innerHTML = `
+    <div class="card-hover-overlay-inner">
+      <div class="card-hover-overlay-media">
+        <div class="card-hover-overlay-loading">Cargando…</div>
+
+        <div class="card-hover-overlay-floating-actions">
+          <button class="card-hover-mylist-btn" type="button" aria-label="Agregar a Mi Lista" aria-pressed="false">
+            ${MYLIST_ICON_PLUS}
+          </button>
+        </div>
+      </div>
+
+      <div class="card-hover-overlay-body">
+        <div class="card-hover-overlay-title"></div>
+        <div class="card-hover-overlay-meta"></div>
+        <div class="card-hover-overlay-synopsis"></div>
+      </div>
+    </div>
+  `;
+
+  overlay.addEventListener("mouseenter", () => {
+    clearTimeout(card.__hoverCloseTimer);
+  });
+
+  overlay.addEventListener("mouseleave", () => {
+    closeCardHoverOverlay(card);
+  });
+
+  overlay.addEventListener("click", (ev) => {
+    const interactive = ev.target.closest("button, a");
+    if (interactive) return;
+
+    const href = card.dataset.href || buildTitleUrl(movieId);
+    if (href) window.location.href = href;
+  });
+
+  card.appendChild(overlay);
+  return overlay;
+}
+
+function getCardHoverMyListButton(overlay) {
+  if (!overlay) return null;
+
+  let actions = overlay.querySelector(".card-hover-overlay-floating-actions");
+
+  if (!actions) {
+    const media = overlay.querySelector(".card-hover-overlay-media");
+    if (!media) return null;
+
+    actions = document.createElement("div");
+    actions.className = "card-hover-overlay-floating-actions";
+    media.appendChild(actions);
+  }
+
+  actions.querySelectorAll(".card-hover-mylist-btn").forEach((btn) => {
+    try {
+      btn.remove();
+    } catch { }
+  });
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "card-hover-mylist-btn";
+  btn.setAttribute("aria-label", "Agregar a Mi Lista");
+  btn.setAttribute("aria-pressed", "false");
+  btn.innerHTML = MYLIST_ICON_PLUS;
+
+  actions.appendChild(btn);
+  return btn;
+}
+
+function positionCardHoverOverlay(card, overlay) {
+  if (!card || !overlay) return;
+
+  const rect = card.getBoundingClientRect();
+  const viewportW = window.innerWidth || document.documentElement.clientWidth || 0;
+
+  const finalWidth = Math.min(430, Math.max(320, viewportW - 32));
+  overlay.style.width = `${Math.round(finalWidth)}px`;
+
+  const overlayLeft = rect.left + (rect.width / 2) - (finalWidth / 2);
+
+  let shiftX = 0;
+
+  const minViewportGap = 12;
+  const overflowLeft = minViewportGap - overlayLeft;
+  const overflowRight = (overlayLeft + finalWidth) - (viewportW - minViewportGap);
+
+  if (overflowLeft > 0) {
+    shiftX += overflowLeft;
+  }
+
+  if (overflowRight > 0) {
+    shiftX -= overflowRight;
+  }
+
+  overlay.style.setProperty("--card-hover-shift-x", `${Math.round(shiftX)}px`);
+}
+
+function restartCardHoverOverlayAnimation(card, overlay) {
+  if (!card || !overlay) return;
+
+  card.classList.remove("card-hover-overlay-open");
+  overlay.classList.remove("is-open");
+  overlay.setAttribute("aria-hidden", "false");
+
+  void overlay.offsetWidth;
+
+  requestAnimationFrame(() => {
+    setCardHoverContext(card, true);
+    positionCardHoverOverlay(card, overlay);
+
+    requestAnimationFrame(() => {
+      card.classList.add("card-hover-overlay-open");
+      overlay.classList.add("is-open");
+    });
+  });
+}
+
+async function hydrateCardHoverOverlay(card, movieId, seq) {
+  if (!card || !movieId) return;
+
+  const overlay = card.querySelector(".card-hover-overlay");
+  if (!overlay) return;
+
+  try {
+    let movie = __cardHoverMovieCache.get(String(movieId));
+
+    if (!movie) {
+      movie = await fetchMovie(movieId);
+      if (movie) __cardHoverMovieCache.set(String(movieId), movie);
+    }
+
+    if (!movie || card.dataset.hoverSeq !== String(seq)) return;
+    if (__cardHoverActiveCard !== card) return;
+
+    const media = overlay.querySelector(".card-hover-overlay-media");
+    const title = overlay.querySelector(".card-hover-overlay-title");
+    const meta = overlay.querySelector(".card-hover-overlay-meta");
+    const synopsis = overlay.querySelector(".card-hover-overlay-synopsis");
+
+    if (title) {
+      title.textContent = movie.title || "Sin título";
+    }
+
+    if (meta) {
+      meta.textContent = buildMovieMetaText(movie);
+      meta.hidden = !meta.textContent.trim();
+    }
+
+    if (synopsis) {
+      synopsis.textContent =
+        movie.description ||
+        movie.sinopsis ||
+        "Sin sinopsis disponible.";
+
+      forceCardOverlaySynopsisBlock(synopsis);
+    }
+
+    if (media) {
+      const floatingActions = overlay.querySelector(".card-hover-overlay-floating-actions");
+
+      media.innerHTML = "";
+
+      if (floatingActions) {
+        media.appendChild(floatingActions);
+      } else {
+        const actions = document.createElement("div");
+        actions.className = "card-hover-overlay-floating-actions";
+        media.appendChild(actions);
+      }
+
+      mountQuickModalTrailer(media, movie);
+
+      const video = media.querySelector("video");
+      if (video) {
+        try {
+          video.pause();
+          video.muted = true;
+          video.currentTime = 0;
+          video.setAttribute("muted", "");
+          video.playsInline = true;
+          video.setAttribute("playsinline", "");
+          video.setAttribute("webkit-playsinline", "");
+        } catch { }
+
+        const p = video.play?.();
+        if (p && typeof p.catch === "function") p.catch(() => { });
+      }
+    }
+
+    const myListBtn = getCardHoverMyListButton(overlay);
+    if (myListBtn) {
+      const session = __homeSessionCache || (await getHomeSessionCached());
+      const userId = session?.user?.id || null;
+
+      bindMyListIconButton(myListBtn, {
+        userId,
+        contentId: String(movie.id)
+      });
+    }
+
+    positionCardHoverOverlay(card, overlay);
+  } catch (e) {
+    console.warn("[home] card hover overlay error:", e);
+
+    const media = overlay.querySelector(".card-hover-overlay-media");
+    if (media) {
+      media.innerHTML = `<div class="card-hover-overlay-loading">No se pudo cargar.</div>`;
+    }
+  }
+}
+
+function openCardHoverOverlay(card, movieId) {
+  if (!card || !movieId || isCardHoverDisabled()) return;
+
+  hardResetAllCardHovers({ except: card });
+
+  if (__cardHoverActiveCard && __cardHoverActiveCard !== card) {
+    hardResetCardHover(__cardHoverActiveCard, { removeOverlay: true });
+  }
+
+  __cardHoverActiveCard = card;
+
+  clearTimeout(card.__hoverOpenTimer);
+  clearTimeout(card.__hoverCloseTimer);
+
+  card.__hoverOpenTimer = setTimeout(() => {
+    if (__cardHoverActiveCard !== card) return;
+
+    __cardHoverGlobalSeq += 1;
+
+    const seq = String(__cardHoverGlobalSeq);
+    card.dataset.hoverSeq = seq;
+
+    const overlay = ensureCardHoverOverlay(card, movieId);
+    if (!overlay) return;
+
+    restartCardHoverOverlayAnimation(card, overlay);
+
+    hydrateCardHoverOverlay(card, movieId, seq);
+  }, 120);
+}
+
+function closeCardHoverOverlay(card, options = {}) {
+  if (!card) return;
+
+  const immediate = options.immediate === true;
+
+  clearTimeout(card.__hoverOpenTimer);
+  clearTimeout(card.__hoverCloseTimer);
+
+  if (__cardHoverActiveCard === card) {
+    __cardHoverActiveCard = null;
+  }
+
+  card.dataset.hoverSeq = "";
+
+  const overlay = card.querySelector(".card-hover-overlay");
+
+  const cleanup = () => {
+    hardResetCardHover(card, { removeOverlay: true });
+
+    if (!document.querySelector(".card-hover-overlay-host")) {
+      hardResetAllCardHovers();
+    }
+  };
+
+  if (!overlay || immediate) {
+    cleanup();
+    return;
+  }
+
+  overlay.classList.remove("is-open");
+  overlay.setAttribute("aria-hidden", "true");
+  card.classList.remove("card-hover-overlay-open");
+
+  card.__hoverCloseTimer = setTimeout(cleanup, 190);
+}
+
+function bindCardHoverPreview(card, movieId) {
+  if (!card || !movieId) return;
+  if (card.dataset.hoverPreviewBound === "1") return;
+
+  card.dataset.hoverPreviewBound = "1";
+
+  card.addEventListener("mouseenter", () => {
+    openCardHoverOverlay(card, String(movieId));
+  }, { passive: true });
+
+  card.addEventListener("mouseleave", () => {
+    clearTimeout(card.__hoverCloseTimer);
+
+    card.__hoverCloseTimer = setTimeout(() => {
+      const overlay = card.querySelector(".card-hover-overlay");
+
+      if (__cardHoverActiveCard !== card) {
+        hardResetCardHover(card, { removeOverlay: true });
+        return;
+      }
+
+      if (!overlay || !overlay.matches(":hover")) {
+        closeCardHoverOverlay(card);
+      }
+    }, 60);
+  }, { passive: true });
+
+  card.addEventListener("focusin", () => {
+    openCardHoverOverlay(card, String(movieId));
+  });
+
+  card.addEventListener("focusout", (ev) => {
+    const overlay = card.querySelector(".card-hover-overlay");
+
+    if (!card.contains(ev.relatedTarget) && !overlay?.contains?.(ev.relatedTarget)) {
+      closeCardHoverOverlay(card);
+    }
+  });
+}
+
+function installCardHoverGlobalCleanup() {
+  if (__cardHoverGlobalEventsInstalled) return;
+  __cardHoverGlobalEventsInstalled = true;
+
+  document.addEventListener("pointermove", (ev) => {
+    const active = __cardHoverActiveCard;
+    if (!active) return;
+
+    const overlay = active.querySelector(".card-hover-overlay");
+    const target = ev.target;
+
+    const insideCard = active.contains(target);
+    const insideOverlay = overlay?.contains?.(target);
+
+    if (!insideCard && !insideOverlay) {
+      closeCardHoverOverlay(active);
+    }
+  }, { passive: true });
+
+  document.addEventListener("pointerdown", (ev) => {
+    const active = __cardHoverActiveCard;
+    if (!active) return;
+
+    const overlay = active.querySelector(".card-hover-overlay");
+    const target = ev.target;
+
+    const insideCard = active.contains(target);
+    const insideOverlay = overlay?.contains?.(target);
+
+    if (!insideCard && !insideOverlay) {
+      closeCardHoverOverlay(active, { immediate: true });
+    }
+  }, { passive: true });
+
+  window.addEventListener("blur", () => {
+    hardResetAllCardHovers();
+  }, { passive: true });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      hardResetAllCardHovers();
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    document.querySelectorAll(".card.card-hover-overlay-host").forEach((card) => {
+      const overlay = card.querySelector(".card-hover-overlay");
+      if (overlay?.classList.contains("is-open")) {
+        positionCardHoverOverlay(card, overlay);
+      }
+    });
+  }, { passive: true });
+
+  window.addEventListener("scroll", () => {
+    document.querySelectorAll(".card.card-hover-overlay-host").forEach((card) => {
+      const overlay = card.querySelector(".card-hover-overlay");
+      if (overlay?.classList.contains("is-open")) {
+        positionCardHoverOverlay(card, overlay);
+      }
+    });
+  }, { passive: true });
+}
+
+installCardHoverGlobalCleanup();
+
+/* =========================================================
    CARDS: "+" (Mi Lista) + "Mas info" (junto al title)
 ========================================================= */
 
@@ -958,20 +1602,19 @@ function enhanceCarouselCardsWithQuickPlus(scope = document) {
 
     card.dataset.movieId = String(movieId);
 
-    const thumb = card.querySelector(".thumb") || card;
+    /*
+      El botón + / - de Mi Lista ya está dentro del hover overlay.
+      Sacamos cualquier botón viejo que haya quedado en la card base.
+    */
+    card.querySelectorAll(".card-quick-plus-btn, .card-mylist-plus-btn").forEach((btn) => {
+      try {
+        btn.remove();
+      } catch { }
+    });
 
-    // ✅ "+" / "-" Mi Lista en la thumb
-    let plusBtn = card.querySelector(".card-quick-plus-btn");
-    if (!plusBtn) {
-      plusBtn = buildCardQuickPlusButton(movieId);
-      thumb.appendChild(plusBtn);
-    }
-
-    const userId = getHomeUserIdCachedSync();
-    bindMyListIconButton(plusBtn, { userId, contentId: String(movieId) });
-
-    // ✅ "Mas info" al lado del title (según ui.js)
     ensureMoreInfoNextToTitle(card, movieId);
+
+    bindCardHoverPreview(card, String(movieId));
   });
 }
 
@@ -1161,7 +1804,6 @@ function renderHomeHeroItem(movie, { userId } = {}) {
 
 /* =========================================================
    LIVE MODE / publish label / cards / carousel / init
-   (tu código intacto)
 ========================================================= */
 
 const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
@@ -1249,7 +1891,7 @@ function promoteCatalogCardBadges(rootEl) {
   });
 }
 
-/* ================= CAROUSEL HELPERS (tu código) ================= */
+/* ================= CAROUSEL HELPERS ================= */
 
 function getCarouselCards(row) { return [...row.querySelectorAll(".card")]; }
 function getRowCenterX(row) { return row.scrollLeft + row.clientWidth / 2; }
@@ -1439,7 +2081,7 @@ function setRow(el, html) {
   scheduleTwoLinesScan(el);
 }
 
-/* ================= CONTINUE WATCHING HELPERS (tu código) ================= */
+/* ================= CONTINUE WATCHING HELPERS ================= */
 
 function buildContinueHref(row) {
   const m = row?.movies;
@@ -1581,10 +2223,8 @@ async function init() {
       if (item?.id && !heroPoolMap.has(item.id)) heroPoolMap.set(item.id, item);
     });
 
-    // hero stable
     const pool = [...heroPoolMap.values()];
     if (pool.length) {
-      // pick stable
       const now = Date.now();
       const key = `${HOME_HERO_STORAGE_PREFIX}:${userId || "guest"}`;
 
