@@ -3675,8 +3675,6 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   overflow: visible !important;
   text-overflow: clip !important;
   max-height: none !important;
-
-  -webkit-line-clamp: unset !important;
   -webkit-box-orient: initial !important;
 }
 
