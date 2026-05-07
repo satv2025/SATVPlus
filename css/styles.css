@@ -98,7 +98,7 @@
   --hover-tarjeta-ancho: 430px;
   --hover-tarjeta-margen-seguro: 32px;
   --hover-tarjeta-y-abierto: -26px;
-  --hover-tarjeta-sombra: 0 20px 55px rgba(0, 0, 0, .58), 0 4px 18px rgba(0, 0, 0, .38);  
+  --hover-tarjeta-sombra: 0 0 14px rgba(0, 0, 0, .32);
   --hover-tarjeta-titulo-size: 20px;
   --hover-tarjeta-meta-size: 18px;
   --hover-tarjeta-sinopsis-size: 18px;
@@ -3763,13 +3763,54 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 }
 
 .overlay-hover-tarjeta-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+
   font-size: var(--hover-tarjeta-meta-size);
   font-weight: 600;
   line-height: 1.35;
 
   margin: 0 0 8px;
-
   color: #fff;
+}
+
+.overlay-hover-tarjeta-meta-item {
+  display: inline-flex;
+  align-items: center;
+  color: rgba(255, 255, 255, .95);
+}
+
+.overlay-hover-tarjeta-meta-sep {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, .6);
+  margin: 0 2px;
+}
+
+.overlay-hover-tarjeta-age {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 24px;
+  padding: 0 10px;
+
+  border-radius: 6px;
+  border: 1px solid rgba(214, 225, 239, .26);
+
+  background: rgba(226, 236, 248, .18);
+  color: #f6fbff;
+
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .01em;
 }
 
 .overlay-hover-tarjeta-sinopsis {

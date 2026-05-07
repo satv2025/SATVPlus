@@ -1176,28 +1176,130 @@ function construirTextoDuracionHover(movie = {}) {
   return "";
 }
 
-function construirTextoMetaHover(movie = {}) {
-  const partes = [];
+function obtenerEdadHover(movie = {}) {
+  const raw = String(
+    movie?.movie_meta?.fullage ||
+    movie?.fullage ||
+    ""
+  ).trim();
+
+  if (!raw) return "";
+
+  const norm = raw
+    .toLowerCase()
+    .replaceAll("público", "publico")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // 1) ATP explícito (cualquier variante que empiece con ATP)
+  if (/^atp\b/i.test(raw)) return "ATP";
+
+  // 2) "Apto/Apta para todo público" => ATP
+  if (/(apto|apta)\s+para\s+todo\s+publico/.test(norm)) return "ATP";
+
+  // 3) +16, 16+, +13, 13+, etc.
+  const m = raw.match(/(\+\s*\d{1,2}|\d{1,2}\s*\+)/);
+  if (m) return m[0].replace(/\s+/g, "");
+
+  // 4) "Apta para mayores de 16 años" => 16+
+  const m2 = norm.match(/mayores\s+de\s+(\d{1,2})/i);
+  if (m2) return `${m2[1]}+`;
+
+  // 5) Si dice "Apto/Apta para ..." pero no es todo público (y no hubo número) => Semi-ATP
+  if (/(apto|apta)\s+para\b/.test(norm)) return "Semi-ATP";
+
+  // 6) fallback corto (ej: PG-13, TV-MA)
+  const short = raw.match(/^[A-Za-z0-9+\-]{2,8}/);
+  return short ? short[0] : "";
+}
+
+function construirMetaHoverPartes(movie = {}) {
+  const items = [];
 
   if (movie.release_year) {
-    partes.push(String(movie.release_year));
+    items.push(String(movie.release_year));
   }
 
   const duracion = construirTextoDuracionHover(movie);
   if (duracion) {
-    partes.push(duracion);
+    items.push(duracion);
   }
 
-  const edad =
-    movie?.movie_meta?.fullage ||
-    movie?.fullage ||
-    "";
+  return {
+    items,
+    age: obtenerEdadHover(movie)
+  };
+}
 
-  if (edad) {
-    partes.push(String(edad));
+function renderizarMetaHover(metaEl, movie = {}) {
+  if (!metaEl) return;
+
+  const { items, age } = construirMetaHoverPartes(movie);
+
+  metaEl.innerHTML = "";
+
+  const hay = (items && items.length > 0) || !!age;
+  metaEl.hidden = !hay;
+  if (!hay) return;
+
+  // ✅ 1 sola línea (no wrap)
+  metaEl.style.setProperty("display", "flex", "important");
+  metaEl.style.setProperty("align-items", "center", "important");
+  metaEl.style.setProperty("gap", "6px", "important");
+  metaEl.style.setProperty("flex-wrap", "nowrap", "important");
+  metaEl.style.setProperty("white-space", "nowrap", "important");
+
+  const frag = document.createDocumentFragment();
+
+  const addSep = () => {
+    const sep = document.createElement("span");
+    sep.className = "overlay-hover-tarjeta-meta-sep";
+    sep.setAttribute("aria-hidden", "true");
+    sep.textContent = "•";
+    sep.style.setProperty("opacity", "0.65");
+    sep.style.setProperty("margin", "0 2px");
+    frag.appendChild(sep);
+  };
+
+  (items || []).forEach((txt, idx) => {
+    const s = document.createElement("span");
+    s.className = "overlay-hover-tarjeta-meta-item";
+    s.textContent = String(txt || "");
+    s.style.setProperty("white-space", "nowrap");
+    frag.appendChild(s);
+
+    if (idx < items.length - 1) addSep();
+  });
+
+  if (age) {
+    if (items.length > 0) addSep();
+
+    const badge = document.createElement("span");
+    badge.className = "overlay-hover-tarjeta-age";
+    badge.textContent = age;
+
+    // ✅ estilo "badge" (bg blanco translucido azulado/gris + radius 6px)
+    badge.style.setProperty("display", "inline-flex");
+    badge.style.setProperty("align-items", "center");
+    badge.style.setProperty("justify-content", "center");
+    badge.style.setProperty("padding", "0 10px");
+    badge.style.setProperty("min-height", "24px");
+    badge.style.setProperty("border-radius", "6px");
+    badge.style.setProperty("border", "1px solid rgba(214, 225, 239, .28)");
+    badge.style.setProperty("background", "rgba(226, 236, 248, .20)");
+    badge.style.setProperty("color", "rgba(255,255,255,.95)");
+    badge.style.setProperty("backdrop-filter", "blur(8px)");
+    badge.style.setProperty("-webkit-backdrop-filter", "blur(8px)");
+    badge.style.setProperty("font-size", "12px");
+    badge.style.setProperty("font-weight", "800");
+    badge.style.setProperty("line-height", "1");
+    badge.style.setProperty("letter-spacing", ".01em");
+    badge.style.setProperty("white-space", "nowrap");
+
+    frag.appendChild(badge);
   }
 
-  return partes.join("  •  ");
+  metaEl.appendChild(frag);
 }
 
 function hoverTarjetaDeshabilitado() {
@@ -1661,8 +1763,7 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
     }
 
     if (meta) {
-      meta.textContent = construirTextoMetaHover(movie);
-      meta.hidden = !meta.textContent.trim();
+      renderizarMetaHover(meta, movie);
     }
 
     if (sinopsis) {
