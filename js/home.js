@@ -1,4 +1,15 @@
-//home.js
+// home.js
+// REEMPLAZO COMPLETO - FIX HOVER TARJETA
+//
+// Este archivo conserva tu lógica y aplica el fix necesario para que el overlay
+// se cierre al sacar el mouse de la tarjeta/overlay.
+//
+// CAMBIOS APLICADOS:
+// - Helper relatedTargetDentroCardUOverlay(...)
+// - mouseleave del overlay cierra si el mouse sale realmente.
+// - mouseleave de la card cierra si el mouse sale realmente.
+// - No se cierra al pasar de card -> overlay ni de overlay -> card.
+
 import {
   renderNav,
   renderAuthButtons,
@@ -18,7 +29,7 @@ import { fetchContinueWatching, fetchLatest, fetchByCategory, fetchMovie } from 
 import { supabase } from "./supabaseClient.js";
 
 /* =========================================================
-   ✅ TIPOGRAFÍA INLINE SOLO PARA 2 LÍNEAS (ESTABLE)
+   TIPOGRAFÍA INLINE SOLO PARA 2 LÍNEAS
 ========================================================= */
 
 let __twoLinesRaf = 0;
@@ -162,7 +173,7 @@ function installTwoLinesObservers() {
 }
 
 /* =========================================================
-   HOME HERO DESTACADO ESTABLE (tipo Netflix)
+   HOME HERO DESTACADO ESTABLE
 ========================================================= */
 
 let __homeHeroRotationTimer = null;
@@ -170,15 +181,14 @@ const HOME_HERO_TTL_MS = 3 * 24 * 60 * 60 * 1000;
 const HOME_HERO_STORAGE_PREFIX = "homeHeroSelection:v1";
 
 /* =========================================================
-   HOME HERO TRAILER VIDEO (autoplay + mute/unmute)
+   HOME HERO TRAILER VIDEO
 ========================================================= */
 
 const HERO_VOLUME_ICON_MUTE = "https://satvplus.com.ar/images/svg/heromute.svg";
 const HERO_VOLUME_ICON_UNMUTE = "https://satvplus.com.ar/images/svg/heroon.svg";
 
 /* =========================================================
-   CARD QUICK MODAL (+ en cards del carrusel)
-   FIX: no hace scroll up/down al abrir/cerrar.
+   CARD QUICK MODAL
 ========================================================= */
 
 let __quickModalRoot = null;
@@ -356,7 +366,7 @@ function mountQuickModalTrailer(container, movie) {
 }
 
 /* =========================================================
-   ✅ HOME SESSION CACHE (evita mil getSession)
+   HOME SESSION CACHE
 ========================================================= */
 
 let __homeSessionCache = null;
@@ -386,7 +396,7 @@ function getHomeUserIdCachedSync() {
 }
 
 /* =========================================================
-   ✅ ICONOS (+ / -) PARA MI LISTA
+   ICONOS (+ / -) PARA MI LISTA
 ========================================================= */
 
 const MYLIST_ICON_PLUS = `
@@ -518,11 +528,6 @@ async function resolveHeroMyListState({ userId, contentId }) {
   }
 }
 
-/* =========================================================
-   ✅ BOTÓN GENÉRICO "MI LISTA" PARA ICONOS (+ / -)
-   - se usa en card y en modal
-========================================================= */
-
 function setMyListIconBtnState(btn, { contentId, added = false, pending = false, source = "unknown" } = {}) {
   if (!btn || !contentId) return;
 
@@ -635,9 +640,7 @@ function bindMyListIconButton(btn, { userId, contentId }) {
 }
 
 /* =========================================================
-   ✅ "MAS INFO" (según ui.js): se inyecta dentro de .card-title
-   - NO toca ui.js
-   - NO navega; abre modal
+   MAS INFO
 ========================================================= */
 
 function buildCardMoreInfoButton(movieId) {
@@ -677,7 +680,7 @@ function ensureMoreInfoNextToTitle(card, movieId) {
 }
 
 /* =========================================================
-   HERO MYLIST (tu implementación original)
+   HERO MYLIST
 ========================================================= */
 
 function setHeroMyListBtnState(btn, { contentId, added = false, pending = false, source = "unknown" } = {}) {
@@ -815,8 +818,7 @@ function ensureMyListNavLink(userId) {
 }
 
 /* =========================================================
-   ✅ QUICK MODAL
-   - MyList (+/-) DENTRO del layout del video (arriba del volumen)
+   QUICK MODAL
 ========================================================= */
 
 async function openQuickCardModal(movieId, triggerEl = null) {
@@ -915,22 +917,7 @@ async function openQuickCardModal(movieId, triggerEl = null) {
 }
 
 /* =========================================================
-   OVERLAY HOVER DE TARJETAS tipo Prime Video
-   - Overlay absoluto dentro de la .card
-   - No modifica el tamaño real de la card
-   - No usa portal ni position: fixed
-   - Activa overflow visible solo mientras el hover está abierto
-   - Limpia todo al salir para evitar z-index/overflow pegado
-   - Trailer + mute + reproducir + mi lista + metadata + sinopsis
-   - FIX FUERTE:
-     1) Suspende data-href / href de la card mientras el overlay está abierto.
-     2) No cierra por click en Mute / Mi Lista / Reproducir.
-     3) No cierra por mouseleave inmediato.
-     4) Cierra solo cuando el puntero está realmente fuera de card + overlay.
-========================================================= */
-
-/* =========================================================
-   TEXTOS CUSTOMIZABLES
+   OVERLAY HOVER DE TARJETAS
 ========================================================= */
 
 const TEXTOS_HOVER_TARJETA = {
@@ -948,19 +935,11 @@ const TEXTOS_HOVER_TARJETA = {
   hora: "h"
 };
 
-/* =========================================================
-   ICONO CUSTOMIZABLE DEL BOTÓN REPRODUCIR
-========================================================= */
-
 const ICONO_BOTON_REPRODUCIR = `
   <svg class="icono-boton-reproducir" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
     <path d="M23.5 17.2v29.6c0 2.1 2.3 3.4 4.1 2.3l23.1-14.8c1.6-1 1.6-3.4 0-4.4L27.6 15C25.8 13.8 23.5 15.1 23.5 17.2z" fill="currentColor"></path>
   </svg>
 `;
-
-/* =========================================================
-   ESTADO INTERNO
-========================================================= */
 
 const __cachePeliculasHoverTarjeta = new Map();
 
@@ -971,10 +950,6 @@ let __eventosGlobalesHoverInstalados = false;
 let __bloquearCierreHoverHasta = 0;
 let __ultimoPointerHoverX = 0;
 let __ultimoPointerHoverY = 0;
-
-/* =========================================================
-   SELECTORES / LOCK
-========================================================= */
 
 const SELECTOR_INTERACTIVO_HOVER_TARJETA = [
   "button",
@@ -1041,6 +1016,22 @@ function punteroDentroCardUOverlay(card) {
   );
 }
 
+/* =========================================================
+   FIX PRINCIPAL: detectar si mouseleave va hacia card/overlay
+========================================================= */
+
+function relatedTargetDentroCardUOverlay(card, relatedTarget) {
+  if (!card || !relatedTarget) return false;
+
+  const overlay = card.querySelector(".overlay-hover-tarjeta");
+
+  return (
+    card.contains(relatedTarget) ||
+    overlay?.contains?.(relatedTarget) ||
+    !!relatedTarget.closest?.(".overlay-hover-tarjeta")
+  );
+}
+
 function mantenerHoverVivo(card, ms = 900) {
   bloquearCierreHoverTarjeta(ms);
 
@@ -1052,8 +1043,6 @@ function mantenerHoverVivo(card, ms = 900) {
 
 /* =========================================================
    SUSPENDER NAVEGACIÓN BASE DE LA CARD
-   Esto evita que data-href / href de la card cierre o navegue
-   cuando clickeás Mute o Mi Lista dentro del overlay.
 ========================================================= */
 
 function obtenerHrefHoverTarjeta(card, movieId) {
@@ -1097,10 +1086,6 @@ function suspenderNavegacionBaseCardHover(card) {
     card.removeAttribute("data-href");
   } catch { }
 
-  /*
-    Si la card es <a>, esto evita navegación nativa mientras el overlay vive.
-    El click general del overlay navega manualmente igual.
-  */
   try {
     if (card.matches?.("a[href]")) {
       card.removeAttribute("href");
@@ -1191,24 +1176,17 @@ function obtenerEdadHover(movie = {}) {
     .replace(/\s+/g, " ")
     .trim();
 
-  // 1) ATP explícito (cualquier variante que empiece con ATP)
   if (/^atp\b/i.test(raw)) return "ATP";
-
-  // 2) "Apto/Apta para todo público" => ATP
   if (/(apto|apta)\s+para\s+todo\s+publico/.test(norm)) return "ATP";
 
-  // 3) +16, 16+, +13, 13+, etc.
   const m = raw.match(/(\+\s*\d{1,2}|\d{1,2}\s*\+)/);
   if (m) return m[0].replace(/\s+/g, "");
 
-  // 4) "Apta para mayores de 16 años" => 16+
   const m2 = norm.match(/mayores\s+de\s+(\d{1,2})/i);
   if (m2) return `${m2[1]}+`;
 
-  // 5) Si dice "Apto/Apta para ..." pero no es todo público (y no hubo número) => Semi-ATP
   if (/(apto|apta)\s+para\b/.test(norm)) return "Semi-ATP";
 
-  // 6) fallback corto (ej: PG-13, TV-MA)
   const short = raw.match(/^[A-Za-z0-9+\-]{2,8}/);
   return short ? short[0] : "";
 }
@@ -1242,7 +1220,6 @@ function renderizarMetaHover(metaEl, movie = {}) {
   metaEl.hidden = !hay;
   if (!hay) return;
 
-  // ✅ 1 sola línea (no wrap)
   metaEl.style.setProperty("display", "flex", "important");
   metaEl.style.setProperty("align-items", "center", "important");
   metaEl.style.setProperty("gap", "6px", "important");
@@ -1278,7 +1255,6 @@ function renderizarMetaHover(metaEl, movie = {}) {
     badge.className = "overlay-hover-tarjeta-age";
     badge.textContent = age;
 
-    // ✅ estilo "badge" (bg blanco translucido azulado/gris + radius 6px)
     badge.style.setProperty("display", "inline-flex");
     badge.style.setProperty("align-items", "center");
     badge.style.setProperty("justify-content", "center");
@@ -1535,12 +1511,6 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
     </div>
   `;
 
-  /*
-    IMPORTANTE:
-    No usamos stopImmediatePropagation.
-    Así los listeners propios de Mute y Mi Lista siguen funcionando.
-  */
-
   const mantenerDesdeOverlay = (ev) => {
     registrarPointerHover(ev);
     mantenerHoverVivo(card, 1200);
@@ -1581,21 +1551,29 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
   }, { passive: true });
 
   /*
-    No cerramos directo en mouseleave.
-    Solo programamos un chequeo: si el puntero realmente quedó afuera,
-    recién ahí se cierra.
+    FIX: cerrar cuando el mouse sale realmente de overlay + card.
+    No cerrar si el destino es la card o el overlay.
   */
   overlay.addEventListener("mouseleave", (ev) => {
     registrarPointerHover(ev);
 
     clearTimeout(card.__hoverCloseTimer);
 
-    card.__hoverCloseTimer = setTimeout(() => {
-      if (cierreHoverBloqueado()) return;
-      if (punteroDentroCardUOverlay(card)) return;
+    if (relatedTargetDentroCardUOverlay(card, ev.relatedTarget)) {
+      mantenerHoverVivo(card, 700);
+      return;
+    }
 
-      cerrarOverlayHoverTarjeta(card);
-    }, 240);
+    card.__hoverCloseTimer = setTimeout(() => {
+      /*
+        Cierre animado:
+        NO usamos inmediato, así el overlay vuelve al estado cerrado
+        con la misma transición de apertura, pero al revés.
+      */
+      cerrarOverlayHoverTarjeta(card, {
+        forzar: true
+      });
+    }, 120);
   });
 
   overlay.addEventListener("click", (ev) => {
@@ -1606,10 +1584,6 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
     if (interactivo) {
       ev.stopPropagation();
 
-      /*
-        Reproducir debe navegar por su <a>.
-        Mute y Mi Lista deben ejecutar acción sin disparar card/data-href.
-      */
       if (!interactivo.matches("a, .boton-reproducir-hover")) {
         ev.preventDefault();
       }
@@ -1617,17 +1591,13 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
       return;
     }
 
-    /*
-      Click general del overlay:
-      navega manualmente a /title.
-      No restauramos href antes para que no se dispare la card.
-    */
     ev.preventDefault();
     ev.stopPropagation();
 
     const href = obtenerHrefHoverTarjeta(card, movieId);
     if (href) window.location.href = href;
   });
+
   card.appendChild(overlay);
   return overlay;
 }
@@ -1665,10 +1635,6 @@ function obtenerBotonMiListaHover(overlay) {
     ev.stopPropagation();
   });
 
-  /*
-    Este listener corre además del bindMyListIconButton.
-    No usa stopImmediatePropagation para no romper el toggle real.
-  */
   btn.addEventListener("click", (ev) => {
     bloquearCierreHoverTarjeta(1200);
     ev.preventDefault();
@@ -1732,7 +1698,7 @@ function reiniciarAnimacionOverlayHover(card, overlay) {
 }
 
 /* =========================================================
-   HIDRATACIÓN: DATOS + TRAILER + BOTONES
+   HIDRATACIÓN
 ========================================================= */
 
 async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
@@ -1791,10 +1757,6 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
       });
 
       botonReproducir.addEventListener("click", (ev) => {
-        /*
-          Dejar navegar normal.
-          Solo bloqueamos cierre y propagación a la card.
-        */
         bloquearCierreHoverTarjeta(1200);
         ev.stopPropagation();
       });
@@ -1819,10 +1781,6 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
         });
 
         botonVolumen.addEventListener("click", (ev) => {
-          /*
-            mountQuickModalTrailer ya tiene el listener que hace mute/unmute.
-            No usamos preventDefault acá para no bloquear comportamiento propio.
-          */
           bloquearCierreHoverTarjeta(1200);
           ev.stopPropagation();
         });
@@ -1877,7 +1835,6 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
 function abrirOverlayHoverTarjeta(card, movieId) {
   if (!card || !movieId || hoverTarjetaDeshabilitado()) return;
 
-  // ✅ FIX: si ya está abierto (por click/focus dentro del overlay), NO reconstruir (evita parpadeo).
   const __overlayExistente = card.querySelector(".overlay-hover-tarjeta");
   if (__overlayExistente?.classList?.contains?.("overlay-hover-abierto")) {
     __tarjetaHoverActiva = card;
@@ -1956,7 +1913,11 @@ function cerrarOverlayHoverTarjeta(card, options = {}) {
   overlay.setAttribute("aria-hidden", "true");
   card.classList.remove("tarjeta-hover-abierta");
 
-  card.__hoverCloseTimer = setTimeout(limpiar, 190);
+  /*
+    Esperamos un poco más que la transición CSS:
+    transform .22s + margen de seguridad.
+  */
+  card.__hoverCloseTimer = setTimeout(limpiar, 280);
 }
 
 function programarCierreHoverTarjetaSiFuera(card, delay = 180) {
@@ -1974,7 +1935,6 @@ function programarCierreHoverTarjetaSiFuera(card, delay = 180) {
 
 /* =========================================================
    BIND POR CARD
-   Mantiene el nombre bindCardHoverPreview para no romper tu código actual.
 ========================================================= */
 
 function bindCardHoverPreview(card, movieId) {
@@ -1997,14 +1957,28 @@ function bindCardHoverPreview(card, movieId) {
   }, { passive: true });
 
   /*
-    FIX:
-    No cerramos por click ni por focusout.
-    El cierre queda únicamente por salida real del puntero,
-    scroll, blur o cambio de pestaña.
+    FIX: cerrar cuando el mouse sale realmente de card + overlay.
+    No cerrar si el destino es el overlay.
   */
   card.addEventListener("mouseleave", (ev) => {
     registrarPointerHover(ev);
-    programarCierreHoverTarjetaSiFuera(card, 320);
+
+    if (relatedTargetDentroCardUOverlay(card, ev.relatedTarget)) {
+      mantenerHoverVivo(card, 700);
+      return;
+    }
+
+    clearTimeout(card.__hoverCloseTimer);
+
+    card.__hoverCloseTimer = setTimeout(() => {
+      /*
+        Cierre animado:
+        NO usamos inmediato, así el overlay hace la animación inversa.
+      */
+      cerrarOverlayHoverTarjeta(card, {
+        forzar: true
+      });
+    }, 120);
   }, { passive: true });
 
   card.addEventListener("focusin", () => {
@@ -2017,11 +1991,6 @@ function bindCardHoverPreview(card, movieId) {
   });
 
   card.addEventListener("focusout", () => {
-    /*
-      NO cerrar acá.
-      En click sobre mute / Mi Lista algunos navegadores disparan focusout
-      con relatedTarget null, y eso era lo que desmontaba el overlay.
-    */
     if (__tarjetaHoverActiva === card) {
       mantenerHoverVivo(card, 1200);
     }
@@ -2054,12 +2023,6 @@ function instalarLimpiezaGlobalHoverTarjeta() {
     programarCierreHoverTarjetaSiFuera(activa, 260);
   }, { passive: true });
 
-  /*
-    FIX DEFINITIVO:
-    NO cerramos por pointerdown/click.
-    Clickear mute, Mi Lista o cualquier parte del overlay jamás desmonta.
-    Click afuera tampoco desmonta; el hover se va al salir realmente con el mouse.
-  */
   document.addEventListener("pointerdown", (ev) => {
     registrarPointerHover(ev);
 
@@ -2123,7 +2086,7 @@ function instalarLimpiezaGlobalHoverTarjeta() {
 instalarLimpiezaGlobalHoverTarjeta();
 
 /* =========================================================
-   CARDS: "+" (Mi Lista) + "Mas info" (junto al title)
+   CARDS
 ========================================================= */
 
 function buildCardQuickPlusButton(movieId) {
@@ -2161,10 +2124,6 @@ function enhanceCarouselCardsWithQuickPlus(scope = document) {
 
     card.dataset.movieId = String(movieId);
 
-    /*
-      El botón + / - de Mi Lista ya está dentro del hover overlay.
-      Sacamos cualquier botón viejo que haya quedado en la card base.
-    */
     card.querySelectorAll(".card-quick-plus-btn, .card-mylist-plus-btn").forEach((btn) => {
       try {
         btn.remove();
@@ -2186,7 +2145,7 @@ function addMovieIdToCardHtml(html, movieId) {
 }
 
 /* =========================================================
-   HOME HERO VIDEO + resto (INTACTO)
+   HOME HERO VIDEO + RESTO
 ========================================================= */
 
 function mountHomeHeroTrailerVideo(hero, movie) {
@@ -2362,7 +2321,7 @@ function renderHomeHeroItem(movie, { userId } = {}) {
 }
 
 /* =========================================================
-   LIVE MODE / publish label / cards / carousel / init
+   LIVE MODE / CARDS / CAROUSEL / INIT
 ========================================================= */
 
 const LIVE_DISPLAY_TIMEZONE = "America/Argentina/Buenos_Aires";
@@ -2449,8 +2408,6 @@ function promoteCatalogCardBadges(rootEl) {
     node.replaceWith(badge);
   });
 }
-
-/* ================= CAROUSEL HELPERS — LAYOUT STREAMING V5 ================= */
 
 function getCarouselCards(row) {
   return Array.from(row?.querySelectorAll?.(".card") || []);

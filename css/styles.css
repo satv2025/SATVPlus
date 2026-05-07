@@ -3630,7 +3630,7 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   position: relative;
   z-index: 5;
 
-  padding: 1em 1.5em;
+  padding: 1.5em;
   background: var(--hover-tarjeta-bg);
 }
 
@@ -3659,8 +3659,8 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   border-radius: .25em;
   border: none;
 
-  background: #fff;
-  color: #000;
+  background: #2563eb;
+  color: #fff;
 
   font-size: 18px;
   font-weight: 800;
@@ -3674,7 +3674,8 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 }
 
 .boton-reproducir-hover:hover {
-  background: rgba(255, 255, 255, .86);
+  background: #fff;
+  color: #2563eb
 }
 
 .boton-reproducir-hover:active {
