@@ -3353,14 +3353,45 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 }
 
 /* =========================================================
-   CARD HOVER OVERLAY tipo Prime Video
-   - overlay dentro de la card
-   - se abre como Prime Video
-   - no deja el carrusel bugueado
-   - overflow visible SOLO mientras hover está activo
+   OVERLAY HOVER TARJETA tipo Prime Video
+   - Overlay dentro de la card
+   - Se abre como Prime Video
+   - No deja el carrusel bugueado
+   - Overflow visible solo mientras hover está activo
+   - Reproducir + Mi Lista en body
+   - Volumen sobre video
 ========================================================= */
 
-/* Estado base: carrusel normal, estable */
+/* =========================================================
+   VARIABLES CUSTOMIZABLES
+========================================================= */
+
+:root {
+  --hover-tarjeta-bg: #07090d;
+  --hover-tarjeta-texto: #fff;
+  --hover-tarjeta-radio: .32em;
+  --hover-tarjeta-ancho: 430px;
+  --hover-tarjeta-margen-seguro: 32px;
+  --hover-tarjeta-y-abierto: -26px;
+
+  --hover-tarjeta-sombra:
+    0 20px 55px rgba(0, 0, 0, .58),
+    0 4px 18px rgba(0, 0, 0, .38);
+
+  --hover-tarjeta-titulo-size: 20px;
+  --hover-tarjeta-meta-size: 18px;
+  --hover-tarjeta-sinopsis-size: 18px;
+
+  --hover-tarjeta-accion-alto: 52px;
+  --hover-tarjeta-icono-play: 34px;
+  --hover-tarjeta-boton-icono: 52px;
+  --hover-tarjeta-boton-volumen: 38px;
+}
+
+/* =========================================================
+   CARRUSEL / CONTEXTO
+========================================================= */
+
 .carousel {
   position: relative;
   overflow: hidden !important;
@@ -3377,20 +3408,22 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   z-index: 1;
 }
 
-/* Estado temporal durante hover */
-.section.section-hover-open {
+.section.seccion-hover-abierta {
   z-index: 80;
 }
 
-.carousel.carousel-hover-open {
+.carousel.carrusel-hover-abierto {
   overflow: visible !important;
 }
 
-.row.row-hover-open {
+.row.fila-hover-abierta {
   overflow: visible !important;
 }
 
-/* Card base */
+/* =========================================================
+   CARD BASE
+========================================================= */
+
 .card {
   position: relative;
   overflow: visible !important;
@@ -3401,20 +3434,20 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   outline: none !important;
 }
 
-.card.card-hover-overlay-host {
+.card.tarjeta-hover-host {
   z-index: 200;
 }
 
-/* El + / - de Mi Lista solo vive en el overlay, nunca en la card base */
+/* El + / - de Mi Lista solo vive en el overlay */
 .card>.thumb>.card-quick-plus-btn,
 .card>.thumb>.card-mylist-plus-btn {
   display: none !important;
 }
 
 /* Oculta acciones propias de la card base mientras está el overlay */
-.card.card-hover-overlay-host .card-quick-plus-btn,
-.card.card-hover-overlay-host .card-mylist-plus-btn,
-.card.card-hover-overlay-host .card-more-info-btn {
+.card.tarjeta-hover-host .card-quick-plus-btn,
+.card.tarjeta-hover-host .card-mylist-plus-btn,
+.card.tarjeta-hover-host .card-more-info-btn {
   opacity: 0 !important;
   pointer-events: none !important;
 }
@@ -3423,29 +3456,27 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
    OVERLAY
 ========================================================= */
 
-.card-hover-overlay {
+.overlay-hover-tarjeta {
   position: absolute;
   left: 50%;
   top: 0;
   z-index: 12000;
 
-  width: min(430px, calc(100vw - 32px));
+  width: min(var(--hover-tarjeta-ancho), calc(100vw - var(--hover-tarjeta-margen-seguro)));
 
-  background: #07090d;
-  color: #fff;
-  border-radius: .32em;
+  background: var(--hover-tarjeta-bg);
+  color: var(--hover-tarjeta-texto);
+  border-radius: var(--hover-tarjeta-radio);
   overflow: hidden;
 
-  box-shadow:
-    0 20px 55px rgba(0, 0, 0, .58),
-    0 4px 18px rgba(0, 0, 0, .38);
+  box-shadow: var(--hover-tarjeta-sombra);
 
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
 
   transform:
-    translate(calc(-50% + var(--card-hover-shift-x, 0px)), 0) scale(.62);
+    translate(calc(-50% + var(--desplazamiento-hover-x, 0px)), 0) scale(.62);
 
   transform-origin: top center;
 
@@ -3453,52 +3484,71 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
     opacity .14s ease,
     visibility .14s ease,
     transform .22s cubic-bezier(.2, .85, .25, 1);
+
+  cursor: default !important;
 }
 
-.card-hover-overlay.is-open {
+.overlay-hover-tarjeta.overlay-hover-abierto {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 
   transform:
-    translate(calc(-50% + var(--card-hover-shift-x, 0px)), -26px) scale(1);
+    translate(calc(-50% + var(--desplazamiento-hover-x, 0px)), var(--hover-tarjeta-y-abierto)) scale(1);
 }
 
-.card-hover-overlay-inner {
+.overlay-hover-tarjeta-inner {
   width: 100%;
   min-height: 100%;
-  background: #07090d;
+  background: var(--hover-tarjeta-bg);
+  cursor: default !important;
+}
+
+/* Cursor default en todo el overlay */
+.overlay-hover-tarjeta,
+.overlay-hover-tarjeta * {
+  cursor: default !important;
+}
+
+/* Solo elementos interactivos son pointer */
+.overlay-hover-tarjeta button,
+.overlay-hover-tarjeta a,
+.overlay-hover-tarjeta [role="button"],
+.overlay-hover-tarjeta .boton-reproducir-hover,
+.overlay-hover-tarjeta .boton-mi-lista-hover,
+.overlay-hover-tarjeta .card-quick-modal-volume-btn {
+  cursor: pointer !important;
 }
 
 /* =========================================================
    MEDIA / TRAILER
 ========================================================= */
 
-.card-hover-overlay-media {
+.overlay-hover-tarjeta-media {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: #07090d;
+  background: var(--hover-tarjeta-bg);
   overflow: hidden;
 }
 
-.card-hover-overlay-media .card-quick-modal-media,
-.card-hover-overlay-media .card-quick-modal-video,
-.card-hover-overlay-media .card-quick-modal-poster {
+.overlay-hover-tarjeta-media .card-quick-modal-media,
+.overlay-hover-tarjeta-media .card-quick-modal-video,
+.overlay-hover-tarjeta-media .card-quick-modal-poster {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
 }
 
-.card-hover-overlay-media .card-quick-modal-video,
-.card-hover-overlay-media .card-quick-modal-poster-img {
+.overlay-hover-tarjeta-media .card-quick-modal-video,
+.overlay-hover-tarjeta-media .card-quick-modal-poster-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.card-hover-overlay-media .card-quick-modal-shade {
+.overlay-hover-tarjeta-media .card-quick-modal-shade {
   position: absolute;
   inset: auto 0 0 0;
   height: 44%;
@@ -3507,7 +3557,7 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 }
 
 /* Loading */
-.card-hover-overlay-loading {
+.overlay-hover-tarjeta-cargando {
   position: absolute;
   inset: 0;
   z-index: 4;
@@ -3517,82 +3567,23 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 
   font-size: 13px;
   color: rgba(255, 255, 255, .78);
-  background: #07090d;
+  background: var(--hover-tarjeta-bg);
 }
 
 /* =========================================================
-   FLOATING BUTTONS: MI LISTA + VOLUMEN
+   VOLUMEN SOBRE VIDEO
 ========================================================= */
 
-.card-hover-overlay-floating-actions {
-  position: absolute;
-  right: 12px;
-  bottom: 58px;
-  z-index: 30;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-
-  pointer-events: auto;
-}
-
-/* Mi Lista arriba del volumen */
-.card-hover-overlay-media .card-hover-mylist-btn {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  min-height: 38px;
-
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, .28);
-
-  background: rgba(0, 0, 0, .55);
-  color: #fff;
-  backdrop-filter: blur(8px);
-
-  display: inline-grid;
-  place-items: center;
-
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-
-.card-hover-overlay-media .card-hover-mylist-btn:hover,
-.card-hover-overlay-media .card-hover-mylist-btn.is-active {
-  background: rgba(0, 0, 0, .82);
-  border-color: rgba(255, 255, 255, .86);
-}
-
-.card-hover-overlay-media .card-hover-mylist-btn .card-quick-plus-icon {
-  width: 17px;
-  height: 17px;
-  fill: currentColor;
-}
-
-.card-hover-overlay-media .card-hover-mylist-btn svg,
-.card-hover-overlay-media .card-hover-mylist-btn path {
-  pointer-events: none !important;
-  fill: currentColor !important;
-}
-
-/* Volumen abajo */
-.card-hover-overlay-media .card-quick-modal-volume-btn {
+.overlay-hover-tarjeta-media .card-quick-modal-volume-btn {
   position: absolute;
   right: 12px !important;
   bottom: 12px !important;
   z-index: 25 !important;
 
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  min-height: 38px;
+  width: var(--hover-tarjeta-boton-volumen);
+  height: var(--hover-tarjeta-boton-volumen);
+  min-width: var(--hover-tarjeta-boton-volumen);
+  min-height: var(--hover-tarjeta-boton-volumen);
 
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, .24);
@@ -3605,15 +3596,14 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 
   padding: 0;
   margin: 0;
-  cursor: pointer;
 }
 
-.card-hover-overlay-media .card-quick-modal-volume-btn:hover {
+.overlay-hover-tarjeta-media .card-quick-modal-volume-btn:hover {
   background: rgba(0, 0, 0, .82);
   border-color: rgba(255, 255, 255, .86);
 }
 
-.card-hover-overlay-media .card-quick-modal-volume-btn img {
+.overlay-hover-tarjeta-media .card-quick-modal-volume-btn img {
   width: 18px;
   height: 18px;
   object-fit: contain;
@@ -3625,22 +3615,124 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
    BODY
 ========================================================= */
 
-.card-hover-overlay-body {
+.overlay-hover-tarjeta-cuerpo {
   position: relative;
   z-index: 5;
 
   padding: 1em 1.5em;
-  background: #07090d;
+  background: var(--hover-tarjeta-bg);
 }
 
-/* Ya no usamos actions en el body */
-.card-hover-overlay-actions {
-  display: none !important;
+/* =========================================================
+   ACCIONES: REPRODUCIR + MI LISTA
+========================================================= */
+
+.overlay-hover-tarjeta-acciones {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+
+  margin: 0 0 14px 0;
 }
 
-/* Textos */
-.card-hover-overlay-title {
-  font-size: 20px;
+/* Botón Reproducir */
+.boton-reproducir-hover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  min-height: var(--hover-tarjeta-accion-alto);
+  padding: 0 20px;
+
+  border-radius: .25em;
+  border: none;
+
+  background: #fff;
+  color: #000;
+
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+
+  transition:
+    transform .16s ease,
+    background .16s ease,
+    opacity .16s ease;
+}
+
+.boton-reproducir-hover:hover {
+  background: rgba(255, 255, 255, .86);
+  transform: scale(1.025);
+}
+
+.boton-reproducir-hover:active {
+  transform: scale(.98);
+}
+
+.icono-boton-reproducir {
+  width: var(--hover-tarjeta-icono-play);
+  height: var(--hover-tarjeta-icono-play);
+  display: block;
+  flex: 0 0 var(--hover-tarjeta-icono-play);
+  color: currentColor;
+}
+
+.icono-boton-reproducir path {
+  fill: currentColor;
+}
+
+.boton-reproducir-hover svg,
+.boton-reproducir-hover path {
+  pointer-events: none;
+}
+
+/* Mi Lista a la derecha de Reproducir */
+.overlay-hover-tarjeta-acciones .boton-mi-lista-hover {
+  width: var(--hover-tarjeta-boton-icono) !important;
+  height: var(--hover-tarjeta-boton-icono) !important;
+  min-width: var(--hover-tarjeta-boton-icono) !important;
+  min-height: var(--hover-tarjeta-boton-icono) !important;
+
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, .28) !important;
+
+  background: rgba(255, 255, 255, .08) !important;
+  color: #fff !important;
+  backdrop-filter: blur(8px);
+
+  display: inline-grid !important;
+  place-items: center !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.overlay-hover-tarjeta-acciones .boton-mi-lista-hover:hover,
+.overlay-hover-tarjeta-acciones .boton-mi-lista-hover.is-active {
+  background: rgba(255, 255, 255, .17) !important;
+  border-color: rgba(255, 255, 255, .88) !important;
+}
+
+.overlay-hover-tarjeta-acciones .boton-mi-lista-hover .card-quick-plus-icon {
+  width: 20px !important;
+  height: 20px !important;
+  fill: currentColor !important;
+}
+
+.overlay-hover-tarjeta-acciones .boton-mi-lista-hover svg,
+.overlay-hover-tarjeta-acciones .boton-mi-lista-hover path {
+  pointer-events: none !important;
+  fill: currentColor !important;
+}
+
+/* =========================================================
+   TEXTOS
+========================================================= */
+
+.overlay-hover-tarjeta-titulo {
+  font-size: var(--hover-tarjeta-titulo-size);
   font-weight: 700;
   line-height: 1.15;
 
@@ -3649,8 +3741,8 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   color: #fff;
 }
 
-.card-hover-overlay-meta {
-  font-size: 18px;
+.overlay-hover-tarjeta-meta {
+  font-size: var(--hover-tarjeta-meta-size);
   font-weight: 600;
   line-height: 1.35;
 
@@ -3659,18 +3751,13 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   color: #fff;
 }
 
-/* SINOPSIS SIEMPRE EN BLOCK, SIN CORTE */
-.card-hover-overlay-synopsis {
+.overlay-hover-tarjeta-sinopsis {
   display: block !important;
-
-  font-size: 18px;
+  font-size: var(--hover-tarjeta-sinopsis-size);
   font-weight: 400;
   line-height: 1.42;
-
   margin: 0;
-
   color: #fff;
-
   white-space: normal !important;
   overflow: visible !important;
   text-overflow: clip !important;
@@ -3682,11 +3769,11 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
    Ajustes para cards cerca de los bordes
 ========================================================= */
 
-.row .card:first-child .card-hover-overlay {
+.row .card:first-child .overlay-hover-tarjeta {
   transform-origin: top left;
 }
 
-.row .card:last-child .card-hover-overlay {
+.row .card:last-child .overlay-hover-tarjeta {
   transform-origin: top right;
 }
 
@@ -3695,30 +3782,30 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 ========================================================= */
 
 @media (hover: none) and (pointer: coarse) {
-  .card-hover-overlay {
+  .overlay-hover-tarjeta {
     display: none !important;
   }
 
-  .carousel.carousel-hover-open {
+  .carousel.carrusel-hover-abierto {
     overflow: hidden !important;
   }
 
-  .row.row-hover-open {
+  .row.fila-hover-abierta {
     overflow-x: auto !important;
     overflow-y: hidden !important;
   }
 }
 
 @media (max-width: 768px) {
-  .card-hover-overlay {
+  .overlay-hover-tarjeta {
     display: none !important;
   }
 
-  .carousel.carousel-hover-open {
+  .carousel.carrusel-hover-abierto {
     overflow: hidden !important;
   }
 
-  .row.row-hover-open {
+  .row.fila-hover-abierta {
     overflow-x: auto !important;
     overflow-y: hidden !important;
   }
@@ -3729,6 +3816,24 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 ========================================================= */
 
 .card-hover-portal,
-.card-hover-preview {
+.card-hover-preview,
+.card-hover-overlay {
   display: none !important;
+}
+
+/* =========================================================
+   FIX CURSOR BOTÓN REPRODUCIR
+   El texto/span/SVG del botón también deben tener pointer.
+========================================================= */
+
+.boton-reproducir-hover,
+.boton-reproducir-hover *,
+.boton-reproducir-hover span,
+.boton-reproducir-hover svg,
+.boton-reproducir-hover path {
+  cursor: pointer !important;
+}
+
+.boton-reproducir-hover span {
+  font-size: 20px;
 }

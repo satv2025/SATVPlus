@@ -915,84 +915,129 @@ async function openQuickCardModal(movieId, triggerEl = null) {
 }
 
 /* =========================================================
-   CARD HOVER OVERLAY tipo Prime Video
-   - overlay absoluto DENTRO de la .card
-   - NO modifica el tamaño real de la card
-   - NO portal
-   - NO fixed
-   - habilita overflow visible SOLO durante hover
-   - corrige bug al pasar de una card a otra
-   - al salir borra TODO lo generado y limpia z-index/overflow
-   - trailer + mute + mi lista + meta + sinopsis
+   OVERLAY HOVER DE TARJETAS tipo Prime Video
+   - Overlay absoluto dentro de la .card
+   - No modifica el tamaño real de la card
+   - No usa portal ni position: fixed
+   - Activa overflow visible solo mientras el hover está abierto
+   - Limpia todo al salir para evitar z-index/overflow pegado
+   - Trailer + mute + reproducir + mi lista + metadata + sinopsis
 ========================================================= */
 
-const __cardHoverMovieCache = new Map();
+/* =========================================================
+   TEXTOS CUSTOMIZABLES
+========================================================= */
 
-let __cardHoverActiveCard = null;
-let __cardHoverGlobalSeq = 0;
-let __cardHoverGlobalEventsInstalled = false;
+const TEXTOS_HOVER_TARJETA = {
+  cargando: "Cargando…",
+  errorCarga: "No se pudo cargar.",
+  sinTitulo: "Sin título",
+  sinSinopsis: "Sin sinopsis disponible.",
+  reproducir: "Reproducir",
+  agregarMiLista: "Agregar a Mi Lista",
+  serie: "Serie",
+  temporadas: "temporadas",
+  episodio: "episodio",
+  episodios: "episodios",
+  minuto: "min",
+  hora: "h"
+};
 
-function buildMovieRuntimeText(movie = {}) {
-  const category = String(movie?.category || "").toLowerCase();
-  const mm = movie?.movie_meta || null;
+/* =========================================================
+   ICONO CUSTOMIZABLE DEL BOTÓN REPRODUCIR
+========================================================= */
 
-  if (category === "series") {
-    const seasonsCount = Number(mm?.seasons_count || movie?.seasons_count || 0);
-    const episodesCount = Number(mm?.episodes_count || movie?.episodes_count || 0);
+const ICONO_BOTON_REPRODUCIR = `
+  <svg class="icono-boton-reproducir" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+    <path d="M23.5 17.2v29.6c0 2.1 2.3 3.4 4.1 2.3l23.1-14.8c1.6-1 1.6-3.4 0-4.4L27.6 15C25.8 13.8 23.5 15.1 23.5 17.2z" fill="currentColor"></path>
+  </svg>
+`;
 
-    if (seasonsCount > 2) {
-      return `${seasonsCount} temporadas`;
+/* =========================================================
+   ESTADO INTERNO
+========================================================= */
+
+const __cachePeliculasHoverTarjeta = new Map();
+
+let __tarjetaHoverActiva = null;
+let __secuenciaGlobalHoverTarjeta = 0;
+let __eventosGlobalesHoverInstalados = false;
+
+/* =========================================================
+   HELPERS DE METADATA
+========================================================= */
+
+function construirTextoDuracionHover(movie = {}) {
+  const categoria = String(movie?.category || "").toLowerCase();
+  const meta = movie?.movie_meta || null;
+
+  if (categoria === "series") {
+    const cantidadTemporadas = Number(meta?.seasons_count || movie?.seasons_count || 0);
+    const cantidadEpisodios = Number(meta?.episodes_count || movie?.episodes_count || 0);
+
+    /*
+      Regla:
+      - Si tiene más de 2 temporadas, mostramos "x temporadas".
+      - Si tiene 1 o 2 temporadas, mostramos cantidad de episodios.
+    */
+    if (cantidadTemporadas > 2) {
+      return `${cantidadTemporadas} ${TEXTOS_HOVER_TARJETA.temporadas}`;
     }
 
-    if (episodesCount > 0) {
-      return `${episodesCount} ${episodesCount === 1 ? "episodio" : "episodios"}`;
+    if (cantidadEpisodios > 0) {
+      return `${cantidadEpisodios} ${cantidadEpisodios === 1
+          ? TEXTOS_HOVER_TARJETA.episodio
+          : TEXTOS_HOVER_TARJETA.episodios
+        }`;
     }
 
-    return "Serie";
+    return TEXTOS_HOVER_TARJETA.serie;
   }
 
   if (movie?.duration_text) {
     return String(movie.duration_text);
   }
 
-  const mins = Number(movie?.duration_minutes || 0);
-  if (mins > 0) {
-    if (mins < 60) return `${mins} min`;
+  const minutos = Number(movie?.duration_minutes || 0);
+  if (minutos > 0) {
+    if (minutos < 60) return `${minutos} ${TEXTOS_HOVER_TARJETA.minuto}`;
 
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
+    const horas = Math.floor(minutos / 60);
+    const restoMinutos = minutos % 60;
 
-    return m ? `${h} h ${m} min` : `${h} h`;
+    return restoMinutos
+      ? `${horas} ${TEXTOS_HOVER_TARJETA.hora} ${restoMinutos} ${TEXTOS_HOVER_TARJETA.minuto}`
+      : `${horas} ${TEXTOS_HOVER_TARJETA.hora}`;
   }
 
   return "";
 }
 
-function buildMovieMetaText(movie = {}) {
-  const parts = [];
+function construirTextoMetaHover(movie = {}) {
+  const partes = [];
 
   if (movie.release_year) {
-    parts.push(String(movie.release_year));
+    partes.push(String(movie.release_year));
   }
 
-  const runtime = buildMovieRuntimeText(movie);
-  if (runtime) {
-    parts.push(runtime);
+  const duracion = construirTextoDuracionHover(movie);
+  if (duracion) {
+    partes.push(duracion);
   }
 
-  const age =
+  const edad =
     movie?.movie_meta?.fullage ||
     movie?.fullage ||
     "";
 
-  if (age) {
-    parts.push(String(age));
+  if (edad) {
+    partes.push(String(edad));
   }
 
-  return parts.join("  •  ");
+  return partes.join("  •  ");
 }
 
-function isCardHoverDisabled() {
+function hoverTarjetaDeshabilitado() {
   try {
     return window.matchMedia?.("(hover: none), (pointer: coarse)")?.matches || window.innerWidth <= 768;
   } catch {
@@ -1000,77 +1045,85 @@ function isCardHoverDisabled() {
   }
 }
 
-function forceCardOverlaySynopsisBlock(node) {
-  if (!node) return;
+function forzarSinopsisEnBloque(nodo) {
+  if (!nodo) return;
 
-  node.style.setProperty("display", "block", "important");
-  node.style.setProperty("white-space", "normal", "important");
-  node.style.setProperty("overflow", "visible", "important");
-  node.style.setProperty("text-overflow", "clip", "important");
-  node.style.setProperty("max-height", "none", "important");
-  node.style.setProperty("-webkit-line-clamp", "unset", "important");
-  node.style.setProperty("-webkit-box-orient", "initial", "important");
+  nodo.style.setProperty("display", "block", "important");
+  nodo.style.setProperty("white-space", "normal", "important");
+  nodo.style.setProperty("overflow", "visible", "important");
+  nodo.style.setProperty("text-overflow", "clip", "important");
+  nodo.style.setProperty("max-height", "none", "important");
+  nodo.style.setProperty("-webkit-line-clamp", "unset", "important");
+  nodo.style.setProperty("-webkit-box-orient", "initial", "important");
 }
 
-function getCardHoverContext(card) {
+/* =========================================================
+   CONTEXTO DEL CARRUSEL
+========================================================= */
+
+function obtenerContextoHoverTarjeta(card) {
   return {
-    row: card?.closest?.(".row") || null,
-    carousel: card?.closest?.(".carousel") || null,
-    section: card?.closest?.(".section") || null
+    fila: card?.closest?.(".row") || null,
+    carrusel: card?.closest?.(".carousel") || null,
+    seccion: card?.closest?.(".section") || null
   };
 }
 
-function setCardHoverContext(card, open) {
+function alternarContextoHoverTarjeta(card, abierto) {
   if (!card) return;
 
-  const { row, carousel, section } = getCardHoverContext(card);
+  const { fila, carrusel, seccion } = obtenerContextoHoverTarjeta(card);
 
-  if (open) {
-    card.classList.add("card-hover-overlay-host");
+  if (abierto) {
+    card.classList.add("tarjeta-hover-host");
 
-    row?.classList.add("row-hover-open");
-    carousel?.classList.add("carousel-hover-open");
-    section?.classList.add("section-hover-open");
+    fila?.classList.add("fila-hover-abierta");
+    carrusel?.classList.add("carrusel-hover-abierto");
+    seccion?.classList.add("seccion-hover-abierta");
 
     return;
   }
 
-  card.classList.remove("card-hover-overlay-host");
+  card.classList.remove("tarjeta-hover-host");
 
   requestAnimationFrame(() => {
-    if (row && !row.querySelector(".card-hover-overlay-host")) {
-      row.classList.remove("row-hover-open");
+    if (fila && !fila.querySelector(".tarjeta-hover-host")) {
+      fila.classList.remove("fila-hover-abierta");
     }
 
-    if (carousel && !carousel.querySelector(".card-hover-overlay-host")) {
-      carousel.classList.remove("carousel-hover-open");
+    if (carrusel && !carrusel.querySelector(".tarjeta-hover-host")) {
+      carrusel.classList.remove("carrusel-hover-abierto");
     }
 
-    if (section && !section.querySelector(".card-hover-overlay-host")) {
-      section.classList.remove("section-hover-open");
+    if (seccion && !seccion.querySelector(".tarjeta-hover-host")) {
+      seccion.classList.remove("seccion-hover-abierta");
     }
 
-    if (!document.querySelector(".card-hover-overlay-host")) {
-      document.querySelectorAll(".row-hover-open").forEach((el) => {
-        el.classList.remove("row-hover-open");
+    if (!document.querySelector(".tarjeta-hover-host")) {
+      document.querySelectorAll(".fila-hover-abierta").forEach((el) => {
+        el.classList.remove("fila-hover-abierta");
       });
 
-      document.querySelectorAll(".carousel-hover-open").forEach((el) => {
-        el.classList.remove("carousel-hover-open");
+      document.querySelectorAll(".carrusel-hover-abierto").forEach((el) => {
+        el.classList.remove("carrusel-hover-abierto");
       });
 
-      document.querySelectorAll(".section-hover-open").forEach((el) => {
-        el.classList.remove("section-hover-open");
+      document.querySelectorAll(".seccion-hover-abierta").forEach((el) => {
+        el.classList.remove("seccion-hover-abierta");
       });
     }
   });
 }
 
-function stopAndResetCardHoverMedia(card) {
+/* =========================================================
+   LIMPIEZA DE VIDEO / OVERLAY
+========================================================= */
+
+function detenerYResetearMediaHover(card) {
   if (!card) return;
 
   try {
-    card.querySelectorAll(".card-hover-overlay video").forEach((video) => {
+    card.querySelectorAll(".overlay-hover-tarjeta video").forEach((video) => {
       try {
         video.pause();
         video.muted = true;
@@ -1082,21 +1135,21 @@ function stopAndResetCardHoverMedia(card) {
   } catch { }
 }
 
-function removeCardHoverOverlay(card) {
+function eliminarOverlayHoverTarjeta(card) {
   if (!card) return;
 
-  stopAndResetCardHoverMedia(card);
+  detenerYResetearMediaHover(card);
 
   try {
-    card.querySelectorAll(".card-hover-overlay").forEach((node) => {
+    card.querySelectorAll(".overlay-hover-tarjeta").forEach((nodo) => {
       try {
-        node.remove();
+        nodo.remove();
       } catch { }
     });
   } catch { }
 }
 
-function hardResetCardHover(card, { removeOverlay = true } = {}) {
+function resetearHoverTarjeta(card, { eliminarOverlay = true } = {}) {
   if (!card) return;
 
   clearTimeout(card.__hoverOpenTimer);
@@ -1105,37 +1158,37 @@ function hardResetCardHover(card, { removeOverlay = true } = {}) {
   card.dataset.hoverSeq = "";
 
   card.classList.remove(
-    "card-hover-overlay-open",
-    "card-hover-overlay-host"
+    "tarjeta-hover-abierta",
+    "tarjeta-hover-host"
   );
 
-  stopAndResetCardHoverMedia(card);
+  detenerYResetearMediaHover(card);
 
-  const overlay = card.querySelector(".card-hover-overlay");
+  const overlay = card.querySelector(".overlay-hover-tarjeta");
   if (overlay) {
-    overlay.classList.remove("is-open");
+    overlay.classList.remove("overlay-hover-abierto");
     overlay.setAttribute("aria-hidden", "true");
 
-    if (removeOverlay) {
+    if (eliminarOverlay) {
       try {
         overlay.remove();
       } catch { }
     }
   }
 
-  setCardHoverContext(card, false);
+  alternarContextoHoverTarjeta(card, false);
 }
 
-function hardResetAllCardHovers({ except = null } = {}) {
-  const cards = new Set();
+function resetearTodosLosHoversTarjeta({ excepto = null } = {}) {
+  const tarjetas = new Set();
 
   document
-    .querySelectorAll(".card-hover-overlay-host, .card-hover-overlay-open")
-    .forEach((card) => cards.add(card));
+    .querySelectorAll(".tarjeta-hover-host, .tarjeta-hover-abierta")
+    .forEach((card) => tarjetas.add(card));
 
-  document.querySelectorAll(".card-hover-overlay").forEach((overlay) => {
+  document.querySelectorAll(".overlay-hover-tarjeta").forEach((overlay) => {
     const card = overlay.closest(".card");
-    if (card) cards.add(card);
+    if (card) tarjetas.add(card);
     else {
       try {
         overlay.remove();
@@ -1143,72 +1196,117 @@ function hardResetAllCardHovers({ except = null } = {}) {
     }
   });
 
-  cards.forEach((card) => {
-    if (except && card === except) return;
-    hardResetCardHover(card, { removeOverlay: true });
+  tarjetas.forEach((card) => {
+    if (excepto && card === excepto) return;
+    resetearHoverTarjeta(card, { eliminarOverlay: true });
   });
 
-  if (!except) {
-    __cardHoverActiveCard = null;
+  if (!excepto) {
+    __tarjetaHoverActiva = null;
   }
 
   requestAnimationFrame(() => {
-    if (!document.querySelector(".card-hover-overlay-host")) {
-      document.querySelectorAll(".row-hover-open").forEach((el) => {
-        el.classList.remove("row-hover-open");
+    if (!document.querySelector(".tarjeta-hover-host")) {
+      document.querySelectorAll(".fila-hover-abierta").forEach((el) => {
+        el.classList.remove("fila-hover-abierta");
       });
 
-      document.querySelectorAll(".carousel-hover-open").forEach((el) => {
-        el.classList.remove("carousel-hover-open");
+      document.querySelectorAll(".carrusel-hover-abierto").forEach((el) => {
+        el.classList.remove("carrusel-hover-abierto");
       });
 
-      document.querySelectorAll(".section-hover-open").forEach((el) => {
-        el.classList.remove("section-hover-open");
+      document.querySelectorAll(".seccion-hover-abierta").forEach((el) => {
+        el.classList.remove("seccion-hover-abierta");
       });
     }
   });
 }
 
-function ensureCardHoverOverlay(card, movieId) {
+/* =========================================================
+   CREACIÓN DEL OVERLAY
+========================================================= */
+
+function asegurarOverlayHoverTarjeta(card, movieId) {
   if (!card || !movieId) return null;
 
-  removeCardHoverOverlay(card);
+  eliminarOverlayHoverTarjeta(card);
 
   const overlay = document.createElement("div");
-  overlay.className = "card-hover-overlay";
+  overlay.className = "overlay-hover-tarjeta";
   overlay.setAttribute("aria-hidden", "true");
 
   overlay.innerHTML = `
-    <div class="card-hover-overlay-inner">
-      <div class="card-hover-overlay-media">
-        <div class="card-hover-overlay-loading">Cargando…</div>
+    <div class="overlay-hover-tarjeta-inner">
+      <div class="overlay-hover-tarjeta-media">
+        <div class="overlay-hover-tarjeta-cargando">${TEXTOS_HOVER_TARJETA.cargando}</div>
+      </div>
 
-        <div class="card-hover-overlay-floating-actions">
-          <button class="card-hover-mylist-btn" type="button" aria-label="Agregar a Mi Lista" aria-pressed="false">
+      <div class="overlay-hover-tarjeta-cuerpo">
+        <div class="overlay-hover-tarjeta-acciones">
+          <a class="boton-reproducir-hover" href="${buildTitleUrl(movieId)}" aria-label="${TEXTOS_HOVER_TARJETA.reproducir}">
+            ${ICONO_BOTON_REPRODUCIR}
+            <span>${TEXTOS_HOVER_TARJETA.reproducir}</span>
+          </a>
+
+          <button class="boton-mi-lista-hover" type="button" aria-label="${TEXTOS_HOVER_TARJETA.agregarMiLista}" aria-pressed="false">
             ${MYLIST_ICON_PLUS}
           </button>
         </div>
-      </div>
 
-      <div class="card-hover-overlay-body">
-        <div class="card-hover-overlay-title"></div>
-        <div class="card-hover-overlay-meta"></div>
-        <div class="card-hover-overlay-synopsis"></div>
+        <div class="overlay-hover-tarjeta-titulo"></div>
+        <div class="overlay-hover-tarjeta-meta"></div>
+        <div class="overlay-hover-tarjeta-sinopsis"></div>
       </div>
     </div>
   `;
+
+  /*
+    Todo lo que pase dentro del overlay no debe cerrar el hover.
+    Esto permite clickear Reproducir, Mi Lista y Mute.
+  */
+  overlay.addEventListener("pointerdown", (ev) => {
+    ev.stopPropagation();
+  }, { passive: true });
+
+  overlay.addEventListener("mousedown", (ev) => {
+    ev.stopPropagation();
+  });
+
+  overlay.addEventListener("touchstart", (ev) => {
+    ev.stopPropagation();
+  }, { passive: true });
 
   overlay.addEventListener("mouseenter", () => {
     clearTimeout(card.__hoverCloseTimer);
   });
 
-  overlay.addEventListener("mouseleave", () => {
-    closeCardHoverOverlay(card);
+  overlay.addEventListener("mouseleave", (ev) => {
+    const related = ev.relatedTarget;
+
+    if (
+      related &&
+      (
+        card.contains(related) ||
+        overlay.contains(related)
+      )
+    ) {
+      return;
+    }
+
+    cerrarOverlayHoverTarjeta(card);
   });
 
   overlay.addEventListener("click", (ev) => {
-    const interactive = ev.target.closest("button, a");
-    if (interactive) return;
+    const interactivo = ev.target.closest(
+      "button, a, input, select, textarea, [role='button'], .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover"
+    );
+
+    if (interactivo) {
+      ev.stopPropagation();
+      return;
+    }
+
+    ev.stopPropagation();
 
     const href = card.dataset.href || buildTitleUrl(movieId);
     if (href) window.location.href = href;
@@ -1218,21 +1316,17 @@ function ensureCardHoverOverlay(card, movieId) {
   return overlay;
 }
 
-function getCardHoverMyListButton(overlay) {
+/* =========================================================
+   BOTÓN MI LISTA EN EL OVERLAY
+========================================================= */
+
+function obtenerBotonMiListaHover(overlay) {
   if (!overlay) return null;
 
-  let actions = overlay.querySelector(".card-hover-overlay-floating-actions");
+  const acciones = overlay.querySelector(".overlay-hover-tarjeta-acciones");
+  if (!acciones) return null;
 
-  if (!actions) {
-    const media = overlay.querySelector(".card-hover-overlay-media");
-    if (!media) return null;
-
-    actions = document.createElement("div");
-    actions.className = "card-hover-overlay-floating-actions";
-    media.appendChild(actions);
-  }
-
-  actions.querySelectorAll(".card-hover-mylist-btn").forEach((btn) => {
+  acciones.querySelectorAll(".boton-mi-lista-hover").forEach((btn) => {
     try {
       btn.remove();
     } catch { }
@@ -1240,117 +1334,161 @@ function getCardHoverMyListButton(overlay) {
 
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = "card-hover-mylist-btn";
-  btn.setAttribute("aria-label", "Agregar a Mi Lista");
+  btn.className = "boton-mi-lista-hover";
+  btn.setAttribute("aria-label", TEXTOS_HOVER_TARJETA.agregarMiLista);
   btn.setAttribute("aria-pressed", "false");
   btn.innerHTML = MYLIST_ICON_PLUS;
 
-  actions.appendChild(btn);
+  btn.addEventListener("pointerdown", (ev) => {
+    ev.stopPropagation();
+  }, { passive: true });
+
+  btn.addEventListener("mousedown", (ev) => {
+    ev.stopPropagation();
+  });
+
+  btn.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+  });
+
+  acciones.appendChild(btn);
   return btn;
 }
 
-function positionCardHoverOverlay(card, overlay) {
+/* =========================================================
+   POSICIÓN / ANIMACIÓN
+========================================================= */
+
+function posicionarOverlayHoverTarjeta(card, overlay) {
   if (!card || !overlay) return;
 
   const rect = card.getBoundingClientRect();
   const viewportW = window.innerWidth || document.documentElement.clientWidth || 0;
 
-  const finalWidth = Math.min(430, Math.max(320, viewportW - 32));
-  overlay.style.width = `${Math.round(finalWidth)}px`;
+  const anchoFinal = Math.min(430, Math.max(320, viewportW - 32));
+  overlay.style.width = `${Math.round(anchoFinal)}px`;
 
-  const overlayLeft = rect.left + (rect.width / 2) - (finalWidth / 2);
+  const overlayLeft = rect.left + (rect.width / 2) - (anchoFinal / 2);
 
-  let shiftX = 0;
+  let desplazamientoX = 0;
 
-  const minViewportGap = 12;
-  const overflowLeft = minViewportGap - overlayLeft;
-  const overflowRight = (overlayLeft + finalWidth) - (viewportW - minViewportGap);
+  const margenViewport = 12;
+  const overflowIzquierda = margenViewport - overlayLeft;
+  const overflowDerecha = (overlayLeft + anchoFinal) - (viewportW - margenViewport);
 
-  if (overflowLeft > 0) {
-    shiftX += overflowLeft;
+  if (overflowIzquierda > 0) {
+    desplazamientoX += overflowIzquierda;
   }
 
-  if (overflowRight > 0) {
-    shiftX -= overflowRight;
+  if (overflowDerecha > 0) {
+    desplazamientoX -= overflowDerecha;
   }
 
-  overlay.style.setProperty("--card-hover-shift-x", `${Math.round(shiftX)}px`);
+  overlay.style.setProperty("--desplazamiento-hover-x", `${Math.round(desplazamientoX)}px`);
 }
 
-function restartCardHoverOverlayAnimation(card, overlay) {
+function reiniciarAnimacionOverlayHover(card, overlay) {
   if (!card || !overlay) return;
 
-  card.classList.remove("card-hover-overlay-open");
-  overlay.classList.remove("is-open");
+  card.classList.remove("tarjeta-hover-abierta");
+  overlay.classList.remove("overlay-hover-abierto");
   overlay.setAttribute("aria-hidden", "false");
 
   void overlay.offsetWidth;
 
   requestAnimationFrame(() => {
-    setCardHoverContext(card, true);
-    positionCardHoverOverlay(card, overlay);
+    alternarContextoHoverTarjeta(card, true);
+    posicionarOverlayHoverTarjeta(card, overlay);
 
     requestAnimationFrame(() => {
-      card.classList.add("card-hover-overlay-open");
-      overlay.classList.add("is-open");
+      card.classList.add("tarjeta-hover-abierta");
+      overlay.classList.add("overlay-hover-abierto");
     });
   });
 }
 
-async function hydrateCardHoverOverlay(card, movieId, seq) {
+/* =========================================================
+   HIDRATACIÓN: DATOS + TRAILER + BOTONES
+========================================================= */
+
+async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
   if (!card || !movieId) return;
 
-  const overlay = card.querySelector(".card-hover-overlay");
+  const overlay = card.querySelector(".overlay-hover-tarjeta");
   if (!overlay) return;
 
   try {
-    let movie = __cardHoverMovieCache.get(String(movieId));
+    let movie = __cachePeliculasHoverTarjeta.get(String(movieId));
 
     if (!movie) {
       movie = await fetchMovie(movieId);
-      if (movie) __cardHoverMovieCache.set(String(movieId), movie);
+      if (movie) __cachePeliculasHoverTarjeta.set(String(movieId), movie);
     }
 
     if (!movie || card.dataset.hoverSeq !== String(seq)) return;
-    if (__cardHoverActiveCard !== card) return;
+    if (__tarjetaHoverActiva !== card) return;
 
-    const media = overlay.querySelector(".card-hover-overlay-media");
-    const title = overlay.querySelector(".card-hover-overlay-title");
-    const meta = overlay.querySelector(".card-hover-overlay-meta");
-    const synopsis = overlay.querySelector(".card-hover-overlay-synopsis");
+    const media = overlay.querySelector(".overlay-hover-tarjeta-media");
+    const titulo = overlay.querySelector(".overlay-hover-tarjeta-titulo");
+    const meta = overlay.querySelector(".overlay-hover-tarjeta-meta");
+    const sinopsis = overlay.querySelector(".overlay-hover-tarjeta-sinopsis");
+    const botonReproducir = overlay.querySelector(".boton-reproducir-hover");
 
-    if (title) {
-      title.textContent = movie.title || "Sin título";
+    if (titulo) {
+      titulo.textContent = movie.title || TEXTOS_HOVER_TARJETA.sinTitulo;
     }
 
     if (meta) {
-      meta.textContent = buildMovieMetaText(movie);
+      meta.textContent = construirTextoMetaHover(movie);
       meta.hidden = !meta.textContent.trim();
     }
 
-    if (synopsis) {
-      synopsis.textContent =
+    if (sinopsis) {
+      sinopsis.textContent =
         movie.description ||
         movie.sinopsis ||
-        "Sin sinopsis disponible.";
+        TEXTOS_HOVER_TARJETA.sinSinopsis;
 
-      forceCardOverlaySynopsisBlock(synopsis);
+      forzarSinopsisEnBloque(sinopsis);
+    }
+
+    if (botonReproducir) {
+      botonReproducir.href = buildTitleUrl(movie.id, {
+        collectionId: movie.collection_id || null
+      });
+
+      botonReproducir.addEventListener("pointerdown", (ev) => {
+        ev.stopPropagation();
+      }, { passive: true });
+
+      botonReproducir.addEventListener("mousedown", (ev) => {
+        ev.stopPropagation();
+      });
+
+      botonReproducir.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+      });
     }
 
     if (media) {
-      const floatingActions = overlay.querySelector(".card-hover-overlay-floating-actions");
-
       media.innerHTML = "";
 
-      if (floatingActions) {
-        media.appendChild(floatingActions);
-      } else {
-        const actions = document.createElement("div");
-        actions.className = "card-hover-overlay-floating-actions";
-        media.appendChild(actions);
-      }
-
       mountQuickModalTrailer(media, movie);
+
+      const botonVolumen = media.querySelector(".card-quick-modal-volume-btn");
+      if (botonVolumen) {
+        botonVolumen.addEventListener("pointerdown", (ev) => {
+          ev.stopPropagation();
+        }, { passive: true });
+
+        botonVolumen.addEventListener("mousedown", (ev) => {
+          ev.stopPropagation();
+        });
+
+        botonVolumen.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+        });
+      }
 
       const video = media.querySelector("video");
       if (video) {
@@ -1369,94 +1507,103 @@ async function hydrateCardHoverOverlay(card, movieId, seq) {
       }
     }
 
-    const myListBtn = getCardHoverMyListButton(overlay);
-    if (myListBtn) {
+    const botonMiLista = obtenerBotonMiListaHover(overlay);
+    if (botonMiLista) {
       const session = __homeSessionCache || (await getHomeSessionCached());
       const userId = session?.user?.id || null;
 
-      bindMyListIconButton(myListBtn, {
+      bindMyListIconButton(botonMiLista, {
         userId,
         contentId: String(movie.id)
       });
     }
 
-    positionCardHoverOverlay(card, overlay);
+    posicionarOverlayHoverTarjeta(card, overlay);
   } catch (e) {
-    console.warn("[home] card hover overlay error:", e);
+    console.warn("[home] overlay hover tarjeta error:", e);
 
-    const media = overlay.querySelector(".card-hover-overlay-media");
+    const media = overlay.querySelector(".overlay-hover-tarjeta-media");
     if (media) {
-      media.innerHTML = `<div class="card-hover-overlay-loading">No se pudo cargar.</div>`;
+      media.innerHTML = `<div class="overlay-hover-tarjeta-cargando">${TEXTOS_HOVER_TARJETA.errorCarga}</div>`;
     }
   }
 }
 
-function openCardHoverOverlay(card, movieId) {
-  if (!card || !movieId || isCardHoverDisabled()) return;
+/* =========================================================
+   ABRIR / CERRAR
+========================================================= */
 
-  hardResetAllCardHovers({ except: card });
+function abrirOverlayHoverTarjeta(card, movieId) {
+  if (!card || !movieId || hoverTarjetaDeshabilitado()) return;
 
-  if (__cardHoverActiveCard && __cardHoverActiveCard !== card) {
-    hardResetCardHover(__cardHoverActiveCard, { removeOverlay: true });
+  resetearTodosLosHoversTarjeta({ excepto: card });
+
+  if (__tarjetaHoverActiva && __tarjetaHoverActiva !== card) {
+    resetearHoverTarjeta(__tarjetaHoverActiva, { eliminarOverlay: true });
   }
 
-  __cardHoverActiveCard = card;
+  __tarjetaHoverActiva = card;
 
   clearTimeout(card.__hoverOpenTimer);
   clearTimeout(card.__hoverCloseTimer);
 
   card.__hoverOpenTimer = setTimeout(() => {
-    if (__cardHoverActiveCard !== card) return;
+    if (__tarjetaHoverActiva !== card) return;
 
-    __cardHoverGlobalSeq += 1;
+    __secuenciaGlobalHoverTarjeta += 1;
 
-    const seq = String(__cardHoverGlobalSeq);
+    const seq = String(__secuenciaGlobalHoverTarjeta);
     card.dataset.hoverSeq = seq;
 
-    const overlay = ensureCardHoverOverlay(card, movieId);
+    const overlay = asegurarOverlayHoverTarjeta(card, movieId);
     if (!overlay) return;
 
-    restartCardHoverOverlayAnimation(card, overlay);
+    reiniciarAnimacionOverlayHover(card, overlay);
 
-    hydrateCardHoverOverlay(card, movieId, seq);
+    hidratarOverlayHoverTarjeta(card, movieId, seq);
   }, 120);
 }
 
-function closeCardHoverOverlay(card, options = {}) {
+function cerrarOverlayHoverTarjeta(card, options = {}) {
   if (!card) return;
 
-  const immediate = options.immediate === true;
+  const inmediato = options.inmediato === true;
 
   clearTimeout(card.__hoverOpenTimer);
   clearTimeout(card.__hoverCloseTimer);
 
-  if (__cardHoverActiveCard === card) {
-    __cardHoverActiveCard = null;
+  if (__tarjetaHoverActiva === card) {
+    __tarjetaHoverActiva = null;
   }
 
   card.dataset.hoverSeq = "";
 
-  const overlay = card.querySelector(".card-hover-overlay");
+  const overlay = card.querySelector(".overlay-hover-tarjeta");
 
-  const cleanup = () => {
-    hardResetCardHover(card, { removeOverlay: true });
+  const limpiar = () => {
+    resetearHoverTarjeta(card, { eliminarOverlay: true });
 
-    if (!document.querySelector(".card-hover-overlay-host")) {
-      hardResetAllCardHovers();
+    if (!document.querySelector(".tarjeta-hover-host")) {
+      resetearTodosLosHoversTarjeta();
     }
   };
 
-  if (!overlay || immediate) {
-    cleanup();
+  if (!overlay || inmediato) {
+    limpiar();
     return;
   }
 
-  overlay.classList.remove("is-open");
+  overlay.classList.remove("overlay-hover-abierto");
   overlay.setAttribute("aria-hidden", "true");
-  card.classList.remove("card-hover-overlay-open");
+  card.classList.remove("tarjeta-hover-abierta");
 
-  card.__hoverCloseTimer = setTimeout(cleanup, 190);
+  card.__hoverCloseTimer = setTimeout(limpiar, 190);
 }
+
+/* =========================================================
+   BIND POR CARD
+   Mantiene el nombre bindCardHoverPreview para no romper tu código actual.
+========================================================= */
 
 function bindCardHoverPreview(card, movieId) {
   if (!card || !movieId) return;
@@ -1465,103 +1612,111 @@ function bindCardHoverPreview(card, movieId) {
   card.dataset.hoverPreviewBound = "1";
 
   card.addEventListener("mouseenter", () => {
-    openCardHoverOverlay(card, String(movieId));
+    abrirOverlayHoverTarjeta(card, String(movieId));
   }, { passive: true });
 
   card.addEventListener("mouseleave", () => {
     clearTimeout(card.__hoverCloseTimer);
 
     card.__hoverCloseTimer = setTimeout(() => {
-      const overlay = card.querySelector(".card-hover-overlay");
+      const overlay = card.querySelector(".overlay-hover-tarjeta");
 
-      if (__cardHoverActiveCard !== card) {
-        hardResetCardHover(card, { removeOverlay: true });
+      if (__tarjetaHoverActiva !== card) {
+        resetearHoverTarjeta(card, { eliminarOverlay: true });
         return;
       }
 
       if (!overlay || !overlay.matches(":hover")) {
-        closeCardHoverOverlay(card);
+        cerrarOverlayHoverTarjeta(card);
       }
     }, 60);
   }, { passive: true });
 
   card.addEventListener("focusin", () => {
-    openCardHoverOverlay(card, String(movieId));
+    abrirOverlayHoverTarjeta(card, String(movieId));
   });
 
   card.addEventListener("focusout", (ev) => {
-    const overlay = card.querySelector(".card-hover-overlay");
+    const overlay = card.querySelector(".overlay-hover-tarjeta");
 
     if (!card.contains(ev.relatedTarget) && !overlay?.contains?.(ev.relatedTarget)) {
-      closeCardHoverOverlay(card);
+      cerrarOverlayHoverTarjeta(card);
     }
   });
 }
 
-function installCardHoverGlobalCleanup() {
-  if (__cardHoverGlobalEventsInstalled) return;
-  __cardHoverGlobalEventsInstalled = true;
+/* =========================================================
+   LIMPIEZA GLOBAL
+========================================================= */
+
+function instalarLimpiezaGlobalHoverTarjeta() {
+  if (__eventosGlobalesHoverInstalados) return;
+  __eventosGlobalesHoverInstalados = true;
 
   document.addEventListener("pointermove", (ev) => {
-    const active = __cardHoverActiveCard;
-    if (!active) return;
+    const activa = __tarjetaHoverActiva;
+    if (!activa) return;
 
-    const overlay = active.querySelector(".card-hover-overlay");
+    const overlay = activa.querySelector(".overlay-hover-tarjeta");
     const target = ev.target;
 
-    const insideCard = active.contains(target);
-    const insideOverlay = overlay?.contains?.(target);
+    if (target.closest?.(".overlay-hover-tarjeta")) return;
 
-    if (!insideCard && !insideOverlay) {
-      closeCardHoverOverlay(active);
+    const dentroDeCard = activa.contains(target);
+    const dentroDeOverlay = overlay?.contains?.(target);
+
+    if (!dentroDeCard && !dentroDeOverlay) {
+      cerrarOverlayHoverTarjeta(activa);
     }
   }, { passive: true });
 
   document.addEventListener("pointerdown", (ev) => {
-    const active = __cardHoverActiveCard;
-    if (!active) return;
+    const activa = __tarjetaHoverActiva;
+    if (!activa) return;
 
-    const overlay = active.querySelector(".card-hover-overlay");
+    const overlay = activa.querySelector(".overlay-hover-tarjeta");
     const target = ev.target;
 
-    const insideCard = active.contains(target);
-    const insideOverlay = overlay?.contains?.(target);
+    if (target.closest?.(".overlay-hover-tarjeta")) return;
 
-    if (!insideCard && !insideOverlay) {
-      closeCardHoverOverlay(active, { immediate: true });
+    const dentroDeCard = activa.contains(target);
+    const dentroDeOverlay = overlay?.contains?.(target);
+
+    if (!dentroDeCard && !dentroDeOverlay) {
+      cerrarOverlayHoverTarjeta(activa, { inmediato: true });
     }
   }, { passive: true });
 
   window.addEventListener("blur", () => {
-    hardResetAllCardHovers();
+    resetearTodosLosHoversTarjeta();
   }, { passive: true });
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-      hardResetAllCardHovers();
+      resetearTodosLosHoversTarjeta();
     }
   });
 
   window.addEventListener("resize", () => {
-    document.querySelectorAll(".card.card-hover-overlay-host").forEach((card) => {
-      const overlay = card.querySelector(".card-hover-overlay");
-      if (overlay?.classList.contains("is-open")) {
-        positionCardHoverOverlay(card, overlay);
+    document.querySelectorAll(".card.tarjeta-hover-host").forEach((card) => {
+      const overlay = card.querySelector(".overlay-hover-tarjeta");
+      if (overlay?.classList.contains("overlay-hover-abierto")) {
+        posicionarOverlayHoverTarjeta(card, overlay);
       }
     });
   }, { passive: true });
 
   window.addEventListener("scroll", () => {
-    document.querySelectorAll(".card.card-hover-overlay-host").forEach((card) => {
-      const overlay = card.querySelector(".card-hover-overlay");
-      if (overlay?.classList.contains("is-open")) {
-        positionCardHoverOverlay(card, overlay);
+    document.querySelectorAll(".card.tarjeta-hover-host").forEach((card) => {
+      const overlay = card.querySelector(".overlay-hover-tarjeta");
+      if (overlay?.classList.contains("overlay-hover-abierto")) {
+        posicionarOverlayHoverTarjeta(card, overlay);
       }
     });
   }, { passive: true });
 }
 
-installCardHoverGlobalCleanup();
+instalarLimpiezaGlobalHoverTarjeta();
 
 /* =========================================================
    CARDS: "+" (Mi Lista) + "Mas info" (junto al title)
