@@ -3664,7 +3664,6 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 
 .boton-reproducir-hover:hover {
   background: rgba(255, 255, 255, .86);
-  transform: scale(1.025);
 }
 
 .boton-reproducir-hover:active {
