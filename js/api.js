@@ -1,4 +1,4 @@
-// /js/api.js
+//api.js
 import { supabase } from "./supabaseClient.js";
 import { CONFIG } from "./config.js";
 

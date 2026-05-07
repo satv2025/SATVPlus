@@ -922,6 +922,11 @@ async function openQuickCardModal(movieId, triggerEl = null) {
    - Activa overflow visible solo mientras el hover está abierto
    - Limpia todo al salir para evitar z-index/overflow pegado
    - Trailer + mute + reproducir + mi lista + metadata + sinopsis
+   - FIX FUERTE:
+     1) Suspende data-href / href de la card mientras el overlay está abierto.
+     2) No cierra por click en Mute / Mi Lista / Reproducir.
+     3) No cierra por mouseleave inmediato.
+     4) Cierra solo cuando el puntero está realmente fuera de card + overlay.
 ========================================================= */
 
 /* =========================================================
@@ -963,6 +968,168 @@ let __tarjetaHoverActiva = null;
 let __secuenciaGlobalHoverTarjeta = 0;
 let __eventosGlobalesHoverInstalados = false;
 
+let __bloquearCierreHoverHasta = 0;
+let __ultimoPointerHoverX = 0;
+let __ultimoPointerHoverY = 0;
+
+/* =========================================================
+   SELECTORES / LOCK
+========================================================= */
+
+const SELECTOR_INTERACTIVO_HOVER_TARJETA = [
+  "button",
+  "a",
+  "input",
+  "select",
+  "textarea",
+  "[role='button']",
+  ".boton-mi-lista-hover",
+  ".card-quick-modal-volume-btn",
+  ".boton-reproducir-hover"
+].join(", ");
+
+function bloquearCierreHoverTarjeta(ms = 900) {
+  __bloquearCierreHoverHasta = Date.now() + ms;
+}
+
+function cierreHoverBloqueado() {
+  return Date.now() < __bloquearCierreHoverHasta;
+}
+
+function registrarPointerHover(ev) {
+  if (!ev) return;
+
+  if (Number.isFinite(ev.clientX)) __ultimoPointerHoverX = ev.clientX;
+  if (Number.isFinite(ev.clientY)) __ultimoPointerHoverY = ev.clientY;
+}
+
+function targetDentroOverlayHover(target) {
+  return !!target?.closest?.(".overlay-hover-tarjeta");
+}
+
+function targetDentroCardHoverActiva(target, card) {
+  if (!target || !card) return false;
+
+  const overlay = card.querySelector(".overlay-hover-tarjeta");
+
+  return (
+    card.contains(target) ||
+    overlay?.contains?.(target) ||
+    !!target.closest?.(".overlay-hover-tarjeta")
+  );
+}
+
+function punteroDentroCardUOverlay(card) {
+  if (!card) return false;
+
+  const overlay = card.querySelector(".overlay-hover-tarjeta");
+
+  let el = null;
+
+  try {
+    el = document.elementFromPoint(__ultimoPointerHoverX, __ultimoPointerHoverY);
+  } catch {
+    el = null;
+  }
+
+  if (!el) return false;
+
+  return (
+    card.contains(el) ||
+    overlay?.contains?.(el) ||
+    !!el.closest?.(".overlay-hover-tarjeta")
+  );
+}
+
+function mantenerHoverVivo(card, ms = 900) {
+  bloquearCierreHoverTarjeta(ms);
+
+  if (card) {
+    clearTimeout(card.__hoverCloseTimer);
+    clearTimeout(card.__hoverSafetyCloseTimer);
+  }
+}
+
+/* =========================================================
+   SUSPENDER NAVEGACIÓN BASE DE LA CARD
+   Esto evita que data-href / href de la card cierre o navegue
+   cuando clickeás Mute o Mi Lista dentro del overlay.
+========================================================= */
+
+function obtenerHrefHoverTarjeta(card, movieId) {
+  if (!card) return buildTitleUrl(movieId);
+
+  return (
+    card.dataset.hoverSavedDataHref ||
+    card.dataset.hoverSavedHref ||
+    card.dataset.href ||
+    card.getAttribute("data-href") ||
+    card.getAttribute("href") ||
+    buildTitleUrl(movieId)
+  );
+}
+
+function suspenderNavegacionBaseCardHover(card) {
+  if (!card || card.dataset.hoverNavSuspendida === "1") return;
+
+  const dataHref =
+    card.dataset.href ||
+    card.getAttribute("data-href") ||
+    "";
+
+  const hrefAttr =
+    card.getAttribute("href") ||
+    "";
+
+  if (dataHref) {
+    card.dataset.hoverSavedDataHref = dataHref;
+  }
+
+  if (hrefAttr) {
+    card.dataset.hoverSavedHref = hrefAttr;
+  }
+
+  try {
+    delete card.dataset.href;
+  } catch { }
+
+  try {
+    card.removeAttribute("data-href");
+  } catch { }
+
+  /*
+    Si la card es <a>, esto evita navegación nativa mientras el overlay vive.
+    El click general del overlay navega manualmente igual.
+  */
+  try {
+    if (card.matches?.("a[href]")) {
+      card.removeAttribute("href");
+    }
+  } catch { }
+
+  card.dataset.hoverNavSuspendida = "1";
+}
+
+function restaurarNavegacionBaseCardHover(card) {
+  if (!card || card.dataset.hoverNavSuspendida !== "1") return;
+
+  const dataHref = card.dataset.hoverSavedDataHref || "";
+  const hrefAttr = card.dataset.hoverSavedHref || "";
+
+  if (dataHref) {
+    card.dataset.href = dataHref;
+    card.setAttribute("data-href", dataHref);
+  }
+
+  if (hrefAttr && card.matches?.("a")) {
+    card.setAttribute("href", hrefAttr);
+  }
+
+  delete card.dataset.hoverSavedDataHref;
+  delete card.dataset.hoverSavedHref;
+  delete card.dataset.hoverNavSuspendida;
+}
+
 /* =========================================================
    HELPERS DE METADATA
 ========================================================= */
@@ -975,19 +1142,14 @@ function construirTextoDuracionHover(movie = {}) {
     const cantidadTemporadas = Number(meta?.seasons_count || movie?.seasons_count || 0);
     const cantidadEpisodios = Number(meta?.episodes_count || movie?.episodes_count || 0);
 
-    /*
-      Regla:
-      - Si tiene más de 2 temporadas, mostramos "x temporadas".
-      - Si tiene 1 o 2 temporadas, mostramos cantidad de episodios.
-    */
     if (cantidadTemporadas > 2) {
       return `${cantidadTemporadas} ${TEXTOS_HOVER_TARJETA.temporadas}`;
     }
 
     if (cantidadEpisodios > 0) {
       return `${cantidadEpisodios} ${cantidadEpisodios === 1
-          ? TEXTOS_HOVER_TARJETA.episodio
-          : TEXTOS_HOVER_TARJETA.episodios
+        ? TEXTOS_HOVER_TARJETA.episodio
+        : TEXTOS_HOVER_TARJETA.episodios
         }`;
     }
 
@@ -999,6 +1161,7 @@ function construirTextoDuracionHover(movie = {}) {
   }
 
   const minutos = Number(movie?.duration_minutes || 0);
+
   if (minutos > 0) {
     if (minutos < 60) return `${minutos} ${TEXTOS_HOVER_TARJETA.minuto}`;
 
@@ -1081,6 +1244,8 @@ function alternarContextoHoverTarjeta(card, abierto) {
     carrusel?.classList.add("carrusel-hover-abierto");
     seccion?.classList.add("seccion-hover-abierta");
 
+    suspenderNavegacionBaseCardHover(card);
+
     return;
   }
 
@@ -1154,6 +1319,7 @@ function resetearHoverTarjeta(card, { eliminarOverlay = true } = {}) {
 
   clearTimeout(card.__hoverOpenTimer);
   clearTimeout(card.__hoverCloseTimer);
+  clearTimeout(card.__hoverSafetyCloseTimer);
 
   card.dataset.hoverSeq = "";
 
@@ -1165,6 +1331,7 @@ function resetearHoverTarjeta(card, { eliminarOverlay = true } = {}) {
   detenerYResetearMediaHover(card);
 
   const overlay = card.querySelector(".overlay-hover-tarjeta");
+
   if (overlay) {
     overlay.classList.remove("overlay-hover-abierto");
     overlay.setAttribute("aria-hidden", "true");
@@ -1177,6 +1344,7 @@ function resetearHoverTarjeta(card, { eliminarOverlay = true } = {}) {
   }
 
   alternarContextoHoverTarjeta(card, false);
+  restaurarNavegacionBaseCardHover(card);
 }
 
 function resetearTodosLosHoversTarjeta({ excepto = null } = {}) {
@@ -1188,8 +1356,10 @@ function resetearTodosLosHoversTarjeta({ excepto = null } = {}) {
 
   document.querySelectorAll(".overlay-hover-tarjeta").forEach((overlay) => {
     const card = overlay.closest(".card");
-    if (card) tarjetas.add(card);
-    else {
+
+    if (card) {
+      tarjetas.add(card);
+    } else {
       try {
         overlay.remove();
       } catch { }
@@ -1230,10 +1400,13 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
   if (!card || !movieId) return null;
 
   eliminarOverlayHoverTarjeta(card);
+  suspenderNavegacionBaseCardHover(card);
 
   const overlay = document.createElement("div");
   overlay.className = "overlay-hover-tarjeta";
   overlay.setAttribute("aria-hidden", "true");
+
+  const hrefInicial = obtenerHrefHoverTarjeta(card, movieId);
 
   overlay.innerHTML = `
     <div class="overlay-hover-tarjeta-inner">
@@ -1243,7 +1416,7 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
 
       <div class="overlay-hover-tarjeta-cuerpo">
         <div class="overlay-hover-tarjeta-acciones">
-          <a class="boton-reproducir-hover" href="${buildTitleUrl(movieId)}" aria-label="${TEXTOS_HOVER_TARJETA.reproducir}">
+          <a class="boton-reproducir-hover" href="${hrefInicial}" aria-label="${TEXTOS_HOVER_TARJETA.reproducir}">
             ${ICONO_BOTON_REPRODUCIR}
             <span>${TEXTOS_HOVER_TARJETA.reproducir}</span>
           </a>
@@ -1261,57 +1434,98 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
   `;
 
   /*
-    Todo lo que pase dentro del overlay no debe cerrar el hover.
-    Esto permite clickear Reproducir, Mi Lista y Mute.
+    IMPORTANTE:
+    No usamos stopImmediatePropagation.
+    Así los listeners propios de Mute y Mi Lista siguen funcionando.
   */
-  overlay.addEventListener("pointerdown", (ev) => {
+
+  const mantenerDesdeOverlay = (ev) => {
+    registrarPointerHover(ev);
+    mantenerHoverVivo(card, 1200);
     ev.stopPropagation();
-  }, { passive: true });
+  };
+
+  overlay.addEventListener("pointerenter", (ev) => {
+    registrarPointerHover(ev);
+    mantenerHoverVivo(card, 1200);
+  });
+
+  overlay.addEventListener("pointermove", mantenerDesdeOverlay, { passive: true });
+  overlay.addEventListener("pointerdown", mantenerDesdeOverlay, { passive: true });
+  overlay.addEventListener("pointerup", mantenerDesdeOverlay, { passive: true });
 
   overlay.addEventListener("mousedown", (ev) => {
+    mantenerHoverVivo(card, 1200);
+    ev.stopPropagation();
+  });
+
+  overlay.addEventListener("mouseup", (ev) => {
+    mantenerHoverVivo(card, 1200);
     ev.stopPropagation();
   });
 
   overlay.addEventListener("touchstart", (ev) => {
+    mantenerHoverVivo(card, 1200);
     ev.stopPropagation();
   }, { passive: true });
 
   overlay.addEventListener("mouseenter", () => {
-    clearTimeout(card.__hoverCloseTimer);
+    mantenerHoverVivo(card, 1200);
   });
 
+  overlay.addEventListener("mousemove", (ev) => {
+    registrarPointerHover(ev);
+    mantenerHoverVivo(card, 700);
+  }, { passive: true });
+
+  /*
+    No cerramos directo en mouseleave.
+    Solo programamos un chequeo: si el puntero realmente quedó afuera,
+    recién ahí se cierra.
+  */
   overlay.addEventListener("mouseleave", (ev) => {
-    const related = ev.relatedTarget;
+    registrarPointerHover(ev);
 
-    if (
-      related &&
-      (
-        card.contains(related) ||
-        overlay.contains(related)
-      )
-    ) {
-      return;
-    }
+    clearTimeout(card.__hoverCloseTimer);
 
-    cerrarOverlayHoverTarjeta(card);
+    card.__hoverCloseTimer = setTimeout(() => {
+      if (cierreHoverBloqueado()) return;
+      if (punteroDentroCardUOverlay(card)) return;
+
+      cerrarOverlayHoverTarjeta(card);
+    }, 240);
   });
 
   overlay.addEventListener("click", (ev) => {
-    const interactivo = ev.target.closest(
-      "button, a, input, select, textarea, [role='button'], .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover"
-    );
+    mantenerHoverVivo(card, 1200);
+
+    const interactivo = ev.target.closest(SELECTOR_INTERACTIVO_HOVER_TARJETA);
 
     if (interactivo) {
       ev.stopPropagation();
+
+      /*
+        Reproducir debe navegar por su <a>.
+        Mute y Mi Lista deben ejecutar acción sin disparar card/data-href.
+      */
+      if (!interactivo.matches("a, .boton-reproducir-hover")) {
+        ev.preventDefault();
+      }
+
       return;
     }
 
+    /*
+      Click general del overlay:
+      navega manualmente a /title.
+      No restauramos href antes para que no se dispare la card.
+    */
+    ev.preventDefault();
     ev.stopPropagation();
 
-    const href = card.dataset.href || buildTitleUrl(movieId);
+    const href = obtenerHrefHoverTarjeta(card, movieId);
     if (href) window.location.href = href;
   });
-
   card.appendChild(overlay);
   return overlay;
 }
@@ -1340,14 +1554,22 @@ function obtenerBotonMiListaHover(overlay) {
   btn.innerHTML = MYLIST_ICON_PLUS;
 
   btn.addEventListener("pointerdown", (ev) => {
+    bloquearCierreHoverTarjeta(1200);
     ev.stopPropagation();
   }, { passive: true });
 
   btn.addEventListener("mousedown", (ev) => {
+    bloquearCierreHoverTarjeta(1200);
     ev.stopPropagation();
   });
 
+  /*
+    Este listener corre además del bindMyListIconButton.
+    No usa stopImmediatePropagation para no romper el toggle real.
+  */
   btn.addEventListener("click", (ev) => {
+    bloquearCierreHoverTarjeta(1200);
+    ev.preventDefault();
     ev.stopPropagation();
   });
 
@@ -1365,7 +1587,7 @@ function posicionarOverlayHoverTarjeta(card, overlay) {
   const rect = card.getBoundingClientRect();
   const viewportW = window.innerWidth || document.documentElement.clientWidth || 0;
 
-  const anchoFinal = Math.min(430, Math.max(320, viewportW - 32));
+  const anchoFinal = Math.min(520, Math.max(360, viewportW - 24));
   overlay.style.width = `${Math.round(anchoFinal)}px`;
 
   const overlayLeft = rect.left + (rect.width / 2) - (anchoFinal / 2);
@@ -1458,14 +1680,21 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
       });
 
       botonReproducir.addEventListener("pointerdown", (ev) => {
+        bloquearCierreHoverTarjeta(1200);
         ev.stopPropagation();
       }, { passive: true });
 
       botonReproducir.addEventListener("mousedown", (ev) => {
+        bloquearCierreHoverTarjeta(1200);
         ev.stopPropagation();
       });
 
       botonReproducir.addEventListener("click", (ev) => {
+        /*
+          Dejar navegar normal.
+          Solo bloqueamos cierre y propagación a la card.
+        */
+        bloquearCierreHoverTarjeta(1200);
         ev.stopPropagation();
       });
     }
@@ -1476,21 +1705,30 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
       mountQuickModalTrailer(media, movie);
 
       const botonVolumen = media.querySelector(".card-quick-modal-volume-btn");
+
       if (botonVolumen) {
         botonVolumen.addEventListener("pointerdown", (ev) => {
+          bloquearCierreHoverTarjeta(1200);
           ev.stopPropagation();
         }, { passive: true });
 
         botonVolumen.addEventListener("mousedown", (ev) => {
+          bloquearCierreHoverTarjeta(1200);
           ev.stopPropagation();
         });
 
         botonVolumen.addEventListener("click", (ev) => {
+          /*
+            mountQuickModalTrailer ya tiene el listener que hace mute/unmute.
+            No usamos preventDefault acá para no bloquear comportamiento propio.
+          */
+          bloquearCierreHoverTarjeta(1200);
           ev.stopPropagation();
         });
       }
 
       const video = media.querySelector("video");
+
       if (video) {
         try {
           video.pause();
@@ -1508,6 +1746,7 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
     }
 
     const botonMiLista = obtenerBotonMiListaHover(overlay);
+
     if (botonMiLista) {
       const session = __homeSessionCache || (await getHomeSessionCached());
       const userId = session?.user?.id || null;
@@ -1523,6 +1762,7 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
     console.warn("[home] overlay hover tarjeta error:", e);
 
     const media = overlay.querySelector(".overlay-hover-tarjeta-media");
+
     if (media) {
       media.innerHTML = `<div class="overlay-hover-tarjeta-cargando">${TEXTOS_HOVER_TARJETA.errorCarga}</div>`;
     }
@@ -1536,6 +1776,14 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
 function abrirOverlayHoverTarjeta(card, movieId) {
   if (!card || !movieId || hoverTarjetaDeshabilitado()) return;
 
+  // ✅ FIX: si ya está abierto (por click/focus dentro del overlay), NO reconstruir (evita parpadeo).
+  const __overlayExistente = card.querySelector(".overlay-hover-tarjeta");
+  if (__overlayExistente?.classList?.contains?.("overlay-hover-abierto")) {
+    __tarjetaHoverActiva = card;
+    mantenerHoverVivo(card, 1500);
+    return;
+  }
+
   resetearTodosLosHoversTarjeta({ excepto: card });
 
   if (__tarjetaHoverActiva && __tarjetaHoverActiva !== card) {
@@ -1546,6 +1794,9 @@ function abrirOverlayHoverTarjeta(card, movieId) {
 
   clearTimeout(card.__hoverOpenTimer);
   clearTimeout(card.__hoverCloseTimer);
+  clearTimeout(card.__hoverSafetyCloseTimer);
+
+  suspenderNavegacionBaseCardHover(card);
 
   card.__hoverOpenTimer = setTimeout(() => {
     if (__tarjetaHoverActiva !== card) return;
@@ -1559,18 +1810,22 @@ function abrirOverlayHoverTarjeta(card, movieId) {
     if (!overlay) return;
 
     reiniciarAnimacionOverlayHover(card, overlay);
-
     hidratarOverlayHoverTarjeta(card, movieId, seq);
-  }, 120);
+  }, 90);
 }
 
 function cerrarOverlayHoverTarjeta(card, options = {}) {
   if (!card) return;
 
   const inmediato = options.inmediato === true;
+  const forzar = options.forzar === true;
+
+  if (!forzar && !inmediato && cierreHoverBloqueado()) return;
+  if (!forzar && !inmediato && punteroDentroCardUOverlay(card)) return;
 
   clearTimeout(card.__hoverOpenTimer);
   clearTimeout(card.__hoverCloseTimer);
+  clearTimeout(card.__hoverSafetyCloseTimer);
 
   if (__tarjetaHoverActiva === card) {
     __tarjetaHoverActiva = null;
@@ -1581,6 +1836,9 @@ function cerrarOverlayHoverTarjeta(card, options = {}) {
   const overlay = card.querySelector(".overlay-hover-tarjeta");
 
   const limpiar = () => {
+    if (!forzar && cierreHoverBloqueado()) return;
+    if (!forzar && punteroDentroCardUOverlay(card)) return;
+
     resetearHoverTarjeta(card, { eliminarOverlay: true });
 
     if (!document.querySelector(".tarjeta-hover-host")) {
@@ -1600,6 +1858,19 @@ function cerrarOverlayHoverTarjeta(card, options = {}) {
   card.__hoverCloseTimer = setTimeout(limpiar, 190);
 }
 
+function programarCierreHoverTarjetaSiFuera(card, delay = 180) {
+  if (!card) return;
+
+  clearTimeout(card.__hoverSafetyCloseTimer);
+
+  card.__hoverSafetyCloseTimer = setTimeout(() => {
+    if (cierreHoverBloqueado()) return;
+    if (punteroDentroCardUOverlay(card)) return;
+
+    cerrarOverlayHoverTarjeta(card);
+  }, delay);
+}
+
 /* =========================================================
    BIND POR CARD
    Mantiene el nombre bindCardHoverPreview para no romper tu código actual.
@@ -1611,36 +1882,47 @@ function bindCardHoverPreview(card, movieId) {
 
   card.dataset.hoverPreviewBound = "1";
 
-  card.addEventListener("mouseenter", () => {
+  card.addEventListener("mouseenter", (ev) => {
+    registrarPointerHover(ev);
     abrirOverlayHoverTarjeta(card, String(movieId));
   }, { passive: true });
 
-  card.addEventListener("mouseleave", () => {
-    clearTimeout(card.__hoverCloseTimer);
+  card.addEventListener("mousemove", (ev) => {
+    registrarPointerHover(ev);
 
-    card.__hoverCloseTimer = setTimeout(() => {
-      const overlay = card.querySelector(".overlay-hover-tarjeta");
+    if (__tarjetaHoverActiva === card) {
+      mantenerHoverVivo(card, 700);
+    }
+  }, { passive: true });
 
-      if (__tarjetaHoverActiva !== card) {
-        resetearHoverTarjeta(card, { eliminarOverlay: true });
-        return;
-      }
-
-      if (!overlay || !overlay.matches(":hover")) {
-        cerrarOverlayHoverTarjeta(card);
-      }
-    }, 60);
+  /*
+    FIX:
+    No cerramos por click ni por focusout.
+    El cierre queda únicamente por salida real del puntero,
+    scroll, blur o cambio de pestaña.
+  */
+  card.addEventListener("mouseleave", (ev) => {
+    registrarPointerHover(ev);
+    programarCierreHoverTarjetaSiFuera(card, 320);
   }, { passive: true });
 
   card.addEventListener("focusin", () => {
+    const overlay = card.querySelector(".overlay-hover-tarjeta");
+    if (overlay?.classList?.contains?.("overlay-hover-abierto")) {
+      mantenerHoverVivo(card, 1500);
+      return;
+    }
     abrirOverlayHoverTarjeta(card, String(movieId));
   });
 
-  card.addEventListener("focusout", (ev) => {
-    const overlay = card.querySelector(".overlay-hover-tarjeta");
-
-    if (!card.contains(ev.relatedTarget) && !overlay?.contains?.(ev.relatedTarget)) {
-      cerrarOverlayHoverTarjeta(card);
+  card.addEventListener("focusout", () => {
+    /*
+      NO cerrar acá.
+      En click sobre mute / Mi Lista algunos navegadores disparan focusout
+      con relatedTarget null, y eso era lo que desmontaba el overlay.
+    */
+    if (__tarjetaHoverActiva === card) {
+      mantenerHoverVivo(card, 1200);
     }
   });
 }
@@ -1654,38 +1936,58 @@ function instalarLimpiezaGlobalHoverTarjeta() {
   __eventosGlobalesHoverInstalados = true;
 
   document.addEventListener("pointermove", (ev) => {
+    registrarPointerHover(ev);
+
     const activa = __tarjetaHoverActiva;
     if (!activa) return;
 
-    const overlay = activa.querySelector(".overlay-hover-tarjeta");
     const target = ev.target;
 
-    if (target.closest?.(".overlay-hover-tarjeta")) return;
-
-    const dentroDeCard = activa.contains(target);
-    const dentroDeOverlay = overlay?.contains?.(target);
-
-    if (!dentroDeCard && !dentroDeOverlay) {
-      cerrarOverlayHoverTarjeta(activa);
+    if (targetDentroCardHoverActiva(target, activa)) {
+      mantenerHoverVivo(activa, 700);
+      return;
     }
+
+    if (cierreHoverBloqueado()) return;
+
+    programarCierreHoverTarjetaSiFuera(activa, 260);
   }, { passive: true });
 
+  /*
+    FIX DEFINITIVO:
+    NO cerramos por pointerdown/click.
+    Clickear mute, Mi Lista o cualquier parte del overlay jamás desmonta.
+    Click afuera tampoco desmonta; el hover se va al salir realmente con el mouse.
+  */
   document.addEventListener("pointerdown", (ev) => {
+    registrarPointerHover(ev);
+
     const activa = __tarjetaHoverActiva;
     if (!activa) return;
 
-    const overlay = activa.querySelector(".overlay-hover-tarjeta");
     const target = ev.target;
 
-    if (target.closest?.(".overlay-hover-tarjeta")) return;
-
-    const dentroDeCard = activa.contains(target);
-    const dentroDeOverlay = overlay?.contains?.(target);
-
-    if (!dentroDeCard && !dentroDeOverlay) {
-      cerrarOverlayHoverTarjeta(activa, { inmediato: true });
+    if (targetDentroCardHoverActiva(target, activa) || targetDentroOverlayHover(target)) {
+      mantenerHoverVivo(activa, 1500);
+      return;
     }
+
+    bloquearCierreHoverTarjeta(450);
   }, { passive: true });
+
+  document.addEventListener("click", (ev) => {
+    const activa = __tarjetaHoverActiva;
+    if (!activa) return;
+
+    const target = ev.target;
+
+    if (targetDentroCardHoverActiva(target, activa) || targetDentroOverlayHover(target)) {
+      mantenerHoverVivo(activa, 1500);
+      return;
+    }
+
+    bloquearCierreHoverTarjeta(450);
+  }, true);
 
   window.addEventListener("blur", () => {
     resetearTodosLosHoversTarjeta();
@@ -1700,6 +2002,7 @@ function instalarLimpiezaGlobalHoverTarjeta() {
   window.addEventListener("resize", () => {
     document.querySelectorAll(".card.tarjeta-hover-host").forEach((card) => {
       const overlay = card.querySelector(".overlay-hover-tarjeta");
+
       if (overlay?.classList.contains("overlay-hover-abierto")) {
         posicionarOverlayHoverTarjeta(card, overlay);
       }
@@ -1707,12 +2010,12 @@ function instalarLimpiezaGlobalHoverTarjeta() {
   }, { passive: true });
 
   window.addEventListener("scroll", () => {
-    document.querySelectorAll(".card.tarjeta-hover-host").forEach((card) => {
-      const overlay = card.querySelector(".overlay-hover-tarjeta");
-      if (overlay?.classList.contains("overlay-hover-abierto")) {
-        posicionarOverlayHoverTarjeta(card, overlay);
-      }
-    });
+    if (__tarjetaHoverActiva && !cierreHoverBloqueado()) {
+      cerrarOverlayHoverTarjeta(__tarjetaHoverActiva, {
+        inmediato: true,
+        forzar: true
+      });
+    }
   }, { passive: true });
 }
 
@@ -2046,46 +2349,48 @@ function promoteCatalogCardBadges(rootEl) {
   });
 }
 
-/* ================= CAROUSEL HELPERS ================= */
+/* ================= CAROUSEL HELPERS — LAYOUT STREAMING V5 ================= */
 
-function getCarouselCards(row) { return [...row.querySelectorAll(".card")]; }
-function getRowCenterX(row) { return row.scrollLeft + row.clientWidth / 2; }
-function getCardCenterX(card) { return card.offsetLeft + card.offsetWidth / 2; }
-
-function centerCard(row, card, behavior = "smooth") {
-  if (!row || !card) return;
-  const target = card.offsetLeft - (row.clientWidth / 2) + (card.offsetWidth / 2);
-  row.scrollTo({ left: Math.max(0, target), behavior });
+function getCarouselCards(row) {
+  return Array.from(row?.querySelectorAll?.(".card") || []);
 }
 
-function getClosestCenteredCard(row) {
-  const cards = getCarouselCards(row);
-  if (!cards.length) return null;
-
-  const rowCenter = getRowCenterX(row);
-  let closest = null;
-  let minDist = Infinity;
-
-  for (const card of cards) {
-    const dist = Math.abs(getCardCenterX(card) - rowCenter);
-    if (dist < minDist) {
-      minDist = dist;
-      closest = card;
-    }
-  }
-  return closest;
+function getMaxScrollLeft(row) {
+  if (!row) return 0;
+  return Math.max(0, row.scrollWidth - row.clientWidth);
 }
 
-function moveToAdjacentCard(row, direction = 1) {
-  const cards = getCarouselCards(row);
-  if (!cards.length) return;
+function getScrollStep(row) {
+  if (!row) return 360;
+  const card = row.querySelector(".card");
+  const gap = parseFloat(getComputedStyle(row).columnGap || getComputedStyle(row).gap || "12") || 12;
+  const cardW = card?.getBoundingClientRect?.().width || 280;
+  const visibleCards = Math.max(1, Math.floor(row.clientWidth / Math.max(1, cardW + gap)));
+  return Math.max(cardW + gap, (cardW + gap) * Math.max(1, visibleCards - 1));
+}
 
-  const current = getClosestCenteredCard(row) || cards[0];
-  const index = cards.indexOf(current);
-  if (index < 0) return;
+function updateCarouselArrows(row) {
+  const carousel = row?.closest?.(".carousel");
+  if (!row || !carousel) return;
 
-  const nextIndex = Math.max(0, Math.min(cards.length - 1, index + direction));
-  centerCard(row, cards[nextIndex], "smooth");
+  const left = carousel.querySelector(".carousel-btn.left");
+  const right = carousel.querySelector(".carousel-btn.right");
+  const max = getMaxScrollLeft(row);
+  const canScroll = max > 4;
+
+  carousel.classList.toggle("no-arrows", !canScroll || row.dataset.arrows === "0");
+  carousel.classList.toggle("is-at-start", row.scrollLeft <= 4);
+  carousel.classList.toggle("is-at-end", row.scrollLeft >= max - 4);
+
+  if (left) left.disabled = !canScroll || row.scrollLeft <= 4;
+  if (right) right.disabled = !canScroll || row.scrollLeft >= max - 4;
+}
+
+function scrollCarouselPage(row, direction = 1) {
+  if (!row) return;
+  const max = getMaxScrollLeft(row);
+  const next = Math.max(0, Math.min(max, row.scrollLeft + getScrollStep(row) * direction));
+  row.scrollTo({ left: next, behavior: "smooth" });
 }
 
 function ensureCarouselWrapper(row) {
@@ -2102,8 +2407,8 @@ function ensureCarouselWrapper(row) {
   leftBtn.type = "button";
   leftBtn.setAttribute("aria-label", "Anterior");
   leftBtn.innerHTML = `
-    <svg viewBox="0 0 24 24">
-      <path d="M15 6l-6 6 6 6" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M15 6l-6 6 6 6" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `;
 
@@ -2112,24 +2417,20 @@ function ensureCarouselWrapper(row) {
   rightBtn.type = "button";
   rightBtn.setAttribute("aria-label", "Siguiente");
   rightBtn.innerHTML = `
-    <svg viewBox="0 0 24 24">
-      <path d="M9 6l6 6-6 6" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M9 6l6 6-6 6" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `;
 
   const parent = row.parentElement;
-  parent.insertBefore(carousel, row);
+  if (!parent) return null;
 
+  parent.insertBefore(carousel, row);
   carousel.appendChild(leftBtn);
   carousel.appendChild(row);
   carousel.appendChild(rightBtn);
 
   return carousel;
-}
-
-function setCarouselCenteredState(carousel, enabled) {
-  if (!carousel) return;
-  carousel.classList.toggle("carousel-disabled", !!enabled);
 }
 
 function resetCarouselState(row) {
@@ -2143,12 +2444,11 @@ function resetCarouselState(row) {
 
   delete row.__carouselCleanup;
   delete row.__resizeHandler;
-  delete row.__snapTimer;
+  delete row.__scrollHandler;
 
   const carousel = row.closest(".carousel");
   if (carousel) {
-    carousel.classList.remove("carousel-disabled");
-    carousel.classList.remove("no-arrows");
+    carousel.classList.remove("carousel-disabled", "no-arrows", "is-at-start", "is-at-end");
   }
 }
 
@@ -2156,73 +2456,55 @@ function buildCarousel(row) {
   if (!row) return;
   if (row.dataset.carouselReady === "1") return;
 
-  const originals = [...row.children];
-  if (!originals.length) return;
+  const cards = getCarouselCards(row);
+  if (!cards.length) return;
 
   const carousel = ensureCarouselWrapper(row);
+  if (!carousel) return;
+
   const btnLeft = carousel.querySelector(".carousel-btn.left");
   const btnRight = carousel.querySelector(".carousel-btn.right");
 
   row.dataset.carouselReady = "1";
 
-  const showArrows = row.dataset.arrows !== "0";
-  carousel.classList.toggle("no-arrows", !showArrows);
+  const onScroll = () => {
+    if (row.__arrowRaf) cancelAnimationFrame(row.__arrowRaf);
+    row.__arrowRaf = requestAnimationFrame(() => updateCarouselArrows(row));
+  };
 
-  if (originals.length <= 1) {
-    carousel.classList.add("no-arrows");
-    setCarouselCenteredState(carousel, true);
-  } else {
-    setCarouselCenteredState(carousel, false);
-  }
-
-  let snapTimer = null;
-  let isSnapping = false;
-
-  function snapToClosest(behavior = "smooth") {
-    if (isSnapping) return;
-    const closest = getClosestCenteredCard(row);
-    if (!closest) return;
-
-    isSnapping = true;
-    centerCard(row, closest, behavior);
-
-    window.clearTimeout(snapTimer);
-    snapTimer = window.setTimeout(() => { isSnapping = false; }, 220);
-  }
-
-  function onScroll() {
-    if (isSnapping) return;
-    window.clearTimeout(snapTimer);
-    snapTimer = window.setTimeout(() => { snapToClosest("smooth"); }, 100);
-  }
-
-  if (btnLeft) btnLeft.onclick = () => moveToAdjacentCard(row, -1);
-  if (btnRight) btnRight.onclick = () => moveToAdjacentCard(row, 1);
-
-  row.addEventListener("scroll", onScroll, { passive: true });
-
-  function onResize() {
-    const current = getClosestCenteredCard(row) || row.querySelector(".card");
-    if (!current) return;
-
+  const onResize = () => {
     requestAnimationFrame(() => {
-      centerCard(row, current, "auto");
+      updateCarouselArrows(row);
       scheduleTwoLinesScan(carousel);
     });
-  }
+  };
 
-  row.__resizeHandler = onResize;
+  if (btnLeft) btnLeft.onclick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    scrollCarouselPage(row, -1);
+  };
+
+  if (btnRight) btnRight.onclick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    scrollCarouselPage(row, 1);
+  };
+
+  row.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onResize, { passive: true });
 
+  row.__scrollHandler = onScroll;
+  row.__resizeHandler = onResize;
   row.__carouselCleanup = () => {
-    window.clearTimeout(snapTimer);
+    if (row.__arrowRaf) cancelAnimationFrame(row.__arrowRaf);
     row.removeEventListener("scroll", onScroll);
-    if (row.__resizeHandler) window.removeEventListener("resize", row.__resizeHandler);
+    window.removeEventListener("resize", onResize);
   };
 
   requestAnimationFrame(() => {
-    const firstCard = row.querySelector(".card");
-    if (firstCard) centerCard(row, firstCard, "auto");
+    row.scrollLeft = 0;
+    updateCarouselArrows(row);
     scheduleTwoLinesScan(carousel);
   });
 }
@@ -2234,7 +2516,24 @@ function setRow(el, html) {
 
   enhanceCarouselCardsWithQuickPlus(el);
   scheduleTwoLinesScan(el);
+
+  try {
+    window.dispatchEvent(new CustomEvent("satv:cards-rendered", { detail: { root: el } }));
+  } catch { }
 }
+
+window.addEventListener("app:searchrendered", (ev) => {
+  const root = ev?.detail?.root || document.getElementById("search-results");
+  if (!root) return;
+  enhanceCarouselCardsWithQuickPlus(root);
+  scheduleTwoLinesScan(root);
+});
+
+window.addEventListener("satv:enhance-cards", (ev) => {
+  const root = ev?.detail?.root || document;
+  enhanceCarouselCardsWithQuickPlus(root);
+  scheduleTwoLinesScan(root);
+});
 
 /* ================= CONTINUE WATCHING HELPERS ================= */
 
@@ -2322,7 +2621,7 @@ async function init() {
       const uniqueRows = Object.values(grouped);
 
       if (uniqueRows.length) {
-        contWrap.classList.remove("hidden");
+        contWrap?.classList?.remove("hidden");
 
         setRow(
           contRow,
@@ -2343,14 +2642,14 @@ async function init() {
 
         buildCarousel(contRow);
       } else {
-        contWrap.classList.add("hidden");
+        contWrap?.classList?.add("hidden");
       }
     } catch (e) {
       console.error("[home] continue watching error:", e);
-      contWrap.classList.add("hidden");
+      contWrap?.classList?.add("hidden");
     }
   } else {
-    contWrap.classList.add("hidden");
+    contWrap?.classList?.add("hidden");
   }
 
   try {

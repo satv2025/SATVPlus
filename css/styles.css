@@ -90,6 +90,23 @@
   --hero-synopsis-size: clamp(13px, .5vw + 11px, 17px);
   --hero-synopsis-maxw: min(720px, 96%);
   --hero-right-min: clamp(48px, 7vw, 84px);
+
+  /* Overlay Tarjeta */
+  --hover-tarjeta-bg: #07090d;
+  --hover-tarjeta-texto: #fff;
+  --hover-tarjeta-radio: .32em;
+  --hover-tarjeta-ancho: 430px;
+  --hover-tarjeta-margen-seguro: 32px;
+  --hover-tarjeta-y-abierto: -26px;
+  --hover-tarjeta-sombra: 0 20px 55px rgba(0, 0, 0, .58), 0 4px 18px rgba(0, 0, 0, .38);  
+  --hover-tarjeta-titulo-size: 20px;
+  --hover-tarjeta-meta-size: 18px;
+  --hover-tarjeta-sinopsis-size: 18px;
+  --hover-tarjeta-accion-alto: 52px;
+  --hover-tarjeta-icono-play: 34px;
+  --hover-tarjeta-boton-icono: 52px;
+  --hover-tarjeta-boton-volumen: 38px;
+
 }
 
 /* ================= RESET / BASE ================= */
@@ -3363,32 +3380,6 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 ========================================================= */
 
 /* =========================================================
-   VARIABLES CUSTOMIZABLES
-========================================================= */
-
-:root {
-  --hover-tarjeta-bg: #07090d;
-  --hover-tarjeta-texto: #fff;
-  --hover-tarjeta-radio: .32em;
-  --hover-tarjeta-ancho: 430px;
-  --hover-tarjeta-margen-seguro: 32px;
-  --hover-tarjeta-y-abierto: -26px;
-
-  --hover-tarjeta-sombra:
-    0 20px 55px rgba(0, 0, 0, .58),
-    0 4px 18px rgba(0, 0, 0, .38);
-
-  --hover-tarjeta-titulo-size: 20px;
-  --hover-tarjeta-meta-size: 18px;
-  --hover-tarjeta-sinopsis-size: 18px;
-
-  --hover-tarjeta-accion-alto: 52px;
-  --hover-tarjeta-icono-play: 34px;
-  --hover-tarjeta-boton-icono: 52px;
-  --hover-tarjeta-boton-volumen: 38px;
-}
-
-/* =========================================================
    CARRUSEL / CONTEXTO
 ========================================================= */
 
@@ -3572,6 +3563,7 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 
 /* =========================================================
    VOLUMEN SOBRE VIDEO
+   Mismo comportamiento visual que Mi Lista
 ========================================================= */
 
 .overlay-hover-tarjeta-media .card-quick-modal-volume-btn {
@@ -3580,35 +3572,54 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   bottom: 12px !important;
   z-index: 25 !important;
 
-  width: var(--hover-tarjeta-boton-volumen);
-  height: var(--hover-tarjeta-boton-volumen);
-  min-width: var(--hover-tarjeta-boton-volumen);
-  min-height: var(--hover-tarjeta-boton-volumen);
+  width: var(--hover-tarjeta-boton-icono) !important;
+  height: var(--hover-tarjeta-boton-icono) !important;
+  min-width: var(--hover-tarjeta-boton-icono) !important;
+  min-height: var(--hover-tarjeta-boton-icono) !important;
 
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 999px !important;
+  border: 2px solid rgba(255, 255, 255, .28) !important;
 
-  background: rgba(0, 0, 0, .55);
-  backdrop-filter: blur(8px);
+  background: rgba(7, 9, 13, .4) !important;
+  color: #fff !important;
 
-  display: inline-grid;
-  place-items: center;
+  display: inline-grid !important;
+  place-items: center !important;
 
-  padding: 0;
-  margin: 0;
+  padding: 0 !important;
+  margin: 0 !important;
+
+  transition:
+    background .16s ease,
+    border-color .16s ease,
+    transform .16s ease,
+    opacity .16s ease;
 }
 
-.overlay-hover-tarjeta-media .card-quick-modal-volume-btn:hover {
-  background: rgba(0, 0, 0, .82);
-  border-color: rgba(255, 255, 255, .86);
+.overlay-hover-tarjeta-media .card-quick-modal-volume-btn:hover,
+.overlay-hover-tarjeta-media .card-quick-modal-volume-btn:focus-visible {
+  background: rgba(7,
+    9,
+    13, .8) !important;
+  border-color: rgba(255, 255, 255) !important;
+}
+
+.overlay-hover-tarjeta-media .card-quick-modal-volume-btn:active {
+  transform: scale(.96);
 }
 
 .overlay-hover-tarjeta-media .card-quick-modal-volume-btn img {
-  width: 18px;
-  height: 18px;
+  width: 30px !important;
+  height: 30px !important;
   object-fit: contain;
   display: block;
   filter: brightness(0) invert(1);
+  pointer-events: none !important;
+  opacity: .28
+}
+
+.card-quick-modal-volume-btn:hover img {
+  opacity: 1;
 }
 
 /* =========================================================
@@ -3706,12 +3717,23 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 
   padding: 0 !important;
   margin: 0 !important;
+
+  transition:
+    background .16s ease,
+    border-color .16s ease,
+    transform .16s ease,
+    opacity .16s ease;
 }
 
 .overlay-hover-tarjeta-acciones .boton-mi-lista-hover:hover,
+.overlay-hover-tarjeta-acciones .boton-mi-lista-hover:focus-visible,
 .overlay-hover-tarjeta-acciones .boton-mi-lista-hover.is-active {
   background: rgba(255, 255, 255, .17) !important;
   border-color: rgba(255, 255, 255, .88) !important;
+}
+
+.overlay-hover-tarjeta-acciones .boton-mi-lista-hover:active {
+  transform: scale(.96);
 }
 
 .overlay-hover-tarjeta-acciones .boton-mi-lista-hover .card-quick-plus-icon {
@@ -3822,7 +3844,6 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 
 /* =========================================================
    FIX CURSOR BOTÓN REPRODUCIR
-   El texto/span/SVG del botón también deben tener pointer.
 ========================================================= */
 
 .boton-reproducir-hover,
