@@ -3492,12 +3492,12 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   width: 100%;
   min-height: 100%;
   background: var(--hover-tarjeta-bg);
-  cursor: default !important;
+  cursor: pointer !important;
 }
 
 /* Cursor default en todo el overlay */
 .overlay-hover-tarjeta,
-.overlay-hover-tarjeta * {
+.overlay-hover-tarjeta-cuerpo {
   cursor: default !important;
 }
 
@@ -3521,6 +3521,7 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   aspect-ratio: 16 / 9;
   background: var(--hover-tarjeta-bg);
   overflow: hidden;
+  cursor: pointer;
 }
 
 .overlay-hover-tarjeta-media .card-quick-modal-media,
@@ -3530,6 +3531,7 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   inset: 0;
   width: 100%;
   height: 100%;
+  cursor: pointer;
 }
 
 .overlay-hover-tarjeta-media .card-quick-modal-video,
@@ -3537,6 +3539,7 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   width: 100%;
   height: 100%;
   object-fit: cover;
+  cursor: pointer;
 }
 
 .overlay-hover-tarjeta-media .card-quick-modal-shade {
@@ -3599,8 +3602,8 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 .overlay-hover-tarjeta-media .card-quick-modal-volume-btn:hover,
 .overlay-hover-tarjeta-media .card-quick-modal-volume-btn:focus-visible {
   background: rgba(7,
-    9,
-    13, .8) !important;
+      9,
+      13, .8) !important;
   border-color: rgba(255, 255, 255) !important;
 }
 
