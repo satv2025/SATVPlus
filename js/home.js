@@ -1,14 +1,11 @@
 // home.js
-// REEMPLAZO COMPLETO - FIX HOVER TARJETA
-//
-// Este archivo conserva tu lógica y aplica el fix necesario para que el overlay
-// se cierre al sacar el mouse de la tarjeta/overlay.
+// REEMPLAZO COMPLETO - FIX CARRUSEL BUG (PATRÓN PORTAL PARA OVERLAY)
 //
 // CAMBIOS APLICADOS:
-// - Helper relatedTargetDentroCardUOverlay(...)
-// - mouseleave del overlay cierra si el mouse sale realmente.
-// - mouseleave de la card cierra si el mouse sale realmente.
-// - No se cierra al pasar de card -> overlay ni de overlay -> card.
+// - El overlay ya no vive dentro de .card (lo que obligaba a romper el overflow del carrusel).
+// - Ahora se inyecta directo en document.body (Portal).
+// - Se calculan coordenadas absolutas reales (top/left) sumando scrollX/scrollY.
+// - Se elimina la mutación de clases "fila-hover-abierta" que causaba el salto visual.
 
 import {
   renderNav,
@@ -978,6 +975,7 @@ function registrarPointerHover(ev) {
   if (Number.isFinite(ev.clientY)) __ultimoPointerHoverY = ev.clientY;
 }
 
+// NUEVO: Busca el overlay en el documento, ya no solo en la card
 function targetDentroOverlayHover(target) {
   return !!target?.closest?.(".overlay-hover-tarjeta");
 }
@@ -985,11 +983,14 @@ function targetDentroOverlayHover(target) {
 function targetDentroCardHoverActiva(target, card) {
   if (!target || !card) return false;
 
-  const overlay = card.querySelector(".overlay-hover-tarjeta");
+  let overlay = null;
+  document.querySelectorAll(".overlay-hover-tarjeta").forEach(n => {
+    if (n.__hostCard === card) overlay = n;
+  });
 
   return (
     card.contains(target) ||
-    overlay?.contains?.(target) ||
+    (overlay && overlay.contains(target)) ||
     !!target.closest?.(".overlay-hover-tarjeta")
   );
 }
@@ -997,37 +998,37 @@ function targetDentroCardHoverActiva(target, card) {
 function punteroDentroCardUOverlay(card) {
   if (!card) return false;
 
-  const overlay = card.querySelector(".overlay-hover-tarjeta");
+  let overlay = null;
+  document.querySelectorAll(".overlay-hover-tarjeta").forEach(n => {
+    if (n.__hostCard === card) overlay = n;
+  });
 
   let el = null;
-
   try {
     el = document.elementFromPoint(__ultimoPointerHoverX, __ultimoPointerHoverY);
   } catch {
     el = null;
   }
-
   if (!el) return false;
 
   return (
     card.contains(el) ||
-    overlay?.contains?.(el) ||
+    (overlay && overlay.contains(el)) ||
     !!el.closest?.(".overlay-hover-tarjeta")
   );
 }
 
-/* =========================================================
-   FIX PRINCIPAL: detectar si mouseleave va hacia card/overlay
-========================================================= */
-
 function relatedTargetDentroCardUOverlay(card, relatedTarget) {
   if (!card || !relatedTarget) return false;
 
-  const overlay = card.querySelector(".overlay-hover-tarjeta");
+  let overlay = null;
+  document.querySelectorAll(".overlay-hover-tarjeta").forEach(n => {
+    if (n.__hostCard === card) overlay = n;
+  });
 
   return (
     card.contains(relatedTarget) ||
-    overlay?.contains?.(relatedTarget) ||
+    (overlay && overlay.contains(relatedTarget)) ||
     !!relatedTarget.closest?.(".overlay-hover-tarjeta")
   );
 }
@@ -1299,97 +1300,53 @@ function forzarSinopsisEnBloque(nodo) {
 }
 
 /* =========================================================
-   CONTEXTO DEL CARRUSEL
+   CONTEXTO DEL CARRUSEL (Actualizado)
+   Ya no rompemos el overflow del carrusel con clases.
 ========================================================= */
-
-function obtenerContextoHoverTarjeta(card) {
-  return {
-    fila: card?.closest?.(".row") || null,
-    carrusel: card?.closest?.(".carousel") || null,
-    seccion: card?.closest?.(".section") || null
-  };
-}
 
 function alternarContextoHoverTarjeta(card, abierto) {
   if (!card) return;
 
-  const { fila, carrusel, seccion } = obtenerContextoHoverTarjeta(card);
-
   if (abierto) {
     card.classList.add("tarjeta-hover-host");
-
-    fila?.classList.add("fila-hover-abierta");
-    carrusel?.classList.add("carrusel-hover-abierto");
-    seccion?.classList.add("seccion-hover-abierta");
-
     suspenderNavegacionBaseCardHover(card);
-
-    return;
+  } else {
+    card.classList.remove("tarjeta-hover-host");
   }
-
-  card.classList.remove("tarjeta-hover-host");
-
-  requestAnimationFrame(() => {
-    if (fila && !fila.querySelector(".tarjeta-hover-host")) {
-      fila.classList.remove("fila-hover-abierta");
-    }
-
-    if (carrusel && !carrusel.querySelector(".tarjeta-hover-host")) {
-      carrusel.classList.remove("carrusel-hover-abierto");
-    }
-
-    if (seccion && !seccion.querySelector(".tarjeta-hover-host")) {
-      seccion.classList.remove("seccion-hover-abierta");
-    }
-
-    if (!document.querySelector(".tarjeta-hover-host")) {
-      document.querySelectorAll(".fila-hover-abierta").forEach((el) => {
-        el.classList.remove("fila-hover-abierta");
-      });
-
-      document.querySelectorAll(".carrusel-hover-abierto").forEach((el) => {
-        el.classList.remove("carrusel-hover-abierto");
-      });
-
-      document.querySelectorAll(".seccion-hover-abierta").forEach((el) => {
-        el.classList.remove("seccion-hover-abierta");
-      });
-    }
-  });
 }
 
 /* =========================================================
-   LIMPIEZA DE VIDEO / OVERLAY
+   LIMPIEZA DE VIDEO / OVERLAY (Actualizado)
 ========================================================= */
 
 function detenerYResetearMediaHover(card) {
   if (!card) return;
 
-  try {
-    card.querySelectorAll(".overlay-hover-tarjeta video").forEach((video) => {
-      try {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
-        video.removeAttribute("src");
-        video.load?.();
-      } catch { }
-    });
-  } catch { }
+  document.querySelectorAll(".overlay-hover-tarjeta").forEach((overlay) => {
+    if (overlay.__hostCard !== card) return;
+    try {
+      overlay.querySelectorAll("video").forEach((video) => {
+        try {
+          video.pause();
+          video.muted = true;
+          video.currentTime = 0;
+          video.removeAttribute("src");
+          video.load?.();
+        } catch { }
+      });
+    } catch { }
+  });
 }
 
 function eliminarOverlayHoverTarjeta(card) {
   if (!card) return;
-
   detenerYResetearMediaHover(card);
 
-  try {
-    card.querySelectorAll(".overlay-hover-tarjeta").forEach((nodo) => {
-      try {
-        nodo.remove();
-      } catch { }
-    });
-  } catch { }
+  document.querySelectorAll(".overlay-hover-tarjeta").forEach((overlay) => {
+    if (overlay.__hostCard === card) {
+      try { overlay.remove(); } catch { }
+    }
+  });
 }
 
 function resetearHoverTarjeta(card, { eliminarOverlay = true } = {}) {
@@ -1408,16 +1365,17 @@ function resetearHoverTarjeta(card, { eliminarOverlay = true } = {}) {
 
   detenerYResetearMediaHover(card);
 
-  const overlay = card.querySelector(".overlay-hover-tarjeta");
+  let overlayNode = null;
+  document.querySelectorAll(".overlay-hover-tarjeta").forEach((n) => {
+    if (n.__hostCard === card) overlayNode = n;
+  });
 
-  if (overlay) {
-    overlay.classList.remove("overlay-hover-abierto");
-    overlay.setAttribute("aria-hidden", "true");
+  if (overlayNode) {
+    overlayNode.classList.remove("overlay-hover-abierto");
+    overlayNode.setAttribute("aria-hidden", "true");
 
     if (eliminarOverlay) {
-      try {
-        overlay.remove();
-      } catch { }
+      try { overlayNode.remove(); } catch { }
     }
   }
 
@@ -1433,14 +1391,11 @@ function resetearTodosLosHoversTarjeta({ excepto = null } = {}) {
     .forEach((card) => tarjetas.add(card));
 
   document.querySelectorAll(".overlay-hover-tarjeta").forEach((overlay) => {
-    const card = overlay.closest(".card");
-
+    const card = overlay.__hostCard;
     if (card) {
       tarjetas.add(card);
     } else {
-      try {
-        overlay.remove();
-      } catch { }
+      try { overlay.remove(); } catch { }
     }
   });
 
@@ -1452,26 +1407,10 @@ function resetearTodosLosHoversTarjeta({ excepto = null } = {}) {
   if (!excepto) {
     __tarjetaHoverActiva = null;
   }
-
-  requestAnimationFrame(() => {
-    if (!document.querySelector(".tarjeta-hover-host")) {
-      document.querySelectorAll(".fila-hover-abierta").forEach((el) => {
-        el.classList.remove("fila-hover-abierta");
-      });
-
-      document.querySelectorAll(".carrusel-hover-abierto").forEach((el) => {
-        el.classList.remove("carrusel-hover-abierto");
-      });
-
-      document.querySelectorAll(".seccion-hover-abierta").forEach((el) => {
-        el.classList.remove("seccion-hover-abierta");
-      });
-    }
-  });
 }
 
 /* =========================================================
-   CREACIÓN DEL OVERLAY
+   CREACIÓN DEL OVERLAY (Actualizado Portal)
 ========================================================= */
 
 function asegurarOverlayHoverTarjeta(card, movieId) {
@@ -1483,6 +1422,9 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
   const overlay = document.createElement("div");
   overlay.className = "overlay-hover-tarjeta";
   overlay.setAttribute("aria-hidden", "true");
+
+  // Vinculamos la tarjeta de forma directa al DOM del overlay
+  overlay.__hostCard = card;
 
   const hrefInicial = obtenerHrefHoverTarjeta(card, movieId);
 
@@ -1550,10 +1492,6 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
     mantenerHoverVivo(card, 700);
   }, { passive: true });
 
-  /*
-    FIX: cerrar cuando el mouse sale realmente de overlay + card.
-    No cerrar si el destino es la card o el overlay.
-  */
   overlay.addEventListener("mouseleave", (ev) => {
     registrarPointerHover(ev);
 
@@ -1565,11 +1503,6 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
     }
 
     card.__hoverCloseTimer = setTimeout(() => {
-      /*
-        Cierre animado:
-        NO usamos inmediato, así el overlay vuelve al estado cerrado
-        con la misma transición de apertura, pero al revés.
-      */
       cerrarOverlayHoverTarjeta(card, {
         forzar: true
       });
@@ -1598,7 +1531,8 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
     if (href) window.location.href = href;
   });
 
-  card.appendChild(overlay);
+  // MAGIA DEL PORTAL: Se inyecta directo en el body
+  document.body.appendChild(overlay);
   return overlay;
 }
 
@@ -1646,7 +1580,7 @@ function obtenerBotonMiListaHover(overlay) {
 }
 
 /* =========================================================
-   POSICIÓN / ANIMACIÓN
+   POSICIÓN / ANIMACIÓN (Actualizado Portal absoluto)
 ========================================================= */
 
 function posicionarOverlayHoverTarjeta(card, overlay) {
@@ -1655,23 +1589,30 @@ function posicionarOverlayHoverTarjeta(card, overlay) {
   const rect = card.getBoundingClientRect();
   const viewportW = window.innerWidth || document.documentElement.clientWidth || 0;
 
+  // Como estamos en body, necesitamos sumar el scroll actual
+  const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+  const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
+
   const anchoFinal = Math.min(520, Math.max(360, viewportW - 24));
   overlay.style.width = `${Math.round(anchoFinal)}px`;
 
-  const overlayLeft = rect.left + (rect.width / 2) - (anchoFinal / 2);
+  // Centro absoluto de la tarjeta
+  const absCenterX = rect.left + scrollX + (rect.width / 2);
+  const absTopY = rect.top + scrollY;
 
+  overlay.style.position = "absolute";
+  overlay.style.top = `${Math.round(absTopY)}px`;
+  overlay.style.left = `${Math.round(absCenterX)}px`;
+
+  // Calculamos el desplazamiento necesario para que no se corte en los bordes del viewport
+  const viewportLeft = rect.left + (rect.width / 2) - (anchoFinal / 2);
   let desplazamientoX = 0;
-
   const margenViewport = 12;
-  const overflowIzquierda = margenViewport - overlayLeft;
-  const overflowDerecha = (overlayLeft + anchoFinal) - (viewportW - margenViewport);
 
-  if (overflowIzquierda > 0) {
-    desplazamientoX += overflowIzquierda;
-  }
-
-  if (overflowDerecha > 0) {
-    desplazamientoX -= overflowDerecha;
+  if (viewportLeft < margenViewport) {
+    desplazamientoX = margenViewport - viewportLeft;
+  } else if (viewportLeft + anchoFinal > viewportW - margenViewport) {
+    desplazamientoX = (viewportW - margenViewport) - (viewportLeft + anchoFinal);
   }
 
   overlay.style.setProperty("--desplazamiento-hover-x", `${Math.round(desplazamientoX)}px`);
@@ -1704,7 +1645,10 @@ function reiniciarAnimacionOverlayHover(card, overlay) {
 async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
   if (!card || !movieId) return;
 
-  const overlay = card.querySelector(".overlay-hover-tarjeta");
+  let overlay = null;
+  document.querySelectorAll(".overlay-hover-tarjeta").forEach(n => {
+    if (n.__hostCard === card) overlay = n;
+  });
   if (!overlay) return;
 
   try {
@@ -1835,7 +1779,11 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
 function abrirOverlayHoverTarjeta(card, movieId) {
   if (!card || !movieId || hoverTarjetaDeshabilitado()) return;
 
-  const __overlayExistente = card.querySelector(".overlay-hover-tarjeta");
+  let __overlayExistente = null;
+  document.querySelectorAll(".overlay-hover-tarjeta").forEach((n) => {
+    if (n.__hostCard === card) __overlayExistente = n;
+  });
+
   if (__overlayExistente?.classList?.contains?.("overlay-hover-abierto")) {
     __tarjetaHoverActiva = card;
     mantenerHoverVivo(card, 1500);
@@ -1869,7 +1817,7 @@ function abrirOverlayHoverTarjeta(card, movieId) {
 
     reiniciarAnimacionOverlayHover(card, overlay);
     hidratarOverlayHoverTarjeta(card, movieId, seq);
-  }, 90);
+  }, 400);
 }
 
 function cerrarOverlayHoverTarjeta(card, options = {}) {
@@ -1891,7 +1839,10 @@ function cerrarOverlayHoverTarjeta(card, options = {}) {
 
   card.dataset.hoverSeq = "";
 
-  const overlay = card.querySelector(".overlay-hover-tarjeta");
+  let overlay = null;
+  document.querySelectorAll(".overlay-hover-tarjeta").forEach((n) => {
+    if (n.__hostCard === card) overlay = n;
+  });
 
   const limpiar = () => {
     if (!forzar && cierreHoverBloqueado()) return;
@@ -1913,10 +1864,6 @@ function cerrarOverlayHoverTarjeta(card, options = {}) {
   overlay.setAttribute("aria-hidden", "true");
   card.classList.remove("tarjeta-hover-abierta");
 
-  /*
-    Esperamos un poco más que la transición CSS:
-    transform .22s + margen de seguridad.
-  */
   card.__hoverCloseTimer = setTimeout(limpiar, 280);
 }
 
@@ -1956,10 +1903,6 @@ function bindCardHoverPreview(card, movieId) {
     }
   }, { passive: true });
 
-  /*
-    FIX: cerrar cuando el mouse sale realmente de card + overlay.
-    No cerrar si el destino es el overlay.
-  */
   card.addEventListener("mouseleave", (ev) => {
     registrarPointerHover(ev);
 
@@ -1971,10 +1914,6 @@ function bindCardHoverPreview(card, movieId) {
     clearTimeout(card.__hoverCloseTimer);
 
     card.__hoverCloseTimer = setTimeout(() => {
-      /*
-        Cierre animado:
-        NO usamos inmediato, así el overlay hace la animación inversa.
-      */
       cerrarOverlayHoverTarjeta(card, {
         forzar: true
       });
@@ -1982,7 +1921,11 @@ function bindCardHoverPreview(card, movieId) {
   }, { passive: true });
 
   card.addEventListener("focusin", () => {
-    const overlay = card.querySelector(".overlay-hover-tarjeta");
+    let overlay = null;
+    document.querySelectorAll(".overlay-hover-tarjeta").forEach(n => {
+      if (n.__hostCard === card) overlay = n;
+    });
+
     if (overlay?.classList?.contains?.("overlay-hover-abierto")) {
       mantenerHoverVivo(card, 1500);
       return;
@@ -2065,7 +2008,10 @@ function instalarLimpiezaGlobalHoverTarjeta() {
 
   window.addEventListener("resize", () => {
     document.querySelectorAll(".card.tarjeta-hover-host").forEach((card) => {
-      const overlay = card.querySelector(".overlay-hover-tarjeta");
+      let overlay = null;
+      document.querySelectorAll(".overlay-hover-tarjeta").forEach(n => {
+        if (n.__hostCard === card) overlay = n;
+      });
 
       if (overlay?.classList.contains("overlay-hover-abierto")) {
         posicionarOverlayHoverTarjeta(card, overlay);
@@ -2527,7 +2473,12 @@ function buildCarousel(row) {
 
   const onScroll = () => {
     if (row.__arrowRaf) cancelAnimationFrame(row.__arrowRaf);
-    row.__arrowRaf = requestAnimationFrame(() => updateCarouselArrows(row));
+    row.__arrowRaf = requestAnimationFrame(() => {
+      updateCarouselArrows(row);
+      if (__tarjetaHoverActiva && row.contains(__tarjetaHoverActiva)) {
+        cerrarOverlayHoverTarjeta(__tarjetaHoverActiva, { inmediato: true, forzar: true });
+      }
+    });
   };
 
   const onResize = () => {

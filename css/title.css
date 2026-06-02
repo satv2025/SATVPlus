@@ -1251,3 +1251,50 @@ a#watch-btn[data-mode="status-clickable"] {
         line-clamp: 4;
     }
 }
+
+/* =========================
+   PISADO DE COLORES
+   ========================= */
+
+   /* --- OVERRIDES A GRISES (title.css) --- */
+   :root {
+       --satvblue: #333 !important;
+   }
+
+   /* Botones y Chips */
+   .btn-primary,
+   .btn-ghost,
+   .dropdown-btn,
+   .season-chip,
+   .season-chip.active {
+       background: #fff !important;
+       color: #000 !important;
+       border-color: #fff !important;
+   }
+
+   .btn-primary:hover,
+   .btn-ghost:hover,
+   .dropdown-btn:hover,
+   .season-chip:hover {
+       background: #dedede !important;
+       color: #000 !important;
+       border-color: #dedede !important;
+   }
+
+   /* Dropdown active */
+   .dropdown-item.active {
+       background: #333 !important;
+       color: #fff !important;
+   }
+
+   /* Progress Fill (Sin azul, blanco puro) */
+   .episode-progress-bar {
+       background: #fff !important;
+       background-image: none !important;
+       box-shadow: none !important;
+   }
+
+   /* Separadores */
+   .separator {
+       border-color: #333 !important;
+   }
