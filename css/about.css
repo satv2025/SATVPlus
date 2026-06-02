@@ -13,13 +13,13 @@
    ========================================================= */
 
 /* ================= TOKENS ================= */
-:root {
-    --bg: #07090d;
-    --panel: #0e1420;
-    --panel2: #111724;
+Tokens:root {
+    --bg: #010101;
+    --panel: #101010;
+    --panel2: #141414;
     --text: #f5f7fb;
     --muted: #b6bfd1;
-    --satvblue: #2563eb;
+    --satvblue: #222222;
     --line: rgba(255, 255, 255, .08);
     --shadow: 0 18px 55px rgba(0, 0, 0, .34);
 
@@ -29,7 +29,7 @@
     --ep-radius: .25em;
 
     /* Hero */
-    --hero-overlay: #07090d;
+    --hero-overlay: #010101;
 
     /* carousel tuning */
     --edge-fade: 120px;
@@ -284,7 +284,7 @@ img.brand-logo,
     height: 12px;
     border-radius: 50%;
     background: var(--satvblue);
-    box-shadow: 0 0 0 6px #2563eb63;
+    box-shadow: 0 0 0 6px #FFFFFF63;
 }
 
 .navlink {
@@ -352,11 +352,11 @@ button#btn-logout:hover {
 }
 
 button#btn-logout {
-    background: #2563eb;
+    background: #FFFFFF;
 }
 
 .pill {
-    background: #2563eb;
+    background: #FFFFFF;
     padding: 10px 12px;
     border-radius: var(--ep-radius);
     color: #ffffff;
@@ -371,7 +371,7 @@ button#btn-logout {
 
 a.pill.profile-link:hover {
     background: #fff;
-    color: #2563eb;
+    color: #FFFFFF;
 }
 
 /* ================= HERO (REHECHO, MISMA UI) ================= */
@@ -428,11 +428,11 @@ a.pill.profile-link:hover {
 
     /* fallback */
     background: linear-gradient(to top,
-            rgba(7, 9, 13, 1) 0%,
-            rgba(7, 9, 13, .94) 28%,
-            rgba(7, 9, 13, .66) 55%,
-            rgba(7, 9, 13, .22) 78%,
-            rgba(7, 9, 13, 0) 100%);
+            rgba(1, 1, 1, 1) 0%,
+            rgba(1, 1, 1, .94) 28%,
+            rgba(1, 1, 1, .66) 55%,
+            rgba(1, 1, 1, .22) 78%,
+            rgba(1, 1, 1, 0) 100%);
 
     /* tu color-mix */
     background: linear-gradient(to top,
@@ -776,12 +776,12 @@ a.pill.profile-link:hover {
     border-radius: inherit;
     transition: width .25s ease;
 
-    background: linear-gradient(90deg, #00eaff, #2563eb);
+    background: linear-gradient(90deg, #00eaff, #FFFFFF);
     box-shadow:
         0 0 4px #00eaff,
         0 0 8px #00eaff,
-        0 0 16px #2563eb,
-        0 0 24px #2563eb;
+        0 0 16px #FFFFFF,
+        0 0 24px #FFFFFF;
 }
 
 /* ================= FORMS ================= */
@@ -1473,7 +1473,7 @@ media-player {
     inset: -1px;
     z-index: 1;
     pointer-events: none;
-    background: linear-gradient(to top, #07090d 0%, rgba(7, 9, 13, 0.9) 30%, rgba(7, 9, 13, 0.5) 65%, rgba(7, 9, 13, 0) 100%) !important;
+    background: linear-gradient(to top, #07090d 0%, rgba(1, 1, 1, 0.9) 30%, rgba(1, 1, 1, 0.5) 65%, rgba(1, 1, 1, 0) 100%) !important;
 
     /* antes: height:21em + margin-top:39em (rompía) */
     top: auto !important;
@@ -3061,7 +3061,7 @@ body.search-open {
     height: 42px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, .22);
-    background: rgba(7, 9, 13, .68);
+    background: rgba(1, 1, 1, .68);
     backdrop-filter: blur(8px);
     color: #fff;
 
@@ -3093,7 +3093,7 @@ body.search-open {
 }
 
 .card-quick-plus-btn:hover {
-    background: rgba(7, 9, 13, .92);
+    background: rgba(1, 1, 1, .92);
     border-color: #fff;
     transform: scale(1.06);
 }
@@ -3249,10 +3249,10 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
     height: clamp(120px, 40%, 220px);
     pointer-events: none;
     background: linear-gradient(to top,
-            rgba(7, 9, 13, 1) 0%,
-            rgba(7, 9, 13, .78) 38%,
-            rgba(7, 9, 13, .24) 72%,
-            rgba(7, 9, 13, 0) 100%);
+            rgba(1, 1, 1, 1) 0%,
+            rgba(1, 1, 1, .78) 38%,
+            rgba(1, 1, 1, .24) 72%,
+            rgba(1, 1, 1, 0) 100%);
 }
 
 /* Volume */
@@ -3381,7 +3381,7 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
     height: 42px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, .22);
-    background: rgba(7, 9, 13, .68);
+    background: rgba(1, 1, 1, .68);
     backdrop-filter: blur(8px);
     color: #fff;
 
@@ -3413,7 +3413,7 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 }
 
 .card-quick-plus-btn:hover {
-    background: rgba(7, 9, 13, .92);
+    background: rgba(1, 1, 1, .92);
     border-color: #fff;
     transform: scale(1.06);
 }
@@ -3573,10 +3573,10 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
     height: 21em;
     pointer-events: none;
     background: linear-gradient(to top,
-            rgba(7, 9, 13, 1) 0%,
-            rgba(7, 9, 13, .78) 38%,
-            rgba(7, 9, 13, .24) 72%,
-            rgba(7, 9, 13, 0) 100%);
+            rgba(1, 1, 1, 1) 0%,
+            rgba(1, 1, 1, .78) 38%,
+            rgba(1, 1, 1, .24) 72%,
+            rgba(1, 1, 1, 0) 100%);
 }
 
 /* Volume */

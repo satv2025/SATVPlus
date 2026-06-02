@@ -70,7 +70,7 @@ span.meta-dropitem {
     inset: 0;
     pointer-events: none;
     z-index: 1;
-    background: linear-gradient(to top, rgb(7 9 13 / 1) 0%, rgb(7 9 13 / 0.96) 8%, rgb(7 9 13 / 0.88) 16%, rgb(7 9 13 / 0.72) 28%, rgb(7 9 13 / 0.50) 42%, rgb(7 9 13 / 0.28) 58%, rgb(7 9 13 / 0.12) 74%, rgb(7 9 13 / 0.03) 88%, rgb(7 9 13 / 0) 100%);
+    background: linear-gradient(to top, rgb(1 1 1 / 1) 0%, rgb(1 1 1 / 0.96) 8%, rgb(1 1 1 / 0.88) 16%, rgb(1 1 1 / 0.72) 28%, rgb(1 1 1 / 0.50) 42%, rgb(1 1 1 / 0.28) 58%, rgb(1 1 1 / 0.12) 74%, rgb(1 1 1 / 0.03) 88%, rgb(1 1 1 / 0) 100%);
 }
 
 .title-hero-inner {
@@ -149,7 +149,7 @@ span.meta-dropitem {
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: linear-gradient(to top, rgb(7 9 13 / 1) 0%, rgb(7 9 13 / 0.96) 8%, rgb(7 9 13 / 0.88) 16%, rgb(7 9 13 / 0.72) 28%, rgb(7 9 13 / 0.50) 42%, rgb(7 9 13 / 0.28) 58%, rgb(7 9 13 / 0.12) 74%, rgb(7 9 13 / 0.03) 88%, rgb(7 9 13 / 0) 100%);
+    background: linear-gradient(to top, rgb(1 1 1 / 1) 0%, rgb(1 1 1 / 0.96) 8%, rgb(1 1 1 / 0.88) 16%, rgb(1 1 1 / 0.72) 28%, rgb(1 1 1 / 0.50) 42%, rgb(1 1 1 / 0.28) 58%, rgb(1 1 1 / 0.12) 74%, rgb(1 1 1 / 0.03) 88%, rgb(1 1 1 / 0) 100%);
 }
 
 .title-hero-inner {
@@ -235,7 +235,7 @@ a#watch-btn[data-mode="countdown"] {
 }
 
 .btn-primary {
-    background: #2563eb;
+    background: #FFF;
     color: #fff;
     border-color: transparent;
 }
@@ -454,7 +454,7 @@ a#watch-btn[data-mode="countdown"] {
 .separator {
     height: 1px;
     margin: 1rem 0.8em;
-    border: 1px solid #2563eb;
+    border: 1px solid #FFF;
 }
 
 .dropdown-item.dropdown-all {
@@ -616,7 +616,7 @@ a#watch-btn[data-mode="countdown"] {
 #episodes-grid .episode-card .episode-progress-bar {
     height: 100%;
     width: 0;
-    background: linear-gradient(90deg, #00eaff, #2563eb);
+    background: linear-gradient(90deg, #00eaff, #FFF);
     border-radius: inherit;
 }
 
@@ -1256,45 +1256,45 @@ a#watch-btn[data-mode="status-clickable"] {
    PISADO DE COLORES
    ========================= */
 
-   /* --- OVERRIDES A GRISES (title.css) --- */
-   :root {
-       --satvblue: #333 !important;
-   }
+/* --- OVERRIDES A GRISES (title.css) --- */
+:root {
+    --satvblue: #333 !important;
+}
 
-   /* Botones y Chips */
-   .btn-primary,
-   .btn-ghost,
-   .dropdown-btn,
-   .season-chip,
-   .season-chip.active {
-       background: #fff !important;
-       color: #000 !important;
-       border-color: #fff !important;
-   }
+/* Botones y Chips */
+.btn-primary,
+.btn-ghost,
+.dropdown-btn,
+.season-chip,
+.season-chip.active {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #fff !important;
+}
 
-   .btn-primary:hover,
-   .btn-ghost:hover,
-   .dropdown-btn:hover,
-   .season-chip:hover {
-       background: #dedede !important;
-       color: #000 !important;
-       border-color: #dedede !important;
-   }
+.btn-primary:hover,
+.btn-ghost:hover,
+.dropdown-btn:hover,
+.season-chip:hover {
+    background: #dedede !important;
+    color: #000 !important;
+    border-color: #dedede !important;
+}
 
-   /* Dropdown active */
-   .dropdown-item.active {
-       background: #333 !important;
-       color: #fff !important;
-   }
+/* Dropdown active */
+.dropdown-item.active {
+    background: #333 !important;
+    color: #fff !important;
+}
 
-   /* Progress Fill (Sin azul, blanco puro) */
-   .episode-progress-bar {
-       background: #fff !important;
-       background-image: none !important;
-       box-shadow: none !important;
-   }
+/* Progress Fill (Sin azul, blanco puro) */
+.episode-progress-bar {
+    background: #fff !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
 
-   /* Separadores */
-   .separator {
-       border-color: #333 !important;
-   }
+/* Separadores */
+.separator {
+    border-color: #333 !important;
+}
