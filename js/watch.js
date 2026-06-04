@@ -38,7 +38,8 @@ const DB = {
       releaseYear: "release_year",
       liveMode: "live_mode",
       liveStartsAt: "live_starts_at",
-      collectionId: "collection_id"
+      collectionId: "collection_id",
+      isObfitContain: "is_obfit_contain"
     }
   },
   episodes: {
@@ -453,7 +454,8 @@ async function fetchMovieById(movieId) {
           m.releaseYear,
           m.liveMode,
           m.liveStartsAt,
-          m.collectionId
+          m.collectionId,
+          m.isObfitContain
         ].join(",")
       )
       .eq(m.id, movieId)
@@ -628,7 +630,8 @@ async function fetchCollectionItemsFromMovies(collectionId) {
             m.durationMinutes,
             m.createdAt,
             m.collectionId,
-            m.category
+            m.category,
+            m.isObfitContain
           ].join(",")
         )
         .eq(m.collectionId, collectionId)
@@ -676,7 +679,8 @@ function buildAkiraProps({
   liveStartsAt = null,
   isCollectionMode = false,
   collectionLabel = "Colección",
-  collectionId = null
+  collectionId = null,
+  isObfitContain = false
 }) {
   const src = proxifyRemoteUrl(srcUrl);
   const subtitles = normalizeSubtitlesFromVtt(vttUrlFromSupabase);
@@ -712,7 +716,8 @@ function buildAkiraProps({
 
     isCollectionMode: !!isCollectionMode,
     collectionLabel,
-    collectionId: collectionId || null
+    collectionId: collectionId || null,
+    isObfitContain: !!isObfitContain
   };
 
   return props;
@@ -742,7 +747,8 @@ function movieToPlayerProps(
     vttUrlFromSupabase: vttFromSupabase,
     allowThumbsOnLocal: forceThumbsLocal,
     isLiveMode,
-    liveStartsAt
+    liveStartsAt,
+    isObfitContain: movie[m.isObfitContain]
   });
 
   props.onBack = () => window.history.back();
@@ -846,7 +852,8 @@ function collectionMovieToPlayerProps(
     liveStartsAt,
     isCollectionMode: true,
     collectionLabel: collectionMeta?.[c?.title] || "Colección",
-    collectionId
+    collectionId,
+    isObfitContain: movie[m.isObfitContain]
   });
 
   props.onBack = () => window.history.back();
@@ -1151,19 +1158,24 @@ function shouldForceContainByAspect(video) {
 }
 
 function applyAspectModeFromVideo(video) {
+  // 1. Leemos si Supabase dice que hay que forzar el contain
+  const forceFromDB = !!window.__SATV_WATCH_LAST_PROPS__?.isObfitContain;
+
   const info = getVideoAspectInfo(video);
-  if (!info) {
+  if (!info && !forceFromDB) {
     debugLog("[watch][aspect] metadata no disponible todavía");
     return;
   }
 
-  const forceContain = shouldForceContainByAspect(video);
+  // 2. Si forceFromDB es true, usa contain. Si no, usa tu detector de aspect ratio.
+  const forceContain = forceFromDB || shouldForceContainByAspect(video);
   setForceVideoContain(forceContain);
 
   infoLog("[watch][aspect] resolución detectada:", {
-    width: info.width,
-    height: info.height,
-    ratio: Number(info.ratio.toFixed(4)),
+    width: info?.width,
+    height: info?.height,
+    ratio: info ? Number(info.ratio.toFixed(4)) : null,
+    forcedByDatabase: forceFromDB,
     mode: forceContain ? "contain" : "default"
   });
 }
