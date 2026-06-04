@@ -1113,10 +1113,17 @@ function ensureAspectContainStyle() {
 
   const style = document.createElement("style");
   style.id = "satv-watch-aspect-style";
+
+  // Reforzamos la regla para apuntar directamente a .akira-video,
+  // a cualquier <video> dentro de .akira-video (por si es un contenedor),
+  // y a la etiqueta genérica de <video>.
   style.textContent = `
     #${ROOT_ID}[data-force-video-contain="1"] .akira-video,
+    #${ROOT_ID}[data-force-video-contain="1"] .akira-video video,
     #${ROOT_ID}[data-force-video-contain="1"] video {
       object-fit: contain !important;
+      width: 100% !important;
+      height: 100% !important;
     }
   `;
   document.head.appendChild(style);
