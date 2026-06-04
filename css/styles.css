@@ -355,12 +355,18 @@ img.brand-logo,
 }
 
 .btn.ghost {
-  background: rgba(255, 255, 255, .06);
+  color: #000 !important;
+  background: #fff !important;
   border: none !important;
 }
 
+button#btn-logout:hover {
+  color: #000 !important;
+  background: #dedede !important;
+}
+
 .btn:hover {
-  color: var(--satvblue);
+  color: #000;
   background: #dedede;
 }
 
@@ -369,15 +375,15 @@ button#btn-logout:hover {
 }
 
 button#btn-logout {
-  background: #222222;
-  color: #fff;
+  background: #fff;
+  color: #000;
 }
 
 .pill {
-  background: #222222;
+  background: #fff;
   padding: 10px 12px;
   border-radius: var(--ep-radius);
-  color: #ffffff;
+  color: #000;
   font-size: 15px;
   text-decoration: none;
   opacity: 1;
@@ -388,8 +394,8 @@ button#btn-logout {
 }
 
 a.pill.profile-link:hover {
-  background: #fff;
-  color: #222222;
+  background: #dedede;
+  color: #000;
 }
 
 /* ================= HERO (REHECHO, MISMA UI) ================= */
