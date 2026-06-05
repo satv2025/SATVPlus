@@ -1370,56 +1370,76 @@ async function boot() {
 }
 
 /* ============================================================
- * Escudo de Buffer: 15 segundos obligatorios + detección de trabe
+ * Escudo de Buffer: mínimo obligatorio 15-20 segundos
  * ============================================================ */
 (function () {
   const overlay = document.getElementById('watch-loading-overlay');
   if (!overlay) return;
 
-  // Marcador: ¿A qué hora empezó la carga?
-  const startTime = Date.now();
-  const MIN_WAIT_MS = 15000; // 15 segundos exactos
+  const MIN_WAIT_MS = 18000; // <- 18 segundos fijos (podés usar 15000 o 20000)
 
   const originalHide = window.hideWatchLoadingOverlay;
 
-  window.hideWatchLoadingOverlay = function () {
-    const video = document.querySelector("#akira-player-root video");
-    const elapsed = Date.now() - startTime;
-    const hasPassed15Secs = elapsed >= MIN_WAIT_MS;
+  let forceUnlocked = false;
 
-    // Lógica del Escudo:
-    // Si no pasaron 15s O el video no ha arrancado (currentTime < 0.3), bloqueamos.
-    // (Si ya pasaron 15s Y el video está reproduciendo, permitimos cerrar).
-    if (!hasPassed15Secs || (video && (video.paused || video.currentTime < 0.3))) {
+  // Bloqueamos cualquier intento de cerrar antes del tiempo
+  window.hideWatchLoadingOverlay = function () {
+    const elapsed = Date.now();
+
+    if (!forceUnlocked) {
       overlay.style.visibility = "visible";
       overlay.style.opacity = "1";
       overlay.classList.remove('middle-buffer');
-
-      // Reintento: chequeamos cada 500ms
-      setTimeout(window.hideWatchLoadingOverlay, 500);
       return;
     }
 
-    // Si ya pasaron los 15s Y el video está ok: ocultamos todo
+    // Ya pasó el tiempo -> permitimos ocultar
     overlay.classList.remove('middle-buffer');
     overlay.style.visibility = "hidden";
     overlay.style.opacity = "0";
-    if (typeof originalHide === 'function') originalHide();
+
+    if (typeof originalHide === 'function') {
+      originalHide();
+    }
   };
 
-  // Monitor para detectar el "trabe" (waiting) a mitad de peli
+  // Desbloqueo FORZADO luego del tiempo exacto
+  setTimeout(() => {
+    forceUnlocked = true;
+    window.hideWatchLoadingOverlay();
+  }, MIN_WAIT_MS);
+
+  // =========================
+  // Detector de buffering
+  // =========================
   const initMonitor = setInterval(() => {
     const video = document.querySelector("#akira-player-root video");
+
     if (video) {
       let yaArranco = false;
-      video.addEventListener("playing", () => { yaArranco = true; });
+
+      video.addEventListener("playing", () => {
+        yaArranco = true;
+
+        // Si ya se cumplió el tiempo, ocultamos
+        if (forceUnlocked) {
+          window.hideWatchLoadingOverlay();
+        }
+      });
 
       video.addEventListener("waiting", () => {
-        // Si se traba DESPUÉS de haber arrancado, agregamos la clase
         if (yaArranco) {
           overlay.classList.add('middle-buffer');
           overlay.style.visibility = "visible";
           overlay.style.opacity = "1";
+        }
+      });
+
+      video.addEventListener("playing", () => {
+        if (forceUnlocked) {
+          overlay.classList.remove('middle-buffer');
+          overlay.style.visibility = "hidden";
+          overlay.style.opacity = "0";
         }
       });
 
