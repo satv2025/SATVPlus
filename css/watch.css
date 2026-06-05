@@ -23,18 +23,21 @@ body {
     position: relative;
 }
 
-/* ✅ Loader global de watch (se mantiene hasta que el video entra en playing) */
+/* ✅ Loader global de watch ultra prioritario */
 #watch-loading-overlay {
     position: fixed;
     inset: 0;
-    z-index: 99990;
+    z-index: 2147483647 !important;
+    /* <--- CLAVE: Tapa cualquier cosa que inyecte Akira */
     display: grid;
     place-items: center;
-    background: #010101;
+    background: #000000 !important;
+    /* Fondo negro puro */
     opacity: 0;
     visibility: hidden;
     transition: opacity .22s ease, visibility .22s ease;
-    pointer-events: none;
+    pointer-events: all;
+    /* Bloquea clicks en el reproductor de fondo */
     box-sizing: border-box;
 }
 
@@ -43,34 +46,28 @@ body {
     visibility: visible;
 }
 
-.watch-loading-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    color: #FFF;
-    padding: 16px;
-}
-
+/* Spinner modificado */
 .watch-loading-spinner {
     width: 84px;
     height: 84px;
     border-radius: 999px;
-    border: 5px solid rgba(37, 100, 235, 0);
-    border-top-color: #FFF;
+    border: 5px solid rgba(255, 255, 255, 0.15) !important;
+    /* Base blanca al 15% */
+    border-top-color: #FFFFFF !important;
+    /* Giro blanco puro */
     animation: satv-watch-spin .8s linear infinite;
     box-sizing: border-box;
 }
 
+/* Texto del loader (opcional) */
 .watch-loading-text {
-    font-size: 12px;
+    font-size: 14px !important;
     opacity: .9;
-    color: #b3b7bb;
+    color: #FFFFFF !important;
     text-align: center;
     max-width: min(92vw, 520px);
     word-break: break-word;
+    margin-top: 12px;
 }
 
 @keyframes satv-watch-spin {

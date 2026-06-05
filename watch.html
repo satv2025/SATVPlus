@@ -186,9 +186,6 @@
           if (!video || video.__satvDebugBound) return;
           video.__satvDebugBound = true;
 
-          hideWatchLoaderIfVideoPlaying(video);
-          video.addEventListener("playing", () => hideWatchLoaderIfVideoPlaying(video));
-
           const events = [
             "loadstart", "loadedmetadata", "loadeddata", "canplay", "canplaythrough",
             "play", "playing", "pause", "waiting", "stalled", "suspend", "emptied",
