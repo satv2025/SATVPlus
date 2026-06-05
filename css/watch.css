@@ -172,3 +172,9 @@ body {
 .akira-video.boltrue {
     object-fit: contain !important;
 }
+
+/* Esto hace que cuando se traba (waiting), el fondo sea transparente 
+   y solo se vea el spinner (o lo que tengas en .watch-loading-card) */
+#watch-loading-overlay.middle-buffer {
+    background: transparent !important;
+}
