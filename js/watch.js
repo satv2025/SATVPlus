@@ -1376,7 +1376,7 @@ async function boot() {
   const overlay = document.getElementById('watch-loading-overlay');
   if (!overlay) return;
 
-  const MIN_WAIT_MS = 18000; // <- 18 segundos fijos (podés usar 15000 o 20000)
+  const MIN_WAIT_MS = 15600; // <- 18 segundos fijos (podés usar 15000 o 20000)
 
   const originalHide = window.hideWatchLoadingOverlay;
 
