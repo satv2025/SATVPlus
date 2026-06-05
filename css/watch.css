@@ -171,3 +171,7 @@ body {
 #satv-debug-overlay .line.ok {
     color: #86efac;
 }
+
+.akira-video.boltrue {
+    object-fit: contain !important;
+}
