@@ -925,6 +925,7 @@ const TEXTOS_HOVER_TARJETA = {
   reproducir: "Reproducir",
   agregarMiLista: "Agregar a Mi Lista",
   serie: "Serie",
+  temporada: "temporada",
   temporadas: "temporadas",
   episodio: "episodio",
   episodios: "episodios",
@@ -1128,20 +1129,24 @@ function construirTextoDuracionHover(movie = {}) {
     const cantidadTemporadas = Number(meta?.seasons_count || movie?.seasons_count || 0);
     const cantidadEpisodios = Number(meta?.episodes_count || movie?.episodes_count || 0);
 
-    if (cantidadTemporadas > 2) {
+    // REGLA 1: Si tiene 2 o más temporadas, mostramos la cantidad de temporadas
+    if (cantidadTemporadas >= 2) {
       return `${cantidadTemporadas} ${TEXTOS_HOVER_TARJETA.temporadas}`;
     }
 
+    // REGLA 2: Si tiene 1 temporada (o dice 0 pero tiene episodios), mostramos los episodios
     if (cantidadEpisodios > 0) {
       return `${cantidadEpisodios} ${cantidadEpisodios === 1
-        ? TEXTOS_HOVER_TARJETA.episodio
-        : TEXTOS_HOVER_TARJETA.episodios
+          ? TEXTOS_HOVER_TARJETA.episodio
+          : TEXTOS_HOVER_TARJETA.episodios
         }`;
     }
 
+    // Fallback por si no hay metadata de nada
     return TEXTOS_HOVER_TARJETA.serie;
   }
 
+  // Lógica de películas (queda igual)
   if (movie?.duration_text) {
     return String(movie.duration_text);
   }
