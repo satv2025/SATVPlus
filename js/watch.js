@@ -1125,8 +1125,8 @@ function applyAspectModeFromVideo(video) {
 
   const enabled = window.__SATV_WATCH_LAST_PROPS__?.video_fit === "contain";
 
+  // Esto es lo que hace la magia de poner o sacar la clase "boltrue"
   video.classList.toggle("boltrue", enabled);
-  setForceVideoContain(enabled);
 }
 
 function getVideoAspectInfo(video) {
@@ -1146,7 +1146,7 @@ function installAspectAutoDetection() {
   const root = getRootEl();
   if (!root) return;
 
-  ensureAspectContainStyle();
+  // ELIMINADO: ensureAspectContainStyle(); <-- Esto rompía todo
 
   let lastVideo = null;
 
