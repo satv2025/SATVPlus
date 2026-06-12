@@ -1290,3 +1290,11 @@ a#watch-btn[data-mode="status-clickable"] {
 .separator {
     border-color: #333 !important;
 }
+
+.minfo-link {
+    cursor: pointer;
+}
+
+.minfo-link:hover {
+    text-decoration: underline;
+}

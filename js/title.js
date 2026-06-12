@@ -55,8 +55,157 @@ function row(label, value, esc) {
     return `
     <div class="title-extra-row">
       <div class="title-extra-label">${esc(label)}</div>
-      <div class="title-extra-value">${esc(value)}</div>
+      <div class="title-extra-value">${renderSmartText(value, esc)}</div>
     </div>`;
+}
+
+function looksLikeHtml(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw || !raw.includes("<") || !raw.includes(">")) return false;
+
+    const template = document.createElement("template");
+    template.innerHTML = raw;
+
+    return [...template.content.childNodes].some(
+        node => node.nodeType === Node.ELEMENT_NODE
+    );
+}
+
+function isSafeUrl(rawUrl) {
+    try {
+        const url = new URL(rawUrl, window.location.origin);
+        return ["http:", "https:", "mailto:"].includes(url.protocol);
+    } catch {
+        return false;
+    }
+}
+
+function extractSafeOnclickUrl(code) {
+    const raw = String(code || "").trim();
+
+    let match =
+        raw.match(/^window\.location\.href\s*=\s*(['"])(https?:\/\/[^'"]+)\1\s*;?$/i) ||
+        raw.match(/^location\.href\s*=\s*(['"])(https?:\/\/[^'"]+)\1\s*;?$/i);
+
+    if (match) return match[2];
+
+    match = raw.match(
+        /^window\.open\(\s*(['"])(https?:\/\/[^'"]+)\1\s*(?:,\s*(['"])_blank\3)?(?:,\s*(['"])[^'"]*\4)?\s*\)\s*;?$/i
+    );
+
+    if (match) return match[2];
+
+    return "";
+}
+
+function sanitizeRichHtml(html) {
+    const allowedTags = new Set([
+        "A",
+        "SPAN",
+        "B",
+        "STRONG",
+        "I",
+        "EM",
+        "BR",
+        "P",
+        "UL",
+        "OL",
+        "LI",
+        "SMALL",
+        "DIV"
+    ]);
+
+    const allowedAttrs = {
+        A: new Set(["href", "target", "rel", "class", "title"]),
+        SPAN: new Set(["class", "title", "onclick"]),
+        DIV: new Set(["class", "title"]),
+        P: new Set(["class", "title"]),
+        SMALL: new Set(["class", "title"]),
+        B: new Set(["class", "title"]),
+        STRONG: new Set(["class", "title"]),
+        I: new Set(["class", "title"]),
+        EM: new Set(["class", "title"]),
+        UL: new Set(["class", "title"]),
+        OL: new Set(["class", "title"]),
+        LI: new Set(["class", "title"])
+    };
+
+    const template = document.createElement("template");
+    template.innerHTML = String(html ?? "");
+
+    function walk(parent) {
+        [...parent.childNodes].forEach((node) => {
+            if (node.nodeType === Node.TEXT_NODE) return;
+
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+                node.remove();
+                return;
+            }
+
+            const tag = node.tagName.toUpperCase();
+
+            if (!allowedTags.has(tag)) {
+                node.replaceWith(document.createTextNode(node.textContent || ""));
+                return;
+            }
+
+            [...node.attributes].forEach((attr) => {
+                const name = attr.name.toLowerCase();
+                const value = attr.value;
+
+                const tagAttrs = allowedAttrs[tag] || new Set();
+
+                if (!tagAttrs.has(name)) {
+                    node.removeAttribute(attr.name);
+                    return;
+                }
+
+                if (name === "href" && !isSafeUrl(value)) {
+                    node.removeAttribute(attr.name);
+                    return;
+                }
+
+                if (name === "onclick") {
+                    const safeUrl = extractSafeOnclickUrl(value);
+
+                    if (!safeUrl || !isSafeUrl(safeUrl)) {
+                        node.removeAttribute(attr.name);
+                    }
+                }
+            });
+
+            if (tag === "A" && node.getAttribute("target") === "_blank") {
+                node.setAttribute("rel", "noopener noreferrer");
+            }
+
+            walk(node);
+        });
+    }
+
+    walk(template.content);
+
+    return template.innerHTML;
+}
+
+function renderSmartText(value, esc) {
+    const raw = String(value ?? "");
+    if (!raw.trim()) return "";
+
+    return looksLikeHtml(raw)
+        ? sanitizeRichHtml(raw)
+        : esc(raw);
+}
+
+function setSmartText(targetEl, value) {
+    if (!targetEl) return;
+
+    const raw = String(value ?? "");
+
+    if (looksLikeHtml(raw)) {
+        targetEl.innerHTML = sanitizeRichHtml(raw);
+    } else {
+        targetEl.textContent = raw;
+    }
 }
 
 function isPositiveIntegerLike(value) {
