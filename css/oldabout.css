@@ -197,3 +197,24 @@ p {
         line-height: 1.54;
     }
 }
+
+
+
+----------------
+
+
+import re from pathlib import Path import spotipy from spotipy.oauth2 import SpotifyClientCredentials #=========================# CONFIGURACIÓN #=========================CLIENT_ID="9208c596f8734f289313a2b4d6e2247b"
+CLIENT_SECRET="3232426e5e4d4e61b5b5d7f012c613d8"
+
+DESTINO=Path(r"F:\Sol Argentino TV - LIBRERIA DE AUDIO\Power Music Factory") ALBUM_URLS=[ "https://open.spotify.com/intl-es/album/62AIw9CMaruBkyaob9tlds?si=1qD4ytmLQZesu6P7bpdGdQ",
+"https://open.spotify.com/intl-es/album/1aMak8En0NqZ3YiFcOCoYj?si=M-YD7hjYTEKxMitn4qbTwQ",
+"https://open.spotify.com/intl-es/album/6x00HBp8rqjxCaDySEATse?si=iK-JcEUhSvObLjY9yUL3lw",
+"https://open.spotify.com/intl-es/album/5y5Lu3Odi5JvLVcSTWUDD1?si=vGCJU8bdRcyTvmRXX8kcSA",
+] #=========================# FUNCIONES #=========================def limpiar_nombre(nombre: str) ->str: nombre=re.sub(r'[<>:"/\\|?*]', "_", nombre) nombre=re.sub(r"\s+", " ", nombre).strip() return nombre[:180] def album_id_desde_url(url: str) ->str: match=re.search(r"/album/([A-Za-z0-9]+)", url) if not match: raise ValueError(f"No pude extraer album ID de: {url}") return match.group(1) def obtener_tracks_album(sp, album_id: str): tracks=[] results=sp.album_tracks(album_id, limit=50) while results: tracks.extend(results["items"]) if results.get("next"): results=sp.next(results) else: break return tracks #=========================# MAIN #=========================def main(): if not CLIENT_ID or CLIENT_ID.startswith ("PEGAR_ACA"): raise RuntimeError("Falta pegar el CLIENT_ID.") if not CLIENT_SECRET or CLIENT_SECRET.startswith ("PEGAR_ACA"): raise RuntimeError("Falta pegar el CLIENT_SECRET.") DESTINO.mkdir(parents=True, exist_ok=True) sp=spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+    )) for url in ALBUM_URLS: album_id=album_id_desde_url(url) album=sp.album(album_id) tracks=obtener_tracks_album(sp, album_id) album_name=album["name"] folder_name=limpiar_nombre(album_name) album_dir=DESTINO / folder_name album_dir.mkdir(parents=True, exist_ok=True) txt_path=album_dir / "tracklist.txt"
+
+tracks_ordenados=sorted(tracks,
+    key=lambda t: (t.get("disc_number", 1),
+        t.get("track_number", 0))) with open(txt_path, "w", encoding="utf-8") as f: for track in tracks_ordenados: num=track.get("track_number", 0) name=track["name"] linea=f"{num:02d} {name}"
+f.write(linea + "\n") print(f"OK: {txt_path}") print("\nTODO TERMINADO.") if __name__=="__main__": main()
