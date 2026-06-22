@@ -2,9 +2,8 @@
 // SATV+ Watch loader
 // - Soporta movie / episode / series
 // - Soporta collection + movie
-// - En collection mode, el modal del player usa una lista obtenida desde public.movies
-//   filtrando por movies.collection_id = collections.id
-//   y navega con /watch?collection=<uuid>&movie=<uuid>
+// - SPA mode: cambia la URL sin recargar página y actualiza el player
+// - Fix UUID: limpia parámetros, tolera caracteres invisibles y acepta UUIDs flexibles
 
 import { supabase } from "./supabaseClient.js";
 
@@ -17,6 +16,13 @@ const NOW_URL = new URL(window.location.href);
 const DEBUG =
   NOW_URL.searchParams.get("debug") === "1" ||
   NOW_URL.searchParams.get("debug") === "true";
+
+/* ============================================================
+ * Estado SPA
+ * ============================================================ */
+let __watchRouteSeq = 0;
+let __satvBooted = false;
+let __satvAspectObserverInstalled = false;
 
 /* ============================================================
  * Esquema DB
@@ -75,9 +81,11 @@ const DB = {
 function debugLog(...args) {
   if (DEBUG) console.log(...args);
 }
+
 function warnLog(...args) {
   console.warn(...args);
 }
+
 function infoLog(...args) {
   console.log(...args);
 }
@@ -96,6 +104,7 @@ function showWatchLoadingOverlay(text = "") {
       return true;
     }
   } catch { }
+
   return false;
 }
 
@@ -106,19 +115,159 @@ function hideWatchLoadingOverlay() {
       return true;
     }
   } catch { }
+
   return false;
 }
 
-function setLoading() {
+
+/* ============================================================
+ * Fullscreen helpers
+ * ============================================================ */
+function getFullscreenElement() {
+  return (
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    document.msFullscreenElement ||
+    null
+  );
+}
+
+function isPlayerFullscreenActive() {
+  const fsEl = getFullscreenElement();
+  if (!fsEl) return false;
+
+  const root = getRootEl();
+  if (!root) return true;
+
+  return (
+    fsEl === root ||
+    root.contains?.(fsEl) ||
+    fsEl.contains?.(root)
+  );
+}
+
+function getRouteOverlayHost() {
+  const fsEl = getFullscreenElement();
+  if (fsEl && isPlayerFullscreenActive()) return fsEl;
+  return document.body;
+}
+
+function getPlayerShellForFullscreenRestore() {
+  const root = getRootEl();
+
+  return (
+    root?.querySelector?.(".akira-player-shell") ||
+    root?.querySelector?.(".akira-wrap") ||
+    root?.querySelector?.("[data-akira-player-shell]") ||
+    root?.querySelector?.("video")?.parentElement ||
+    root
+  );
+}
+
+async function restoreFullscreenIfNeeded(wasFullscreen) {
+  if (!wasFullscreen) return;
+  if (getFullscreenElement()) return;
+
+  const el = getPlayerShellForFullscreenRestore();
+
+  if (!el || !el.isConnected) {
+    warnLog("[watch] No se pudo restaurar fullscreen: shell desconectado");
+    return;
+  }
+
+  try {
+    await el.requestFullscreen?.();
+    debugLog("[watch] fullscreen restaurado");
+  } catch (e) {
+    warnLog("[watch] requestFullscreen bloqueado por navegador", e);
+  }
+}
+
+function ensureRouteSpinnerStyle() {
+  if (document.getElementById("satv-route-spinner-style")) return;
+
+  const style = document.createElement("style");
+  style.id = "satv-route-spinner-style";
+  style.textContent = `
+    @keyframes satv-spin {
+      to { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function showRouteLoadingOverlay() {
+  ensureRouteSpinnerStyle();
+
+  let overlay = document.getElementById("satv-route-loading-overlay");
+
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "satv-route-loading-overlay";
+    overlay.innerHTML = `
+      <div style="
+        width:84px;
+        height:84px;
+        border-radius:999px;
+        border:5px solid rgba(37, 100, 235, 0);
+        border-top-color:#FFFFFF;
+        animation:satv-spin .8s linear infinite;
+      "></div>
+    `;
+
+    overlay.style.cssText = `
+      position:fixed;
+      inset:0;
+      z-index:999999;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.55);
+      pointer-events:none;
+    `;
+  }
+
+  const host = getRouteOverlayHost();
+  if (host && overlay.parentElement !== host) {
+    host.appendChild(overlay);
+  }
+
+  overlay.style.display = "flex";
+}
+
+function hideRouteLoadingOverlay() {
+  const overlay = document.getElementById("satv-route-loading-overlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+function setLoading({ clearRoot = false } = {}) {
+  const fullscreenActive = isPlayerFullscreenActive();
   const usedGlobalOverlay = showWatchLoadingOverlay("");
 
   if (usedGlobalOverlay) {
+    // En fullscreen, los overlays fuera del elemento fullscreen pueden no verse.
+    // Por eso usamos también el overlay flotante dentro del player/fsEl.
+    if (fullscreenActive || !clearRoot) {
+      showRouteLoadingOverlay();
+      return;
+    }
+
     const root = getRootEl();
     if (root) root.innerHTML = "";
     return;
   }
 
   const root = getRootEl();
+  if (!root) return;
+
+  // En navegación SPA o fullscreen nunca destruimos el player.
+  // Borrar el nodo fullscreen hace que el navegador salga de fullscreen.
+  if (!clearRoot || fullscreenActive || root.querySelector("video")) {
+    showRouteLoadingOverlay();
+    return;
+  }
+
   root.innerHTML = `
     <div style="
       min-height:100vh;
@@ -135,14 +284,14 @@ function setLoading() {
         justify-content:center;
         gap:14px;
         font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-        color:#2563eb;
+        color:#FFFFFF;
       ">
         <div style="
           width:84px;
           height:84px;
           border-radius:999px;
           border:5px solid rgba(37, 100, 235, 0);
-          border-top-color:#2563eb;
+          border-top-color:#FFFFFF;
           animation:satv-spin .8s linear infinite;
         "></div>
         <div style="font-size:12px;opacity:.9;"></div>
@@ -155,9 +304,11 @@ function setLoading() {
 }
 
 function setError(message, details = "") {
+  hideRouteLoadingOverlay();
   hideWatchLoadingOverlay();
 
   const root = getRootEl();
+
   root.innerHTML = `
     <div style="
       min-height:100vh;display:flex;align-items:center;justify-content:center;
@@ -172,10 +323,11 @@ function setError(message, details = "") {
       ">
         <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Error al cargar reproducción</div>
         <div style="opacity:.95;margin-bottom:10px;">${escapeHtml(message)}</div>
-        ${details
-      ? `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;padding:12px;border-radius:10px;background:rgba(0,0,0);border:1px solid rgba(255,255,255,.08);font-size:12px;line-height:1.35;opacity:.95;">${escapeHtml(details)}</pre>`
-      : ""
-    }
+        ${
+          details
+            ? `<pre style="white-space:pre-wrap;word-break:break-word;margin:0;padding:12px;border-radius:10px;background:rgba(0,0,0);border:1px solid rgba(255,255,255,.08);font-size:12px;line-height:1.35;opacity:.95;">${escapeHtml(details)}</pre>`
+            : ""
+        }
       </div>
     </div>
   `;
@@ -213,6 +365,7 @@ function getAssetBaseUrl() {
  * ============================================================ */
 function getLiveStartDateFromRow(row, keyName = "live_starts_at") {
   if (!row) return null;
+
   const raw =
     row[keyName] ??
     row.live_starts_at ??
@@ -222,6 +375,7 @@ function getLiveStartDateFromRow(row, keyName = "live_starts_at") {
     null;
 
   if (!raw) return null;
+
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -232,21 +386,71 @@ function isUpcomingLiveFromRow(
 ) {
   const isLive = Boolean(row?.[liveModeKey] ?? row?.live_mode);
   if (!isLive) return false;
+
   const d = getLiveStartDateFromRow(row, liveStartsAtKey);
   if (!d) return false;
+
   return d.getTime() > Date.now();
 }
 
 /* ============================================================
  * Params / helpers
  * ============================================================ */
+function cleanParam(v) {
+  if (v == null) return null;
+
+  const s = String(v)
+    .normalize("NFKC")
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/^['"{\s]+/, "")
+    .replace(/['"}\s]+$/, "");
+
+  return s || null;
+}
+
+function normalizeUuidParam(v) {
+  const s = cleanParam(v);
+  if (!s) return null;
+
+  // Extrae un UUID aunque venga envuelto en comillas, objeto stringify, etc.
+  const match = s.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return match ? match[0].toLowerCase() : s;
+}
+
+function isUuid(v) {
+  const s = normalizeUuidParam(v);
+  if (!s) return false;
+
+  // Flexible: no exige versión/variant RFC, porque algunas DBs/fixtures generan UUID-like.
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+}
+
+function getSelectableId(value) {
+  if (!value) return null;
+
+  if (typeof value === "object") {
+    return normalizeUuidParam(
+      value.id ||
+      value.episodeId ||
+      value.movieId ||
+      value.contentId ||
+      value.value ||
+      null
+    );
+  }
+
+  return normalizeUuidParam(value);
+}
+
 function getParams() {
   const url = new URL(window.location.href);
+
   return {
-    movieId: url.searchParams.get("movie"),
-    episodeId: url.searchParams.get("episode"),
-    seriesId: url.searchParams.get("series"),
-    collectionId: url.searchParams.get("collection"),
+    movieId: normalizeUuidParam(url.searchParams.get("movie")),
+    episodeId: normalizeUuidParam(url.searchParams.get("episode")),
+    seriesId: normalizeUuidParam(url.searchParams.get("series")),
+    collectionId: normalizeUuidParam(url.searchParams.get("collection")),
     autoplay: url.searchParams.get("autoplay") !== "0",
     forceThumbsLocal: url.searchParams.get("forceThumbsLocal") === "1",
     probe: url.searchParams.get("probe") !== "0"
@@ -255,18 +459,48 @@ function getParams() {
 
 function buildWatchUrl(params) {
   const url = new URL(window.location.href);
+
+  url.pathname = "/watch";
   url.search = "";
+
   for (const [k, v] of Object.entries(params)) {
-    if (v != null && v !== "") url.searchParams.set(k, String(v));
+    const cleanValue = k === "movie" || k === "episode" || k === "series" || k === "collection"
+      ? normalizeUuidParam(v)
+      : cleanParam(v);
+
+    if (cleanValue != null && cleanValue !== "") {
+      url.searchParams.set(k, cleanValue);
+    }
   }
+
   return url.toString();
 }
 
-function isUuid(v) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    String(v || "")
-  );
+function navigateWatch(params, { replace = false, showOverlay = true } = {}) {
+  const nextUrl = buildWatchUrl(params);
+
+  if (nextUrl === window.location.href) {
+    return Promise.resolve();
+  }
+
+  if (replace) {
+    window.history.replaceState({ satvWatch: true }, "", nextUrl);
+  } else {
+    window.history.pushState({ satvWatch: true }, "", nextUrl);
+  }
+
+  return loadCurrentWatchRoute({
+    showOverlay,
+    reusePlayer: true
+  });
 }
+
+window.addEventListener("popstate", () => {
+  loadCurrentWatchRoute({
+    showOverlay: true,
+    reusePlayer: true
+  });
+});
 
 function safeArray(v) {
   return Array.isArray(v) ? v : [];
@@ -278,14 +512,18 @@ function isLikelyAbsoluteUrl(url) {
 
 function proxifyRemoteUrl(url) {
   if (!url) return undefined;
+
   const s = String(url).trim();
   return s || undefined;
 }
 
 function isThumbsVtt(url) {
   const s = String(url || "").toLowerCase();
+
   return (
-    s.includes("thumbs.vtt") || s.includes("thumbnail") || s.includes("thumbnails")
+    s.includes("thumbs.vtt") ||
+    s.includes("thumbnail") ||
+    s.includes("thumbnails")
   );
 }
 
@@ -322,9 +560,11 @@ function computeThumbnailsVtt(vttUrlFromSupabase, { allowOnLocal = false } = {})
 
 function withTimeout(promise, ms, label = "Operación") {
   let timer;
+
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error(`${label} excedió ${ms}ms`)), ms);
   });
+
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
@@ -372,7 +612,13 @@ async function awaitAkiraReadyAfterRender(renderResult, opts = {}) {
  * Probes
  * ============================================================ */
 async function probeM3u8(url) {
-  if (!url || !isLikelyAbsoluteUrl(url) || !/\.m3u8(\?|#|$)|\.mpd(\?|#|$)/i.test(url)) return;
+  if (
+    !url ||
+    !isLikelyAbsoluteUrl(url) ||
+    !/\.m3u8(\?|#|$)|\.mpd(\?|#|$)/i.test(url)
+  ) {
+    return;
+  }
 
   try {
     infoLog("[watch][probe] Probing stream:", url);
@@ -413,6 +659,7 @@ async function probeVtt(url) {
       mode: "cors",
       cache: "no-store"
     });
+
     const text = await res.text();
 
     infoLog("[watch][probe] vtt response:", {
@@ -436,6 +683,7 @@ async function probeVtt(url) {
  * ============================================================ */
 async function fetchMovieById(movieId) {
   const m = DB.movies.cols;
+
   const { data, error } = await withTimeout(
     supabase
       .from(DB.movies.table)
@@ -465,11 +713,13 @@ async function fetchMovieById(movieId) {
   );
 
   if (error) throw error;
+
   return data;
 }
 
 async function fetchSeriesById(seriesId) {
   const m = DB.movies.cols;
+
   const { data, error } = await withTimeout(
     supabase
       .from(DB.movies.table)
@@ -495,11 +745,13 @@ async function fetchSeriesById(seriesId) {
   );
 
   if (error) throw error;
+
   return data;
 }
 
 async function fetchEpisodeById(episodeId) {
   const e = DB.episodes.cols;
+
   const { data, error } = await withTimeout(
     supabase
       .from(DB.episodes.table)
@@ -523,16 +775,27 @@ async function fetchEpisodeById(episodeId) {
   );
 
   if (error) throw error;
+
   return data;
 }
 
 async function fetchEpisodesForSeries(seriesId) {
   const e = DB.episodes.cols;
+
   const { data, error } = await withTimeout(
     supabase
       .from(DB.episodes.table)
       .select(
-        [e.id, e.seriesId, e.season, e.episodeNumber, e.title, e.m3u8, e.vtt, e.sinopsis].join(",")
+        [
+          e.id,
+          e.seriesId,
+          e.season,
+          e.episodeNumber,
+          e.title,
+          e.m3u8,
+          e.vtt,
+          e.sinopsis
+        ].join(",")
       )
       .eq(e.seriesId, seriesId)
       .order(e.season, { ascending: true })
@@ -561,7 +824,15 @@ async function fetchRecommendations(currentContentId = null) {
   let q = supabase
     .from(DB.movies.table)
     .select(
-      [m.id, m.title, m.description, m.thumbnail, m.banner, m.category, m.createdAt].join(",")
+      [
+        m.id,
+        m.title,
+        m.description,
+        m.thumbnail,
+        m.banner,
+        m.category,
+        m.createdAt
+      ].join(",")
     )
     .order(m.createdAt, { ascending: false })
     .limit(12);
@@ -593,7 +864,16 @@ async function fetchCollectionMetaById(collectionId) {
     const { data, error } = await withTimeout(
       supabase
         .from(DB.collections.table)
-        .select([c.id, c.title, c.description, c.thumbnail, c.banner, c.createdAt].join(","))
+        .select(
+          [
+            c.id,
+            c.title,
+            c.description,
+            c.thumbnail,
+            c.banner,
+            c.createdAt
+          ].join(",")
+        )
         .eq(c.id, collectionId)
         .maybeSingle(),
       15000,
@@ -684,12 +964,14 @@ function buildAkiraProps({
   video_fit = "cover"
 }) {
   const src = proxifyRemoteUrl(srcUrl);
+
   const subtitles = normalizeSubtitlesFromVtt(vttUrlFromSupabase);
+
   const thumbnailsVtt = computeThumbnailsVtt(vttUrlFromSupabase, {
     allowOnLocal: allowThumbsOnLocal
   });
 
-  const props = {
+  return {
     src,
     poster: poster || undefined,
     autoplay: !!autoplay,
@@ -720,8 +1002,6 @@ function buildAkiraProps({
     collectionId: collectionId || null,
     video_fit
   };
-
-  return props;
 }
 
 function movieToPlayerProps(
@@ -734,6 +1014,7 @@ function movieToPlayerProps(
   const vttFromSupabase = movie[m.vtt];
   const isLiveMode = Boolean(movie[m.liveMode]);
   const liveStartsAt = movie[m.liveStartsAt] || null;
+
   const rawFit = String(movie[m.videoFit] ?? "cover").trim().toLowerCase();
   const video_fit = rawFit === "contain" ? "contain" : "cover";
 
@@ -751,15 +1032,18 @@ function movieToPlayerProps(
     allowThumbsOnLocal: forceThumbsLocal,
     isLiveMode,
     liveStartsAt,
-    video_fit: movie[m.videoFit] || "cover"
+    video_fit
   });
 
   props.onBack = () => window.history.back();
 
   props.onSelectRecommendation = (item) => {
     if (!item?.id) return;
-    window.location.href = buildWatchUrl(
-      item.type === "series" ? { series: item.id } : { movie: item.id }
+
+    navigateWatch(
+      item.type === "series"
+        ? { series: item.id }
+        : { movie: item.id }
     );
   };
 
@@ -773,16 +1057,19 @@ function episodeToPlayerProps(
   const e = DB.episodes.cols;
   const m = DB.movies.cols;
 
-  console.log("m.videoFit =", m.videoFit);
-  console.log("series.video_fit =", series?.video_fit);
-  console.log("series[m.videoFit] =", series?.[m.videoFit]);
-  console.log("series keys =", Object.keys(series || {}));
+  debugLog("m.videoFit =", m.videoFit);
+  debugLog("series.video_fit =", series?.video_fit);
+  debugLog("series[m.videoFit] =", series?.[m.videoFit]);
+  debugLog("series keys =", Object.keys(series || {}));
 
-  const seriesId = series?.[m.id] || episode[e.seriesId] || null;
+  const seriesId = normalizeUuidParam(series?.[m.id] || episode[e.seriesId] || null);
   const m3u8FromSupabase = episode[e.m3u8];
   const vttFromSupabase = episode[e.vtt];
   const isLiveMode = Boolean(series?.[m.liveMode]);
   const liveStartsAt = series?.[m.liveStartsAt] || null;
+
+  const rawFit = String(series?.[m.videoFit] ?? "cover").trim().toLowerCase();
+  const video_fit = rawFit === "contain" ? "contain" : "cover";
 
   const props = buildAkiraProps({
     srcUrl: m3u8FromSupabase,
@@ -791,21 +1078,24 @@ function episodeToPlayerProps(
     title: episode[e.title] || series?.[m.title] || "SATV+",
     contentId: seriesId || episode[e.id],
     seasonId: episode[e.season] != null ? String(episode[e.season]) : null,
-    episodeId: episode[e.id],
+    episodeId: normalizeUuidParam(episode[e.id]),
     recommendations,
     episodes,
     vttUrlFromSupabase: vttFromSupabase,
     allowThumbsOnLocal: forceThumbsLocal,
     isLiveMode,
     liveStartsAt,
-    video_fit: series?.[m.videoFit] || "cover"
+    video_fit
   });
 
   props.onBack = () => window.history.back();
 
-  props.onSelectEpisode = (selectedEpisodeId) => {
+  props.onSelectEpisode = (selectedEpisode) => {
+    const selectedEpisodeId = getSelectableId(selectedEpisode);
+
     if (!selectedEpisodeId) return;
-    window.location.href = buildWatchUrl({
+
+    navigateWatch({
       series: seriesId,
       episode: selectedEpisodeId
     });
@@ -813,8 +1103,11 @@ function episodeToPlayerProps(
 
   props.onSelectRecommendation = (item) => {
     if (!item?.id) return;
-    window.location.href = buildWatchUrl(
-      item.type === "series" ? { series: item.id } : { movie: item.id }
+
+    navigateWatch(
+      item.type === "series"
+        ? { series: item.id }
+        : { movie: item.id }
     );
   };
 
@@ -847,14 +1140,15 @@ function collectionMovieToPlayerProps(
 
   const rawFit = String(movie[m.videoFit] ?? "cover").trim().toLowerCase();
   const video_fit = rawFit === "contain" ? "contain" : "cover";
+
   const props = buildAkiraProps({
     srcUrl: m3u8FromSupabase,
     poster: movie[m.banner] || movie[m.thumbnail] || posterFromCollection,
     autoplay,
     title: movie[m.title] || "SATV+",
-    contentId: movie[m.id],
+    contentId: normalizeUuidParam(movie[m.id]),
     seasonId: collectionId || null,
-    episodeId: movie[m.id],
+    episodeId: normalizeUuidParam(movie[m.id]),
     recommendations,
     episodes: collectionItems,
     vttUrlFromSupabase: vttFromSupabase,
@@ -864,16 +1158,19 @@ function collectionMovieToPlayerProps(
     isCollectionMode: true,
     collectionLabel: collectionMeta?.[c?.title] || "Colección",
     collectionId,
-    video_fit: movie[m.videoFit] || "cover"
+    video_fit
   });
 
-  console.log("OBFIT DB VALUE:", movie[m.videoFit]);
+  debugLog("OBFIT DB VALUE:", movie[m.videoFit]);
 
   props.onBack = () => window.history.back();
 
-  props.onSelectEpisode = (selectedMovieId) => {
+  props.onSelectEpisode = (selectedMovie) => {
+    const selectedMovieId = getSelectableId(selectedMovie);
+
     if (!selectedMovieId || !collectionId) return;
-    window.location.href = buildWatchUrl({
+
+    navigateWatch({
       collection: collectionId,
       movie: selectedMovieId
     });
@@ -881,8 +1178,11 @@ function collectionMovieToPlayerProps(
 
   props.onSelectRecommendation = (item) => {
     if (!item?.id) return;
-    window.location.href = buildWatchUrl(
-      item.type === "series" ? { series: item.id } : { movie: item.id }
+
+    navigateWatch(
+      item.type === "series"
+        ? { series: item.id }
+        : { movie: item.id }
     );
   };
 
@@ -903,6 +1203,14 @@ async function resolveRouteAndBuildProps() {
     probe
   } = getParams();
 
+  debugLog("[watch] params normalizados:", {
+    movieId,
+    episodeId,
+    seriesId,
+    collectionId,
+    href: window.location.href
+  });
+
   const m = DB.movies.cols;
   const e = DB.episodes.cols;
   const c = DB.collections.cols;
@@ -910,14 +1218,15 @@ async function resolveRouteAndBuildProps() {
   // ?collection=<uuid>&movie=<uuid>
   if (collectionId && movieId) {
     if (!isUuid(collectionId)) {
-      throw new Error("Parámetro ?collection inválido (UUID esperado)");
+      throw new Error(`Parámetro ?collection inválido (UUID esperado): ${collectionId}`);
     }
 
     if (!isUuid(movieId)) {
-      throw new Error("Parámetro ?movie inválido (UUID esperado)");
+      throw new Error(`Parámetro ?movie inválido (UUID esperado): ${movieId}`);
     }
 
     const movie = await fetchMovieById(movieId);
+
     if (!movie) throw new Error("No se encontró el contenido de la colección");
     if (!movie[m.m3u8]) throw new Error("El contenido no tiene m3u8_url");
 
@@ -929,17 +1238,19 @@ async function resolveRouteAndBuildProps() {
 
     const safeCollectionItems = collectionItems.length
       ? collectionItems
-      : [{
-        id: String(movie[m.id]),
-        title: movie[m.title] || "Contenido actual",
-        synopsis: movie[m.description] || null,
-        thumbnail: movie[m.thumbnail] || movie[m.banner] || null,
-        seasonNumber: 1,
-        episodeNumber: 1,
-        durationSeconds: Number.isFinite(Number(movie[m.durationMinutes]))
-          ? Number(movie[m.durationMinutes]) * 60
-          : null
-      }];
+      : [
+          {
+            id: String(movie[m.id]),
+            title: movie[m.title] || "Contenido actual",
+            synopsis: movie[m.description] || null,
+            thumbnail: movie[m.thumbnail] || movie[m.banner] || null,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            durationSeconds: Number.isFinite(Number(movie[m.durationMinutes]))
+              ? Number(movie[m.durationMinutes]) * 60
+              : null
+          }
+        ];
 
     if (probe) {
       probeM3u8(movie[m.m3u8]);
@@ -947,6 +1258,7 @@ async function resolveRouteAndBuildProps() {
     }
 
     const liveStartsAtDate = getLiveStartDateFromRow(movie, m.liveStartsAt);
+
     const liveGate = {
       enabled: Boolean(movie[m.liveMode]),
       isUpcoming: isUpcomingLiveFromRow(movie, {
@@ -974,17 +1286,25 @@ async function resolveRouteAndBuildProps() {
   // ?movie=<uuid>
   if (movieId) {
     if (!isUuid(movieId)) {
-      throw new Error("Parámetro ?movie inválido (UUID esperado)");
+      throw new Error(`Parámetro ?movie inválido (UUID esperado): ${movieId}`);
     }
 
     const movie = await fetchMovieById(movieId);
+
     if (!movie) throw new Error("No se encontró la película");
 
     if (movie[m.category] !== "movie") {
       if (movie[m.category] === "series") {
-        window.location.replace(buildWatchUrl({ series: movie[m.id] }));
-        return null;
+        return {
+          redirect: {
+            replace: true,
+            params: {
+              series: movie[m.id]
+            }
+          }
+        };
       }
+
       throw new Error("El contenido de ?movie no es una película");
     }
 
@@ -998,6 +1318,7 @@ async function resolveRouteAndBuildProps() {
     }
 
     const liveStartsAtDate = getLiveStartDateFromRow(movie, m.liveStartsAt);
+
     const liveGate = {
       enabled: Boolean(movie[m.liveMode]),
       isUpcoming: isUpcomingLiveFromRow(movie, {
@@ -1022,7 +1343,7 @@ async function resolveRouteAndBuildProps() {
   // ?episode=<uuid>
   if (episodeId) {
     if (!isUuid(episodeId)) {
-      throw new Error("Parámetro ?episode inválido (UUID esperado)");
+      throw new Error(`Parámetro ?episode inválido (UUID esperado): ${episodeId}`);
     }
 
     const episode = await fetchEpisodeById(episodeId);
@@ -1030,7 +1351,7 @@ async function resolveRouteAndBuildProps() {
     if (!episode) throw new Error("No se encontró el episodio");
     if (!episode[e.m3u8]) throw new Error("El episodio no tiene m3u8_url");
 
-    const resolvedSeriesId = seriesId || episode[e.seriesId] || null;
+    const resolvedSeriesId = normalizeUuidParam(seriesId || episode[e.seriesId] || null);
 
     let series = null;
     let episodesList = [];
@@ -1060,17 +1381,20 @@ async function resolveRouteAndBuildProps() {
       ? `${series[m.title]} · ${episode[e.title] || `E${episode[e.episodeNumber] ?? ""}`}`
       : episode[e.title] || "Episodio";
 
-    const liveStartsAtDate = series ? getLiveStartDateFromRow(series, m.liveStartsAt) : null;
+    const liveStartsAtDate = series
+      ? getLiveStartDateFromRow(series, m.liveStartsAt)
+      : null;
+
     const liveGate = series
       ? {
-        enabled: Boolean(series[m.liveMode]),
-        isUpcoming: isUpcomingLiveFromRow(series, {
-          liveModeKey: m.liveMode,
-          liveStartsAtKey: m.liveStartsAt
-        }),
-        startsAt: liveStartsAtDate,
-        title: series[m.title] || title
-      }
+          enabled: Boolean(series[m.liveMode]),
+          isUpcoming: isUpcomingLiveFromRow(series, {
+            liveModeKey: m.liveMode,
+            liveStartsAtKey: m.liveStartsAt
+          }),
+          startsAt: liveStartsAtDate,
+          title: series[m.title] || title
+        }
       : null;
 
     return {
@@ -1089,36 +1413,60 @@ async function resolveRouteAndBuildProps() {
   // ?series=<uuid>
   if (seriesId) {
     if (!isUuid(seriesId)) {
-      throw new Error("Parámetro ?series inválido (UUID esperado)");
+      throw new Error(`Parámetro ?series inválido (UUID esperado): ${seriesId}`);
     }
 
     await fetchSeriesById(seriesId);
 
     const episodesList = await fetchEpisodesForSeries(seriesId);
+
     if (!episodesList.length) {
       throw new Error("La serie no tiene episodios cargados");
     }
 
-    window.location.replace(
-      buildWatchUrl({
-        series: seriesId,
-        episode: episodesList[0].id
-      })
-    );
-    return null;
+    return {
+      redirect: {
+        replace: true,
+        params: {
+          series: seriesId,
+          episode: episodesList[0].id
+        }
+      }
+    };
   }
 
-  throw new Error("Ruta inválida. Usá ?movie=<uuid> o ?episode=<uuid> o ?series=<uuid> o ?collection=<uuid>&movie=<uuid>");
+  throw new Error(
+    "Ruta inválida. Usá ?movie=<uuid> o ?episode=<uuid> o ?series=<uuid> o ?collection=<uuid>&movie=<uuid>"
+  );
 }
 
 /* ============================================================
- * Aspect-ratio helpers (force contain for squarer videos)
+ * Aspect-ratio helpers
  * ============================================================ */
-const CONTAIN_MAX_ASPECT_RATIO = 1.55;
-// <= 1.55 => 1:1, 5:4, 4:3, 3:2 aprox => contain
-// >  1.55 => 16:10, 16:9, 21:9, etc => no contain
+function ensureAspectContainStyle() {
+  if (document.getElementById("satv-aspect-contain-style")) return;
 
-let __satvAspectStyleInjected = false;
+  const style = document.createElement("style");
+  style.id = "satv-aspect-contain-style";
+  style.textContent = `
+    video.boltrue,
+    .akira-video.boltrue {
+      object-fit: contain !important;
+    }
+
+    html.satv-force-video-contain video,
+    body.satv-force-video-contain video {
+      object-fit: contain !important;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+function setForceVideoContain(enabled) {
+  document.documentElement.classList.toggle("satv-force-video-contain", !!enabled);
+  document.body?.classList?.toggle("satv-force-video-contain", !!enabled);
+}
 
 function applyAspectModeFromVideo(video) {
   if (!video) return;
@@ -1129,22 +1477,23 @@ function applyAspectModeFromVideo(video) {
   setForceVideoContain(enabled);
 }
 
-function getVideoAspectInfo(video) {
-  const width = Number(video?.videoWidth || 0);
-  const height = Number(video?.videoHeight || 0);
-
-  if (!width || !height) return null;
-
-  return {
-    width,
-    height,
-    ratio: width / height
-  };
-}
-
 function installAspectAutoDetection() {
+  if (__satvAspectObserverInstalled) {
+    const root = getRootEl();
+
+    const video =
+      root?.querySelector(".akira-video") ||
+      root?.querySelector("video");
+
+    if (video) applyAspectModeFromVideo(video);
+
+    return;
+  }
+
   const root = getRootEl();
   if (!root) return;
+
+  __satvAspectObserverInstalled = true;
 
   ensureAspectContainStyle();
 
@@ -1152,6 +1501,7 @@ function installAspectAutoDetection() {
 
   const bindVideo = (video) => {
     if (!video || video === lastVideo) return;
+
     lastVideo = video;
 
     const reevaluate = () => applyAspectModeFromVideo(video);
@@ -1159,7 +1509,6 @@ function installAspectAutoDetection() {
     video.addEventListener("loadedmetadata", reevaluate);
     video.addEventListener("resize", reevaluate);
 
-    // por si metadata ya estaba disponible
     if (video.videoWidth && video.videoHeight) {
       reevaluate();
     } else {
@@ -1188,7 +1537,6 @@ function installAspectAutoDetection() {
     subtree: true
   });
 
-  // opcional: guardarlo global para debug
   window.__SATV_WATCH_ASPECT_OBSERVER__ = observer;
 }
 
@@ -1231,7 +1579,9 @@ function readyStateName(v) {
 
 function getMediaErrorInfo(video) {
   const err = video?.error;
+
   if (!err) return null;
+
   return {
     code: err.code ?? null,
     codeName: mediaErrorName(err.code),
@@ -1243,6 +1593,7 @@ function inspectMountedVideoLater() {
   setTimeout(() => {
     const root = getRootEl();
     const video = root?.querySelector?.("video");
+
     if (!video) {
       warnLog("[watch] No se encontró <video> tras render (t+2.5s)");
       return;
@@ -1267,6 +1618,7 @@ function inspectMountedVideoLater() {
   setTimeout(() => {
     const root = getRootEl();
     const video = root?.querySelector?.("video");
+
     if (!video) return;
 
     const info = {
@@ -1292,7 +1644,9 @@ function inspectMountedVideoLater() {
 /* ============================================================
  * Render pipeline
  * ============================================================ */
-async function renderAndWaitPlayer(result) {
+async function renderAndWaitPlayer(result, { reusePlayer = false } = {}) {
+  const wasFullscreen = isPlayerFullscreenActive();
+
   window.__SATV_WATCH_LAST_RESULT__ = result;
   window.__SATV_WATCH_LAST_PROPS__ = result.props;
 
@@ -1301,15 +1655,35 @@ async function renderAndWaitPlayer(result) {
   debugLog("[watch] thumbnailsVtt:", result.props?.thumbnailsVtt);
   debugLog("[watch] subtitles:", result.props?.subtitles);
   debugLog("[watch] liveGate:", result?.liveGate || null);
+  debugLog("[watch] fullscreen antes de actualizar:", wasFullscreen);
 
   setDocumentTitle(result.title);
 
-  const root = getRootEl();
-  if (root) root.innerHTML = "";
+  if (typeof window.__SATV_RESET_WATCH_OVERLAY_LOCK__ === "function") {
+    window.__SATV_RESET_WATCH_OVERLAY_LOCK__();
+  }
 
-  const renderResult = window.renderAkiraPlayer(result.props);
+  let renderResult;
 
-  // NUEVO
+  const shouldPreserveDom = reusePlayer || wasFullscreen;
+  const canUpdateSameInstance = typeof window.updateAkiraPlayer === "function";
+
+  if (canUpdateSameInstance) {
+    renderResult = window.updateAkiraPlayer(result.props);
+  } else {
+    const root = getRootEl();
+
+    if (!shouldPreserveDom && root) {
+      root.innerHTML = "";
+    } else {
+      warnLog(
+        "[watch] updateAkiraPlayer no existe; llamando renderAkiraPlayer sin limpiar root para preservar fullscreen"
+      );
+    }
+
+    renderResult = window.renderAkiraPlayer(result.props);
+  }
+
   installAspectAutoDetection();
 
   try {
@@ -1321,20 +1695,29 @@ async function renderAndWaitPlayer(result) {
 
     window.__SATV_WATCH_LAST_READY_INFO__ = readyInfo;
     infoLog("[watch] Akira playback ready:", readyInfo);
+
     hideWatchLoadingOverlay();
+    hideRouteLoadingOverlay();
+    await restoreFullscreenIfNeeded(wasFullscreen);
   } catch (e) {
     warnLog("[watch] wait READY del player timeout/fallo:", e);
+
+    hideRouteLoadingOverlay();
+    await restoreFullscreenIfNeeded(wasFullscreen);
   }
 
   inspectMountedVideoLater();
 }
 
-/* ============================================================
- * Boot
- * ============================================================ */
-async function boot() {
+async function loadCurrentWatchRoute({ showOverlay = true, reusePlayer = true } = {}) {
+  const seq = ++__watchRouteSeq;
+
   try {
-    setLoading();
+    if (showOverlay) {
+      setLoading({
+        clearRoot: !reusePlayer
+      });
+    }
 
     requireRenderBridge();
 
@@ -1343,26 +1726,52 @@ async function boot() {
     }
 
     const result = await resolveRouteAndBuildProps();
+
+    if (seq !== __watchRouteSeq) return;
     if (!result) return;
 
-    await renderAndWaitPlayer(result);
+    if (result.redirect?.params) {
+      const nextUrl = buildWatchUrl(result.redirect.params);
+
+      if (result.redirect.replace) {
+        window.history.replaceState({ satvWatch: true }, "", nextUrl);
+      } else {
+        window.history.pushState({ satvWatch: true }, "", nextUrl);
+      }
+
+      return loadCurrentWatchRoute({
+        showOverlay,
+        reusePlayer
+      });
+    }
+
+    await renderAndWaitPlayer(result, {
+      reusePlayer
+    });
   } catch (err) {
-    console.error("[watch] boot error:", err);
+    if (seq !== __watchRouteSeq) return;
+
+    hideRouteLoadingOverlay();
+
+    console.error("[watch] route load error:", err);
 
     const msg = err?.message || "No se pudo cargar el contenido";
+
     const details =
       typeof err === "object" && err
         ? JSON.stringify(
-          {
-            message: err.message,
-            details: err.details || null,
-            hint: err.hint || null,
-            code: err.code || null,
-            stack: err.stack || null
-          },
-          null,
-          2
-        )
+            {
+              message: err.message,
+              details: err.details || null,
+              hint: err.hint || null,
+              code: err.code || null,
+              stack: err.stack || null,
+              href: window.location.href,
+              params: getParams()
+            },
+            null,
+            2
+          )
         : "";
 
     setError(msg, details);
@@ -1370,16 +1779,30 @@ async function boot() {
 }
 
 /* ============================================================
+ * Boot
+ * ============================================================ */
+async function boot() {
+  if (__satvBooted) return;
+
+  __satvBooted = true;
+
+  await loadCurrentWatchRoute({
+    showOverlay: true,
+    reusePlayer: false
+  });
+}
+
+/* ============================================================
  * Escudo de Buffer: esperar OK real del player (UNMUTE)
- * - La overlay NO se va por timeout fijo (12s), sino cuando el <video> queda desmuteado.
- * - Mantiene el "middle-buffer" (waiting/playing) una vez que ya arrancó.
- * - Tiene fallback de seguridad para no quedar trabado si nunca llega el unmute.
+ * - La overlay NO se va por timeout fijo corto.
+ * - Se desbloquea cuando el <video> queda desmuteado.
+ * - En modo SPA se resetea por cada cambio de capítulo/peli.
  * ============================================================ */
 (function () {
   const overlay = document.getElementById("watch-loading-overlay");
+
   if (!overlay) return;
 
-  // Importante: no bloquear la interacción del usuario con el player (necesaria para desmutear)
   overlay.style.pointerEvents = "none";
 
   const originalHide =
@@ -1390,8 +1813,9 @@ async function boot() {
   let unlocked = false;
   let videoEl = null;
   let started = false;
+  let fallbackTimer = null;
 
-  const MAX_WAIT_MS = 45000; // fallback duro para evitar overlay infinita
+  const MAX_WAIT_MS = 45000;
   const POLL_MS = 250;
 
   const showOverlay = () => {
@@ -1407,12 +1831,15 @@ async function boot() {
 
   const isUnmuted = (v) => {
     if (!v) return false;
+
     const vol = typeof v.volume === "number" ? v.volume : 1;
+
     return v.muted === false && vol > 0;
   };
 
   const unlock = (reason) => {
     if (unlocked) return;
+
     unlocked = true;
 
     if (DEBUG) {
@@ -1426,13 +1853,65 @@ async function boot() {
       });
     }
 
-    // Pedimos ocultar (si alguien ya lo pidió, ahora sí se va)
     try {
       window.hideWatchLoadingOverlay();
     } catch { }
+
+    hideRouteLoadingOverlay();
   };
 
-  // Interceptamos el hide global: hasta que NO haya unmute, no se cierra.
+  const scheduleFallback = () => {
+    if (fallbackTimer) clearTimeout(fallbackTimer);
+
+    fallbackTimer = setTimeout(() => {
+      if (!unlocked) unlock("timeout");
+    }, MAX_WAIT_MS);
+  };
+
+  const findVideo = () =>
+    document.querySelector("#akira-player-root video") ||
+    document.querySelector("#akira-player-root .akira-video") ||
+    document.querySelector("video");
+
+  const bindVideo = (v) => {
+    if (!v || v === videoEl) return;
+
+    videoEl = v;
+
+    const markStarted = () => {
+      started = true;
+    };
+
+    const maybeUnlock = (why) => {
+      if (isUnmuted(videoEl)) unlock(why);
+    };
+
+    v.addEventListener("playing", () => {
+      markStarted();
+
+      if (unlocked) {
+        overlay.classList.remove("middle-buffer");
+        hideOverlay();
+        hideRouteLoadingOverlay();
+      }
+
+      maybeUnlock("playing");
+    });
+
+    v.addEventListener("volumechange", () => {
+      maybeUnlock("volumechange");
+    });
+
+    v.addEventListener("waiting", () => {
+      if (started && unlocked) {
+        overlay.classList.add("middle-buffer");
+        showOverlay();
+      }
+    });
+
+    maybeUnlock("bind");
+  };
+
   window.hideWatchLoadingOverlay = function () {
     if (!unlocked) {
       showOverlay();
@@ -1441,6 +1920,7 @@ async function boot() {
     }
 
     hideOverlay();
+    hideRouteLoadingOverlay();
 
     if (typeof originalHide === "function") {
       try {
@@ -1451,78 +1931,49 @@ async function boot() {
     }
   };
 
-  const bindVideo = (v) => {
-    if (!v || v === videoEl) return;
-    videoEl = v;
+  window.__SATV_RESET_WATCH_OVERLAY_LOCK__ = function () {
+    unlocked = false;
+    started = false;
+    videoEl = null;
 
-    const markStarted = () => {
-      started = true;
-    };
+    showOverlay();
+    scheduleFallback();
 
-    // "OK real" = el usuario desmuteó (o el player quedó con audio ON)
-    const maybeUnlock = (why) => {
-      if (isUnmuted(videoEl)) unlock(why);
-    };
-
-    v.addEventListener("playing", () => {
-      markStarted();
-      // Si ya estamos unlocked, el playing saca overlay de middle-buffer
-      if (unlocked) {
-        overlay.classList.remove("middle-buffer");
-        hideOverlay();
-      }
-      // si justo arrancó con audio on
-      maybeUnlock("playing");
-    });
-
-    v.addEventListener("volumechange", () => {
-      // muted/unmuted y cambios de volumen disparan esto
-      maybeUnlock("volumechange");
-    });
-
-    // Buffer intermedio (solo después de arrancar)
-    v.addEventListener("waiting", () => {
-      if (started && unlocked) {
-        overlay.classList.add("middle-buffer");
-        showOverlay();
-      }
-    });
-
-    // Por si ya vino desmuteado
-    maybeUnlock("bind");
+    const found = findVideo();
+    if (found) bindVideo(found);
   };
 
-  const findVideo = () =>
-    document.querySelector("#akira-player-root video") ||
-    document.querySelector("#akira-player-root .akira-video") ||
-    document.querySelector("video");
-
-  // Intento inmediato
   bindVideo(findVideo());
+  scheduleFallback();
 
-  // Observamos DOM para detectar cuando el player inserta el <video>
   const root = document.getElementById("akira-player-root") || document.body;
+
   const observer = new MutationObserver(() => {
-    if (!videoEl) bindVideo(findVideo());
+    const found = findVideo();
+
+    if (found && found !== videoEl) {
+      bindVideo(found);
+    }
   });
 
   try {
-    observer.observe(root, { childList: true, subtree: true });
+    observer.observe(root, {
+      childList: true,
+      subtree: true
+    });
   } catch { }
 
-  // Poll liviano por si el observer no dispara (o el video cambia)
-  const poll = setInterval(() => {
-    if (unlocked) return;
-    if (!videoEl) bindVideo(findVideo());
-    else if (isUnmuted(videoEl)) unlock("poll");
-  }, POLL_MS);
+  setInterval(() => {
+    const found = findVideo();
 
-  // Fallback duro (no debería pasar, pero evita quedarte colgado)
-  setTimeout(() => {
-    if (!unlocked) unlock("timeout");
-    clearInterval(poll);
-    try { observer.disconnect(); } catch { }
-  }, MAX_WAIT_MS);
+    if (found && found !== videoEl) {
+      bindVideo(found);
+    }
+
+    if (!unlocked && videoEl && isUnmuted(videoEl)) {
+      unlock("poll");
+    }
+  }, POLL_MS);
 })();
 
 boot();

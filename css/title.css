@@ -582,9 +582,32 @@ a#watch-btn[data-mode="countdown"] {
     opacity: 1;
 }
 
+.episode-thumb-wrap,
 .more-card-thumb-wrap {
     position: relative;
     border-radius: .25em;
+}
+
+.episode-card .duration {
+    position: absolute;
+    right: 7px;
+    bottom: 7px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 20px;
+    padding: 3px 7px;
+    border-radius: .25em;
+    background: rgba(0, 0, 0, .72);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: .1px;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .45);
+    pointer-events: none;
+    user-select: none;
 }
 
 /* =========================
@@ -1005,6 +1028,11 @@ a#watch-btn[data-mode="status-clickable"] {
     outline: none !important;
 }
 
+#episodes-grid .episode-card .duration,
+#collection-grid .more-card .duration {
+    z-index: 5;
+}
+
 #more-grid .more-card .more-card-synopsis {
     display: block;
     margin: 0;
@@ -1242,6 +1270,14 @@ a#watch-btn[data-mode="status-clickable"] {
     #collection-grid .more-card-synopsis {
         -webkit-line-clamp: 4;
         line-clamp: 4;
+    }
+
+    .episode-card .duration {
+        right: 6px;
+        bottom: 6px;
+        min-height: 19px;
+        padding: 3px 6px;
+        font-size: 11px;
     }
 }
 

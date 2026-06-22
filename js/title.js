@@ -40,6 +40,132 @@ function formatDuration(minutes) {
     return rem === 0 ? `${h} h` : `${h} h ${rem} min`;
 }
 
+function parseDurationTimeStringToSeconds(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw || !raw.includes(":")) return null;
+
+    const parts = raw.split(":").map((part) => part.trim());
+    if (parts.length !== 2 && parts.length !== 3) return null;
+
+    const nums = parts.map(Number);
+    if (nums.some((n) => !Number.isFinite(n) || n < 0)) return null;
+
+    if (parts.length === 3) {
+        const [h, m, s] = nums;
+        return (h * 3600) + (m * 60) + s;
+    }
+
+    const [m, s] = nums;
+    return (m * 60) + s;
+}
+
+function formatDurationBadgeFromValue(value, unit = "auto") {
+    if (value === null || value === undefined || value === "") return "";
+
+    const raw = String(value).trim();
+    if (!raw) return "";
+
+    let minutes = 0;
+
+    if (unit === "seconds") {
+        const seconds = Number(value);
+        if (!Number.isFinite(seconds) || seconds <= 0) return "";
+        minutes = Math.floor(seconds / 60);
+        if (minutes < 1) minutes = 1;
+    } else if (unit === "minutes") {
+        const n = Number(value);
+        if (!Number.isFinite(n) || n <= 0) return "";
+        minutes = Math.floor(n);
+    } else {
+        const seconds = parseDurationTimeStringToSeconds(raw);
+        if (seconds !== null) {
+            if (seconds <= 0) return "";
+            minutes = Math.floor(seconds / 60);
+            if (minutes < 1) minutes = 1;
+        } else {
+            const n = Number(raw.replace(/,/g, "."));
+            if (!Number.isFinite(n) || n <= 0) return "";
+            minutes = Math.floor(n);
+        }
+    }
+
+    return minutes > 0 ? `${minutes}min` : "";
+}
+
+function hasDurationValue(row, columnName) {
+    if (!row || typeof row !== "object" || !columnName) return false;
+
+    const value = row[columnName];
+    return value !== null && value !== undefined && String(value).trim() !== "";
+}
+
+function getEpisodeDurationBadgeText(ep) {
+    // episodes.epduration puede venir como "01:12:00", "32:12" o minutos.
+    return formatDurationBadgeFromValue(ep?.epduration, "auto");
+}
+
+function getMovieDurationBadgeText(movie) {
+    // movies.duration_minutes viene en minutos.
+    return formatDurationBadgeFromValue(movie?.duration_minutes, "minutes");
+}
+
+async function hydrateDurationColumnFromTable({ rows, tableName, columnName = "duration" }) {
+    const list = Array.isArray(rows) ? rows : [];
+    const missingIds = [...new Set(
+        list
+            .filter((row) => row?.id && !hasDurationValue(row, columnName))
+            .map((row) => String(row.id))
+    )];
+
+    if (!missingIds.length) return list;
+
+    try {
+        const supabase = await getAppSupabaseClient();
+        if (!supabase) return list;
+
+        const { data, error } = await supabase
+            .from(tableName)
+            .select(`id, ${columnName}`)
+            .in("id", missingIds);
+
+        if (error) {
+            console.warn(`[title] no se pudo hidratar ${tableName}.${columnName}:`, error);
+            return list;
+        }
+
+        const durationById = new Map(
+            (data || [])
+                .filter((row) => row?.id)
+                .map((row) => [String(row.id), row?.[columnName]])
+        );
+
+        return list.map((row) => {
+            if (!row?.id || hasDurationValue(row, columnName)) return row;
+            if (!durationById.has(String(row.id))) return row;
+            return { ...row, [columnName]: durationById.get(String(row.id)) };
+        });
+    } catch (e) {
+        console.warn(`[title] hydrate ${tableName}.${columnName} error:`, e);
+        return list;
+    }
+}
+
+function hydrateEpisodeDurations(episodes) {
+    return hydrateDurationColumnFromTable({
+        rows: episodes,
+        tableName: "episodes",
+        columnName: "epduration"
+    });
+}
+
+function hydrateMovieDurations(movies) {
+    return hydrateDurationColumnFromTable({
+        rows: movies,
+        tableName: "movies",
+        columnName: "duration_minutes"
+    });
+}
+
 function formatElapsed(seconds) {
     const s = Math.max(0, Math.floor(Number(seconds) || 0));
     const h = Math.floor(s / 3600);
@@ -658,6 +784,7 @@ async function fetchEpisodeProgressMapForTitle({ movieId }) {
 
 function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
     const thumb = pickEpisodeThumb(ep) || fallbackThumb;
+    const durationText = getEpisodeDurationBadgeText(ep);
 
     const s = ep.season ?? "";
     const n = ep.episode_number ?? "";
@@ -679,7 +806,10 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
 
     return `
     <article class="episode-card" tabindex="0" role="link" data-episode="${ep.id}">
-      <img class="episode-thumb" src="${esc(thumb)}" alt="">
+      <div class="episode-thumb-wrap">
+        <img class="episode-thumb" src="${esc(thumb)}" alt="">
+        ${durationText ? `<span class="duration">${esc(durationText)}</span>` : ""}
+      </div>
       ${hasProgress ? `
         <div class="episode-progress" aria-hidden="true">
           <div class="episode-progress-bar" style="width:${progressPercent}%;"></div>
@@ -1658,12 +1788,14 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
 
 function renderCollectionCardHtml({ item, esc }) {
     const thumb = item.thumbnail_url || item.banner_url || "";
+    const durationText = getMovieDurationBadgeText(item);
     const synopsis = esc(item.description || item.sinopsis || "");
 
     return `
     <article class="episode-card more-card" tabindex="0" role="link" data-title="${esc(item.id)}">
       <div class="more-card-thumb-wrap">
         <img class="episode-thumb" src="${esc(thumb)}" alt="">
+        ${durationText ? `<span class="duration">${esc(durationText)}</span>` : ""}
       </div>
       <div class="episode-body">
         <h4 class="episode-title">${esc(item.title || "")}</h4>
@@ -1757,6 +1889,8 @@ async function renderCollectionSection({ api, esc, collectionId, currentMovieId 
     items = (items || []).filter(
         (item) => item?.id && String(item.id) !== String(currentMovieId)
     );
+
+    items = await hydrateMovieDurations(items);
 
     if (!items.length) {
         section.classList.add("hidden");
@@ -1860,6 +1994,7 @@ async function main() {
     if (movie.category === "series" && typeof api.fetchEpisodes === "function") {
         try {
             episodes = await api.fetchEpisodes(movie.id);
+            episodes = await hydrateEpisodeDurations(episodes);
         } catch (e) {
             console.warn("[title] no se pudieron cargar episodios para meta robusta:", e);
             episodes = [];
