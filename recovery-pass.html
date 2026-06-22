@@ -1,236 +1,236 @@
 <!doctype html>
 <html lang="es">
 
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Nueva contraseña · SATV+</title>
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link rel="icon" href="images/satvpluslogo.png">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Nueva contraseña · SATV+</title>
+        <link rel="stylesheet" href="/css/styles.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+        <link rel="icon" href="images/satvpluslogopro.png">
 
-    <style>
-        .password-field {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .password-field input {
-            width: 100%;
-            padding-right: 44px;
-        }
-
-        .pw-toggle {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            border: 0;
-            background: transparent;
-            cursor: pointer;
-            padding: 6px;
-            line-height: 1;
-            color: #2563eb;
-            opacity: .9;
-            display: grid;
-            place-items: center;
-        }
-
-        .pw-toggle:hover {
-            opacity: 1;
-        }
-
-        .pw-toggle svg {
-            display: block;
-        }
-    </style>
-</head>
-
-<body>
-    <header class="topnav">
-        <div class="nav-inner container" id="topnav"></div>
-    </header>
-
-    <main class="container">
-        <div class="panel" style="max-width:520px;margin:18px auto;">
-            <h2 style="margin:0 0 8px 0;">Elegí una nueva contraseña</h2>
-            <p class="muted" style="margin:0 0 12px 0;">
-                Si llegaste desde el email, acá podés setear tu nueva contraseña.
-            </p>
-
-            <form id="form-newpass">
-                <label>Nueva contraseña</label>
-                <div class="password-field">
-                    <input id="password" type="password" required placeholder="********" />
-                    <button type="button" class="pw-toggle" data-toggle="#password" aria-label="Mostrar contraseña"
-                        title="Mostrar/ocultar"></button>
-                </div>
-
-                <label>Repetir nueva contraseña</label>
-                <div class="password-field">
-                    <input id="password2" type="password" required placeholder="********" />
-                    <button type="button" class="pw-toggle" data-toggle="#password2" aria-label="Mostrar contraseña"
-                        title="Mostrar/ocultar"></button>
-                </div>
-
-                <div class="form-actions" style="margin-top:12px;">
-                    <button class="btn" type="submit">Guardar</button>
-                    <a class="btn ghost" href="/login.html">Volver</a>
-                </div>
-            </form>
-        </div>
-    </main>
-
-    <div class="toast-host" id="toast-host"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module">
-        import { renderNav, renderAuthButtons, toast, $ } from "/js/ui.js";
-        import { supabase } from "/js/supabaseClient.js";
-
-        renderNav({ active: "" });
-        renderAuthButtons();
-
-        // =========================
-        // 1) LEER "id" DESDE QUERY / HASH / sessionStorage
-        // =========================
-        function parseHashParams() {
-            // soporta "#id=...&type=...&token_hash=..." o "#access_token=..."
-            const raw = window.location.hash?.startsWith("#") ? window.location.hash.slice(1) : "";
-            const p = new URLSearchParams(raw);
-            return p;
-        }
-
-        function getFlowId() {
-            const url = new URL(window.location.href);
-            const qId = url.searchParams.get("id");
-
-            const h = parseHashParams();
-            const hId = h.get("id");
-
-            const sId = sessionStorage.getItem("recovery_flow_id");
-
-            return qId || hId || sId || null;
-        }
-
-        const flowId = getFlowId();
-        if (!flowId) {
-            toast("Falta el id del recovery. Volvé a pedir el enlace.", "error");
-            setTimeout(() => window.location.href = "/login.html", 1400);
-            throw new Error("Missing recovery_flow_id");
-        }
-
-        // guardar para futuros reloads
-        sessionStorage.setItem("recovery_flow_id", flowId);
-
-        // =========================
-        // 2) FORZAR que el id quede SIEMPRE en la URL (query),
-        //    incluso si llegó por hash o se perdió en el redirect.
-        // =========================
-        (function ensureIdInQuery() {
-            const url = new URL(window.location.href);
-
-            if (url.searchParams.get("id") !== flowId) {
-                url.searchParams.set("id", flowId);
-                // NO tocamos otros params (token_hash/type/code) si existen.
-                window.history.replaceState({}, "", url.toString());
+        <style>
+            .password-field {
+                position: relative;
+                display: flex;
+                align-items: center;
             }
 
-            // si el hash tiene id, lo sacamos del hash para evitar duplicado
-            const h = parseHashParams();
-            if (h.get("id")) {
-                h.delete("id");
-                const newHash = h.toString();
-                // mantenemos el hash solo si quedó algo útil
-                window.history.replaceState({}, "", url.toString() + (newHash ? ("#" + newHash) : ""));
-            }
-        })();
-
-        // =========================
-        // 3) CREAR SESIÓN DE RECOVERY (PKCE code o tokens)
-        // =========================
-        async function ensureRecoverySession() {
-            const url = new URL(window.location.href);
-            const code = url.searchParams.get("code");
-
-            if (code) {
-                const { error } = await supabase.auth.exchangeCodeForSession(code);
-                if (error) throw error;
-
-                // limpiamos code, pero dejamos id
-                url.searchParams.delete("code");
-                window.history.replaceState({}, "", url.toString());
-            } else {
-                // en flows con hash tokens, supabase-js suele auto-detectar
-                await supabase.auth.getSession();
+            .password-field input {
+                width: 100%;
+                padding-right: 44px;
             }
 
-            const { data } = await supabase.auth.getSession();
-            return data.session;
-        }
+            .pw-toggle {
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                border: 0;
+                background: transparent;
+                cursor: pointer;
+                padding: 6px;
+                line-height: 1;
+                color: #2563eb;
+                opacity: .9;
+                display: grid;
+                place-items: center;
+            }
 
-        const session = await ensureRecoverySession();
-        if (!session) {
-            toast("Link inválido o vencido. Pedí uno nuevo.", "error");
-            setTimeout(() => window.location.href = "/recovery.html?id=" + encodeURIComponent(flowId), 1400);
-        }
+            .pw-toggle:hover {
+                opacity: 1;
+            }
 
-        // =========================
-        // 4) OJO CONTRASEÑA
-        // =========================
-        const ICON_HIDE = `
+            .pw-toggle svg {
+                display: block;
+            }
+        </style>
+    </head>
+
+    <body>
+        <header class="topnav">
+            <div class="nav-inner container" id="topnav"></div>
+        </header>
+
+        <main class="container">
+            <div class="panel" style="max-width:520px;margin:18px auto;">
+                <h2 style="margin:0 0 8px 0;">Elegí una nueva contraseña</h2>
+                <p class="muted" style="margin:0 0 12px 0;">
+                    Si llegaste desde el email, acá podés setear tu nueva contraseña.
+                </p>
+
+                <form id="form-newpass">
+                    <label>Nueva contraseña</label>
+                    <div class="password-field">
+                        <input id="password" type="password" required placeholder="********" />
+                        <button type="button" class="pw-toggle" data-toggle="#password" aria-label="Mostrar contraseña"
+                            title="Mostrar/ocultar"></button>
+                    </div>
+
+                    <label>Repetir nueva contraseña</label>
+                    <div class="password-field">
+                        <input id="password2" type="password" required placeholder="********" />
+                        <button type="button" class="pw-toggle" data-toggle="#password2" aria-label="Mostrar contraseña"
+                            title="Mostrar/ocultar"></button>
+                    </div>
+
+                    <div class="form-actions" style="margin-top:12px;">
+                        <button class="btn" type="submit">Guardar</button>
+                        <a class="btn ghost" href="/login.html">Volver</a>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <div class="toast-host" id="toast-host"></div>
+
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script type="module">
+            import { renderNav, renderAuthButtons, toast, $ } from "/js/ui.js";
+            import { supabase } from "/js/supabaseClient.js";
+
+            renderNav({ active: "" });
+            renderAuthButtons();
+
+            // =========================
+            // 1) LEER "id" DESDE QUERY / HASH / sessionStorage
+            // =========================
+            function parseHashParams() {
+                // soporta "#id=...&type=...&token_hash=..." o "#access_token=..."
+                const raw = window.location.hash?.startsWith("#") ? window.location.hash.slice(1) : "";
+                const p = new URLSearchParams(raw);
+                return p;
+            }
+
+            function getFlowId() {
+                const url = new URL(window.location.href);
+                const qId = url.searchParams.get("id");
+
+                const h = parseHashParams();
+                const hId = h.get("id");
+
+                const sId = sessionStorage.getItem("recovery_flow_id");
+
+                return qId || hId || sId || null;
+            }
+
+            const flowId = getFlowId();
+            if (!flowId) {
+                toast("Falta el id del recovery. Volvé a pedir el enlace.", "error");
+                setTimeout(() => window.location.href = "/login.html", 1400);
+                throw new Error("Missing recovery_flow_id");
+            }
+
+            // guardar para futuros reloads
+            sessionStorage.setItem("recovery_flow_id", flowId);
+
+            // =========================
+            // 2) FORZAR que el id quede SIEMPRE en la URL (query),
+            //    incluso si llegó por hash o se perdió en el redirect.
+            // =========================
+            (function ensureIdInQuery() {
+                const url = new URL(window.location.href);
+
+                if (url.searchParams.get("id") !== flowId) {
+                    url.searchParams.set("id", flowId);
+                    // NO tocamos otros params (token_hash/type/code) si existen.
+                    window.history.replaceState({}, "", url.toString());
+                }
+
+                // si el hash tiene id, lo sacamos del hash para evitar duplicado
+                const h = parseHashParams();
+                if (h.get("id")) {
+                    h.delete("id");
+                    const newHash = h.toString();
+                    // mantenemos el hash solo si quedó algo útil
+                    window.history.replaceState({}, "", url.toString() + (newHash ? ("#" + newHash) : ""));
+                }
+            })();
+
+            // =========================
+            // 3) CREAR SESIÓN DE RECOVERY (PKCE code o tokens)
+            // =========================
+            async function ensureRecoverySession() {
+                const url = new URL(window.location.href);
+                const code = url.searchParams.get("code");
+
+                if (code) {
+                    const { error } = await supabase.auth.exchangeCodeForSession(code);
+                    if (error) throw error;
+
+                    // limpiamos code, pero dejamos id
+                    url.searchParams.delete("code");
+                    window.history.replaceState({}, "", url.toString());
+                } else {
+                    // en flows con hash tokens, supabase-js suele auto-detectar
+                    await supabase.auth.getSession();
+                }
+
+                const { data } = await supabase.auth.getSession();
+                return data.session;
+            }
+
+            const session = await ensureRecoverySession();
+            if (!session) {
+                toast("Link inválido o vencido. Pedí uno nuevo.", "error");
+                setTimeout(() => window.location.href = "/recovery.html?id=" + encodeURIComponent(flowId), 1400);
+            }
+
+            // =========================
+            // 4) OJO CONTRASEÑA
+            // =========================
+            const ICON_HIDE = `
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path fill-rule="evenodd" clip-rule="evenodd"
           d="M6.30147 15.5771C4.77832 14.2684 3.6904 12.7726 3.18002 12C3.6904 11.2274 4.77832 9.73158 6.30147 8.42294C7.87402 7.07185 9.81574 6 12 6C14.1843 6 16.1261 7.07185 17.6986 8.42294C19.2218 9.73158 20.3097 11.2274 20.8201 12C20.3097 12.7726 19.2218 14.2684 17.6986 15.5771C16.1261 16.9282 14.1843 18 12 18C9.81574 18 7.87402 16.9282 6.30147 15.5771ZM12 4C9.14754 4 6.75717 5.39462 4.99812 6.90595C3.23268 8.42276 2.00757 10.1376 1.46387 10.9698C1.05306 11.5985 1.05306 12.4015 1.46387 13.0302C2.00757 13.8624 3.23268 15.5772 4.99812 17.0941C6.75717 18.6054 9.14754 20 12 20C14.8525 20 17.2429 18.6054 19.002 17.0941C20.7674 15.5772 21.9925 13.8624 22.5362 13.0302C22.947 12.4015 22.947 11.5985 22.5362 10.9698C21.9925 10.1376 20.7674 8.42276 19.002 6.90595C17.2429 5.39462 14.8525 4 12 4ZM10 12C10 10.8954 10.8955 10 12 10C13.1046 10 14 10.8954 14 12C14 13.1046 13.1046 14 12 14C10.8955 14 10 13.1046 10 12ZM12 8C9.7909 8 8.00004 9.79086 8.00004 12C8.00004 14.2091 9.7909 16 12 16C14.2092 16 16 14.2091 16 12C16 9.79086 14.2092 8 12 8Z"
           fill="currentColor"/>
       </svg>`;
 
-        const ICON_SHOW = `
+            const ICON_SHOW = `
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M2.68936 6.70456C2.52619 6.32384 2.08528 6.14747 1.70456 6.31064C1.32384 6.47381 1.14747 6.91472 1.31064 7.29544L2.68936 6.70456ZM15.5872 13.3287L15.3125 12.6308L15.5872 13.3287ZM9.04145 13.7377C9.26736 13.3906 9.16904 12.926 8.82185 12.7001C8.47466 12.4742 8.01008 12.5725 7.78417 12.9197L9.04145 13.7377ZM6.37136 15.091C6.14545 15.4381 6.24377 15.9027 6.59096 16.1286C6.93815 16.3545 7.40273 16.2562 7.62864 15.909L6.37136 15.091ZM22.6894 7.29544C22.8525 6.91472 22.6762 6.47381 22.2954 6.31064C21.9147 6.14747 21.4738 6.32384 21.3106 6.70456L22.6894 7.29544ZM19 11.1288L18.4867 10.582V10.582L19 11.1288ZM19.9697 13.1592C20.2626 13.4521 20.7374 13.4521 21.0303 13.1592C21.3232 12.8663 21.3232 12.3914 21.0303 12.0985L19.9697 13.1592ZM11.25 16.5C11.25 16.9142 11.5858 17.25 12 17.25C12.4142 17.25 12.75 16.9142 12.75 16.5H11.25Z"
           fill="currentColor"/>
       </svg>`;
 
-        function setupPasswordToggles() {
-            document.querySelectorAll(".pw-toggle[data-toggle]").forEach((btn) => {
-                const sel = btn.getAttribute("data-toggle");
-                const input = document.querySelector(sel);
-                if (!input) return;
+            function setupPasswordToggles() {
+                document.querySelectorAll(".pw-toggle[data-toggle]").forEach((btn) => {
+                    const sel = btn.getAttribute("data-toggle");
+                    const input = document.querySelector(sel);
+                    if (!input) return;
 
-                btn.innerHTML = (input.type === "password") ? ICON_SHOW : ICON_HIDE;
-                btn.addEventListener("click", () => {
-                    const willShow = input.type === "password";
-                    input.type = willShow ? "text" : "password";
-                    btn.setAttribute("aria-label", willShow ? "Ocultar contraseña" : "Mostrar contraseña");
-                    btn.innerHTML = willShow ? ICON_HIDE : ICON_SHOW;
+                    btn.innerHTML = (input.type === "password") ? ICON_SHOW : ICON_HIDE;
+                    btn.addEventListener("click", () => {
+                        const willShow = input.type === "password";
+                        input.type = willShow ? "text" : "password";
+                        btn.setAttribute("aria-label", willShow ? "Ocultar contraseña" : "Mostrar contraseña");
+                        btn.innerHTML = willShow ? ICON_HIDE : ICON_SHOW;
+                    });
                 });
-            });
-        }
-        setupPasswordToggles();
-
-        // =========================
-        // 5) SUBMIT: UPDATE PASSWORD
-        // =========================
-        document.getElementById("form-newpass").addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const p1 = $("#password").value;
-            const p2 = $("#password2").value;
-            if (p1 !== p2) return toast("Las contraseñas no coinciden", "error");
-
-            try {
-                const { error } = await supabase.auth.updateUser({ password: p1 });
-                if (error) throw error;
-
-                toast("Contraseña actualizada ✅", "success");
-                setTimeout(() => window.location.href = "/login.html", 900);
-            } catch (err) {
-                console.error(err);
-                toast(err.message || "No se pudo actualizar la contraseña", "error");
             }
-        });
-    </script>
-</body>
+            setupPasswordToggles();
+
+            // =========================
+            // 5) SUBMIT: UPDATE PASSWORD
+            // =========================
+            document.getElementById("form-newpass").addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                const p1 = $("#password").value;
+                const p2 = $("#password2").value;
+                if (p1 !== p2) return toast("Las contraseñas no coinciden", "error");
+
+                try {
+                    const { error } = await supabase.auth.updateUser({ password: p1 });
+                    if (error) throw error;
+
+                    toast("Contraseña actualizada ✅", "success");
+                    setTimeout(() => window.location.href = "/login.html", 900);
+                } catch (err) {
+                    console.error(err);
+                    toast(err.message || "No se pudo actualizar la contraseña", "error");
+                }
+            });
+        </script>
+    </body>
 
 </html>
