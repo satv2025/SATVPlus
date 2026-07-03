@@ -1,9 +1,9 @@
 /* ================= CUSTOM FONTS — SATVPlus Font ================= */
-@import url('fonts/satvplusfont/satvplusfont.css');
+@import url('fonts/amazon/AEmber.css');
 @import url('fonts/discord/ggsans/GGSans.css');
+@import url('fonts/satvplusfont/satvplusfont.css');
 @import url('fonts/premium/proximanova/ParamountPN.css');
 @import url('https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400..700;1,400..700&display=swap');
-
 /* =========================================================
    SATV+ ABOUT / WIKI
    Baseado en about.html + paleta/tokens de styles.css

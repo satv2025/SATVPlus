@@ -1,6 +1,7 @@
 /* ========= ========= CUSTOM FONTS — SATVPlus Font ======== ========== */
-@import url('fonts/satvplusfont/satvplusfont.css');
+@import url('fonts/amazon/AEmber.css');
 @import url('fonts/discord/ggsans/GGSans.css');
+@import url('fonts/satvplusfont/satvplusfont.css');
 @import url('fonts/premium/proximanova/ParamountPN.css');
 @import url('https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400..700;1,400..700&display=swap');
 
@@ -116,7 +117,7 @@
   -ms-user-select: none;
   user-select: none;
   box-sizing: border-box;
-  font-family: ParamountPN !important;
+  font-family: AEmber !important;
 
 }
 
@@ -2744,8 +2745,8 @@ body.lang-modal-open {
   border: 0;
   outline: 0;
   color: #fff;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 400;
   cursor: text;
   width: 100%;
 }

@@ -1,0 +1,193 @@
+/* =========================
+   AEmber
+   ========================= */
+
+/* Por Peso */
+@font-face {
+    font-family: "AEmber";
+    src: url("AmazonEmber_Th.ttf") format("truetype");
+    font-weight: 100;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("AmazonEmber_Lt.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("AmazonEmber_Rg.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("Amazon-Ember-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("AmazonEmber_Bd.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("AmazonEmber_He.ttf") format("truetype");
+    font-weight: 800;
+    font-style: normal;
+}
+
+/* Cursiva */
+@font-face {
+    font-family: "AEmber";
+    src: url("AmazonEmber_ThIt.ttf") format("truetype");
+    font-weight: 100;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("AmazonEmber_LtIt.ttf") format("truetype");
+    font-weight: 300;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("AmazonEmber_RgIt.ttf") format("truetype");
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("Amazon-Ember-MediumItalic.ttf") format("truetype");
+    font-weight: 500;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("AmazonEmber_BdIt.ttf") format("truetype");
+    font-weight: 700;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("AmazonEmber_HeIt.ttf") format("truetype");
+    font-weight: 800;
+    font-style: italic;
+}
+
+
+/* =========================
+   AEmberC
+   ========================= */
+
+/* Por Peso */
+@font-face {
+    font-family: "AEmberC";
+    src: url("AmazonEmberCdRC_Th.ttf") format("truetype");
+    font-weight: 100;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("AmazonEmberCdRC_Lt.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("AmazonEmberCdRC_Rg.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("AmazonEmberCdRC_Bd.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+/* Cursiva */
+@font-face {
+    font-family: "AEmberC";
+    src: url("AmazonEmberCdRC_ThIt.ttf") format("truetype");
+    font-weight: 100;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("AmazonEmberCdRC_LtIt.ttf") format("truetype");
+    font-weight: 300;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("AmazonEmberCdRC_RgIt.ttf") format("truetype");
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("AmazonEmberCdRC_BdIt.ttf") format("truetype");
+    font-weight: 700;
+    font-style: italic;
+}
+
+
+/* =========================
+   AEmberD
+   ========================= */
+
+/* Por Peso */
+@font-face {
+    font-family: "AEmberD";
+    src: url("AmazonEmberDisplay_Lt.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmberD";
+    src: url("AmazonEmberDisplay_Rg.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmberD";
+    src: url("AmazonEmberDisplay_Md.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmberD";
+    src: url("AmazonEmberDisplay_Bd.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "AEmberD";
+    src: url("AmazonEmberDisplay_He.ttf") format("truetype");
+    font-weight: 800;
+    font-style: normal;
+}
