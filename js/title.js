@@ -654,6 +654,46 @@ function getMoreMetaLine(movie) {
     return [year, right].filter(Boolean).join(" · ");
 }
 
+function normalizeGenreList(value) {
+    if (Array.isArray(value)) {
+        return [...new Set(
+            value
+                .map((item) => String(item || "").trim())
+                .filter(Boolean)
+        )];
+    }
+
+    return [...new Set(
+        String(value || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+    )];
+}
+
+function getMovieGenres(movie) {
+    const fromMovies = normalizeGenreList(movie?.genres);
+    if (fromMovies.length) return fromMovies;
+    return normalizeGenreList(movie?.movie_meta?.fullgenres);
+}
+
+function formatGenresInline(movie, { limit = 3 } = {}) {
+    const genres = getMovieGenres(movie);
+    if (!genres.length) return "";
+
+    const safeLimit = Math.max(1, Number(limit) || 3);
+    const visible = genres.slice(0, safeLimit);
+    const extra = genres.length - visible.length;
+
+    return extra > 0
+        ? `${visible.join(", ")} +${extra}`
+        : visible.join(", ");
+}
+
+function formatGenresFull(movie) {
+    return getMovieGenres(movie).join(", ");
+}
+
 /* ===========================
    Episodes helpers
 =========================== */
@@ -2158,12 +2198,12 @@ async function main() {
 
     await bindTitleReleaseReminderButton(remindBtn, movie, api);
 
-    if (publishState === "upcoming") {
-        setWatchBtnDisabledStatus(watchBtn, publishStateLabel);
-    } else {
-        const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
+    const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
 
-        if (!isUpcomingLiveCountdown) {
+    if (!isUpcomingLiveCountdown) {
+        if (publishState === "upcoming") {
+            setWatchBtnDisabledStatus(watchBtn, publishStateLabel);
+        } else {
             if (publishState === "live") {
                 setWatchBtnStatusClickable(watchBtn, movie, publishStateLabel);
             } else {
@@ -2190,7 +2230,7 @@ async function main() {
         right = formatDuration(movie.duration_minutes);
     }
 
-    if (metaEl) metaEl.textContent = [year, right].filter(Boolean).join(" · ");
+    if (metaEl) metaEl.textContent = [year, right, formatGenresInline(movie)].filter(Boolean).join(" · ");
 
     if (extraEl) {
         const durText = movie.category === "movie" ? formatDuration(movie.duration_minutes) : "";
@@ -2199,6 +2239,7 @@ async function main() {
             !!mm?.fullcast ||
             !!mm?.fullscript ||
             !!mm?.fullgenres ||
+            !!formatGenresFull(movie) ||
             !!mm?.fulltitletype ||
             !!mm?.fullage;
 
@@ -2213,7 +2254,7 @@ async function main() {
         ${row("Creado por", mm?.created_by, esc)}
         ${row("Elenco", mm?.fullcast, esc)}
         ${row("Guion", mm?.fullscript, esc)}
-        ${row("Géneros", mm?.fullgenres, esc)}
+        ${row("Géneros", mm?.fullgenres || formatGenresFull(movie), esc)}
         ${row("Tipo", mm?.fulltitletype, esc)}
         ${row("Edad", mm?.fullage, esc)}
 

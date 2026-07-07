@@ -27,6 +27,7 @@ import {
   fetchContinueWatching,
   fetchLatest,
   fetchByCategory,
+  fetchAllMovies,
   fetchMovie,
   isReleaseReminderSet,
   setReleaseReminder,
@@ -2397,6 +2398,108 @@ function getMovieCollectionId(movie) {
   return movie?.collection_id || null;
 }
 
+function normalizeGenreList(value) {
+  if (Array.isArray(value)) {
+    return [...new Set(
+      value
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+    )];
+  }
+
+  return [...new Set(
+    String(value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+  )];
+}
+
+function getMovieGenres(movie) {
+  const fromMovies = normalizeGenreList(movie?.genres);
+  if (fromMovies.length) return fromMovies;
+  return normalizeGenreList(movie?.movie_meta?.fullgenres);
+}
+
+function formatGenresInline(movie, { limit = 2 } = {}) {
+  const genres = getMovieGenres(movie);
+  if (!genres.length) return "";
+
+  const safeLimit = Math.max(1, Number(limit) || 2);
+  const visible = genres.slice(0, safeLimit);
+  const extra = genres.length - visible.length;
+
+  return extra > 0 ? `${visible.join(", ")} +${extra}` : visible.join(", ");
+}
+
+function getGenreSectionId(genre) {
+  return `genre-${String(genre || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "otros"}`;
+}
+
+function renderGenreSections(catalog = []) {
+  const main = document.querySelector("main.container") || document.querySelector("main");
+  if (!main) return;
+
+  main.querySelectorAll(".genre-section[data-generated='genre']").forEach((node) => node.remove());
+
+  const byGenre = new Map();
+  const seenInGenre = new Map();
+
+  (catalog || []).forEach((movie) => {
+    if (!movie?.id) return;
+
+    getMovieGenres(movie).forEach((genre) => {
+      const cleanGenre = String(genre || "").trim();
+      if (!cleanGenre) return;
+
+      if (!byGenre.has(cleanGenre)) {
+        byGenre.set(cleanGenre, []);
+        seenInGenre.set(cleanGenre, new Set());
+      }
+
+      const seen = seenInGenre.get(cleanGenre);
+      const id = String(movie.id);
+      if (seen.has(id)) return;
+
+      seen.add(id);
+      byGenre.get(cleanGenre).push(movie);
+    });
+  });
+
+  const collator = new Intl.Collator("es", { sensitivity: "base" });
+  const genres = [...byGenre.keys()].sort((a, b) => collator.compare(a, b));
+
+  genres.forEach((genre) => {
+    const items = byGenre.get(genre) || [];
+    if (!items.length) return;
+
+    const section = document.createElement("section");
+    section.className = "section genre-section";
+    section.dataset.generated = "genre";
+    section.dataset.genre = genre;
+
+    const rowId = getGenreSectionId(genre);
+    section.innerHTML = `
+      <div class="section-head">
+        <h2 class="section-title">${escapeHtml(genre)}</h2>
+      </div>
+      <div class="row" id="${escapeHtml(rowId)}" data-arrows="1"></div>
+    `;
+
+    main.appendChild(section);
+
+    const row = section.querySelector(".row");
+    setRow(row, items.map((m) => homeCatalogCardHtml(m)).join(""));
+    promoteCatalogCardBadges(row);
+    buildCarousel(row);
+  });
+}
+
 function homeHeroMeta(movie) {
   const year = movie?.release_year ? String(movie.release_year) : "";
   let right = "";
@@ -2420,7 +2523,7 @@ function homeHeroMeta(movie) {
     }
   }
 
-  return [year, right].filter(Boolean).join(" · ");
+  return [year, right, formatGenresInline(movie)].filter(Boolean).join(" · ");
 }
 
 function renderHomeHeroItem(movie, { userId } = {}) {
@@ -2900,6 +3003,20 @@ async function init() {
     setRow(seriesRow, series.map((m) => homeCatalogCardHtml(m)).join(""));
     promoteCatalogCardBadges(seriesRow);
     buildCarousel(seriesRow);
+
+    let allCatalog = [];
+    try {
+      allCatalog = await fetchAllMovies(500);
+      renderGenreSections(allCatalog);
+    } catch (e) {
+      console.warn("[home] no se pudieron cargar secciones por género:", e);
+      const fallbackMap = new Map();
+      [...latest, ...movies, ...series].forEach((item) => {
+        if (item?.id && !fallbackMap.has(String(item.id))) fallbackMap.set(String(item.id), item);
+      });
+      allCatalog = [...fallbackMap.values()];
+      renderGenreSections(allCatalog);
+    }
 
     const heroPoolMap = new Map();
     [...latest, ...movies, ...series].forEach((item) => {
