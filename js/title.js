@@ -1646,8 +1646,41 @@ function setTitleReminderBtnState(btn, { active = false, pending = false, visibl
     btn.innerHTML = `<i class="${active ? "fa-solid" : "fa-regular"} fa-bell" aria-hidden="true"></i><span>${label}</span>`;
 }
 
+let __titleReleaseReminderSyncInstalled = false;
+
+function getTitleReminderButtonsByMovieId(movieId) {
+    const id = String(movieId || "");
+    if (!id) return [];
+
+    return Array.from(document.querySelectorAll(".title-reminder-btn[data-movie-id]"))
+        .filter((btn) => String(btn.dataset.movieId || "") === id);
+}
+
+function syncTitleReminderButtonsByMovieId(movieId, { active = false, pending = false, visible = true } = {}) {
+    getTitleReminderButtonsByMovieId(movieId).forEach((button) => {
+        setTitleReminderBtnState(button, { active, pending, visible });
+    });
+}
+
+function ensureTitleReminderGlobalSync() {
+    if (__titleReleaseReminderSyncInstalled) return;
+    __titleReleaseReminderSyncInstalled = true;
+
+    window.addEventListener("satv:release-reminders-changed", (ev) => {
+        const movieId = ev?.detail?.movieId || ev?.detail?.contentId;
+        if (!movieId || typeof ev?.detail?.active === "undefined") return;
+
+        syncTitleReminderButtonsByMovieId(movieId, {
+            active: !!ev.detail.active,
+            pending: false,
+            visible: true
+        });
+    });
+}
+
 async function bindTitleReleaseReminderButton(btn, movie, api) {
     if (!btn || !movie?.id || !api) return;
+    ensureTitleReminderGlobalSync();
 
     const publishState = getMoviePublishState(movie);
     if (publishState !== "upcoming") {
@@ -1671,7 +1704,7 @@ async function bindTitleReleaseReminderButton(btn, movie, api) {
 
     try {
         const active = await api.isReleaseReminderSet(profileId, contentId);
-        setTitleReminderBtnState(btn, { visible: true, active, pending: false });
+        syncTitleReminderButtonsByMovieId(contentId, { visible: true, active, pending: false });
     } catch (e) {
         console.warn("[title] no se pudo leer Avisarme:", e);
         setTitleReminderBtnState(btn, { visible: true, active: false, pending: false });
@@ -1687,7 +1720,7 @@ async function bindTitleReleaseReminderButton(btn, movie, api) {
         if (btn.dataset.releaseReminderPending === "1") return;
 
         const wasActive = btn.dataset.releaseReminderState === "on";
-        setTitleReminderBtnState(btn, { visible: true, active: wasActive, pending: true });
+        syncTitleReminderButtonsByMovieId(contentId, { visible: true, active: wasActive, pending: true });
 
         let nextCtx = ctx;
         try {
@@ -1699,11 +1732,11 @@ async function bindTitleReleaseReminderButton(btn, movie, api) {
         try {
             if (wasActive) {
                 await api.removeReleaseReminder(nextProfileId, contentId);
-                setTitleReminderBtnState(btn, { visible: true, active: false, pending: false });
+                syncTitleReminderButtonsByMovieId(contentId, { visible: true, active: false, pending: false });
                 console.log("[title] aviso de lanzamiento desactivado");
             } else {
                 await api.setReleaseReminder(nextProfileId, contentId);
-                setTitleReminderBtnState(btn, { visible: true, active: true, pending: false });
+                syncTitleReminderButtonsByMovieId(contentId, { visible: true, active: true, pending: false });
                 console.log("[title] aviso de lanzamiento activado");
             }
 
@@ -1712,7 +1745,7 @@ async function bindTitleReleaseReminderButton(btn, movie, api) {
             }));
         } catch (e) {
             console.warn("[title] toggle Avisarme error:", e);
-            setTitleReminderBtnState(btn, { visible: true, active: wasActive, pending: false });
+            syncTitleReminderButtonsByMovieId(contentId, { visible: true, active: wasActive, pending: false });
         }
     }, { passive: false });
 }

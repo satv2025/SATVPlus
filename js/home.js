@@ -450,6 +450,47 @@ function setReleaseReminderBtnState(btn, { active = false, pending = false } = {
   btn.innerHTML = `${releaseReminderIconHtml(active)}<span>${label}</span>`;
 }
 
+const RELEASE_REMINDER_BUTTON_CLASSES = [
+  "card-release-reminder-btn",
+  "home-hero-reminder",
+  "title-reminder-btn"
+];
+
+let __releaseReminderGlobalSyncInstalled = false;
+
+function isReleaseReminderButtonElement(btn) {
+  return !!btn?.classList && RELEASE_REMINDER_BUTTON_CLASSES.some((className) => btn.classList.contains(className));
+}
+
+function getReleaseReminderButtonsByMovieId(movieId) {
+  const id = String(movieId || "");
+  if (!id) return [];
+
+  return Array.from(document.querySelectorAll("[data-movie-id]"))
+    .filter((btn) => isReleaseReminderButtonElement(btn) && String(btn.dataset.movieId || "") === id);
+}
+
+function syncReleaseReminderButtonsByMovieId(movieId, { active = false, pending = false } = {}) {
+  getReleaseReminderButtonsByMovieId(movieId).forEach((button) => {
+    setReleaseReminderBtnState(button, { active, pending });
+  });
+}
+
+function ensureReleaseReminderGlobalSync() {
+  if (__releaseReminderGlobalSyncInstalled) return;
+  __releaseReminderGlobalSyncInstalled = true;
+
+  window.addEventListener("satv:release-reminders-changed", (ev) => {
+    const movieId = ev?.detail?.movieId || ev?.detail?.contentId;
+    if (!movieId || typeof ev?.detail?.active === "undefined") return;
+
+    syncReleaseReminderButtonsByMovieId(movieId, {
+      active: !!ev.detail.active,
+      pending: false
+    });
+  });
+}
+
 async function getReleaseReminderUserId() {
   const session = __homeSessionCache || (await getHomeSessionCached());
   return session?.user?.id || null;
@@ -466,11 +507,12 @@ async function refreshReleaseReminderButton(btn) {
 
   const userId = await getReleaseReminderUserId();
   const active = await isReleaseReminderSet(userId, movieId);
-  setReleaseReminderBtnState(btn, { active, pending: false });
+  syncReleaseReminderButtonsByMovieId(movieId, { active, pending: false });
 }
 
 function bindReleaseReminderButton(btn) {
   if (!btn?.dataset?.movieId) return;
+  ensureReleaseReminderGlobalSync();
   if (btn.dataset.releaseReminderBound === "1") return;
   btn.dataset.releaseReminderBound = "1";
 
@@ -490,18 +532,18 @@ function bindReleaseReminderButton(btn) {
     if (!movieId) return;
 
     const wasActive = btn.dataset.releaseReminderState === "on";
-    setReleaseReminderBtnState(btn, { active: wasActive, pending: true });
+    syncReleaseReminderButtonsByMovieId(movieId, { active: wasActive, pending: true });
 
     try {
       const userId = await getReleaseReminderUserId();
 
       if (wasActive) {
         await removeReleaseReminder(userId, movieId);
-        setReleaseReminderBtnState(btn, { active: false, pending: false });
+        syncReleaseReminderButtonsByMovieId(movieId, { active: false, pending: false });
         toast?.("Aviso desactivado.", "success");
       } else {
         await setReleaseReminder(userId, movieId);
-        setReleaseReminderBtnState(btn, { active: true, pending: false });
+        syncReleaseReminderButtonsByMovieId(movieId, { active: true, pending: false });
         toast?.("Te avisaremos cuando esté disponible.", "success");
       }
 
@@ -510,7 +552,7 @@ function bindReleaseReminderButton(btn) {
       }));
     } catch (e) {
       console.warn("[home] toggle Avisarme error:", e);
-      setReleaseReminderBtnState(btn, { active: wasActive, pending: false });
+      syncReleaseReminderButtonsByMovieId(movieId, { active: wasActive, pending: false });
       toast?.("No se pudo actualizar el aviso.", "error");
     }
   }, { passive: false });
