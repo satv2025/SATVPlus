@@ -432,8 +432,8 @@ function releaseReminderIconHtml(active = false) {
   return `<i class="${active ? "fa-solid" : "fa-regular"} fa-bell" aria-hidden="true"></i>`;
 }
 
-function isUpcomingForReminder(value) {
-  return String(value || "").toLowerCase() === "upcoming";
+function isLiveModeForReminder(value) {
+  return value === true || String(value || "").toLowerCase() === "true" || String(value || "") === "1";
 }
 
 function setReleaseReminderBtnState(btn, { active = false, pending = false } = {}) {
@@ -572,8 +572,8 @@ function buildReleaseReminderButton(movieId, className = "card-release-reminder-
 function ensureReleaseReminderButtonOnCard(card, movieId) {
   if (!card || !movieId) return;
 
-  const state = card.dataset.publishState || card.getAttribute("data-publish-state") || "";
-  if (!isUpcomingForReminder(state)) {
+  const liveMode = card.dataset.liveMode || card.getAttribute("data-live-mode") || "";
+  if (!isLiveModeForReminder(liveMode)) {
     card.querySelectorAll(".card-release-reminder-btn").forEach((btn) => btn.remove());
     return;
   }
@@ -607,10 +607,11 @@ function addHomeMovieDataToCardHtml(html, movie) {
 
   const state = escapeHtml(String(movie?.publish_state || "public").toLowerCase());
   const title = escapeHtml(String(movie?.title || ""));
+  const liveMode = Boolean(movie?.live_mode) ? "true" : "false";
 
   return addMovieIdToCardHtml(html, movieId).replace(
     /<div\s+class="([^"]*\bcard\b[^"]*)"/,
-    `<div class="$1" data-publish-state="${state}" data-movie-title="${title}"`
+    `<div class="$1" data-publish-state="${state}" data-live-mode="${liveMode}" data-movie-title="${title}"`
   );
 }
 
@@ -2564,7 +2565,7 @@ function renderHomeHeroItem(movie, { userId } = {}) {
               <span class="home-hero-mylist-label">Mi Lista</span>
             </button>
 
-            ${isUpcomingForReminder(movie.publish_state) ? `
+            ${Boolean(movie.live_mode) ? `
               <button
                 class="btn ghost home-hero-reminder"
                 type="button"

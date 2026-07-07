@@ -1722,8 +1722,7 @@ async function bindTitleReleaseReminderButton(btn, movie, api) {
     if (!btn || !movie?.id || !api) return;
     ensureTitleReminderGlobalSync();
 
-    const publishState = getMoviePublishState(movie);
-    if (publishState !== "upcoming") {
+    if (!Boolean(movie.live_mode)) {
         setTitleReminderBtnState(btn, { visible: false });
         return;
     }
