@@ -59,6 +59,18 @@ function parseDurationTimeStringToSeconds(value) {
     return (m * 60) + s;
 }
 
+function formatDurationBadgeMinutes(minutes) {
+    const total = Math.floor(Number(minutes));
+    if (!Number.isFinite(total) || total <= 0) return "";
+
+    if (total < 60) return `${total} min`;
+
+    const hours = Math.floor(total / 60);
+    const mins = total % 60;
+
+    return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+}
+
 function formatDurationBadgeFromValue(value, unit = "auto") {
     if (value === null || value === undefined || value === "") return "";
 
@@ -89,7 +101,7 @@ function formatDurationBadgeFromValue(value, unit = "auto") {
         }
     }
 
-    return minutes > 0 ? `${minutes}min` : "";
+    return formatDurationBadgeMinutes(minutes);
 }
 
 function hasDurationValue(row, columnName) {
@@ -539,6 +551,65 @@ function getMoviePublishStateLabel(movie) {
     if (state === "other") return custom || "Otro";
 
     return "Público";
+}
+
+const FINISHED_LIVE_PUBLISH_STATE = "other";
+const FINISHED_LIVE_PUBLISH_TEXT = "Recién agregado";
+
+function isLiveModeActive(movie) {
+    return Boolean(movie?.live_mode);
+}
+
+function isLiveStartInFuture(movie) {
+    const d = getLiveStartDate(movie);
+    return !!d && d.getTime() > Date.now();
+}
+
+function isLiveStartFinished(movie) {
+    const d = getLiveStartDate(movie);
+    return isLiveModeActive(movie) && !!d && d.getTime() <= Date.now();
+}
+
+function applyFinishedLiveStateLocally(movie) {
+    if (!movie) return movie;
+
+    return {
+        ...movie,
+        live_mode: false,
+        live_starts_at: null,
+        publish_state: FINISHED_LIVE_PUBLISH_STATE,
+        publish_state_text: FINISHED_LIVE_PUBLISH_TEXT
+    };
+}
+
+async function persistFinishedLiveState(movie) {
+    if (!movie?.id) return;
+
+    try {
+        const supabase = await getAppSupabaseClient();
+        if (!supabase) return;
+
+        const { error } = await supabase
+            .from("movies")
+            .update({
+                live_mode: false,
+                live_starts_at: null,
+                publish_state: FINISHED_LIVE_PUBLISH_STATE,
+                publish_state_text: FINISHED_LIVE_PUBLISH_TEXT
+            })
+            .eq("id", movie.id);
+
+        if (error) console.warn("[title] no se pudo finalizar live_mode:", error);
+    } catch (e) {
+        console.warn("[title] finalizar live_mode error:", e);
+    }
+}
+
+async function normalizeFinishedLiveState(movie) {
+    if (!isLiveStartFinished(movie)) return movie;
+
+    void persistFinishedLiveState(movie);
+    return applyFinishedLiveStateLocally(movie);
 }
 
 /* ===========================
@@ -1061,7 +1132,9 @@ function setWatchBtnLiveCountdown(watchBtn, movie) {
 
         if (diff <= 0) {
             clearLiveCountdownTimer();
-            setWatchBtnVerAhora(watchBtn, movie);
+            const finishedMovie = applyFinishedLiveStateLocally(movie);
+            void persistFinishedLiveState(movie);
+            setWatchBtnVerAhora(watchBtn, finishedMovie);
             return;
         }
 
@@ -1722,7 +1795,7 @@ async function bindTitleReleaseReminderButton(btn, movie, api) {
     if (!btn || !movie?.id || !api) return;
     ensureTitleReminderGlobalSync();
 
-    if (!Boolean(movie.live_mode)) {
+    if (!isLiveModeActive(movie) || !isLiveStartInFuture(movie)) {
         setTitleReminderBtnState(btn, { visible: false });
         return;
     }
@@ -1809,6 +1882,7 @@ function getMoreCardBadgeLabel(movie) {
 
     if (Boolean(movie.live_mode)) {
         const d = getLiveStartDate(movie);
+        if (d && d.getTime() <= Date.now()) return FINISHED_LIVE_PUBLISH_TEXT;
         if (d) return `${formatLiveDateEs(d)} - ${formatLiveTimeEs(d)}`;
         if (publishState === "live") return "En Vivo";
     }
@@ -2150,6 +2224,8 @@ async function main() {
         renderTitleNotFound();
         return;
     }
+
+    movie = await normalizeFinishedLiveState(movie);
 
     applyAkiraVideoContainOverrideIfNeeded(movie.id);
 

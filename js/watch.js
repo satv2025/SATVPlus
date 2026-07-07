@@ -43,6 +43,8 @@ const DB = {
       releaseYear: "release_year",
       liveMode: "live_mode",
       liveStartsAt: "live_starts_at",
+      publishState: "publish_state",
+      publishStateText: "publish_state_text",
       collectionId: "collection_id",
       videoFit: "video_fit"
     }
@@ -265,6 +267,66 @@ function isUpcomingLiveFromRow(
   if (!d) return false;
 
   return d.getTime() > Date.now();
+}
+
+const FINISHED_LIVE_PUBLISH_STATE = "other";
+const FINISHED_LIVE_PUBLISH_TEXT = "Recién agregado";
+
+function isFinishedLiveRow(row, {
+  liveModeKey = "live_mode",
+  liveStartsAtKey = "live_starts_at"
+} = {}) {
+  const isLive = Boolean(row?.[liveModeKey] ?? row?.live_mode);
+  if (!isLive) return false;
+
+  const d = getLiveStartDateFromRow(row, liveStartsAtKey);
+  return !!d && d.getTime() <= Date.now();
+}
+
+function applyFinishedLiveRowLocally(row) {
+  const m = DB.movies.cols;
+  if (!row) return row;
+
+  return {
+    ...row,
+    [m.liveMode]: false,
+    [m.liveStartsAt]: null,
+    [m.publishState]: FINISHED_LIVE_PUBLISH_STATE,
+    [m.publishStateText]: FINISHED_LIVE_PUBLISH_TEXT,
+    live_mode: false,
+    live_starts_at: null,
+    publish_state: FINISHED_LIVE_PUBLISH_STATE,
+    publish_state_text: FINISHED_LIVE_PUBLISH_TEXT
+  };
+}
+
+async function persistFinishedLiveRow(row) {
+  const m = DB.movies.cols;
+  const id = row?.[m.id] || row?.id;
+  if (!id) return;
+
+  try {
+    const { error } = await supabase
+      .from(DB.movies.table)
+      .update({
+        [m.liveMode]: false,
+        [m.liveStartsAt]: null,
+        [m.publishState]: FINISHED_LIVE_PUBLISH_STATE,
+        [m.publishStateText]: FINISHED_LIVE_PUBLISH_TEXT
+      })
+      .eq(m.id, id);
+
+    if (error) warnLog("[watch] no se pudo finalizar live_mode:", error);
+  } catch (e) {
+    warnLog("[watch] finalizar live_mode error:", e);
+  }
+}
+
+async function normalizeFinishedLiveRow(row, options = {}) {
+  if (!isFinishedLiveRow(row, options)) return row;
+
+  void persistFinishedLiveRow(row);
+  return applyFinishedLiveRowLocally(row);
 }
 
 /* ============================================================
@@ -518,6 +580,8 @@ async function fetchMovieById(movieId) {
           m.releaseYear,
           m.liveMode,
           m.liveStartsAt,
+          m.publishState,
+          m.publishStateText,
           m.collectionId,
           m.videoFit
         ].join(",")
@@ -553,6 +617,8 @@ async function fetchSeriesById(seriesId) {
           m.vtt,
           m.liveMode,
           m.liveStartsAt,
+          m.publishState,
+          m.publishStateText,
           m.videoFit
         ].join(",")
       )
@@ -1069,9 +1135,13 @@ async function resolveRouteAndBuildProps() {
       throw new Error("Parámetro ?movie inválido (UUID esperado)");
     }
 
-    const movie = await fetchMovieById(movieId);
+    let movie = await fetchMovieById(movieId);
 
     if (!movie) throw new Error("No se encontró el contenido de la colección");
+    movie = await normalizeFinishedLiveRow(movie, {
+      liveModeKey: m.liveMode,
+      liveStartsAtKey: m.liveStartsAt
+    });
     if (!movie[m.m3u8]) throw new Error("El contenido no tiene m3u8_url");
 
     const [collectionMeta, collectionItems, recommendations] = await Promise.all([
@@ -1133,9 +1203,13 @@ async function resolveRouteAndBuildProps() {
       throw new Error("Parámetro ?movie inválido (UUID esperado)");
     }
 
-    const movie = await fetchMovieById(movieId);
+    let movie = await fetchMovieById(movieId);
 
     if (!movie) throw new Error("No se encontró la película");
+    movie = await normalizeFinishedLiveRow(movie, {
+      liveModeKey: m.liveMode,
+      liveStartsAtKey: m.liveStartsAt
+    });
 
     if (movie[m.category] !== "movie") {
       if (movie[m.category] === "series") {
@@ -1203,6 +1277,10 @@ async function resolveRouteAndBuildProps() {
     if (resolvedSeriesId && isUuid(resolvedSeriesId)) {
       try {
         series = await fetchSeriesById(resolvedSeriesId);
+        series = await normalizeFinishedLiveRow(series, {
+          liveModeKey: m.liveMode,
+          liveStartsAtKey: m.liveStartsAt
+        });
       } catch (err) {
         warnLog("[watch] No se pudo cargar serie:", err);
       }
@@ -1260,7 +1338,11 @@ async function resolveRouteAndBuildProps() {
       throw new Error("Parámetro ?series inválido (UUID esperado)");
     }
 
-    await fetchSeriesById(seriesId);
+    const series = await fetchSeriesById(seriesId);
+    await normalizeFinishedLiveRow(series, {
+      liveModeKey: m.liveMode,
+      liveStartsAtKey: m.liveStartsAt
+    });
 
     const episodesList = await fetchEpisodesForSeries(seriesId);
 

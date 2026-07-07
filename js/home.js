@@ -432,8 +432,28 @@ function releaseReminderIconHtml(active = false) {
   return `<i class="${active ? "fa-solid" : "fa-regular"} fa-bell" aria-hidden="true"></i>`;
 }
 
-function isLiveModeForReminder(value) {
-  return value === true || String(value || "").toLowerCase() === "true" || String(value || "") === "1";
+function getLiveStartDateForReminder(movieOrDataset) {
+  const raw =
+    movieOrDataset?.live_starts_at ??
+    movieOrDataset?.liveStartsAt ??
+    movieOrDataset?.live_start_at ??
+    movieOrDataset?.live_datetime ??
+    movieOrDataset?.live_at ??
+    null;
+
+  if (!raw) return null;
+
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function shouldShowReleaseReminder(movieOrDataset) {
+  const liveModeRaw = movieOrDataset?.live_mode ?? movieOrDataset?.liveMode ?? false;
+  const isLiveMode = liveModeRaw === true || String(liveModeRaw).toLowerCase() === "true" || liveModeRaw === "1";
+  if (!isLiveMode) return false;
+
+  const d = getLiveStartDateForReminder(movieOrDataset);
+  return !!d && d.getTime() > Date.now();
 }
 
 function setReleaseReminderBtnState(btn, { active = false, pending = false } = {}) {
@@ -572,8 +592,7 @@ function buildReleaseReminderButton(movieId, className = "card-release-reminder-
 function ensureReleaseReminderButtonOnCard(card, movieId) {
   if (!card || !movieId) return;
 
-  const liveMode = card.dataset.liveMode || card.getAttribute("data-live-mode") || "";
-  if (!isLiveModeForReminder(liveMode)) {
+  if (!shouldShowReleaseReminder(card.dataset)) {
     card.querySelectorAll(".card-release-reminder-btn").forEach((btn) => btn.remove());
     return;
   }
@@ -608,10 +627,11 @@ function addHomeMovieDataToCardHtml(html, movie) {
   const state = escapeHtml(String(movie?.publish_state || "public").toLowerCase());
   const title = escapeHtml(String(movie?.title || ""));
   const liveMode = Boolean(movie?.live_mode) ? "true" : "false";
+  const liveStartsAt = escapeHtml(String(movie?.live_starts_at || ""));
 
   return addMovieIdToCardHtml(html, movieId).replace(
     /<div\s+class="([^"]*\bcard\b[^"]*)"/,
-    `<div class="$1" data-publish-state="${state}" data-live-mode="${liveMode}" data-movie-title="${title}"`
+    `<div class="$1" data-publish-state="${state}" data-live-mode="${liveMode}" data-live-starts-at="${liveStartsAt}" data-movie-title="${title}"`
   );
 }
 
@@ -2565,7 +2585,7 @@ function renderHomeHeroItem(movie, { userId } = {}) {
               <span class="home-hero-mylist-label">Mi Lista</span>
             </button>
 
-            ${Boolean(movie.live_mode) ? `
+            ${shouldShowReleaseReminder(movie) ? `
               <button
                 class="btn ghost home-hero-reminder"
                 type="button"
@@ -2640,6 +2660,9 @@ function getMovieCardPublicLabel(movie) {
   }
 
   if (Boolean(movie.live_mode)) {
+    const d = getLiveStartDateForReminder(movie);
+    if (d && d.getTime() <= Date.now()) return "Recién agregado";
+
     const liveDate = formatMovieLiveDateTime(movie);
     return liveDate || (publishState === "live" ? "En Vivo" : "");
   }
