@@ -4239,21 +4239,39 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 }
 
 .card-release-reminder-btn {
-  margin: 7px 10px 4px;
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 6;
+  margin: 0;
+  max-width: calc(100% - 16px);
   min-height: 32px;
   border: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, .12);
+  background: rgba(0, 0, 0, .62);
   color: #fff;
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
+  padding: 0 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .32);
+  backdrop-filter: blur(8px);
 }
 
 .card-release-reminder-btn:hover,
 .card-release-reminder-btn.is-active {
   background: #fff;
   color: #000;
+}
+
+@media (max-width: 480px) {
+  .card-release-reminder-btn {
+    right: 6px;
+    bottom: 6px;
+    min-height: 30px;
+    padding: 0 9px;
+    font-size: 12px;
+  }
 }
 
 .card-release-reminder-btn:disabled,

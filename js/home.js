@@ -577,15 +577,17 @@ function ensureReleaseReminderButtonOnCard(card, movieId) {
     return;
   }
 
+  const thumb = card.querySelector(".thumb");
+  if (!thumb) return;
+
   let btn = card.querySelector(".card-release-reminder-btn");
   if (!btn) {
     btn = buildReleaseReminderButton(movieId, "card-release-reminder-btn");
-    const titleEl = card.querySelector(".card-title");
-    if (titleEl?.parentElement === card) {
-      titleEl.insertAdjacentElement("afterend", btn);
-    } else {
-      card.appendChild(btn);
-    }
+  }
+
+  // El botón vive dentro del thumbnail para no sumar alto ni romper el layout de la card.
+  if (btn.parentElement !== thumb) {
+    thumb.appendChild(btn);
   }
 
   btn.dataset.movieId = String(movieId);
