@@ -208,7 +208,7 @@ svg {
 /* Mantengo tu idea de 100% width, pero fluido y estable */
 .container {
   margin: 0 auto;
-  padding: var(--ui-pad-y) var(--ui-pad-x);
+  padding: clamp(238px, 1.6vw, 18px) var(--ui-pad-x);
   width: 100% !important;
   max-width: 100%;
 }
@@ -228,11 +228,6 @@ svg {
   background: transparent;
   border-bottom: 1px solid rgb(255 255 255 / 0%);
   width: 100%;
-}
-
-/* si el hero está dentro del primer .container después del nav */
-.topnav+.container {
-  padding-top: 0 !important;
 }
 
 /* ✅ CLAVE: si nav-inner tiene "container", NO lo dejes al 85% nunca */
@@ -3941,4 +3936,1102 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
 .card-badge-other {
   background: #fff;
   color: #000;
+}
+
+/* =========================
+   ALERTS / AVISOS DE LANZAMIENTO
+========================= */
+
+.alerts-bell {
+  background: none;
+  border: none;
+  font-size: 23px;
+  color: #fff;
+  position: relative;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.alerts-bell i,
+.alerts-modal-close i,
+.card-release-reminder-btn i,
+.home-hero-reminder i,
+.title-reminder-btn i {
+  font-family: "Font Awesome 6 Free" !important;
+}
+
+.alerts-bell i.fa-solid,
+.alerts-modal-close i.fa-solid,
+.card-release-reminder-btn i.fa-solid,
+.home-hero-reminder i.fa-solid,
+.title-reminder-btn i.fa-solid {
+  font-weight: 900 !important;
+}
+
+.card-release-reminder-btn i.fa-regular,
+.home-hero-reminder i.fa-regular,
+.title-reminder-btn i.fa-regular {
+  font-weight: 400 !important;
+}
+
+.alerts-bell:hover,
+.alerts-bell.has-alerts {
+  background: rgba(255, 255, 255, .12);
+}
+
+.alerts-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #e50914;
+  color: #fff;
+  font: 800 10px/16px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-align: center;
+  box-shadow: 0 0 0 2px #000;
+}
+
+.alerts-modal-open {
+  overflow: hidden;
+}
+
+.alerts-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: transparent;
+  pointer-events: none;
+}
+
+.alerts-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+.alerts-modal {
+  position: absolute;
+  top: 78px;
+  right: clamp(12px, 3vw, 34px);
+  width: min(460px, calc(100vw - 24px));
+  pointer-events: auto;
+  max-height: min(76vh, 680px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: var(--radius, .25em);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02) 34%, rgba(14, 14, 18, .98) 100%),
+    rgba(14, 14, 18, .98);
+  color: #fff;
+  box-shadow: 0 24px 90px rgba(0, 0, 0, .58);
+  backdrop-filter: blur(18px);
+}
+
+.alerts-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 18px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+
+.alerts-modal-kicker {
+  display: inline-flex;
+  width: fit-content;
+  margin: 0 0 7px;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .06);
+  color: rgba(255, 255, 255, .72);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.alerts-modal-head h2 {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.1;
+}
+
+.alerts-modal-head p {
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, .68);
+  font-size: 13px;
+}
+
+.alerts-modal-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .09);
+  color: #fff;
+  cursor: pointer;
+}
+
+.alerts-modal-close:hover {
+  background: rgba(255, 255, 255, .16);
+}
+
+.alerts-tabs {
+  display: flex;
+  gap: 7px;
+  padding: 10px 10px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.alerts-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.alerts-tab {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .055);
+  color: rgba(255, 255, 255, .72);
+  padding: 0 11px;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.alerts-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, .1);
+}
+
+.alerts-tab.is-active {
+  color: #000;
+  background: #fff;
+  border-color: #fff;
+}
+
+.alerts-tab-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(229, 9, 20, .92);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.alerts-tab.is-active .alerts-tab-count {
+  background: #e50914;
+  color: #fff;
+}
+
+.alerts-modal-body {
+  max-height: calc(min(76vh, 680px) - 132px);
+  overflow: auto;
+  padding: 10px;
+}
+
+.alerts-empty {
+  padding: 30px 16px;
+  color: rgba(255, 255, 255, .72);
+  text-align: center;
+}
+
+.alerts-list {
+  display: grid;
+  gap: 8px;
+}
+
+.alerts-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .045);
+  color: #fff;
+  text-decoration: none;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease;
+}
+
+.alerts-item:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, .09);
+  border-color: rgba(255, 255, 255, .18);
+}
+
+.alerts-item.is-unseen {
+  background: rgba(229, 9, 20, .12);
+  border-color: rgba(229, 9, 20, .32);
+}
+
+.alerts-item-thumb {
+  width: 90px;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .08) center / cover no-repeat;
+}
+
+.alerts-item-main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.alerts-item-title {
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alerts-item-sub {
+  color: rgba(255, 255, 255, .68);
+  font-size: 13px;
+}
+
+.alerts-item-mylist {
+  width: fit-content;
+  margin-top: 3px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+  color: rgba(255, 255, 255, .92);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.alerts-item-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #e50914;
+  box-shadow: 0 0 0 4px rgba(229, 9, 20, .16);
+}
+
+.card-release-reminder-btn,
+.home-hero-reminder,
+.title-reminder-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.card-release-reminder-btn {
+  margin: 7px 10px 4px;
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.card-release-reminder-btn:hover,
+.card-release-reminder-btn.is-active {
+  background: #fff;
+  color: #000;
+}
+
+.card-release-reminder-btn:disabled,
+.home-hero-reminder:disabled,
+.title-reminder-btn:disabled {
+  opacity: .7;
+  cursor: progress;
+}
+
+.home-hero-reminder.is-active,
+.title-reminder-btn.is-active {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+.title-reminder-btn.hidden,
+.home-hero-reminder.hidden {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .alerts-modal {
+    top: 96px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+
+  .alerts-modal-body {
+    max-height: calc(min(76vh, 680px) - 144px);
+  }
+
+  .alerts-item {
+    grid-template-columns: 74px 1fr auto;
+  }
+
+  .alerts-item-thumb {
+    width: 74px;
+  }
+}
+
+/* =========================
+   ALERTS MODAL · tabs + mini Mi Lista
+   Backdrop transparente: solo bloquea overflow del body.
+========================= */
+.alerts-modal-open {
+  overflow: hidden;
+}
+
+.alerts-modal-backdrop {
+  background: transparent !important;
+  pointer-events: none;
+}
+
+.alerts-modal {
+  background: var(--bg) !important;
+  border-radius: var(--radius, .25em) !important;
+  border-color: rgba(255, 255, 255, .16);
+  box-shadow: 0 24px 95px rgba(0, 0, 0, .72), 0 0 0 1px rgba(255, 255, 255, .03) inset;
+}
+
+.alerts-modal-head {
+  background:
+    radial-gradient(360px 140px at 15% 0%, rgba(255, 255, 255, .09), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, .045), transparent);
+}
+
+.alerts-tabs {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(255, 255, 255, .025);
+}
+
+.alerts-tab {
+  flex: 0 0 auto;
+}
+
+.alerts-tab i,
+.alerts-mini-action i,
+.alerts-inline-link i {
+  font-family: "Font Awesome 6 Free" !important;
+}
+
+.alerts-tab i.fa-solid,
+.alerts-mini-action i.fa-solid,
+.alerts-inline-link i.fa-solid {
+  font-weight: 900 !important;
+}
+
+.alerts-tab i.fa-regular {
+  font-weight: 400 !important;
+}
+
+.alerts-item.is-pending {
+  background: rgba(255, 255, 255, .055);
+  border-color: rgba(255, 255, 255, .12);
+}
+
+.alerts-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.alerts-section-head>div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.alerts-section-head strong {
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.alerts-section-head span {
+  color: rgba(255, 255, 255, .62);
+  font-size: 12px;
+}
+
+.alerts-mini-action,
+.alerts-inline-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .1);
+  color: #fff;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.alerts-mini-action:hover,
+.alerts-inline-link:hover {
+  background: #fff;
+  color: #000;
+}
+
+.alerts-inline-link {
+  margin: 12px auto 0;
+  width: fit-content;
+}
+
+.alerts-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.alerts-mini-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 9px;
+  align-items: center;
+  padding: 8px;
+  border-radius: var(--radius, .25em);
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(255, 255, 255, .045);
+  color: #fff;
+  text-decoration: none;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease;
+}
+
+.alerts-mini-card:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, .09);
+  border-color: rgba(255, 255, 255, .18);
+}
+
+.alerts-mini-thumb {
+  width: 78px;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .08) center / cover no-repeat;
+}
+
+.alerts-mini-main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.alerts-mini-title {
+  min-width: 0;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alerts-mini-meta {
+  min-width: 0;
+  color: rgba(255, 255, 255, .62);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 520px) {
+  .alerts-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .alerts-mini-card {
+    grid-template-columns: 86px 1fr;
+  }
+
+  .alerts-mini-thumb {
+    width: 86px;
+  }
+}
+
+/* =========================
+   CONTROL CENTER · cuenta + avisos
+   Backdrop transparente: solo bloquea overflow del body.
+========================= */
+body.alerts-modal-open {
+  overflow: hidden !important;
+}
+
+.control-center-trigger {
+  isolation: isolate;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .14);
+}
+
+.control-center-trigger:hover,
+.control-center-trigger.has-alerts {
+  background: rgba(255, 255, 255, .16);
+}
+
+.alerts-modal-backdrop.control-center-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: transparent !important;
+  pointer-events: none;
+}
+
+.alerts-modal-backdrop.control-center-backdrop[hidden] {
+  display: none !important;
+}
+
+.control-center-modal {
+  background: var(--bg) !important;
+  border-radius: var(--radius, .25em) !important;
+  width: min(540px, calc(100vw - 24px));
+  max-height: min(82vh, 760px);
+  box-shadow: 0 24px 95px rgba(0, 0, 0, .72), 0 0 0 1px rgba(255, 255, 255, .035) inset;
+}
+
+.control-center-head {
+  align-items: center;
+  background:
+    radial-gradient(420px 160px at 12% 0%, rgba(255, 255, 255, .085), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, .04), transparent);
+}
+
+.control-center-user {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.control-center-user-text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.control-center-avatar {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .12);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+.control-center-avatar.is-large {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+}
+
+.control-center-tabs {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(255, 255, 255, .025);
+}
+
+.control-center-tabs .alerts-tab {
+  flex: 0 0 auto;
+}
+
+.control-center-body {
+  max-height: calc(min(82vh, 760px) - 146px);
+}
+
+.control-account-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.control-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .055);
+}
+
+.control-profile-main {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.control-profile-main strong {
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.control-profile-main small {
+  color: rgba(255, 255, 255, .62);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.control-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.control-quick-action {
+  min-width: 0;
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .048);
+  color: #fff;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease;
+}
+
+.control-quick-action:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, .09);
+  border-color: rgba(255, 255, 255, .18);
+}
+
+.control-quick-action i,
+.control-stats-row i {
+  font-family: "Font Awesome 6 Free" !important;
+}
+
+.control-quick-action i.fa-solid,
+.control-stats-row i.fa-solid {
+  font-weight: 900 !important;
+}
+
+.control-quick-action i.fa-regular {
+  font-weight: 400 !important;
+}
+
+.control-quick-action>i {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .1);
+  color: #fff;
+}
+
+.control-quick-action span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.control-quick-action strong {
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.control-quick-action small {
+  color: rgba(255, 255, 255, .62);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.control-quick-action.is-danger:hover {
+  background: rgba(229, 9, 20, .15);
+  border-color: rgba(229, 9, 20, .35);
+}
+
+.control-quick-action:disabled {
+  opacity: .65;
+  cursor: progress;
+}
+
+.control-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.control-stats-row button {
+  min-height: 56px;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: var(--radius, .25em);
+  background: rgba(255, 255, 255, .04);
+  color: #fff;
+  cursor: pointer;
+}
+
+.control-stats-row button:hover {
+  background: rgba(255, 255, 255, .085);
+}
+
+.control-stats-row strong {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.control-stats-row span {
+  color: rgba(255, 255, 255, .62);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+
+@media (max-width: 620px) {
+  .control-quick-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .control-center-body {
+    max-height: calc(min(82vh, 760px) - 156px);
+  }
+}
+
+
+/* =========================================================
+   CONTROL CENTER FIX · full width + transparent overflow lock
+   - Backdrop visible only as transparent fixed layer.
+   - Modal uses full available viewport width so tabs/content don't cut.
+   - Modal body scrolls internally while body overflow stays blocked.
+   ========================================================= */
+body.alerts-modal-open {
+  overflow: hidden !important;
+}
+
+.alerts-modal-backdrop.control-center-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 100000 !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+.alerts-modal-backdrop.control-center-backdrop[hidden] {
+  display: none !important;
+}
+
+.alerts-modal.control-center-modal {
+  position: absolute !important;
+  top: calc(78px + env(safe-area-inset-top)) !important;
+  left: max(12px, env(safe-area-inset-left)) !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  max-height: calc(100dvh - 96px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: var(--bg) !important;
+  border-radius: var(--radius, .25em) !important;
+  pointer-events: auto !important;
+}
+
+@supports not (height: 100dvh) {
+  .alerts-modal.control-center-modal {
+    max-height: calc(100vh - 96px) !important;
+  }
+}
+
+.control-center-head,
+.control-center-user,
+.control-center-user-text {
+  min-width: 0 !important;
+}
+
+.control-center-tabs {
+  width: 100% !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 7px !important;
+  overflow: visible !important;
+  flex: 0 0 auto !important;
+}
+
+.control-center-tabs .alerts-tab {
+  flex: 1 1 max-content !important;
+  min-width: max-content !important;
+}
+
+.control-center-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: auto !important;
+}
+
+.control-account-panel,
+.alerts-list,
+.alerts-mini-grid {
+  min-width: 0 !important;
+}
+
+@media (max-width: 768px) {
+  .alerts-modal.control-center-modal {
+    top: calc(96px + env(safe-area-inset-top)) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    max-height: calc(100dvh - 112px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+  }
+
+  .control-center-tabs .alerts-tab {
+    flex: 1 1 calc(50% - 7px) !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .control-center-tabs .alerts-tab {
+    flex-basis: 100% !important;
+  }
+}
+
+
+/* =========================================================
+   CONTROL CENTER FINAL · popup compacto + sin cortes
+   ========================================================= */
+body.alerts-modal-open {
+  overflow: hidden !important;
+  overscroll-behavior: contain !important;
+}
+
+.control-center-trigger {
+  background: rgba(255, 255, 255, .08) !important;
+  border: 1px solid rgba(255, 255, 255, .16) !important;
+  color: #fff !important;
+  font-size: 22px !important;
+  position: relative !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  border-radius: var(--radius, .25em) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  line-height: 1 !important;
+}
+
+.control-center-trigger:hover,
+.control-center-trigger.has-alerts {
+  background: rgba(255, 255, 255, .16) !important;
+  border-color: rgba(255, 255, 255, .24) !important;
+}
+
+.control-center-trigger i {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+}
+
+.alerts-modal-backdrop.control-center-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 100000 !important;
+  background: transparent !important;
+  overflow: hidden !important;
+  pointer-events: auto !important;
+}
+
+.alerts-modal-backdrop.control-center-backdrop[hidden] {
+  display: none !important;
+}
+
+.alerts-modal.control-center-modal {
+  position: fixed !important;
+  top: calc(72px + env(safe-area-inset-top)) !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: min(520px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right))) !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  max-height: calc(100dvh - 88px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: var(--bg) !important;
+  border: 1px solid rgba(255, 255, 255, .09) !important;
+  border-radius: var(--radius, .25em) !important;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, .72), 0 0 0 1px rgba(255, 255, 255, .03) inset !important;
+  pointer-events: auto !important;
+}
+
+@supports not (height: 100dvh) {
+  .alerts-modal.control-center-modal {
+    max-height: calc(100vh - 88px) !important;
+  }
+}
+
+.control-center-head {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  padding: 14px !important;
+}
+
+.control-center-user,
+.control-center-user-text {
+  min-width: 0 !important;
+}
+
+.control-center-tabs {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 7px !important;
+  padding: 9px 10px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.control-center-tabs::-webkit-scrollbar {
+  display: none !important;
+}
+
+.control-center-tabs .alerts-tab {
+  flex: 0 0 auto !important;
+  min-width: max-content !important;
+  white-space: nowrap !important;
+}
+
+.control-center-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: auto !important;
+  padding: 12px !important;
+  overscroll-behavior: contain !important;
+}
+
+.control-quick-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.control-quick-action {
+  min-height: 62px !important;
+}
+
+.control-account-panel,
+.control-profile-card,
+.control-quick-grid,
+.alerts-list,
+.alerts-mini-grid {
+  min-width: 0 !important;
+}
+
+@media (max-width: 768px) {
+  .alerts-modal.control-center-modal {
+    top: calc(88px + env(safe-area-inset-top)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    width: min(480px, calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right))) !important;
+    max-height: calc(100dvh - 104px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+  }
+
+  .control-quick-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .alerts-modal.control-center-modal {
+    top: calc(78px + env(safe-area-inset-top)) !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    width: min(390px, calc(100vw - 12px - env(safe-area-inset-left) - env(safe-area-inset-right))) !important;
+    max-height: calc(100dvh - 90px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* =========================================================
+   CONTROL CENTER PATCH · fondo var(--bg) + width auto
+   ========================================================= */
+.alerts-modal.control-center-modal {
+  width: auto !important;
+  background: var(--bg) !important;
+}
+
+.alerts-modal.control-center-modal,
+.alerts-modal.control-center-modal .control-center-head,
+.alerts-modal.control-center-modal .control-center-tabs,
+.alerts-modal.control-center-modal .control-center-body {
+  background-color: var(--bg) !important;
+}
+
+@media (max-width: 768px) {
+  .alerts-modal.control-center-modal {
+    width: auto !important;
+    min-width: min(340px, calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right))) !important;
+    max-width: min(480px, calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right))) !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .alerts-modal.control-center-modal {
+    width: auto !important;
+    min-width: calc(100vw - 12px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    max-width: calc(100vw - 12px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+  }
+}
+
+.panel-header-plus {
+  margin-bottom: 1em;
 }

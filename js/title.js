@@ -1625,6 +1625,98 @@ async function bindMyListButton(btn, movie) {
     });
 }
 
+
+/* ===========================
+   AVISO DE LANZAMIENTO (title.html)
+=========================== */
+
+function setTitleReminderBtnState(btn, { active = false, pending = false, visible = true } = {}) {
+    if (!btn) return;
+
+    btn.classList.toggle("hidden", !visible);
+    btn.classList.toggle("is-active", !!active);
+    btn.dataset.releaseReminderState = active ? "on" : "off";
+    btn.dataset.releaseReminderPending = pending ? "1" : "0";
+    btn.setAttribute("aria-pressed", String(!!active));
+    btn.setAttribute("aria-label", active ? "Quitar aviso de lanzamiento" : "Avisarme cuando se lance");
+
+    try { btn.disabled = !!pending; } catch { }
+
+    const label = pending ? "Actualizando…" : (active ? "Aviso activado" : "Avisarme");
+    btn.innerHTML = `<i class="${active ? "fa-solid" : "fa-regular"} fa-bell" aria-hidden="true"></i><span>${label}</span>`;
+}
+
+async function bindTitleReleaseReminderButton(btn, movie, api) {
+    if (!btn || !movie?.id || !api) return;
+
+    const publishState = getMoviePublishState(movie);
+    if (publishState !== "upcoming") {
+        setTitleReminderBtnState(btn, { visible: false });
+        return;
+    }
+
+    const contentId = String(movie.id);
+    btn.dataset.movieId = contentId;
+    setTitleReminderBtnState(btn, { visible: true, active: false, pending: true });
+
+    let ctx = null;
+    try {
+        ctx = await getMyListAuthContext();
+    } catch (e) {
+        console.warn("[title] no se pudo resolver usuario para Avisarme:", e);
+        ctx = { profileId: null };
+    }
+
+    const profileId = ctx?.profileId || null;
+
+    try {
+        const active = await api.isReleaseReminderSet(profileId, contentId);
+        setTitleReminderBtnState(btn, { visible: true, active, pending: false });
+    } catch (e) {
+        console.warn("[title] no se pudo leer Avisarme:", e);
+        setTitleReminderBtnState(btn, { visible: true, active: false, pending: false });
+    }
+
+    if (btn.dataset.releaseReminderBound === "1") return;
+    btn.dataset.releaseReminderBound = "1";
+
+    btn.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        if (btn.dataset.releaseReminderPending === "1") return;
+
+        const wasActive = btn.dataset.releaseReminderState === "on";
+        setTitleReminderBtnState(btn, { visible: true, active: wasActive, pending: true });
+
+        let nextCtx = ctx;
+        try {
+            nextCtx = await getMyListAuthContext();
+        } catch { }
+
+        const nextProfileId = nextCtx?.profileId || profileId || null;
+
+        try {
+            if (wasActive) {
+                await api.removeReleaseReminder(nextProfileId, contentId);
+                setTitleReminderBtnState(btn, { visible: true, active: false, pending: false });
+                console.log("[title] aviso de lanzamiento desactivado");
+            } else {
+                await api.setReleaseReminder(nextProfileId, contentId);
+                setTitleReminderBtnState(btn, { visible: true, active: true, pending: false });
+                console.log("[title] aviso de lanzamiento activado");
+            }
+
+            window.dispatchEvent(new CustomEvent("satv:release-reminders-changed", {
+                detail: { movieId: contentId, active: !wasActive }
+            }));
+        } catch (e) {
+            console.warn("[title] toggle Avisarme error:", e);
+            setTitleReminderBtnState(btn, { visible: true, active: wasActive, pending: false });
+        }
+    }, { passive: false });
+}
+
 /* ===========================
    TE PODRÍA GUSTAR (cards)
 =========================== */
@@ -1963,6 +2055,7 @@ async function main() {
     const watchBtn = el("watch-btn");
     const trailerBtn = el("trailer-btn");
     const myListBtn = el("episodes-jump");
+    const remindBtn = el("remind-btn");
 
     const episodesSection = el("episodes-section");
     const episodesTitle = el("episodes-title");
@@ -2029,6 +2122,8 @@ async function main() {
 
     const publishState = getMoviePublishState(movie);
     const publishStateLabel = getMoviePublishStateLabel(movie);
+
+    await bindTitleReleaseReminderButton(remindBtn, movie, api);
 
     if (publishState === "upcoming") {
         setWatchBtnDisabledStatus(watchBtn, publishStateLabel);

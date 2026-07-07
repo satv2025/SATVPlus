@@ -12,6 +12,7 @@ import {
   renderAuthButtons,
   toast,
   cardHtml,
+  escapeHtml,
   $,
   formatTime,
   enableDataHrefNavigation,
@@ -22,7 +23,15 @@ import {
 } from "./ui.js";
 
 import { getSession, requireAuthOrRedirect } from "./auth.js";
-import { fetchContinueWatching, fetchLatest, fetchByCategory, fetchMovie } from "./api.js";
+import {
+  fetchContinueWatching,
+  fetchLatest,
+  fetchByCategory,
+  fetchMovie,
+  isReleaseReminderSet,
+  setReleaseReminder,
+  removeReleaseReminder
+} from "./api.js";
 import { supabase } from "./supabaseClient.js";
 
 /* =========================================================
@@ -411,6 +420,153 @@ const MYLIST_ICON_MINUS = `
 function setMyListPlusMinusIcon(btn, added) {
   if (!btn) return;
   btn.innerHTML = added ? MYLIST_ICON_MINUS : MYLIST_ICON_PLUS;
+}
+
+
+/* =========================================================
+   AVISOS DE LANZAMIENTO - BOTONES EN HOME
+========================================================= */
+
+function releaseReminderIconHtml(active = false) {
+  return `<i class="${active ? "fa-solid" : "fa-regular"} fa-bell" aria-hidden="true"></i>`;
+}
+
+function isUpcomingForReminder(value) {
+  return String(value || "").toLowerCase() === "upcoming";
+}
+
+function setReleaseReminderBtnState(btn, { active = false, pending = false } = {}) {
+  if (!btn) return;
+
+  btn.classList.toggle("is-active", !!active);
+  btn.dataset.releaseReminderState = active ? "on" : "off";
+  btn.dataset.releaseReminderPending = pending ? "1" : "0";
+  btn.setAttribute("aria-pressed", String(!!active));
+  btn.setAttribute("aria-label", active ? "Quitar aviso de lanzamiento" : "Avisarme cuando se lance");
+
+  try { btn.disabled = !!pending; } catch { }
+
+  const label = pending ? "Actualizando…" : (active ? "Aviso activado" : "Avisarme");
+  btn.innerHTML = `${releaseReminderIconHtml(active)}<span>${label}</span>`;
+}
+
+async function getReleaseReminderUserId() {
+  const session = __homeSessionCache || (await getHomeSessionCached());
+  return session?.user?.id || null;
+}
+
+async function refreshReleaseReminderButton(btn) {
+  if (!btn?.dataset?.movieId) return;
+  const movieId = String(btn.dataset.movieId);
+
+  setReleaseReminderBtnState(btn, {
+    active: btn.dataset.releaseReminderState === "on",
+    pending: true
+  });
+
+  const userId = await getReleaseReminderUserId();
+  const active = await isReleaseReminderSet(userId, movieId);
+  setReleaseReminderBtnState(btn, { active, pending: false });
+}
+
+function bindReleaseReminderButton(btn) {
+  if (!btn?.dataset?.movieId) return;
+  if (btn.dataset.releaseReminderBound === "1") return;
+  btn.dataset.releaseReminderBound = "1";
+
+  setReleaseReminderBtnState(btn, { active: false, pending: true });
+  refreshReleaseReminderButton(btn).catch((e) => {
+    console.warn("[home] no se pudo refrescar Avisarme:", e);
+    setReleaseReminderBtnState(btn, { active: false, pending: false });
+  });
+
+  btn.addEventListener("click", async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    if (btn.dataset.releaseReminderPending === "1") return;
+
+    const movieId = String(btn.dataset.movieId || "");
+    if (!movieId) return;
+
+    const wasActive = btn.dataset.releaseReminderState === "on";
+    setReleaseReminderBtnState(btn, { active: wasActive, pending: true });
+
+    try {
+      const userId = await getReleaseReminderUserId();
+
+      if (wasActive) {
+        await removeReleaseReminder(userId, movieId);
+        setReleaseReminderBtnState(btn, { active: false, pending: false });
+        toast?.("Aviso desactivado.", "success");
+      } else {
+        await setReleaseReminder(userId, movieId);
+        setReleaseReminderBtnState(btn, { active: true, pending: false });
+        toast?.("Te avisaremos cuando esté disponible.", "success");
+      }
+
+      window.dispatchEvent(new CustomEvent("satv:release-reminders-changed", {
+        detail: { movieId, active: !wasActive }
+      }));
+    } catch (e) {
+      console.warn("[home] toggle Avisarme error:", e);
+      setReleaseReminderBtnState(btn, { active: wasActive, pending: false });
+      toast?.("No se pudo actualizar el aviso.", "error");
+    }
+  }, { passive: false });
+}
+
+function buildReleaseReminderButton(movieId, className = "card-release-reminder-btn") {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = className;
+  btn.dataset.movieId = String(movieId);
+  btn.setAttribute("aria-pressed", "false");
+  setReleaseReminderBtnState(btn, { active: false, pending: false });
+  return btn;
+}
+
+function ensureReleaseReminderButtonOnCard(card, movieId) {
+  if (!card || !movieId) return;
+
+  const state = card.dataset.publishState || card.getAttribute("data-publish-state") || "";
+  if (!isUpcomingForReminder(state)) {
+    card.querySelectorAll(".card-release-reminder-btn").forEach((btn) => btn.remove());
+    return;
+  }
+
+  let btn = card.querySelector(".card-release-reminder-btn");
+  if (!btn) {
+    btn = buildReleaseReminderButton(movieId, "card-release-reminder-btn");
+    const titleEl = card.querySelector(".card-title");
+    if (titleEl?.parentElement === card) {
+      titleEl.insertAdjacentElement("afterend", btn);
+    } else {
+      card.appendChild(btn);
+    }
+  }
+
+  btn.dataset.movieId = String(movieId);
+  bindReleaseReminderButton(btn);
+}
+
+function bindHomeHeroReleaseReminderButton(hero = document) {
+  const btn = hero?.querySelector?.(".home-hero-reminder");
+  if (!btn) return;
+  bindReleaseReminderButton(btn);
+}
+
+function addHomeMovieDataToCardHtml(html, movie) {
+  const movieId = movie?.id;
+  if (!html || !movieId) return html || "";
+
+  const state = escapeHtml(String(movie?.publish_state || "public").toLowerCase());
+  const title = escapeHtml(String(movie?.title || ""));
+
+  return addMovieIdToCardHtml(html, movieId).replace(
+    /<div\s+class="([^"]*\bcard\b[^"]*)"/,
+    `<div class="$1" data-publish-state="${state}" data-movie-title="${title}"`
+  );
 }
 
 /* =========================================================
@@ -2082,6 +2238,7 @@ function enhanceCarouselCardsWithQuickPlus(scope = document) {
     });
 
     ensureMoreInfoNextToTitle(card, movieId);
+    ensureReleaseReminderButtonOnCard(card, movieId);
 
     bindCardHoverPreview(card, String(movieId));
   });
@@ -2259,6 +2416,19 @@ function renderHomeHeroItem(movie, { userId } = {}) {
               </svg>
               <span class="home-hero-mylist-label">Mi Lista</span>
             </button>
+
+            ${isUpcomingForReminder(movie.publish_state) ? `
+              <button
+                class="btn ghost home-hero-reminder"
+                type="button"
+                data-movie-id="${String(movie.id)}"
+                aria-label="Avisarme cuando se lance"
+                aria-pressed="false"
+              >
+                <i class="fa-regular fa-bell" aria-hidden="true"></i>
+                <span>Avisarme</span>
+              </button>
+            ` : ""}
           </div>
         </div>
 
@@ -2269,6 +2439,7 @@ function renderHomeHeroItem(movie, { userId } = {}) {
 
   mountHomeHeroTrailerVideo(hero, movie);
   bindHeroMyListButton({ movie, userId });
+  bindHomeHeroReleaseReminderButton(hero);
 }
 
 /* =========================================================
@@ -2342,7 +2513,7 @@ function homeCatalogCardHtml(movie) {
     ? cardHtml(movie, href, stateLabel, null, { showCollectionOverlay: true })
     : cardHtml(movie, href, null, null, { showCollectionOverlay: true });
 
-  return addMovieIdToCardHtml(html, movie?.id);
+  return addHomeMovieDataToCardHtml(html, movie);
 }
 
 function promoteCatalogCardBadges(rootEl) {

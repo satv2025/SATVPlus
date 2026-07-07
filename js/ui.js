@@ -8,7 +8,10 @@ import {
   detectConnectionCountryCode,
   countryHasSpanishOfficialLanguage,
   getPreferredDeviceLanguage,
-  searchMovies
+  searchMovies,
+  fetchReleaseAlerts,
+  fetchMyListPreview,
+  markReleaseAlertsSeen
 } from "./api.js";
 
 export function $(sel) { return document.querySelector(sel); }
@@ -584,16 +587,23 @@ export async function renderAuthButtons() {
   const name = escapeHtml(display || "Usuario");
 
   host.innerHTML = `
-    <a class="pill profile-link" href="/profile.html">${name}</a>
-    <button class="btn ghost" id="btn-logout" type="button">Salir</button>
+    <button
+      class="control-center-trigger"
+      id="control-center-trigger"
+      type="button"
+      aria-label="Abrir centro de control"
+      title="Centro de control"
+      data-display-name="${name}"
+    >
+      <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+      <span class="alerts-badge" id="alerts-badge" hidden></span>
+    </button>
   `;
 
-  const btnLogout = document.getElementById("btn-logout");
-  if (btnLogout) {
-    btnLogout.addEventListener("click", async () => {
-      await signOut();
-      window.location.href = "/login.html";
-    });
+  try {
+    await initAlertsBell(session);
+  } catch (e) {
+    console.warn("[ui] initAlertsBell error:", e);
   }
 
   try {
@@ -601,6 +611,536 @@ export async function renderAuthButtons() {
   } catch (e) {
     console.warn("[ui] maybeSuggestLanguageChange error:", e);
   }
+}
+
+
+/* =========================
+   CONTROL CENTER / ALERTS
+========================= */
+
+let __alertsBellInitialized = false;
+let __alertsBadgeRefreshTimer = 0;
+let __alertsMarkSeenTimer = 0;
+
+function getAlertsUserId(session) {
+  return getUserIdFromSession(session);
+}
+
+function getSessionUser(session) {
+  return (
+    session?.user ||
+    session?.session?.user ||
+    session?.data?.session?.user ||
+    {}
+  );
+}
+
+function getControlCenterTrigger() {
+  return (
+    document.getElementById("control-center-trigger") ||
+    document.getElementById("alerts-bell")
+  );
+}
+
+function getControlUserData(session, userId = null) {
+  const u = getSessionUser(session);
+  const trigger = getControlCenterTrigger();
+  const displayName =
+    trigger?.dataset?.displayName ||
+    getFallbackDisplayName(session) ||
+    "Usuario";
+
+  return {
+    userId: userId || getAlertsUserId(session),
+    displayName,
+    email: u?.email || "",
+    initial: String(displayName || "U").trim().charAt(0).toUpperCase() || "U"
+  };
+}
+
+function ensureAlertsModalRoot() {
+  let root = document.getElementById("alerts-modal-root");
+  if (root) return root;
+
+  root = document.createElement("div");
+  root.id = "alerts-modal-root";
+  root.className = "alerts-modal-backdrop control-center-backdrop";
+  root.setAttribute("hidden", "");
+  root.innerHTML = `
+    <div class="alerts-modal control-center-modal" role="dialog" aria-modal="true" aria-labelledby="control-center-title">
+      <div class="alerts-modal-head control-center-head">
+        <div class="control-center-user">
+          <span class="control-center-avatar" data-control-avatar>U</span>
+          <span class="control-center-user-text">
+            <span class="alerts-modal-kicker">Centro de control</span>
+            <h2 id="control-center-title" data-control-title>Cuenta</h2>
+            <p data-control-subtitle>Perfil, lista, avisos y accesos rápidos.</p>
+          </span>
+        </div>
+        <button class="alerts-modal-close" type="button" aria-label="Cerrar">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="alerts-tabs control-center-tabs" role="tablist" aria-label="Centro de control">
+        <button class="alerts-tab is-active" type="button" role="tab" aria-selected="true" data-alerts-tab="account">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+          Cuenta
+        </button>
+        <button class="alerts-tab" type="button" role="tab" aria-selected="false" data-alerts-tab="new">
+          <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+          Notificaciones
+          <span class="alerts-tab-count" data-alerts-count="new">0</span>
+        </button>
+        <button class="alerts-tab" type="button" role="tab" aria-selected="false" data-alerts-tab="reminders">
+          <i class="fa-regular fa-bell" aria-hidden="true"></i>
+          Recordatorios
+          <span class="alerts-tab-count" data-alerts-count="reminders">0</span>
+        </button>
+        <button class="alerts-tab" type="button" role="tab" aria-selected="false" data-alerts-tab="mylist">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          Mi Lista
+          <span class="alerts-tab-count" data-alerts-count="mylist">0</span>
+        </button>
+        <button class="alerts-tab" type="button" role="tab" aria-selected="false" data-alerts-tab="seen">
+          <i class="fa-solid fa-check" aria-hidden="true"></i>
+          Vistos
+          <span class="alerts-tab-count" data-alerts-count="seen">0</span>
+        </button>
+        <button class="alerts-tab" type="button" role="tab" aria-selected="false" data-alerts-tab="all">
+          <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+          Todo
+          <span class="alerts-tab-count" data-alerts-count="all">0</span>
+        </button>
+      </div>
+
+      <div class="alerts-modal-body control-center-body" id="alerts-modal-body">
+        <div class="alerts-empty">Cargando…</div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(root);
+
+  root.querySelector(".alerts-modal-close")?.addEventListener("click", closeAlertsModal);
+
+  root.addEventListener("click", async (ev) => {
+    const logoutBtn = ev.target?.closest?.("[data-control-logout]");
+    if (logoutBtn) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      logoutBtn.disabled = true;
+      try {
+        await signOut();
+      } finally {
+        window.location.href = "/login.html";
+      }
+      return;
+    }
+
+    const tab = ev.target?.closest?.("[data-alerts-tab]");
+    if (!tab) return;
+
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const tabName = tab.getAttribute("data-alerts-tab") || "account";
+    renderAlertsModalContent(root.__alertsData || { alerts: [], mylist: [], user: {} }, tabName);
+  });
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && !root.hasAttribute("hidden")) closeAlertsModal();
+  });
+
+  return root;
+}
+
+function updateControlHeader(root, user = {}) {
+  const avatar = root.querySelector("[data-control-avatar]");
+  const title = root.querySelector("[data-control-title]");
+  const subtitle = root.querySelector("[data-control-subtitle]");
+
+  if (avatar) avatar.textContent = escapeHtml(user.initial || "U");
+  if (title) title.textContent = user.displayName || "Cuenta";
+  if (subtitle) subtitle.textContent = user.email || "Perfil, lista, avisos y accesos rápidos.";
+}
+
+function closeAlertsModal() {
+  const root = document.getElementById("alerts-modal-root");
+  if (!root) return;
+  root.setAttribute("hidden", "");
+  document.body.classList.remove("alerts-modal-open");
+}
+
+function showAlertsModalRoot() {
+  const root = ensureAlertsModalRoot();
+  root.removeAttribute("hidden");
+  document.body.classList.add("alerts-modal-open");
+  return root;
+}
+
+function getAlertTitleHref(contentId) {
+  if (!contentId) return "#";
+  return `/title?title=${encodeURIComponent(String(contentId))}`;
+}
+
+function getMyListHref(userId) {
+  if (!userId) return "/mylist";
+  const q = new URLSearchParams({ list: String(userId), user: String(userId) });
+  return `/mylist?${q.toString()}`;
+}
+
+function normalizeAlertsData(data) {
+  if (Array.isArray(data)) return { alerts: data, mylist: [], userId: null, user: {} };
+  return {
+    alerts: Array.isArray(data?.alerts) ? data.alerts : [],
+    mylist: Array.isArray(data?.mylist) ? data.mylist : [],
+    userId: data?.userId || data?.user?.userId || null,
+    user: data?.user || {}
+  };
+}
+
+function getAlertsGroups(data = {}) {
+  const safe = normalizeAlertsData(data);
+  const alerts = safe.alerts;
+  const released = alerts.filter((item) => item?.is_released !== false && !item?.is_pending);
+
+  return {
+    account: [],
+    new: released.filter((item) => item.unseen),
+    reminders: alerts.filter((item) => item?.is_pending || item?.is_released === false),
+    mylist: safe.mylist,
+    seen: released.filter((item) => !item.unseen),
+    all: released
+  };
+}
+
+function getDefaultAlertsTab(data = {}) {
+  return "account";
+}
+
+function getAlertsEmptyMessage(tabName) {
+  if (tabName === "seen") return "Todavía no tenés avisos vistos.";
+  if (tabName === "reminders") return "No tenés recordatorios pendientes.";
+  if (tabName === "mylist") return "Tu lista está vacía.";
+  if (tabName === "all") return "Todavía no tenés avisos de lanzamiento.";
+  return "Todavía no tenés notificaciones nuevas.";
+}
+
+function updateAlertsTabs(root, data = {}, activeTab = "account") {
+  const groups = getAlertsGroups(data);
+
+  root.querySelectorAll("[data-alerts-tab]").forEach((btn) => {
+    const tab = btn.getAttribute("data-alerts-tab") || "account";
+    const active = tab === activeTab;
+    btn.classList.toggle("is-active", active);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+
+  root.querySelectorAll("[data-alerts-count]").forEach((el) => {
+    const tab = el.getAttribute("data-alerts-count") || "new";
+    const count = groups[tab]?.length || 0;
+    el.textContent = count > 99 ? "99+" : String(count);
+    el.hidden = count <= 0;
+  });
+}
+
+function getAlertStatusMeta(item) {
+  if (item?.is_pending || item?.is_released === false) {
+    const stateText = item?.movie?.publish_state_text || item?.movie?.release_year || "Próximamente";
+    return `Recordatorio activado · ${escapeHtml(stateText)}`;
+  }
+
+  if (item?.unseen) return "Nuevo lanzamiento · Ya está disponible";
+  return "Aviso visto · Ya está disponible";
+}
+
+function renderAlertsList(items = [], { emptyMessage = "Todavía no tenés avisos de lanzamiento." } = {}) {
+  if (!items.length) {
+    return `<div class="alerts-empty">${escapeHtml(emptyMessage)}</div>`;
+  }
+
+  return `
+    <div class="alerts-list">
+      ${items.map((item) => {
+        const title = escapeHtml(item.title || item.movie?.title || "Sin título");
+        const thumb = escapeHtml(item.thumbnail_url || item.movie?.thumbnail_url || item.movie?.banner_url || "");
+        const href = getAlertTitleHref(item.content_id);
+        const tag = item.in_my_list
+          ? `<span class="alerts-item-mylist">Está en tu lista</span>`
+          : "";
+        const unseen = item.unseen ? `<span class="alerts-item-dot" aria-label="Sin ver"></span>` : "";
+        const pending = item?.is_pending || item?.is_released === false;
+
+        return `
+          <a class="alerts-item ${item.unseen ? "is-unseen" : ""} ${pending ? "is-pending" : ""}" href="${href}">
+            <span class="alerts-item-thumb" style="${thumb ? `background-image:url('${thumb}')` : ""}"></span>
+            <span class="alerts-item-main">
+              <span class="alerts-item-title">${title}</span>
+              <span class="alerts-item-sub">${getAlertStatusMeta(item)}</span>
+              ${tag}
+            </span>
+            ${unseen}
+          </a>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderMyListPreview(items = [], userId = null) {
+  const openListHref = getMyListHref(userId);
+
+  if (!items.length) {
+    return `
+      <div class="alerts-empty">
+        Tu lista está vacía.
+        <a class="alerts-inline-link" href="/index.html">Explorar títulos</a>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="alerts-section-head">
+      <div>
+        <strong>Mi Lista</strong>
+        <span>${items.length} ${items.length === 1 ? "título guardado" : "títulos guardados"}</span>
+      </div>
+      <a class="alerts-mini-action" href="${openListHref}">
+        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+        Abrir lista
+      </a>
+    </div>
+    <div class="alerts-mini-grid">
+      ${items.map((item) => {
+        const title = escapeHtml(item.title || "Sin título");
+        const thumb = escapeHtml(item.thumbnail_url || item.banner_url || "");
+        const meta = escapeHtml(item.mylist_meta || item.duration_text || item.category || "");
+        const href = getAlertTitleHref(item.id || item.content_id);
+
+        return `
+          <a class="alerts-mini-card" href="${href}">
+            <span class="alerts-mini-thumb" style="${thumb ? `background-image:url('${thumb}')` : ""}"></span>
+            <span class="alerts-mini-main">
+              <span class="alerts-mini-title">${title}</span>
+              ${meta ? `<span class="alerts-mini-meta">${meta}</span>` : ""}
+            </span>
+          </a>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderControlAccountPanel(data = {}) {
+  const safe = normalizeAlertsData(data);
+  const groups = getAlertsGroups(safe);
+  const user = safe.user || {};
+  const myListHref = getMyListHref(safe.userId);
+  const newCount = groups.new.length;
+  const remindersCount = groups.reminders.length;
+  const listCount = groups.mylist.length;
+
+  return `
+    <div class="control-account-panel">
+      <div class="control-profile-card">
+        <span class="control-center-avatar is-large">${escapeHtml(user.initial || "U")}</span>
+        <span class="control-profile-main">
+          <strong>${escapeHtml(user.displayName || "Usuario")}</strong>
+          <small>${escapeHtml(user.email || "Cuenta SATV+")}</small>
+        </span>
+      </div>
+
+      <div class="control-quick-grid">
+        <a class="control-quick-action" href="/profile.html">
+          <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
+          <span>
+            <strong>Perfil y nickname</strong>
+            <small>Editar cuenta, nombre y ajustes</small>
+          </span>
+        </a>
+        <a class="control-quick-action" href="${myListHref}">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          <span>
+            <strong>Mi Lista</strong>
+            <small>${listCount ? `${listCount} guardados` : "Ver títulos guardados"}</small>
+          </span>
+        </a>
+        <button class="control-quick-action" type="button" data-alerts-tab="new">
+          <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+          <span>
+            <strong>Notificaciones</strong>
+            <small>${newCount ? `${newCount} nuevas` : "Sin novedades nuevas"}</small>
+          </span>
+        </button>
+        <button class="control-quick-action" type="button" data-alerts-tab="reminders">
+          <i class="fa-regular fa-bell" aria-hidden="true"></i>
+          <span>
+            <strong>Recordatorios</strong>
+            <small>${remindersCount ? `${remindersCount} pendientes` : "Nada pendiente"}</small>
+          </span>
+        </button>
+        <button class="control-quick-action is-danger" type="button" data-control-logout>
+          <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+          <span>
+            <strong>Cerrar sesión</strong>
+            <small>Salir de esta cuenta</small>
+          </span>
+        </button>
+      </div>
+
+      <div class="control-stats-row">
+        <button type="button" data-alerts-tab="new">
+          <strong>${newCount}</strong>
+          <span>nuevas</span>
+        </button>
+        <button type="button" data-alerts-tab="reminders">
+          <strong>${remindersCount}</strong>
+          <span>recordatorios</span>
+        </button>
+        <button type="button" data-alerts-tab="mylist">
+          <strong>${listCount}</strong>
+          <span>en lista</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function maybeMarkReleaseAlertsSeen(data = {}, activeTab = "account") {
+  if (activeTab !== "new") return;
+
+  const safe = normalizeAlertsData(data);
+  const unseenIds = getAlertsGroups(safe).new
+    .map((item) => item.content_id)
+    .filter(Boolean);
+
+  if (!safe.userId || !unseenIds.length) return;
+
+  clearTimeout(__alertsMarkSeenTimer);
+  __alertsMarkSeenTimer = setTimeout(async () => {
+    try {
+      await markReleaseAlertsSeen(safe.userId, unseenIds);
+      scheduleAlertsBadgeRefresh();
+    } catch (e) {
+      console.warn("[ui] no se pudieron marcar alerts como vistas:", e);
+    }
+  }, 350);
+}
+
+function renderAlertsModalContent(data = {}, activeTab = null) {
+  const root = ensureAlertsModalRoot();
+  const body = root.querySelector("#alerts-modal-body");
+  const safe = normalizeAlertsData(data);
+  const tabName = activeTab || getDefaultAlertsTab(safe);
+  const groups = getAlertsGroups(safe);
+
+  root.__alertsData = safe;
+  updateControlHeader(root, safe.user);
+  updateAlertsTabs(root, safe, tabName);
+
+  if (!body) return;
+
+  if (tabName === "account") {
+    body.innerHTML = renderControlAccountPanel(safe);
+    return;
+  }
+
+  if (tabName === "mylist") {
+    body.innerHTML = renderMyListPreview(groups.mylist, safe.userId);
+    return;
+  }
+
+  body.innerHTML = renderAlertsList(groups[tabName] || groups.new, {
+    emptyMessage: getAlertsEmptyMessage(tabName)
+  });
+
+  maybeMarkReleaseAlertsSeen(safe, tabName);
+}
+
+async function refreshAlertsBadge(session = null) {
+  const badge = document.getElementById("alerts-badge");
+  const bell = getControlCenterTrigger();
+  if (!badge || !bell) return;
+
+  const userId = getAlertsUserId(session || await getSession());
+  if (!userId) {
+    badge.hidden = true;
+    badge.textContent = "";
+    return;
+  }
+
+  try {
+    const items = await fetchReleaseAlerts(userId, { limit: 50 });
+    const count = items.filter((item) => item.unseen).length;
+
+    badge.hidden = count <= 0;
+    badge.textContent = count > 9 ? "9+" : String(count || "");
+    bell.classList.toggle("has-alerts", count > 0);
+  } catch (e) {
+    console.warn("[ui] no se pudieron cargar alerts:", e);
+    badge.hidden = true;
+    badge.textContent = "";
+    bell.classList.remove("has-alerts");
+  }
+}
+
+function scheduleAlertsBadgeRefresh() {
+  clearTimeout(__alertsBadgeRefreshTimer);
+  __alertsBadgeRefreshTimer = setTimeout(() => {
+    refreshAlertsBadge().catch((e) => console.warn("[ui] refresh alerts badge error:", e));
+  }, 120);
+}
+
+async function openAlertsModal(session = null) {
+  const activeSession = session || await getSession();
+  const root = showAlertsModalRoot();
+  const userId = getAlertsUserId(activeSession);
+  const user = getControlUserData(activeSession, userId);
+
+  root.__alertsData = { alerts: [], mylist: [], userId, user };
+  renderAlertsModalContent(root.__alertsData, "account");
+
+  const body = root.querySelector("#alerts-modal-body");
+  if (!userId) {
+    if (body) body.innerHTML = `<div class="alerts-empty">Iniciá sesión para usar el centro de control.</div>`;
+    return;
+  }
+
+  try {
+    const [alerts, mylist] = await Promise.all([
+      fetchReleaseAlerts(userId, { limit: 80, includePending: true }),
+      fetchMyListPreview(userId, { limit: 12 })
+    ]);
+
+    const data = { alerts, mylist, userId, user };
+    renderAlertsModalContent(data, getDefaultAlertsTab(data));
+  } catch (e) {
+    console.warn("[ui] openAlertsModal error:", e);
+    if (body) body.innerHTML = `<div class="alerts-empty">No se pudo cargar el centro de control.</div>`;
+  }
+}
+
+async function initAlertsBell(session = null) {
+  const bell = getControlCenterTrigger();
+  if (!bell) return;
+
+  if (bell.dataset.alertsBound !== "1") {
+    bell.dataset.alertsBound = "1";
+    bell.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      await openAlertsModal(session || await getSession());
+    });
+  }
+
+  if (!__alertsBellInitialized) {
+    __alertsBellInitialized = true;
+    window.addEventListener("satv:release-reminders-changed", scheduleAlertsBadgeRefresh);
+    window.addEventListener("focus", scheduleAlertsBadgeRefresh);
+  }
+
+  await refreshAlertsBadge(session || await getSession());
 }
 
 /* =========================
@@ -634,7 +1174,7 @@ export function enableDataHrefNavigation() {
     if (target?.closest?.(".overlay-hover-tarjeta")) return;
 
     const interactive = target.closest?.(
-      "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist, .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover"
+      "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist, .home-hero-reminder, .card-release-reminder-btn, .title-reminder-btn, .alerts-bell, .control-center-trigger, .alerts-modal, .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover"
     );
     if (interactive) return;
 
@@ -660,7 +1200,7 @@ export function enableDataHrefNavigation() {
     if (target?.closest?.(".overlay-hover-tarjeta")) return;
 
     const interactive = target.closest?.(
-      "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist, .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover"
+      "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist, .home-hero-reminder, .card-release-reminder-btn, .title-reminder-btn, .alerts-bell, .control-center-trigger, .alerts-modal, .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover"
     );
     if (interactive) return;
 

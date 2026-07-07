@@ -332,6 +332,416 @@ export async function upsertLanguagePreference({ userId, countryCode, langCode }
   return data || payload;
 }
 
+
+/* =========================================================
+   RELEASE ALERTS / AVISOS DE LANZAMIENTO
+   Tabla esperada: public.release_reminders
+   Fallback localStorage para que la UI no rompa si la tabla aún no existe.
+========================================================= */
+
+const RELEASE_REMINDERS_TABLE = "release_reminders";
+const RELEASE_REMINDERS_LOCAL_PREFIX = "satv_release_reminders_v1";
+const LOCAL_MY_LIST_KEY = "satv_my_list_ids";
+
+function getReleaseReminderStorageKey(profileId) {
+  return `${RELEASE_REMINDERS_LOCAL_PREFIX}:${String(profileId || "guest")}`;
+}
+
+function getReleaseReminderLocalMap(profileId) {
+  try {
+    const raw = localStorage.getItem(getReleaseReminderStorageKey(profileId));
+    const parsed = JSON.parse(raw || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveReleaseReminderLocalMap(profileId, map) {
+  try {
+    localStorage.setItem(getReleaseReminderStorageKey(profileId), JSON.stringify(map || {}));
+  } catch { }
+}
+
+function setReleaseReminderLocal(profileId, contentId, patch = {}) {
+  if (!contentId) return null;
+  const id = String(contentId);
+  const map = getReleaseReminderLocalMap(profileId);
+  const now = new Date().toISOString();
+  map[id] = {
+    content_id: id,
+    created_at: map[id]?.created_at || now,
+    seen_at: map[id]?.seen_at || null,
+    notified_at: map[id]?.notified_at || null,
+    ...patch
+  };
+  saveReleaseReminderLocalMap(profileId, map);
+  return map[id];
+}
+
+function removeReleaseReminderLocal(profileId, contentId) {
+  if (!contentId) return false;
+  const id = String(contentId);
+  const map = getReleaseReminderLocalMap(profileId);
+  const existed = !!map[id];
+  delete map[id];
+  saveReleaseReminderLocalMap(profileId, map);
+  return existed;
+}
+
+function getReleaseReminderLocalRows(profileId) {
+  const map = getReleaseReminderLocalMap(profileId);
+  return Object.values(map || {})
+    .filter((row) => row?.content_id)
+    .map((row) => ({
+      id: row.id || null,
+      profile_id: profileId || null,
+      content_id: String(row.content_id),
+      created_at: row.created_at || null,
+      seen_at: row.seen_at || null,
+      notified_at: row.notified_at || null,
+      __local: true
+    }));
+}
+
+function markReleaseReminderLocalSeen(profileId, contentIds = []) {
+  const ids = [...new Set((contentIds || []).filter(Boolean).map(String))];
+  if (!ids.length) return;
+
+  const map = getReleaseReminderLocalMap(profileId);
+  const now = new Date().toISOString();
+
+  ids.forEach((id) => {
+    if (map[id]) {
+      map[id].seen_at = map[id].seen_at || now;
+      map[id].notified_at = map[id].notified_at || now;
+    }
+  });
+
+  saveReleaseReminderLocalMap(profileId, map);
+}
+
+function isReleasedForAlert(movie) {
+  if (!movie) return false;
+  const state = String(movie.publish_state || "public").toLowerCase();
+  if (state === "upcoming") return false;
+
+  if (Boolean(movie.live_mode) && movie.live_starts_at) {
+    const liveDate = new Date(movie.live_starts_at);
+    if (!Number.isNaN(liveDate.getTime()) && liveDate.getTime() > Date.now() && state !== "public") {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function normalizeReleaseRow(row) {
+  if (!row?.content_id) return null;
+  return {
+    id: row.id || null,
+    profile_id: row.profile_id || null,
+    content_id: String(row.content_id),
+    created_at: row.created_at || null,
+    seen_at: row.seen_at || null,
+    notified_at: row.notified_at || null,
+    __local: !!row.__local
+  };
+}
+
+async function fetchReleaseReminderRows(profileId) {
+  const localRows = getReleaseReminderLocalRows(profileId).map(normalizeReleaseRow).filter(Boolean);
+  if (!profileId) return localRows;
+
+  try {
+    const { data, error } = await supabase
+      .from(RELEASE_REMINDERS_TABLE)
+      .select("id, profile_id, content_id, created_at, seen_at, notified_at")
+      .eq("profile_id", profileId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const remoteRows = (data || []).map(normalizeReleaseRow).filter(Boolean);
+    const merged = new Map();
+
+    localRows.forEach((row) => merged.set(row.content_id, row));
+    remoteRows.forEach((row) => merged.set(row.content_id, row));
+
+    return [...merged.values()];
+  } catch (e) {
+    console.warn("[api] release_reminders no disponible; usando fallback local:", e);
+    return localRows;
+  }
+}
+
+export async function fetchReleaseReminderIds(profileId) {
+  const rows = await fetchReleaseReminderRows(profileId);
+  return [...new Set(rows.map((row) => String(row.content_id)).filter(Boolean))];
+}
+
+export async function isReleaseReminderSet(profileId, contentId) {
+  if (!contentId) return false;
+  const id = String(contentId);
+
+  if (getReleaseReminderLocalMap(profileId)[id]) return true;
+
+  if (!profileId) return false;
+
+  try {
+    const { data, error } = await supabase
+      .from(RELEASE_REMINDERS_TABLE)
+      .select("id")
+      .eq("profile_id", profileId)
+      .eq("content_id", id)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return !!data;
+  } catch (e) {
+    console.warn("[api] no se pudo leer release_reminders; fallback local:", e);
+    return !!getReleaseReminderLocalMap(profileId)[id];
+  }
+}
+
+export async function setReleaseReminder(profileId, contentId) {
+  if (!contentId) throw new Error("Falta contentId para setReleaseReminder");
+  const id = String(contentId);
+
+  const localRow = setReleaseReminderLocal(profileId, id, {
+    seen_at: null,
+    notified_at: null
+  });
+
+  if (!profileId) return localRow;
+
+  try {
+    const payload = {
+      profile_id: profileId,
+      content_id: id,
+      created_at: new Date().toISOString(),
+      seen_at: null,
+      notified_at: null
+    };
+
+    const { data, error } = await supabase
+      .from(RELEASE_REMINDERS_TABLE)
+      .upsert(payload, {
+        onConflict: "profile_id,content_id",
+        ignoreDuplicates: false
+      })
+      .select("id, profile_id, content_id, created_at, seen_at, notified_at")
+      .single();
+
+    if (error) throw error;
+    return data || localRow;
+  } catch (e) {
+    console.warn("[api] no se pudo guardar release_reminders; queda local:", e);
+    return localRow;
+  }
+}
+
+export async function removeReleaseReminder(profileId, contentId) {
+  if (!contentId) return false;
+  const id = String(contentId);
+  removeReleaseReminderLocal(profileId, id);
+
+  if (!profileId) return true;
+
+  try {
+    const { error } = await supabase
+      .from(RELEASE_REMINDERS_TABLE)
+      .delete()
+      .eq("profile_id", profileId)
+      .eq("content_id", id);
+
+    if (error) throw error;
+  } catch (e) {
+    console.warn("[api] no se pudo borrar release_reminders remoto; fallback local actualizado:", e);
+  }
+
+  return true;
+}
+
+function getLocalMyListIds() {
+  try {
+    const raw = localStorage.getItem(LOCAL_MY_LIST_KEY);
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed)
+      ? [...new Set(parsed.map((id) => String(id)).filter(Boolean))]
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatMyListMetaLine(item) {
+  const parts = [];
+  if (item?.release_year) parts.push(String(item.release_year));
+
+  const category = String(item?.category || "").toLowerCase();
+  if (category === "series") parts.push("Serie");
+  else if (category === "movie") parts.push(item?.duration_text || "Película");
+  else if (item?.duration_text) parts.push(item.duration_text);
+
+  return parts.filter(Boolean).join(" · ");
+}
+
+async function fetchMoviesByContentIds(contentIds = []) {
+  const ids = [...new Set((contentIds || []).map(String).filter(Boolean))];
+  if (!ids.length) return [];
+
+  const { data, error } = await supabase
+    .from("movies")
+    .select(MOVIE_CARD_FIELDS)
+    .in("id", ids);
+
+  if (error) throw error;
+  return (data || []).map(withFormattedMovieDuration);
+}
+
+export async function fetchMyListPreview(profileId, { limit = 12 } = {}) {
+  const safeLimit = clampLimit(limit, 1, 50, 12);
+  const orderRows = [];
+  const seenIds = new Set();
+
+  if (profileId) {
+    try {
+      const { data, error } = await supabase
+        .from("my_list")
+        .select("id, profile_id, content_id, added_at")
+        .eq("profile_id", profileId)
+        .order("added_at", { ascending: false })
+        .limit(safeLimit);
+
+      if (error) throw error;
+
+      (data || []).forEach((row) => {
+        const id = String(row?.content_id || "");
+        if (!id || seenIds.has(id)) return;
+        seenIds.add(id);
+        orderRows.push({ content_id: id, added_at: row?.added_at || null, source: "remote" });
+      });
+    } catch (e) {
+      console.warn("[api] no se pudo leer my_list para alerts:", e);
+    }
+  }
+
+  for (const id of getLocalMyListIds()) {
+    if (orderRows.length >= safeLimit) break;
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
+    orderRows.push({ content_id: id, added_at: null, source: "local" });
+  }
+
+  const contentIds = orderRows.map((row) => row.content_id).slice(0, safeLimit);
+  if (!contentIds.length) return [];
+
+  const movies = await fetchMoviesByContentIds(contentIds);
+  const movieById = new Map(movies.map((movie) => [String(movie.id), movie]));
+
+  return orderRows
+    .map((row) => {
+      const movie = movieById.get(String(row.content_id));
+      if (!movie) return null;
+      return {
+        ...movie,
+        content_id: String(movie.id),
+        added_at: row.added_at,
+        in_my_list: true,
+        mylist_meta: formatMyListMetaLine(movie)
+      };
+    })
+    .filter(Boolean)
+    .slice(0, safeLimit);
+}
+
+export async function fetchReleaseAlerts(profileId, { limit = 50, includePending = false } = {}) {
+  const rows = await fetchReleaseReminderRows(profileId);
+  const safeLimit = clampLimit(limit, 1, 100, 50);
+  const contentIds = [...new Set(rows.map((row) => String(row.content_id)).filter(Boolean))];
+
+  if (!contentIds.length) return [];
+
+  const { data: moviesData, error: moviesError } = await supabase
+    .from("movies")
+    .select(MOVIE_CARD_FIELDS)
+    .in("id", contentIds);
+
+  if (moviesError) throw moviesError;
+
+  const movieById = new Map((moviesData || []).map((movie) => [String(movie.id), movie]));
+
+  let myListIds = new Set();
+  if (profileId && contentIds.length) {
+    try {
+      const { data, error } = await supabase
+        .from("my_list")
+        .select("content_id")
+        .eq("profile_id", profileId)
+        .in("content_id", contentIds);
+
+      if (error) throw error;
+      myListIds = new Set((data || []).map((row) => String(row.content_id)).filter(Boolean));
+    } catch (e) {
+      console.warn("[api] no se pudo cruzar Mi Lista para alerts:", e);
+    }
+  }
+
+  return rows
+    .map((row) => {
+      const movie = movieById.get(String(row.content_id));
+      const isReleased = isReleasedForAlert(movie);
+      if (!includePending && !isReleased) return null;
+
+      return {
+        ...row,
+        movie,
+        title: movie?.title || "Sin título",
+        thumbnail_url: movie?.thumbnail_url || movie?.banner_url || "",
+        in_my_list: myListIds.has(String(row.content_id)),
+        is_released: isReleased,
+        is_pending: !isReleased,
+        unseen: isReleased && !row.seen_at
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a.unseen !== b.unseen) return a.unseen ? -1 : 1;
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    })
+    .slice(0, safeLimit);
+}
+
+export async function markReleaseAlertsSeen(profileId, contentIds = []) {
+  const ids = [...new Set((contentIds || []).filter(Boolean).map(String))];
+  if (!ids.length) return true;
+
+  markReleaseReminderLocalSeen(profileId, ids);
+
+  if (!profileId) return true;
+
+  try {
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from(RELEASE_REMINDERS_TABLE)
+      .update({
+        seen_at: now,
+        notified_at: now
+      })
+      .eq("profile_id", profileId)
+      .in("content_id", ids)
+      .is("seen_at", null);
+
+    if (error) throw error;
+  } catch (e) {
+    console.warn("[api] no se pudo marcar release_reminders como visto; fallback local actualizado:", e);
+  }
+
+  return true;
+}
+
 /* =========================================================
    PROFILES (tabla public.profiles)
 ========================================================= */
