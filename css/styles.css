@@ -2710,7 +2710,7 @@ body.lang-modal-open {
   padding: 0 14px;
   border-radius: .25em;
   background: rgb(0 0 0 / 48%);
-  border: 1px solid rgb(255 255 255);
+  border: 2px solid rgb(255 255 255);
   transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
   cursor: text;
 }
@@ -2728,7 +2728,7 @@ body.lang-modal-open {
   cursor: pointer;
   bottom: 0px;
   height: 100%;
-  border-left: 1px solid;
+  border-left: 2px solid;
   padding-left: 0.7em;
 }
 
@@ -3028,8 +3028,9 @@ body.search-open {
 
 .fa-magnifying-glass:before,
 .fa-search:before {
-  content: "🔍" !important;
-  font-family: FONTAWESOME !important;
+  content: "\f002" !important;
+  font-family: "Font Awesome 6 Free";
+  color: #fff;
 }
 
 .topnav-search {
@@ -4515,7 +4516,7 @@ body.alerts-modal-open {
 
 .control-center-trigger:hover,
 .control-center-trigger.has-alerts {
-  background: rgba(255, 255, 255, .16);
+  background: #000;
 }
 
 .alerts-modal-backdrop.control-center-backdrop {
@@ -4540,9 +4541,7 @@ body.alerts-modal-open {
 
 .control-center-head {
   align-items: center;
-  background:
-    radial-gradient(420px 160px at 12% 0%, rgba(255, 255, 255, .085), transparent 72%),
-    linear-gradient(180deg, rgba(255, 255, 255, .04), transparent);
+  background: var(--bg) !important;
 }
 
 .control-center-user {
@@ -4871,27 +4870,27 @@ body.alerts-modal-open {
 }
 
 .control-center-trigger {
-  background: rgba(255, 255, 255, .08) !important;
-  border: 1px solid rgba(255, 255, 255, .16) !important;
+  border-radius: 0.15em;
+  background: rgb(0 0 0 / 48%);
+  border: 2px solid rgb(255 255 255);
   color: #fff !important;
   font-size: 22px !important;
   position: relative !important;
-  width: 42px !important;
-  min-width: 42px !important;
-  height: 42px !important;
-  border-radius: var(--radius, .25em) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 0 !important;
+  padding: 9px !important;
   cursor: pointer !important;
   line-height: 1 !important;
+  margin-top: 0.2em;
+  width: 44px;
+  height: 44px;
 }
 
 .control-center-trigger:hover,
 .control-center-trigger.has-alerts {
-  background: rgba(255, 255, 255, .16) !important;
-  border-color: rgba(255, 255, 255, .24) !important;
+  background: #000;
+  border-color: 2px solid rgb(255 255 255);
 }
 
 .control-center-trigger i {
