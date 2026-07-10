@@ -94,15 +94,13 @@ span.meta-dropitem {
     font-weight: 700;
     letter-spacing: .2px;
     font-size: 16px;
-    color: rgba(243, 244, 246, .92);
-    opacity: .95;
+    color: #fff;
 }
 
 #t-sinopsis {
-    color: rgba(243, 244, 246, .92);
+    color: #fff;
     line-height: 1.3;
     margin-top: 12px;
-    opacity: .92;
     font-size: 20px;
     max-width: 36em;
 }
@@ -155,6 +153,7 @@ span.meta-dropitem {
 .title-hero-inner {
     position: absolute;
     z-index: 2;
+    color: #fff;
 }
 
 .title-hero-volume-btn {
@@ -744,6 +743,7 @@ a#watch-btn[data-mode="countdown"] {
     line-height: 1.55;
     font-size: 14px;
     white-space: pre-wrap;
+    text-transform: capitalize;
 }
 
 /* =========================

@@ -5052,3 +5052,77 @@ body.alerts-modal-open {
 .panel-header-plus {
   margin-bottom: 1em;
 }
+
+/* =========================================================
+   NAV: BUSCADOR + BOTÓN JUNTOS EN NAV-RIGHT
+========================================================= */
+
+.topnav .nav-inner,
+#topnav.nav-inner {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: clamp(12px, 1.5vw, 22px) !important;
+  width: 100% !important;
+}
+
+/* Izquierda: logo + Inicio */
+.nav-left {
+  display: flex !important;
+  align-items: center !important;
+  justify-self: start !important;
+  gap: clamp(8px, 1vw, 14px) !important;
+
+  min-width: 0 !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Derecha: buscador + botón de cuenta */
+.nav-right {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  justify-self: end !important;
+
+  gap: clamp(8px, 1vw, 12px) !important;
+
+  width: auto !important;
+  min-width: 0 !important;
+  margin-left: auto !important;
+
+  /* Esto evita que el botón caiga debajo */
+  flex-wrap: nowrap !important;
+}
+
+/* Buscador */
+.nav-right .topnav-search-wrap {
+  width: clamp(220px, 28vw, 386px) !important;
+  max-width: 386px !important;
+  min-width: 180px !important;
+
+  flex: 0 1 386px !important;
+}
+
+.nav-right .topnav-search,
+.nav-right .topnav-search-input {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Entrar/Crear cuenta o botón del centro de control */
+.nav-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: clamp(8px, 1vw, 10px) !important;
+
+  flex: 0 0 auto !important;
+  min-width: max-content !important;
+  white-space: nowrap !important;
+}
+
+.nav-actions .btn,
+.nav-actions .pill,
+.nav-actions .control-center-trigger {
+  flex: 0 0 auto !important;
+}

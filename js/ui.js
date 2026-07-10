@@ -1,6 +1,6 @@
 // ui.js
-import { CONFIG } from "./config.js";
-import { getSession, signOut } from "./auth.js";
+import { CONFIG } from './config.js';
+import { getSession, signOut } from './auth.js';
 import {
   fetchMovie,
   fetchLanguagePreference,
@@ -11,19 +11,23 @@ import {
   searchMovies,
   fetchReleaseAlerts,
   fetchMyListPreview,
-  markReleaseAlertsSeen
-} from "./api.js";
+  markReleaseAlertsSeen,
+} from './api.js';
 
-export function $(sel) { return document.querySelector(sel); }
-export function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
+export function $(sel) {
+  return document.querySelector(sel);
+}
+export function $all(sel) {
+  return Array.from(document.querySelectorAll(sel));
+}
 
-export function escapeHtml(str = "") {
+export function escapeHtml(str = '') {
   return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 /* =========================
@@ -31,7 +35,7 @@ export function escapeHtml(str = "") {
 ========================= */
 
 export function setAppName() {
-  const els = $all("[data-appname]");
+  const els = $all('[data-appname]');
   for (const el of els) el.textContent = CONFIG.APP_NAME;
 
   const currentTitle = document.title.trim();
@@ -44,22 +48,22 @@ export function setAppName() {
    TOAST
 ========================= */
 
-export function toast(msg, type = "info") {
-  const host = document.getElementById("toast-host");
+export function toast(msg, type = 'info') {
+  const host = document.getElementById('toast-host');
   if (!host) {
     alert(msg);
     return;
   }
 
-  const t = document.createElement("div");
+  const t = document.createElement('div');
   t.className = `toast ${type}`;
   t.textContent = msg;
   host.appendChild(t);
 
-  requestAnimationFrame(() => t.classList.add("show"));
+  requestAnimationFrame(() => t.classList.add('show'));
 
   setTimeout(() => {
-    t.classList.remove("show");
+    t.classList.remove('show');
     setTimeout(() => t.remove(), 200);
   }, 2800);
 }
@@ -75,31 +79,31 @@ export function formatTime(secs) {
   const r = s % 60;
 
   if (h > 0) {
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
   }
-  return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
 }
 
 /* =========================
    NAVBAR
 ========================= */
 
-export function renderNav({ active = "home" } = {}) {
-  const nav = document.getElementById("topnav");
+export function renderNav({ active = 'home' } = {}) {
+  const nav = document.getElementById('topnav');
   if (!nav) return;
 
   const url = new URL(window.location.href);
-  const currentQuery = url.searchParams.get("q") || "";
+  const currentQuery = url.searchParams.get('q') || '';
 
   nav.innerHTML = `
     <div class="nav-left">
       <a class="brand" href="/index.html">
         <img src="https://api.satvplus.com.ar/storage/v1/object/public/general/Thumbnails/SATV_logo_fondo_transparente_alpha_A_limpia.png" alt="Logo" class="brand-logo"/>
       </a>
-      <a class="navlink ${active === "home" ? "active" : ""}" href="/index.html">Inicio</a>
+      <a class="navlink ${active === 'home' ? 'active' : ''}" href="/index.html">Inicio</a>
     </div>
 
-    <div class="nav-center">
+    <div class="nav-right" id="nav-right" style="grid-column: 2 / -1;">
       <div class="topnav-search-wrap">
         <label class="topnav-search" for="topnav-search-input" aria-label="Buscar">
           <span class="topnav-search-icon" aria-hidden="true">
@@ -119,9 +123,9 @@ export function renderNav({ active = "home" } = {}) {
           />
         </label>
       </div>
-    </div>
 
-    <div class="nav-right" id="nav-right"></div>
+      <div class="nav-actions" id="nav-actions"></div>
+    </div>
   `;
 }
 
@@ -168,9 +172,9 @@ function getSupabaseAnonKeyFromConfig() {
 }
 
 function safeLocalPartFromEmail(email) {
-  const s = String(email || "");
-  const i = s.indexOf("@");
-  return (i > 0 ? s.slice(0, i) : s) || "";
+  const s = String(email || '');
+  const i = s.indexOf('@');
+  return (i > 0 ? s.slice(0, i) : s) || '';
 }
 
 async function fetchProfileRowByUserId({ userId, accessToken } = {}) {
@@ -180,22 +184,22 @@ async function fetchProfileRowByUserId({ userId, accessToken } = {}) {
   if (!supabaseUrl || !anonKey || !userId) return null;
 
   const url =
-    `${supabaseUrl.replace(/\/+$/, "")}/rest/v1/profiles` +
+    `${supabaseUrl.replace(/\/+$/, '')}/rest/v1/profiles` +
     `?id=eq.${encodeURIComponent(userId)}` +
     `&select=username,full_name`;
 
   const headers = {
-    "apikey": anonKey,
-    "Accept": "application/json",
+    apikey: anonKey,
+    Accept: 'application/json',
   };
 
   if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
+    headers['Authorization'] = `Bearer ${accessToken}`;
   } else {
-    headers["Authorization"] = `Bearer ${anonKey}`;
+    headers['Authorization'] = `Bearer ${anonKey}`;
   }
 
-  const res = await fetch(url, { method: "GET", headers });
+  const res = await fetch(url, { method: 'GET', headers });
   if (!res.ok) return null;
 
   const data = await res.json();
@@ -213,13 +217,15 @@ async function getUsernameFromProfilesTable(session) {
   try {
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) return cached;
-  } catch (_) { }
+  } catch (_) {}
 
   const row = await fetchProfileRowByUserId({ userId, accessToken });
   const username = row?.username ? String(row.username) : null;
 
   if (username) {
-    try { sessionStorage.setItem(cacheKey, username); } catch (_) { }
+    try {
+      sessionStorage.setItem(cacheKey, username);
+    } catch (_) {}
     return username;
   }
 
@@ -240,7 +246,7 @@ function getFallbackDisplayName(session) {
     u?.name ||
     meta?.full_name ||
     safeLocalPartFromEmail(u?.email) ||
-    "Usuario"
+    'Usuario'
   );
 }
 
@@ -248,19 +254,22 @@ function getFallbackDisplayName(session) {
    LANGUAGE PREFERENCE
 ========================= */
 
-const APP_LANG_STORAGE_KEY = "satv_lang_code";
-const LANG_PROMPT_SESSION_KEY_PREFIX = "satv_lang_prompt_v3";
+const APP_LANG_STORAGE_KEY = 'satv_lang_code';
+const LANG_PROMPT_SESSION_KEY_PREFIX = 'satv_lang_prompt_v3';
 
 function normalizeCountryCode(value) {
-  return String(value || "").trim().toUpperCase().slice(0, 2);
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 function normalizeLangCode(value) {
-  return String(value || "").trim();
+  return String(value || '').trim();
 }
 
 function getLangBase(value) {
-  return normalizeLangCode(value).split("-")[0].toLowerCase();
+  return normalizeLangCode(value).split('-')[0].toLowerCase();
 }
 
 function sameLanguage(a, b) {
@@ -276,14 +285,14 @@ function getCurrentAppLanguage(savedLang = null) {
       normalizeLangCode(localStorage.getItem(APP_LANG_STORAGE_KEY)) ||
       normalizeLangCode(document.documentElement.lang) ||
       normalizeLangCode(navigator.language) ||
-      "es-AR"
+      'es-AR'
     );
   } catch {
     return (
       normalizeLangCode(savedLang) ||
       normalizeLangCode(document.documentElement.lang) ||
       normalizeLangCode(navigator.language) ||
-      "es-AR"
+      'es-AR'
     );
   }
 }
@@ -294,35 +303,38 @@ function applyLanguagePreference(langCode) {
 
   try {
     localStorage.setItem(APP_LANG_STORAGE_KEY, safe);
-  } catch (_) { }
+  } catch (_) {}
 
   document.documentElement.lang = safe;
   window.__APP_LANG__ = safe;
 
   try {
     window.dispatchEvent(
-      new CustomEvent("app:langchange", {
-        detail: { langCode: safe }
+      new CustomEvent('app:langchange', {
+        detail: { langCode: safe },
       })
     );
-  } catch (_) { }
+  } catch (_) {}
 }
 
-function getRegionDisplayName(countryCode, locale = "es") {
+function getRegionDisplayName(countryCode, locale = 'es') {
   const safe = normalizeCountryCode(countryCode);
-  if (!safe) return "";
+  if (!safe) return '';
   try {
-    return new Intl.DisplayNames([locale], { type: "region" }).of(safe) || safe;
+    return new Intl.DisplayNames([locale], { type: 'region' }).of(safe) || safe;
   } catch {
     return safe;
   }
 }
 
-function getLanguageDisplayName(langCode, locale = "es") {
+function getLanguageDisplayName(langCode, locale = 'es') {
   const base = getLangBase(langCode);
   if (!base) return normalizeLangCode(langCode);
   try {
-    return new Intl.DisplayNames([locale], { type: "language" }).of(base) || normalizeLangCode(langCode);
+    return (
+      new Intl.DisplayNames([locale], { type: 'language' }).of(base) ||
+      normalizeLangCode(langCode)
+    );
   } catch {
     return normalizeLangCode(langCode);
   }
@@ -333,13 +345,13 @@ function getPromptCacheKey(userId, countryCode, suggestedLang) {
 }
 
 function ensureLanguagePromptModal() {
-  let root = document.getElementById("lang-modal-root");
+  let root = document.getElementById('lang-modal-root');
   if (root) return root;
 
-  root = document.createElement("div");
-  root.id = "lang-modal-root";
-  root.className = "lang-modal-backdrop";
-  root.setAttribute("aria-hidden", "true");
+  root = document.createElement('div');
+  root.id = 'lang-modal-root';
+  root.className = 'lang-modal-backdrop';
+  root.setAttribute('aria-hidden', 'true');
 
   root.innerHTML = `
     <div class="lang-modal" role="dialog" aria-modal="true" aria-labelledby="lang-modal-title">
@@ -375,20 +387,18 @@ function ensureLanguagePromptModal() {
 function showLanguagePromptModal({ regionName, suggestedLang }) {
   return new Promise((resolve) => {
     const root = ensureLanguagePromptModal();
-    const closeBtn = root.querySelector("[data-lang-close]");
-    const acceptBtn = root.querySelector("[data-lang-accept]");
-    const declineBtn = root.querySelector("[data-lang-decline]");
-    const copyEs = root.querySelector("[data-lang-copy-es]");
-    const copyEn = root.querySelector("[data-lang-copy-en]");
-    const meta = root.querySelector("[data-lang-meta]");
+    const closeBtn = root.querySelector('[data-lang-close]');
+    const acceptBtn = root.querySelector('[data-lang-accept]');
+    const declineBtn = root.querySelector('[data-lang-decline]');
+    const copyEs = root.querySelector('[data-lang-copy-es]');
+    const copyEn = root.querySelector('[data-lang-copy-en]');
+    const meta = root.querySelector('[data-lang-meta]');
 
-    const langEs = getLanguageDisplayName(suggestedLang, "es");
-    const langEn = getLanguageDisplayName(suggestedLang, "en");
+    const langEs = getLanguageDisplayName(suggestedLang, 'es');
+    const langEn = getLanguageDisplayName(suggestedLang, 'en');
 
-    copyEs.textContent =
-      `Detectamos que te estás conectando desde ${regionName}. ¿Deseas traducir la app a ${langEs}?`;
-    copyEn.textContent =
-      `We detected that you're connecting from ${regionName}. Would you like to translate the app to ${langEn}?`;
+    copyEs.textContent = `Detectamos que te estás conectando desde ${regionName}. ¿Deseas traducir la app a ${langEs}?`;
+    copyEn.textContent = `We detected that you're connecting from ${regionName}. Would you like to translate the app to ${langEn}?`;
     meta.hidden = false;
     meta.textContent = `${regionName} • ${langEs} / ${langEn}`;
 
@@ -401,18 +411,20 @@ function showLanguagePromptModal({ regionName, suggestedLang }) {
       if (settled) return;
       settled = true;
 
-      root.classList.remove("show");
-      root.setAttribute("aria-hidden", "true");
-      document.body.classList.remove("lang-modal-open");
+      root.classList.remove('show');
+      root.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('lang-modal-open');
 
-      root.removeEventListener("click", onBackdropClick);
-      document.removeEventListener("keydown", onKeyDown);
-      acceptBtn.removeEventListener("click", onAccept);
-      declineBtn.removeEventListener("click", onDecline);
-      closeBtn.removeEventListener("click", onDecline);
+      root.removeEventListener('click', onBackdropClick);
+      document.removeEventListener('keydown', onKeyDown);
+      acceptBtn.removeEventListener('click', onAccept);
+      declineBtn.removeEventListener('click', onDecline);
+      closeBtn.removeEventListener('click', onDecline);
 
       window.setTimeout(() => {
-        try { previousFocused?.focus?.(); } catch (_) { }
+        try {
+          previousFocused?.focus?.();
+        } catch (_) {}
         resolve(accepted);
       }, 180);
     };
@@ -425,13 +437,13 @@ function showLanguagePromptModal({ regionName, suggestedLang }) {
     };
 
     const onKeyDown = (e) => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         e.preventDefault();
         cleanup(false);
         return;
       }
 
-      if (e.key !== "Tab") return;
+      if (e.key !== 'Tab') return;
 
       const nodes = focusables();
       if (!nodes.length) return;
@@ -448,17 +460,17 @@ function showLanguagePromptModal({ regionName, suggestedLang }) {
       }
     };
 
-    root.addEventListener("click", onBackdropClick);
-    document.addEventListener("keydown", onKeyDown);
-    acceptBtn.addEventListener("click", onAccept);
-    declineBtn.addEventListener("click", onDecline);
-    closeBtn.addEventListener("click", onDecline);
+    root.addEventListener('click', onBackdropClick);
+    document.addEventListener('keydown', onKeyDown);
+    acceptBtn.addEventListener('click', onAccept);
+    declineBtn.addEventListener('click', onDecline);
+    closeBtn.addEventListener('click', onDecline);
 
-    document.body.classList.add("lang-modal-open");
-    root.setAttribute("aria-hidden", "false");
+    document.body.classList.add('lang-modal-open');
+    root.setAttribute('aria-hidden', 'false');
 
     requestAnimationFrame(() => {
-      root.classList.add("show");
+      root.classList.add('show');
       acceptBtn.focus();
     });
   });
@@ -475,10 +487,12 @@ async function maybeSuggestLanguageChange(session) {
       applyLanguagePreference(savedPreference.lang_code);
     }
   } catch (error) {
-    console.warn("[ui] no se pudo leer public.lang:", error);
+    console.warn('[ui] no se pudo leer public.lang:', error);
   }
 
-  const detectedCountry = normalizeCountryCode(await detectConnectionCountryCode());
+  const detectedCountry = normalizeCountryCode(
+    await detectConnectionCountryCode()
+  );
   if (!detectedCountry) return;
 
   const currentLang = getCurrentAppLanguage(savedPreference?.lang_code);
@@ -491,7 +505,7 @@ async function maybeSuggestLanguageChange(session) {
   try {
     isSpanishCountry = await countryHasSpanishOfficialLanguage(detectedCountry);
   } catch (error) {
-    console.warn("[ui] no se pudo resolver idioma oficial del país:", error);
+    console.warn('[ui] no se pudo resolver idioma oficial del país:', error);
   }
 
   if (isSpanishCountry) {
@@ -499,43 +513,44 @@ async function maybeSuggestLanguageChange(session) {
       await upsertLanguagePreference({
         userId,
         countryCode: detectedCountry,
-        langCode: currentLang
+        langCode: currentLang,
       });
     } catch (error) {
-      console.warn("[ui] no se pudo guardar idioma automático:", error);
+      console.warn('[ui] no se pudo guardar idioma automático:', error);
     }
     return;
   }
 
-  const suggestedLang = normalizeLangCode(getPreferredDeviceLanguage()) || "en-US";
+  const suggestedLang =
+    normalizeLangCode(getPreferredDeviceLanguage()) || 'en-US';
 
   if (sameLanguage(currentLang, suggestedLang)) {
     try {
       await upsertLanguagePreference({
         userId,
         countryCode: detectedCountry,
-        langCode: currentLang
+        langCode: currentLang,
       });
     } catch (error) {
-      console.warn("[ui] no se pudo persistir idioma actual:", error);
+      console.warn('[ui] no se pudo persistir idioma actual:', error);
     }
     return;
   }
 
   const promptKey = getPromptCacheKey(userId, detectedCountry, suggestedLang);
   try {
-    if (sessionStorage.getItem(promptKey) === "1") return;
-    sessionStorage.setItem(promptKey, "1");
-  } catch (_) { }
+    if (sessionStorage.getItem(promptKey) === '1') return;
+    sessionStorage.setItem(promptKey, '1');
+  } catch (_) {}
 
   const regionName =
-    getRegionDisplayName(detectedCountry, "es") ||
-    getRegionDisplayName(detectedCountry, "en") ||
+    getRegionDisplayName(detectedCountry, 'es') ||
+    getRegionDisplayName(detectedCountry, 'en') ||
     detectedCountry;
 
   const accepted = await showLanguagePromptModal({
     regionName,
-    suggestedLang
+    suggestedLang,
   });
 
   const chosenLang = accepted ? suggestedLang : currentLang;
@@ -544,25 +559,28 @@ async function maybeSuggestLanguageChange(session) {
     await upsertLanguagePreference({
       userId,
       countryCode: detectedCountry,
-      langCode: chosenLang
+      langCode: chosenLang,
     });
   } catch (error) {
-    console.warn("[ui] no se pudo guardar la preferencia de idioma:", error);
+    console.warn('[ui] no se pudo guardar la preferencia de idioma:', error);
   }
 
   if (!accepted) return;
 
   applyLanguagePreference(chosenLang);
   toast(
-    `Idioma actualizado a ${getLanguageDisplayName(chosenLang, "es")} / Language updated to ${getLanguageDisplayName(chosenLang, "en")}.`,
-    "info"
+    `Idioma actualizado a ${getLanguageDisplayName(chosenLang, 'es')} / Language updated to ${getLanguageDisplayName(chosenLang, 'en')}.`,
+    'info'
   );
 
   window.location.reload();
 }
 
 export async function renderAuthButtons() {
-  const host = document.getElementById("nav-right");
+  const host =
+    document.getElementById('nav-actions') ||
+    document.getElementById('nav-right');
+
   if (!host) return;
 
   const session = await getSession();
@@ -579,12 +597,12 @@ export async function renderAuthButtons() {
   try {
     display = await getUsernameFromProfilesTable(session);
   } catch (e) {
-    console.warn("No se pudo leer profiles.username:", e);
+    console.warn('No se pudo leer profiles.username:', e);
   }
 
   if (!display) display = getFallbackDisplayName(session);
 
-  const name = escapeHtml(display || "Usuario");
+  const name = escapeHtml(display || 'Usuario');
 
   host.innerHTML = `
     <button
@@ -603,16 +621,15 @@ export async function renderAuthButtons() {
   try {
     await initAlertsBell(session);
   } catch (e) {
-    console.warn("[ui] initAlertsBell error:", e);
+    console.warn('[ui] initAlertsBell error:', e);
   }
 
   try {
     await maybeSuggestLanguageChange(session);
   } catch (e) {
-    console.warn("[ui] maybeSuggestLanguageChange error:", e);
+    console.warn('[ui] maybeSuggestLanguageChange error:', e);
   }
 }
-
 
 /* =========================
    CONTROL CENTER / ALERTS
@@ -637,8 +654,8 @@ function getSessionUser(session) {
 
 function getControlCenterTrigger() {
   return (
-    document.getElementById("control-center-trigger") ||
-    document.getElementById("alerts-bell")
+    document.getElementById('control-center-trigger') ||
+    document.getElementById('alerts-bell')
   );
 }
 
@@ -648,24 +665,28 @@ function getControlUserData(session, userId = null) {
   const displayName =
     trigger?.dataset?.displayName ||
     getFallbackDisplayName(session) ||
-    "Usuario";
+    'Usuario';
 
   return {
     userId: userId || getAlertsUserId(session),
     displayName,
-    email: u?.email || "",
-    initial: String(displayName || "U").trim().charAt(0).toUpperCase() || "U"
+    email: u?.email || '',
+    initial:
+      String(displayName || 'U')
+        .trim()
+        .charAt(0)
+        .toUpperCase() || 'U',
   };
 }
 
 function ensureAlertsModalRoot() {
-  let root = document.getElementById("alerts-modal-root");
+  let root = document.getElementById('alerts-modal-root');
   if (root) return root;
 
-  root = document.createElement("div");
-  root.id = "alerts-modal-root";
-  root.className = "alerts-modal-backdrop control-center-backdrop";
-  root.setAttribute("hidden", "");
+  root = document.createElement('div');
+  root.id = 'alerts-modal-root';
+  root.className = 'alerts-modal-backdrop control-center-backdrop';
+  root.setAttribute('hidden', '');
   root.innerHTML = `
     <div class="alerts-modal control-center-modal" role="dialog" aria-modal="true" aria-labelledby="control-center-title">
       <div class="alerts-modal-head control-center-head">
@@ -722,10 +743,12 @@ function ensureAlertsModalRoot() {
 
   document.body.appendChild(root);
 
-  root.querySelector(".alerts-modal-close")?.addEventListener("click", closeAlertsModal);
+  root
+    .querySelector('.alerts-modal-close')
+    ?.addEventListener('click', closeAlertsModal);
 
-  root.addEventListener("click", async (ev) => {
-    const logoutBtn = ev.target?.closest?.("[data-control-logout]");
+  root.addEventListener('click', async (ev) => {
+    const logoutBtn = ev.target?.closest?.('[data-control-logout]');
     if (logoutBtn) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -733,148 +756,174 @@ function ensureAlertsModalRoot() {
       try {
         await signOut();
       } finally {
-        window.location.href = "/login.html";
+        window.location.href = '/login.html';
       }
       return;
     }
 
-    const tab = ev.target?.closest?.("[data-alerts-tab]");
+    const tab = ev.target?.closest?.('[data-alerts-tab]');
     if (!tab) return;
 
     ev.preventDefault();
     ev.stopPropagation();
 
-    const tabName = tab.getAttribute("data-alerts-tab") || "account";
-    renderAlertsModalContent(root.__alertsData || { alerts: [], mylist: [], user: {} }, tabName);
+    const tabName = tab.getAttribute('data-alerts-tab') || 'account';
+    renderAlertsModalContent(
+      root.__alertsData || { alerts: [], mylist: [], user: {} },
+      tabName
+    );
   });
 
-  document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape" && !root.hasAttribute("hidden")) closeAlertsModal();
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !root.hasAttribute('hidden')) closeAlertsModal();
   });
 
   return root;
 }
 
 function updateControlHeader(root, user = {}) {
-  const avatar = root.querySelector("[data-control-avatar]");
-  const title = root.querySelector("[data-control-title]");
-  const subtitle = root.querySelector("[data-control-subtitle]");
+  const avatar = root.querySelector('[data-control-avatar]');
+  const title = root.querySelector('[data-control-title]');
+  const subtitle = root.querySelector('[data-control-subtitle]');
 
-  if (avatar) avatar.textContent = escapeHtml(user.initial || "U");
-  if (title) title.textContent = user.displayName || "Cuenta";
-  if (subtitle) subtitle.textContent = user.email || "Perfil, lista, avisos y accesos rápidos.";
+  if (avatar) avatar.textContent = escapeHtml(user.initial || 'U');
+  if (title) title.textContent = user.displayName || 'Cuenta';
+  if (subtitle)
+    subtitle.textContent =
+      user.email || 'Perfil, lista, avisos y accesos rápidos.';
 }
 
 function closeAlertsModal() {
-  const root = document.getElementById("alerts-modal-root");
+  const root = document.getElementById('alerts-modal-root');
   if (!root) return;
-  root.setAttribute("hidden", "");
-  document.body.classList.remove("alerts-modal-open");
+  root.setAttribute('hidden', '');
+  document.body.classList.remove('alerts-modal-open');
 }
 
 function showAlertsModalRoot() {
   const root = ensureAlertsModalRoot();
-  root.removeAttribute("hidden");
-  document.body.classList.add("alerts-modal-open");
+  root.removeAttribute('hidden');
+  document.body.classList.add('alerts-modal-open');
   return root;
 }
 
 function getAlertTitleHref(contentId) {
-  if (!contentId) return "#";
+  if (!contentId) return '#';
   return `/title?title=${encodeURIComponent(String(contentId))}`;
 }
 
 function getMyListHref(userId) {
-  if (!userId) return "/mylist";
+  if (!userId) return '/mylist';
   const q = new URLSearchParams({ list: String(userId), user: String(userId) });
   return `/mylist?${q.toString()}`;
 }
 
 function normalizeAlertsData(data) {
-  if (Array.isArray(data)) return { alerts: data, mylist: [], userId: null, user: {} };
+  if (Array.isArray(data))
+    return { alerts: data, mylist: [], userId: null, user: {} };
   return {
     alerts: Array.isArray(data?.alerts) ? data.alerts : [],
     mylist: Array.isArray(data?.mylist) ? data.mylist : [],
     userId: data?.userId || data?.user?.userId || null,
-    user: data?.user || {}
+    user: data?.user || {},
   };
 }
 
 function getAlertsGroups(data = {}) {
   const safe = normalizeAlertsData(data);
   const alerts = safe.alerts;
-  const released = alerts.filter((item) => item?.is_released !== false && !item?.is_pending);
+  const released = alerts.filter(
+    (item) => item?.is_released !== false && !item?.is_pending
+  );
 
   return {
     account: [],
     new: released.filter((item) => item.unseen),
-    reminders: alerts.filter((item) => item?.is_pending || item?.is_released === false),
+    reminders: alerts.filter(
+      (item) => item?.is_pending || item?.is_released === false
+    ),
     mylist: safe.mylist,
     seen: released.filter((item) => !item.unseen),
-    all: released
+    all: released,
   };
 }
 
 function getDefaultAlertsTab(data = {}) {
-  return "account";
+  return 'account';
 }
 
 function getAlertsEmptyMessage(tabName) {
-  if (tabName === "seen") return "Todavía no tenés avisos vistos.";
-  if (tabName === "reminders") return "No tenés recordatorios pendientes.";
-  if (tabName === "mylist") return "Tu lista está vacía.";
-  if (tabName === "all") return "Todavía no tenés avisos de lanzamiento.";
-  return "Todavía no tenés notificaciones nuevas.";
+  if (tabName === 'seen') return 'Todavía no tenés avisos vistos.';
+  if (tabName === 'reminders') return 'No tenés recordatorios pendientes.';
+  if (tabName === 'mylist') return 'Tu lista está vacía.';
+  if (tabName === 'all') return 'Todavía no tenés avisos de lanzamiento.';
+  return 'Todavía no tenés notificaciones nuevas.';
 }
 
-function updateAlertsTabs(root, data = {}, activeTab = "account") {
+function updateAlertsTabs(root, data = {}, activeTab = 'account') {
   const groups = getAlertsGroups(data);
 
-  root.querySelectorAll("[data-alerts-tab]").forEach((btn) => {
-    const tab = btn.getAttribute("data-alerts-tab") || "account";
+  root.querySelectorAll('[data-alerts-tab]').forEach((btn) => {
+    const tab = btn.getAttribute('data-alerts-tab') || 'account';
     const active = tab === activeTab;
-    btn.classList.toggle("is-active", active);
-    btn.setAttribute("aria-selected", active ? "true" : "false");
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
   });
 
-  root.querySelectorAll("[data-alerts-count]").forEach((el) => {
-    const tab = el.getAttribute("data-alerts-count") || "new";
+  root.querySelectorAll('[data-alerts-count]').forEach((el) => {
+    const tab = el.getAttribute('data-alerts-count') || 'new';
     const count = groups[tab]?.length || 0;
-    el.textContent = count > 99 ? "99+" : String(count);
+    el.textContent = count > 99 ? '99+' : String(count);
     el.hidden = count <= 0;
   });
 }
 
 function getAlertStatusMeta(item) {
   if (item?.is_pending || item?.is_released === false) {
-    const stateText = item?.movie?.publish_state_text || item?.movie?.release_year || "Próximamente";
+    const stateText =
+      item?.movie?.publish_state_text ||
+      item?.movie?.release_year ||
+      'Próximamente';
     return `Recordatorio activado · ${escapeHtml(stateText)}`;
   }
 
-  if (item?.unseen) return "Nuevo lanzamiento · Ya está disponible";
-  return "Aviso visto · Ya está disponible";
+  if (item?.unseen) return 'Nuevo lanzamiento · Ya está disponible';
+  return 'Aviso visto · Ya está disponible';
 }
 
-function renderAlertsList(items = [], { emptyMessage = "Todavía no tenés avisos de lanzamiento." } = {}) {
+function renderAlertsList(
+  items = [],
+  { emptyMessage = 'Todavía no tenés avisos de lanzamiento.' } = {}
+) {
   if (!items.length) {
     return `<div class="alerts-empty">${escapeHtml(emptyMessage)}</div>`;
   }
 
   return `
     <div class="alerts-list">
-      ${items.map((item) => {
-        const title = escapeHtml(item.title || item.movie?.title || "Sin título");
-        const thumb = escapeHtml(item.thumbnail_url || item.movie?.thumbnail_url || item.movie?.banner_url || "");
-        const href = getAlertTitleHref(item.content_id);
-        const tag = item.in_my_list
-          ? `<span class="alerts-item-mylist">Está en tu lista</span>`
-          : "";
-        const unseen = item.unseen ? `<span class="alerts-item-dot" aria-label="Sin ver"></span>` : "";
-        const pending = item?.is_pending || item?.is_released === false;
+      ${items
+        .map((item) => {
+          const title = escapeHtml(
+            item.title || item.movie?.title || 'Sin título'
+          );
+          const thumb = escapeHtml(
+            item.thumbnail_url ||
+              item.movie?.thumbnail_url ||
+              item.movie?.banner_url ||
+              ''
+          );
+          const href = getAlertTitleHref(item.content_id);
+          const tag = item.in_my_list
+            ? `<span class="alerts-item-mylist">Está en tu lista</span>`
+            : '';
+          const unseen = item.unseen
+            ? `<span class="alerts-item-dot" aria-label="Sin ver"></span>`
+            : '';
+          const pending = item?.is_pending || item?.is_released === false;
 
-        return `
-          <a class="alerts-item ${item.unseen ? "is-unseen" : ""} ${pending ? "is-pending" : ""}" href="${href}">
-            <span class="alerts-item-thumb" style="${thumb ? `background-image:url('${thumb}')` : ""}"></span>
+          return `
+          <a class="alerts-item ${item.unseen ? 'is-unseen' : ''} ${pending ? 'is-pending' : ''}" href="${href}">
+            <span class="alerts-item-thumb" style="${thumb ? `background-image:url('${thumb}')` : ''}"></span>
             <span class="alerts-item-main">
               <span class="alerts-item-title">${title}</span>
               <span class="alerts-item-sub">${getAlertStatusMeta(item)}</span>
@@ -883,7 +932,8 @@ function renderAlertsList(items = [], { emptyMessage = "Todavía no tenés aviso
             ${unseen}
           </a>
         `;
-      }).join("")}
+        })
+        .join('')}
     </div>
   `;
 }
@@ -904,7 +954,7 @@ function renderMyListPreview(items = [], userId = null) {
     <div class="alerts-section-head">
       <div>
         <strong>Mi Lista</strong>
-        <span>${items.length} ${items.length === 1 ? "título guardado" : "títulos guardados"}</span>
+        <span>${items.length} ${items.length === 1 ? 'título guardado' : 'títulos guardados'}</span>
       </div>
       <a class="alerts-mini-action" href="${openListHref}">
         <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
@@ -912,22 +962,26 @@ function renderMyListPreview(items = [], userId = null) {
       </a>
     </div>
     <div class="alerts-mini-grid">
-      ${items.map((item) => {
-        const title = escapeHtml(item.title || "Sin título");
-        const thumb = escapeHtml(item.thumbnail_url || item.banner_url || "");
-        const meta = escapeHtml(item.mylist_meta || item.duration_text || item.category || "");
-        const href = getAlertTitleHref(item.id || item.content_id);
+      ${items
+        .map((item) => {
+          const title = escapeHtml(item.title || 'Sin título');
+          const thumb = escapeHtml(item.thumbnail_url || item.banner_url || '');
+          const meta = escapeHtml(
+            item.mylist_meta || item.duration_text || item.category || ''
+          );
+          const href = getAlertTitleHref(item.id || item.content_id);
 
-        return `
+          return `
           <a class="alerts-mini-card" href="${href}">
-            <span class="alerts-mini-thumb" style="${thumb ? `background-image:url('${thumb}')` : ""}"></span>
+            <span class="alerts-mini-thumb" style="${thumb ? `background-image:url('${thumb}')` : ''}"></span>
             <span class="alerts-mini-main">
               <span class="alerts-mini-title">${title}</span>
-              ${meta ? `<span class="alerts-mini-meta">${meta}</span>` : ""}
+              ${meta ? `<span class="alerts-mini-meta">${meta}</span>` : ''}
             </span>
           </a>
         `;
-      }).join("")}
+        })
+        .join('')}
     </div>
   `;
 }
@@ -944,10 +998,10 @@ function renderControlAccountPanel(data = {}) {
   return `
     <div class="control-account-panel">
       <div class="control-profile-card">
-        <span class="control-center-avatar is-large">${escapeHtml(user.initial || "U")}</span>
+        <span class="control-center-avatar is-large">${escapeHtml(user.initial || 'U')}</span>
         <span class="control-profile-main">
-          <strong>${escapeHtml(user.displayName || "Usuario")}</strong>
-          <small>${escapeHtml(user.email || "Cuenta SATV+")}</small>
+          <strong>${escapeHtml(user.displayName || 'Usuario')}</strong>
+          <small>${escapeHtml(user.email || 'Cuenta SATV+')}</small>
         </span>
       </div>
 
@@ -963,21 +1017,21 @@ function renderControlAccountPanel(data = {}) {
           <i class="fa-solid fa-plus" aria-hidden="true"></i>
           <span>
             <strong>Mi Lista</strong>
-            <small>${listCount ? `${listCount} guardados` : "Ver títulos guardados"}</small>
+            <small>${listCount ? `${listCount} guardados` : 'Ver títulos guardados'}</small>
           </span>
         </a>
         <button class="control-quick-action" type="button" data-alerts-tab="new">
           <i class="fa-solid fa-bolt" aria-hidden="true"></i>
           <span>
             <strong>Notificaciones</strong>
-            <small>${newCount ? `${newCount} nuevas` : "Sin novedades nuevas"}</small>
+            <small>${newCount ? `${newCount} nuevas` : 'Sin novedades nuevas'}</small>
           </span>
         </button>
         <button class="control-quick-action" type="button" data-alerts-tab="reminders">
           <i class="fa-regular fa-bell" aria-hidden="true"></i>
           <span>
             <strong>Recordatorios</strong>
-            <small>${remindersCount ? `${remindersCount} pendientes` : "Nada pendiente"}</small>
+            <small>${remindersCount ? `${remindersCount} pendientes` : 'Nada pendiente'}</small>
           </span>
         </button>
         <button class="control-quick-action is-danger" type="button" data-control-logout>
@@ -1007,12 +1061,12 @@ function renderControlAccountPanel(data = {}) {
   `;
 }
 
-function maybeMarkReleaseAlertsSeen(data = {}, activeTab = "account") {
-  if (activeTab !== "new") return;
+function maybeMarkReleaseAlertsSeen(data = {}, activeTab = 'account') {
+  if (activeTab !== 'new') return;
 
   const safe = normalizeAlertsData(data);
-  const unseenIds = getAlertsGroups(safe).new
-    .map((item) => item.content_id)
+  const unseenIds = getAlertsGroups(safe)
+    .new.map((item) => item.content_id)
     .filter(Boolean);
 
   if (!safe.userId || !unseenIds.length) return;
@@ -1023,14 +1077,14 @@ function maybeMarkReleaseAlertsSeen(data = {}, activeTab = "account") {
       await markReleaseAlertsSeen(safe.userId, unseenIds);
       scheduleAlertsBadgeRefresh();
     } catch (e) {
-      console.warn("[ui] no se pudieron marcar alerts como vistas:", e);
+      console.warn('[ui] no se pudieron marcar alerts como vistas:', e);
     }
   }, 350);
 }
 
 function renderAlertsModalContent(data = {}, activeTab = null) {
   const root = ensureAlertsModalRoot();
-  const body = root.querySelector("#alerts-modal-body");
+  const body = root.querySelector('#alerts-modal-body');
   const safe = normalizeAlertsData(data);
   const tabName = activeTab || getDefaultAlertsTab(safe);
   const groups = getAlertsGroups(safe);
@@ -1041,32 +1095,32 @@ function renderAlertsModalContent(data = {}, activeTab = null) {
 
   if (!body) return;
 
-  if (tabName === "account") {
+  if (tabName === 'account') {
     body.innerHTML = renderControlAccountPanel(safe);
     return;
   }
 
-  if (tabName === "mylist") {
+  if (tabName === 'mylist') {
     body.innerHTML = renderMyListPreview(groups.mylist, safe.userId);
     return;
   }
 
   body.innerHTML = renderAlertsList(groups[tabName] || groups.new, {
-    emptyMessage: getAlertsEmptyMessage(tabName)
+    emptyMessage: getAlertsEmptyMessage(tabName),
   });
 
   maybeMarkReleaseAlertsSeen(safe, tabName);
 }
 
 async function refreshAlertsBadge(session = null) {
-  const badge = document.getElementById("alerts-badge");
+  const badge = document.getElementById('alerts-badge');
   const bell = getControlCenterTrigger();
   if (!badge || !bell) return;
 
-  const userId = getAlertsUserId(session || await getSession());
+  const userId = getAlertsUserId(session || (await getSession()));
   if (!userId) {
     badge.hidden = true;
-    badge.textContent = "";
+    badge.textContent = '';
     return;
   }
 
@@ -1075,49 +1129,53 @@ async function refreshAlertsBadge(session = null) {
     const count = items.filter((item) => item.unseen).length;
 
     badge.hidden = count <= 0;
-    badge.textContent = count > 9 ? "9+" : String(count || "");
-    bell.classList.toggle("has-alerts", count > 0);
+    badge.textContent = count > 9 ? '9+' : String(count || '');
+    bell.classList.toggle('has-alerts', count > 0);
   } catch (e) {
-    console.warn("[ui] no se pudieron cargar alerts:", e);
+    console.warn('[ui] no se pudieron cargar alerts:', e);
     badge.hidden = true;
-    badge.textContent = "";
-    bell.classList.remove("has-alerts");
+    badge.textContent = '';
+    bell.classList.remove('has-alerts');
   }
 }
 
 function scheduleAlertsBadgeRefresh() {
   clearTimeout(__alertsBadgeRefreshTimer);
   __alertsBadgeRefreshTimer = setTimeout(() => {
-    refreshAlertsBadge().catch((e) => console.warn("[ui] refresh alerts badge error:", e));
+    refreshAlertsBadge().catch((e) =>
+      console.warn('[ui] refresh alerts badge error:', e)
+    );
   }, 120);
 }
 
 async function openAlertsModal(session = null) {
-  const activeSession = session || await getSession();
+  const activeSession = session || (await getSession());
   const root = showAlertsModalRoot();
   const userId = getAlertsUserId(activeSession);
   const user = getControlUserData(activeSession, userId);
 
   root.__alertsData = { alerts: [], mylist: [], userId, user };
-  renderAlertsModalContent(root.__alertsData, "account");
+  renderAlertsModalContent(root.__alertsData, 'account');
 
-  const body = root.querySelector("#alerts-modal-body");
+  const body = root.querySelector('#alerts-modal-body');
   if (!userId) {
-    if (body) body.innerHTML = `<div class="alerts-empty">Iniciá sesión para usar el centro de control.</div>`;
+    if (body)
+      body.innerHTML = `<div class="alerts-empty">Iniciá sesión para usar el centro de control.</div>`;
     return;
   }
 
   try {
     const [alerts, mylist] = await Promise.all([
       fetchReleaseAlerts(userId, { limit: 80, includePending: true }),
-      fetchMyListPreview(userId, { limit: 12 })
+      fetchMyListPreview(userId, { limit: 12 }),
     ]);
 
     const data = { alerts, mylist, userId, user };
     renderAlertsModalContent(data, getDefaultAlertsTab(data));
   } catch (e) {
-    console.warn("[ui] openAlertsModal error:", e);
-    if (body) body.innerHTML = `<div class="alerts-empty">No se pudo cargar el centro de control.</div>`;
+    console.warn('[ui] openAlertsModal error:', e);
+    if (body)
+      body.innerHTML = `<div class="alerts-empty">No se pudo cargar el centro de control.</div>`;
   }
 }
 
@@ -1125,22 +1183,25 @@ async function initAlertsBell(session = null) {
   const bell = getControlCenterTrigger();
   if (!bell) return;
 
-  if (bell.dataset.alertsBound !== "1") {
-    bell.dataset.alertsBound = "1";
-    bell.addEventListener("click", async (ev) => {
+  if (bell.dataset.alertsBound !== '1') {
+    bell.dataset.alertsBound = '1';
+    bell.addEventListener('click', async (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      await openAlertsModal(session || await getSession());
+      await openAlertsModal(session || (await getSession()));
     });
   }
 
   if (!__alertsBellInitialized) {
     __alertsBellInitialized = true;
-    window.addEventListener("satv:release-reminders-changed", scheduleAlertsBadgeRefresh);
-    window.addEventListener("focus", scheduleAlertsBadgeRefresh);
+    window.addEventListener(
+      'satv:release-reminders-changed',
+      scheduleAlertsBadgeRefresh
+    );
+    window.addEventListener('focus', scheduleAlertsBadgeRefresh);
   }
 
-  await refreshAlertsBadge(session || await getSession());
+  await refreshAlertsBadge(session || (await getSession()));
 }
 
 /* =========================
@@ -1153,16 +1214,24 @@ export function enableDataHrefNavigation() {
   if (__dataHrefNavEnabled) return;
   __dataHrefNavEnabled = true;
 
-  document.addEventListener("click", (e) => {
+  document.addEventListener('click', (e) => {
     if (e.defaultPrevented) return;
 
     // ✅ Overlay hover: jamás navegues por data-href si el click nació dentro del overlay.
     // (Mi Lista y Mute cambian el DOM y pueden romper closest(); esto lo hace estable.)
     try {
-      const path = typeof e.composedPath === "function" ? e.composedPath() : null;
-      if (path && path.some((n) => n && n.classList && n.classList.contains("overlay-hover-tarjeta"))) return;
-    } catch { }
-    if (e.target?.closest?.(".overlay-hover-tarjeta")) return;
+      const path =
+        typeof e.composedPath === 'function' ? e.composedPath() : null;
+      if (
+        path &&
+        path.some(
+          (n) =>
+            n && n.classList && n.classList.contains('overlay-hover-tarjeta')
+        )
+      )
+        return;
+    } catch {}
+    if (e.target?.closest?.('.overlay-hover-tarjeta')) return;
 
     const target = e.target;
 
@@ -1171,45 +1240,45 @@ export function enableDataHrefNavigation() {
       El overlay hover maneja sus propios clicks.
       Nunca debe activar la navegación global por data-href.
     */
-    if (target?.closest?.(".overlay-hover-tarjeta")) return;
+    if (target?.closest?.('.overlay-hover-tarjeta')) return;
 
     const interactive = target.closest?.(
       "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist, .home-hero-reminder, .card-release-reminder-btn, .title-reminder-btn, .alerts-bell, .control-center-trigger, .alerts-modal, .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover"
     );
     if (interactive) return;
 
-    const el = target.closest?.("[data-href]");
+    const el = target.closest?.('[data-href]');
     if (!el) return;
 
-    const href = el.dataset.href || el.getAttribute("data-href");
+    const href = el.dataset.href || el.getAttribute('data-href');
     if (!href) return;
 
     if (e.ctrlKey || e.metaKey) {
-      window.open(href, "_blank", "noopener");
+      window.open(href, '_blank', 'noopener');
       return;
     }
 
     window.location.href = href;
   });
 
-  document.addEventListener("keydown", (e) => {
+  document.addEventListener('keydown', (e) => {
     // ✅ Overlay hover: ignorar navegación por teclado iniciada dentro del overlay.
-    if (e.target?.closest?.(".overlay-hover-tarjeta")) return;
+    if (e.target?.closest?.('.overlay-hover-tarjeta')) return;
     const target = e.target;
 
-    if (target?.closest?.(".overlay-hover-tarjeta")) return;
+    if (target?.closest?.('.overlay-hover-tarjeta')) return;
 
     const interactive = target.closest?.(
       "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist, .home-hero-reminder, .card-release-reminder-btn, .title-reminder-btn, .alerts-bell, .control-center-trigger, .alerts-modal, .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover"
     );
     if (interactive) return;
 
-    const el = target.closest?.("[data-href]");
+    const el = target.closest?.('[data-href]');
     if (!el) return;
 
-    if (e.key === "Enter" || e.key === " ") {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      const href = el.dataset.href || el.getAttribute("data-href");
+      const href = el.dataset.href || el.getAttribute('data-href');
       if (href) window.location.href = href;
     }
   });
@@ -1220,20 +1289,20 @@ export function enableDataHrefNavigation() {
 ========================= */
 
 function getMoviePublishState(movie) {
-  const state = String(movie?.publish_state || "public").toLowerCase();
-  if (["public", "upcoming", "live", "other"].includes(state)) return state;
-  return "public";
+  const state = String(movie?.publish_state || 'public').toLowerCase();
+  if (['public', 'upcoming', 'live', 'other'].includes(state)) return state;
+  return 'public';
 }
 
 function getMovieBadgeLabel(movie) {
   const state = getMoviePublishState(movie);
 
-  if (state === "public") return "";
-  if (state === "upcoming") return "Próximamente";
-  if (state === "live") return "En Vivo";
+  if (state === 'public') return '';
+  if (state === 'upcoming') return 'Próximamente';
+  if (state === 'live') return 'En Vivo';
 
-  const custom = String(movie?.publish_state_text || "").trim();
-  return custom || "Otro";
+  const custom = String(movie?.publish_state_text || '').trim();
+  return custom || 'Otro';
 }
 
 function getMovieBadgeClass(movie) {
@@ -1245,8 +1314,11 @@ function getMovieBadgeClass(movie) {
    URL HELPERS
 ========================= */
 
-export function buildTitleUrl(movieId, { collectionId = null, episodeId = null } = {}) {
-  if (!movieId) return "#";
+export function buildTitleUrl(
+  movieId,
+  { collectionId = null, episodeId = null } = {}
+) {
+  if (!movieId) return '#';
 
   const parts = [];
 
@@ -1260,7 +1332,7 @@ export function buildTitleUrl(movieId, { collectionId = null, episodeId = null }
     parts.push(`episode=${encodeURIComponent(String(episodeId))}`);
   }
 
-  return `/title?${parts.join("&")}`;
+  return `/title?${parts.join('&')}`;
 }
 
 /* =========================
@@ -1274,33 +1346,33 @@ export function cardHtml(
   progressPercent = null,
   options = {}
 ) {
-  const thumb = movie.thumbnail_url || "";
-  const title = escapeHtml(movie.title || "Sin título");
+  const thumb = movie.thumbnail_url || '';
+  const title = escapeHtml(movie.title || 'Sin título');
 
   const href = hrefOverride
     ? hrefOverride
     : buildTitleUrl(movie?.id, {
-      collectionId: movie?.collection_id || null
-    });
+        collectionId: movie?.collection_id || null,
+      });
 
   const sub = subtitle
     ? `<div class="card-subtitle">${escapeHtml(subtitle)}</div>`
-    : "";
+    : '';
 
-  const pb = typeof progressPercent === "number"
-    ? `<div class="progressbar">
+  const pb =
+    typeof progressPercent === 'number'
+      ? `<div class="progressbar">
          <div class="progressfill" style="width:${Math.min(100, Math.max(0, progressPercent))}%"></div>
        </div>`
-    : "";
+      : '';
 
   const badgeLabel = getMovieBadgeLabel(movie);
   const badge = badgeLabel
     ? `<div class="card-badge ${getMovieBadgeClass(movie)}">${escapeHtml(badgeLabel)}</div>`
-    : "";
+    : '';
 
   const isCollection =
-    options?.showCollectionOverlay === true &&
-    !!movie?.collection_id;
+    options?.showCollectionOverlay === true && !!movie?.collection_id;
 
   const collectionOverlay = isCollection
     ? `
@@ -1308,7 +1380,7 @@ export function cardHtml(
         <img src="/images/svg/collections.svg" alt=""/>
       </div>
     `
-    : "";
+    : '';
 
   return `
     <div class="card no-select" role="link" tabindex="0" data-href="${href}">
@@ -1327,7 +1399,7 @@ export function cardHtml(
    SEARCH OVERLAY FULLSCREEN
 ========================= */
 
-const SEARCH_OVERLAY_ID = "search-overlay";
+const SEARCH_OVERLAY_ID = 'search-overlay';
 let __topnavSearchInit = false;
 let __searchExperienceInit = false;
 let __searchRequestSeq = 0;
@@ -1335,15 +1407,17 @@ let __searchDebounceTimer = null;
 let __searchBaseUrl = null;
 
 function normalizeSearchQuery(value) {
-  return String(value || "").trim().replace(/\s+/g, " ");
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ');
 }
 
 function getCurrentSearchQueryFromUrl() {
   try {
     const url = new URL(window.location.href);
-    return normalizeSearchQuery(url.searchParams.get("q") || "");
+    return normalizeSearchQuery(url.searchParams.get('q') || '');
   } catch {
-    return "";
+    return '';
   }
 }
 
@@ -1354,13 +1428,13 @@ function getCurrentNonSearchUrl() {
 
 function rememberSearchBaseUrl() {
   const url = new URL(window.location.href);
-  if (url.pathname !== "/search") {
+  if (url.pathname !== '/search') {
     __searchBaseUrl = `${url.pathname}${url.search}${url.hash}`;
   }
 }
 
 function getFallbackBaseUrl() {
-  return __searchBaseUrl || "/index.html";
+  return __searchBaseUrl || '/index.html';
 }
 
 function buildSearchUrl(query) {
@@ -1371,10 +1445,10 @@ function buildSearchUrl(query) {
   }
 
   const base = new URL(window.location.origin + getFallbackBaseUrl());
-  base.pathname = "/search";
-  base.search = "";
-  base.hash = "";
-  base.searchParams.set("q", q);
+  base.pathname = '/search';
+  base.search = '';
+  base.hash = '';
+  base.searchParams.set('q', q);
 
   return `${base.pathname}${base.search}${base.hash}`;
 }
@@ -1387,7 +1461,7 @@ function replaceSearchUrl(query) {
   }
 
   const nextUrl = buildSearchUrl(safeQuery);
-  history.replaceState({ searchQuery: safeQuery }, "", nextUrl);
+  history.replaceState({ searchQuery: safeQuery }, '', nextUrl);
 }
 
 function dispatchSearchChange(query, extra = {}) {
@@ -1395,25 +1469,25 @@ function dispatchSearchChange(query, extra = {}) {
 
   try {
     window.dispatchEvent(
-      new CustomEvent("app:searchchange", {
+      new CustomEvent('app:searchchange', {
         detail: {
           query: safeQuery,
-          ...extra
-        }
+          ...extra,
+        },
       })
     );
-  } catch (_) { }
+  } catch (_) {}
 }
 
 function ensureSearchOverlay() {
   let root = document.getElementById(SEARCH_OVERLAY_ID);
   if (root) return root;
 
-  root = document.createElement("div");
+  root = document.createElement('div');
   root.id = SEARCH_OVERLAY_ID;
-  root.className = "search-overlay";
+  root.className = 'search-overlay';
   root.hidden = true;
-  root.setAttribute("aria-hidden", "true");
+  root.setAttribute('aria-hidden', 'true');
 
   root.innerHTML = `
     <div class="search-overlay-shell">
@@ -1451,30 +1525,30 @@ function ensureSearchOverlay() {
 
   document.body.appendChild(root);
 
-  const closeBtn = root.querySelector("[data-search-close]");
-  const overlayInput = root.querySelector("#search-overlay-input");
+  const closeBtn = root.querySelector('[data-search-close]');
+  const overlayInput = root.querySelector('#search-overlay-input');
 
-  closeBtn?.addEventListener("click", () => {
+  closeBtn?.addEventListener('click', () => {
     closeSearchOverlay({ clearQuery: true });
   });
 
-  root.addEventListener("click", (e) => {
+  root.addEventListener('click', (e) => {
     if (e.target === root) {
       closeSearchOverlay({ clearQuery: true });
     }
   });
 
-  document.addEventListener("keydown", (e) => {
+  document.addEventListener('keydown', (e) => {
     if (root.hidden) return;
 
-    if (e.key === "Escape") {
+    if (e.key === 'Escape') {
       e.preventDefault();
       closeSearchOverlay({ clearQuery: true });
     }
   });
 
-  overlayInput?.addEventListener("input", (e) => {
-    const q = normalizeSearchQuery(e.target.value || "");
+  overlayInput?.addEventListener('input', (e) => {
+    const q = normalizeSearchQuery(e.target.value || '');
     syncSearchInputs(q);
 
     if (!q) {
@@ -1485,7 +1559,7 @@ function ensureSearchOverlay() {
 
     rememberSearchBaseUrl();
     replaceSearchUrl(q);
-    debouncedSearch(q, "overlay-input");
+    debouncedSearch(q, 'overlay-input');
   });
 
   return root;
@@ -1493,31 +1567,31 @@ function ensureSearchOverlay() {
 
 function getSearchInputs() {
   return [
-    document.getElementById("topnav-search-input"),
-    document.getElementById("search-overlay-input")
+    document.getElementById('topnav-search-input'),
+    document.getElementById('search-overlay-input'),
   ].filter(Boolean);
 }
 
 function syncSearchInputs(query) {
-  const q = String(query || "");
+  const q = String(query || '');
   for (const input of getSearchInputs()) {
     if (input.value !== q) input.value = q;
   }
 }
 
 function setSearchStatus(html) {
-  const el = document.getElementById("search-overlay-status");
+  const el = document.getElementById('search-overlay-status');
   if (el) el.innerHTML = html;
 }
 
-export function openSearchOverlay(query = "") {
+export function openSearchOverlay(query = '') {
   const root = ensureSearchOverlay();
   root.hidden = false;
-  root.setAttribute("aria-hidden", "false");
-  document.body.classList.add("search-open");
+  root.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('search-open');
   syncSearchInputs(query);
 
-  const overlayInput = document.getElementById("search-overlay-input");
+  const overlayInput = document.getElementById('search-overlay-input');
   requestAnimationFrame(() => {
     overlayInput?.focus?.();
     if (overlayInput && query) {
@@ -1532,47 +1606,51 @@ export function closeSearchOverlay({ clearQuery = false } = {}) {
   if (!root) return;
 
   root.hidden = true;
-  root.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("search-open");
+  root.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('search-open');
 
-  const results = document.getElementById("search-results");
-  if (results) results.innerHTML = "";
+  const results = document.getElementById('search-results');
+  if (results) results.innerHTML = '';
 
-  setSearchStatus("");
+  setSearchStatus('');
 
   if (clearQuery) {
-    syncSearchInputs("");
-    history.replaceState({ searchQuery: "" }, "", getFallbackBaseUrl());
+    syncSearchInputs('');
+    history.replaceState({ searchQuery: '' }, '', getFallbackBaseUrl());
     return;
   }
 
-  const q = normalizeSearchQuery(document.getElementById("topnav-search-input")?.value || "");
+  const q = normalizeSearchQuery(
+    document.getElementById('topnav-search-input')?.value || ''
+  );
   if (!q) {
-    history.replaceState({ searchQuery: "" }, "", getFallbackBaseUrl());
+    history.replaceState({ searchQuery: '' }, '', getFallbackBaseUrl());
   }
 }
 
 function renderSearchMessage(html) {
-  const results = document.getElementById("search-results");
+  const results = document.getElementById('search-results');
   if (!results) return;
-  results.innerHTML = "";
+  results.innerHTML = '';
   setSearchStatus(html);
 }
 
-export function renderSearchResults(items = [], query = "") {
-  const host = document.getElementById("search-results");
+export function renderSearchResults(items = [], query = '') {
+  const host = document.getElementById('search-results');
   if (!host) return;
 
   const safeQuery = normalizeSearchQuery(query);
 
   if (!safeQuery) {
-    host.innerHTML = "";
-    setSearchStatus(`<div class="search-empty-state">Empezá a escribir para buscar.</div>`);
+    host.innerHTML = '';
+    setSearchStatus(
+      `<div class="search-empty-state">Empezá a escribir para buscar.</div>`
+    );
     return;
   }
 
   if (!Array.isArray(items) || !items.length) {
-    host.innerHTML = "";
+    host.innerHTML = '';
     setSearchStatus(`
       <div class="search-empty-state">
         No encontramos resultados para <strong>${escapeHtml(safeQuery)}</strong>.
@@ -1587,12 +1665,14 @@ export function renderSearchResults(items = [], query = "") {
     </div>
   `);
 
-  host.innerHTML = items.map((movie) =>
-    cardHtml(movie, null, null, null, { showCollectionOverlay: true })
-  ).join("");
+  host.innerHTML = items
+    .map((movie) =>
+      cardHtml(movie, null, null, null, { showCollectionOverlay: true })
+    )
+    .join('');
 }
 
-function debouncedSearch(query, source = "input") {
+function debouncedSearch(query, source = 'input') {
   clearTimeout(__searchDebounceTimer);
 
   __searchDebounceTimer = setTimeout(() => {
@@ -1606,19 +1686,19 @@ export function initTopnavSearch() {
 
   ensureSearchOverlay();
 
-  document.addEventListener("focusin", (e) => {
-    const input = e.target?.closest?.("#topnav-search-input");
+  document.addEventListener('focusin', (e) => {
+    const input = e.target?.closest?.('#topnav-search-input');
     if (!input) return;
 
-    const q = normalizeSearchQuery(input.value || "");
+    const q = normalizeSearchQuery(input.value || '');
     if (q) openSearchOverlay(q);
   });
 
-  document.addEventListener("input", (e) => {
-    const input = e.target?.closest?.("#topnav-search-input");
+  document.addEventListener('input', (e) => {
+    const input = e.target?.closest?.('#topnav-search-input');
     if (!input) return;
 
-    const q = normalizeSearchQuery(input.value || "");
+    const q = normalizeSearchQuery(input.value || '');
     syncSearchInputs(q);
 
     if (!q) {
@@ -1630,26 +1710,26 @@ export function initTopnavSearch() {
     rememberSearchBaseUrl();
     openSearchOverlay(q);
     replaceSearchUrl(q);
-    debouncedSearch(q, "topnav-input");
+    debouncedSearch(q, 'topnav-input');
   });
 
-  document.addEventListener("keydown", (e) => {
-    const input = e.target?.closest?.("#topnav-search-input");
+  document.addEventListener('keydown', (e) => {
+    const input = e.target?.closest?.('#topnav-search-input');
     if (!input) return;
 
-    if (e.key === "Escape") {
+    if (e.key === 'Escape') {
       e.preventDefault();
       closeSearchOverlay({ clearQuery: true });
     }
   });
 
-  window.addEventListener("popstate", () => {
+  window.addEventListener('popstate', () => {
     const query = getCurrentSearchQueryFromUrl();
     syncSearchInputs(query);
 
     if (query) {
       openSearchOverlay(query);
-      dispatchSearchChange(query, { source: "popstate" });
+      dispatchSearchChange(query, { source: 'popstate' });
     } else {
       closeSearchOverlay({ clearQuery: false });
     }
@@ -1663,12 +1743,12 @@ export function initSearchExperience() {
   ensureSearchOverlay();
 
   const currentUrl = getCurrentNonSearchUrl();
-  if (!__searchBaseUrl && !currentUrl.startsWith("/search")) {
+  if (!__searchBaseUrl && !currentUrl.startsWith('/search')) {
     __searchBaseUrl = currentUrl;
   }
 
-  window.addEventListener("app:searchchange", async (e) => {
-    const query = normalizeSearchQuery(e?.detail?.query || "");
+  window.addEventListener('app:searchchange', async (e) => {
+    const query = normalizeSearchQuery(e?.detail?.query || '');
     const requestId = ++__searchRequestSeq;
 
     syncSearchInputs(query);
@@ -1691,7 +1771,7 @@ export function initSearchExperience() {
       renderSearchResults(results || [], query);
     } catch (error) {
       if (requestId !== __searchRequestSeq) return;
-      console.error("[search] error:", error);
+      console.error('[search] error:', error);
       renderSearchMessage(`
         <div class="search-empty-state">
           Ocurrió un error al buscar <strong>${escapeHtml(query)}</strong>.
@@ -1703,7 +1783,7 @@ export function initSearchExperience() {
   const initialQuery = getCurrentSearchQueryFromUrl();
   if (initialQuery) {
     openSearchOverlay(initialQuery);
-    dispatchSearchChange(initialQuery, { source: "init" });
+    dispatchSearchChange(initialQuery, { source: 'init' });
   }
 }
 
@@ -1711,32 +1791,35 @@ export function initSearchExperience() {
    CSS DISFRAZADO
 ========================= */
 
-function setDisguisedCssHref(href, linkId = "app-style") {
+function setDisguisedCssHref(href, linkId = 'app-style') {
   const link = document.getElementById(linkId);
   if (!link) return;
   link.href = href;
 }
 
-export function applyDisguisedCssFromId(id, {
-  linkId = "app-style",
-  disguisedPrefix = "/css/satvplusClient.",
-  disguisedSuffix = ".css"
-} = {}) {
-  const safe = (id === null || id === undefined) ? "0" : String(id);
+export function applyDisguisedCssFromId(
+  id,
+  {
+    linkId = 'app-style',
+    disguisedPrefix = '/css/satvplusClient.',
+    disguisedSuffix = '.css',
+  } = {}
+) {
+  const safe = id === null || id === undefined ? '0' : String(id);
   const href = `${disguisedPrefix}${encodeURIComponent(safe)}${disguisedSuffix}`;
   setDisguisedCssHref(href, linkId);
 }
 
 function getMovieIdFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get("movie") || urlParams.get("title");
+  return urlParams.get('movie') || urlParams.get('title');
 }
 
 export function applyDisguisedCssFromMovieId({
-  linkId = "app-style",
-  disguisedPrefix = "/css/satvplusClient.",
-  disguisedSuffix = ".css",
-  defaultId = "0"
+  linkId = 'app-style',
+  disguisedPrefix = '/css/satvplusClient.',
+  disguisedSuffix = '.css',
+  defaultId = '0',
 } = {}) {
   const movieId = getMovieIdFromUrl();
   const id = movieId || defaultId;
@@ -1751,7 +1834,7 @@ export async function setMovieTitleFromUrl() {
   const movieId = getMovieIdFromUrl();
 
   if (!movieId) {
-    document.title = "Película no encontrada · SATV+";
+    document.title = 'Película no encontrada · SATV+';
     return null;
   }
 
@@ -1762,12 +1845,12 @@ export async function setMovieTitleFromUrl() {
       document.title = `${movie.title} · SATV+`;
       return movie;
     } else {
-      document.title = "Película no encontrada · SATV+";
+      document.title = 'Película no encontrada · SATV+';
       return null;
     }
   } catch (error) {
-    console.error("Error al obtener la película:", error);
-    document.title = "Error al cargar la película · SATV+";
+    console.error('Error al obtener la película:', error);
+    document.title = 'Error al cargar la película · SATV+';
     return null;
   }
 }
