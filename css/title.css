@@ -16,8 +16,7 @@
   --title-square-radius: var(--media-square-radius, 24%);
   --title-outline-size: var(--media-outline-size, 4px);
   --title-outline-gap: var(--media-outline-gap, 5px);
-
-  --ep-gap: 12px;
+  --ep-gap: 40px;
   --ep-progress-h: 4px;
   --container-max: 1920px;
 }
@@ -274,14 +273,14 @@ textarea,
   outline-offset: 3px;
 }
 
-#episodes-jump > svg,
+#episodes-jump>svg,
 #episodes-jump .btn-icon {
   width: 20px;
   height: 20px;
   flex: 0 0 20px;
 }
 
-#episodes-jump > svg path,
+#episodes-jump>svg path,
 #episodes-jump .btn-icon path {
   fill: currentColor;
 }
@@ -395,12 +394,6 @@ span.meta-dropitem {
   content: "▲";
 }
 
-.dropdown-btn:hover,
-.dropdown-btn[aria-expanded="true"] {
-  border-color: #fff;
-  background: rgba(255, 255, 255, .12);
-}
-
 .dropdown-btn:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 3px;
@@ -412,7 +405,7 @@ span.meta-dropitem {
   top: calc(100% + 8px);
   left: 0;
   z-index: 1000;
-  min-width: 240px;
+  min-width: 250px;
   max-width: min(92vw, 420px);
   max-height: min(420px, 70vh);
   padding: 6px;
@@ -560,6 +553,10 @@ span.meta-dropitem {
   transition: outline-color .16s ease, background-color .16s ease;
 }
 
+.more-card-thumb-wrap:hover {
+  outline-color: #fff;
+}
+
 .episode-card:hover .episode-thumb-wrap,
 .episode-card:hover .more-card-thumb-wrap,
 .more-card:hover .more-card-thumb-wrap,
@@ -567,11 +564,6 @@ span.meta-dropitem {
 .episode-card:focus-visible .more-card-thumb-wrap,
 .more-card:focus-visible .more-card-thumb-wrap {
   outline-color: #fff;
-}
-
-.episode-card:focus-visible,
-.more-card:focus-visible {
-  outline: none;
 }
 
 .episode-thumb,
@@ -795,6 +787,10 @@ section#more-section {
   width: 100%;
 }
 
+article.episode-card.more-card.collection-card:hover .more-card-thumb-wrap {
+  outline-color: #fff;
+}
+
 /* ================= ACCESSIBILITY / STATES ================= */
 .btn-primary:disabled,
 .btn-ghost:disabled,
@@ -811,6 +807,7 @@ section#more-section {
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 1400px) {
+
   .episodes-grid,
   #more-grid,
   #collection-grid {
@@ -819,6 +816,7 @@ section#more-section {
 }
 
 @media (max-width: 1100px) {
+
   .episodes-grid,
   #more-grid,
   #collection-grid {
@@ -855,6 +853,7 @@ section#more-section {
 }
 
 @media (max-width: 560px) {
+
   .title-actions,
   .season-filter {
     align-items: stretch;
@@ -892,6 +891,7 @@ section#more-section {
 }
 
 @media (hover: none) and (pointer: coarse) {
+
   .episode-card::before,
   .episode-card::after,
   .more-card::before,
@@ -901,6 +901,7 @@ section#more-section {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -908,4 +909,135 @@ section#more-section {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* =========================================================
+   TITLE CARDS — BODY VISIBLE
+   Agregar al final de title.css o reemplazar el bloque
+   "Body image-only" y los pseudo-elementos de hover.
+========================================================= */
+
+/* El hover debe cubrir solamente la miniatura, no el body. */
+.episode-card::before,
+.more-card::before,
+.episode-card::after,
+.more-card::after {
+  content: none !important;
+  display: none !important;
+}
+
+.episode-thumb-wrap::before,
+.more-card-thumb-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, .18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+
+.episode-thumb-wrap::after,
+.more-card-thumb-wrap::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: 58px;
+  height: 58px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, .75);
+  border-radius: var(--title-square-radius);
+  background: rgba(0, 0, 0, .52) center / 28px 28px no-repeat;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='white' d='M8 5v14l11-7z'/></svg>");
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease, background-color .16s ease, border-color .16s ease;
+}
+
+.episode-card:hover .episode-thumb-wrap::before,
+.episode-card:hover .more-card-thumb-wrap::before,
+.more-card:hover .more-card-thumb-wrap::before,
+.episode-card:focus-visible .episode-thumb-wrap::before,
+.episode-card:focus-visible .more-card-thumb-wrap::before,
+.more-card:focus-visible .more-card-thumb-wrap::before,
+.episode-card:hover .episode-thumb-wrap::after,
+.episode-card:hover .more-card-thumb-wrap::after,
+.more-card:hover .more-card-thumb-wrap::after,
+.episode-card:focus-visible .episode-thumb-wrap::after,
+.episode-card:focus-visible .more-card-thumb-wrap::after,
+.more-card:focus-visible .more-card-thumb-wrap::after {
+  opacity: 1;
+}
+
+/* Body real para episodios, colección y Te podría gustar. */
+.episode-body,
+.episode-card .episode-body,
+#episodes-grid .episode-body,
+#more-grid .episode-body,
+#collection-grid .episode-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 2px 0;
+  color: #ffffff !important;
+}
+
+.episode-title,
+#episodes-grid .episode-title,
+#more-grid .episode-title,
+#collection-grid .episode-title {
+  display: block;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(14px, .55vw + 10px, 17px);
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.episode-sub,
+.more-card-synopsis {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.more-card-meta {
+  display: block;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* La barra de progreso queda entre la miniatura y el body. */
+#episodes-grid .episode-card .episode-progress,
+#episodes-grid .episode-card.image-only-card .episode-progress {
+  margin-bottom: 0;
+}
+
+@media (hover: none) and (pointer: coarse) {
+
+  .episode-thumb-wrap::before,
+  .episode-thumb-wrap::after,
+  .more-card-thumb-wrap::before,
+  .more-card-thumb-wrap::after {
+    display: none;
+  }
+}
+
+#collection-grid .collection-card:hover>.more-card-thumb-wrap,
+#collection-grid .collection-card:focus-visible>.more-card-thumb-wrap {
+  outline: var(--title-outline-size) solid #fff !important;
+  outline-offset: var(--title-outline-gap);
 }

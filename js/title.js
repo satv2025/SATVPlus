@@ -466,8 +466,7 @@ function renderTitleNotFound() {
 let __episodeTitleWrappedRaf = 0;
 
 function applyCondensedFontToWrappedEpisodeTitles(root = document) {
-  // Las tarjetas de episodios y colecciones ya no tienen body ni títulos visibles.
-  // Se mantiene la API interna, evitando mediciones de layout innecesarias.
+  // Los bodies volvieron a mostrarse. La medición queda delegada al CSS responsivo.
   void root;
 }
 
@@ -930,6 +929,7 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
 
   const epTitleText = tag ? `${tag} ${ep.title || ''}`.trim() : ep.title || '';
   const epTitle = esc(epTitleText);
+  const synopsis = String(ep?.sinopsis || '').trim();
 
   const progress = progressMap?.get?.(ep.id) || null;
   const progressPercent = Math.max(
@@ -940,7 +940,7 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
 
   return `
     <article
-      class="episode-card image-only-card"
+      class="episode-card"
       tabindex="0"
       role="link"
       aria-label="${epTitle}"
@@ -960,6 +960,10 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
       `
           : ''
       }
+      <div class="episode-body">
+        <h3 class="episode-title">${epTitle}</h3>
+        ${synopsis ? `<p class="episode-sub">${esc(synopsis)}</p>` : ''}
+      </div>
     </article>
   `;
 }
@@ -2016,12 +2020,17 @@ async function renderMoreCardHtml({ item, esc, api }) {
   void api;
 
   const thumb = item.thumbnail_url || item.banner_url || '';
-  const title = esc(shortenTitle(item.title || ''));
+  const rawTitle = shortenTitle(item.title || '');
+  const title = esc(rawTitle);
   const badgeLabel = getMoreCardBadgeLabel(item);
+  const metaLine = getMoreMetaLine(item);
+  const genresLine = formatGenresInline(item, { limit: 3 });
+  const synopsis = String(item?.description || item?.sinopsis || '').trim();
+  const secondaryMeta = [metaLine, genresLine].filter(Boolean).join(' · ');
 
   return `
     <article
-      class="episode-card more-card image-only-card"
+      class="episode-card more-card"
       tabindex="0"
       role="link"
       aria-label="${title}"
@@ -2031,6 +2040,11 @@ async function renderMoreCardHtml({ item, esc, api }) {
       <div class="more-card-thumb-wrap">
         <img class="episode-thumb" src="${esc(thumb)}" alt="">
         ${badgeLabel ? `<div class="card-badge card-badge-upcoming">${esc(badgeLabel)}</div>` : ``}
+      </div>
+      <div class="episode-body more-card-body">
+        <h3 class="episode-title">${title}</h3>
+        ${secondaryMeta ? `<div class="more-card-meta">${esc(secondaryMeta)}</div>` : ''}
+        ${synopsis ? `<p class="more-card-synopsis">${esc(synopsis)}</p>` : ''}
       </div>
     </article>
   `;
@@ -2137,10 +2151,14 @@ function renderCollectionCardHtml({ item, esc }) {
   const thumb = item.thumbnail_url || item.banner_url || '';
   const durationText = getMovieDurationBadgeText(item);
   const title = esc(item.title || '');
+  const metaLine = getMoreMetaLine(item);
+  const genresLine = formatGenresInline(item, { limit: 3 });
+  const synopsis = String(item?.description || item?.sinopsis || '').trim();
+  const secondaryMeta = [metaLine, genresLine].filter(Boolean).join(' · ');
 
   return `
     <article
-      class="episode-card more-card image-only-card"
+      class="episode-card more-card collection-card"
       tabindex="0"
       role="link"
       aria-label="${title}"
@@ -2150,6 +2168,11 @@ function renderCollectionCardHtml({ item, esc }) {
       <div class="more-card-thumb-wrap">
         <img class="episode-thumb" src="${esc(thumb)}" alt="">
         ${durationText ? `<span class="duration">${esc(durationText)}</span>` : ''}
+      </div>
+      <div class="episode-body more-card-body collection-card-body">
+        <h3 class="episode-title">${title}</h3>
+        ${secondaryMeta ? `<div class="more-card-meta">${esc(secondaryMeta)}</div>` : ''}
+        ${synopsis ? `<p class="more-card-synopsis">${esc(synopsis)}</p>` : ''}
       </div>
     </article>
   `;

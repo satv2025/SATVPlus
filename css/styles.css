@@ -59,8 +59,6 @@
   --hover-tarjeta-bg: #010101;
   --hover-tarjeta-texto: #fff;
   --hover-tarjeta-radio: var(--media-card-radius);
-  --hover-tarjeta-ancho: 430px;
-  --hover-tarjeta-half-ancho: 215px;
   --hover-tarjeta-margen-seguro: 32px;
   --hover-tarjeta-y-abierto: -26px;
   --hover-tarjeta-accion-alto: 52px;
@@ -148,7 +146,6 @@ button,
   width: 100%;
   max-width: var(--container-max);
   margin-inline: auto;
-  padding: var(--ui-pad-y) var(--ui-pad-x);
 }
 
 .hr {
@@ -615,7 +612,7 @@ button#btn-logout {
   justify-content: space-between;
   gap: 10px;
   margin: 0 0 10px;
-  padding: 0 12px;
+  padding: 0;
 }
 
 .section-title {
@@ -648,11 +645,13 @@ button#btn-logout {
 }
 
 .row {
+  --row-gap: clamp(8px, 1.2vw, 12px);
+
   position: relative;
   display: flex;
   align-items: stretch;
   justify-content: flex-start;
-  gap: clamp(8px, 1.2vw, 12px);
+  gap: var(--row-gap);
   overflow-x: auto;
   overflow-y: hidden;
   padding: 16px 12px 18px;
@@ -660,6 +659,12 @@ button#btn-logout {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+}
+
+.row>.card {
+  flex: 0 0 calc((100% - (var(--row-gap) * 4)) / 5);
+  width: calc((100% - (var(--row-gap) * 4)) / 5);
+  max-width: none;
 }
 
 .row::-webkit-scrollbar {
@@ -772,9 +777,7 @@ button#btn-logout {
 .card:focus-within>.thumb,
 .card.card-image-only:hover>.thumb,
 .card.card-image-only:focus-visible>.thumb,
-.card.card-image-only:focus-within>.thumb {
-  outline-color: var(--media-outline-color);
-}
+.card.card-image-only:focus-within>.thumb {}
 
 .card:focus-visible,
 .card.card-image-only:focus-visible {
@@ -1667,15 +1670,15 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
 .overlay-hover-tarjeta {
   position: absolute;
   left: calc(50% + var(--desplazamiento-hover-x, 0px));
-  margin-left: calc(var(--hover-tarjeta-half-ancho) * -1);
   top: var(--hover-tarjeta-y-abierto);
   z-index: 12000;
-  width: var(--hover-tarjeta-ancho);
+  width: clamp(320px, 130%, 460px);
   max-width: calc(100vw - var(--hover-tarjeta-margen-seguro));
+  margin-left: 0;
+  transform: translateX(-50%);
+  font-size: 16px !important;
   border: 1px solid transparent;
   border-radius: var(--hover-tarjeta-radio);
-  outline: var(--media-outline-size) solid transparent;
-  outline-offset: var(--media-outline-gap);
   background: var(--hover-tarjeta-bg);
   color: var(--hover-tarjeta-texto);
   overflow: hidden;
@@ -1683,14 +1686,16 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   visibility: hidden;
   pointer-events: none;
   cursor: default;
-  transition: opacity .16s ease, visibility .16s ease, outline-color .16s ease, border-color .16s ease;
+  transition:
+    opacity .16s ease,
+    visibility .16s ease,
+    border-color .16s ease;
 }
 
 .overlay-hover-tarjeta.overlay-hover-abierto {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  outline-color: #fff;
   border-color: rgba(255, 255, 255, .16);
 }
 
@@ -1760,7 +1765,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   border-radius: inherit;
   background: var(--hover-tarjeta-bg);
   color: rgba(255, 255, 255, .78);
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .overlay-hover-tarjeta-media .card-quick-modal-volume-btn {
@@ -1829,7 +1834,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   border-radius: var(--radius);
   background: #fff;
   color: #000;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1;
   text-decoration: none;
@@ -1889,7 +1894,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
 .overlay-hover-tarjeta-titulo {
   margin: 0 0 8px;
   color: #fff;
-  font-size: 20px;
+  font-size: 26px;
   line-height: 1.15;
   font-weight: 800;
 }
@@ -1901,7 +1906,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   gap: 7px;
   margin-bottom: 10px;
   color: rgba(255, 255, 255, .78);
-  font-size: 15px;
+  font-size: 21px;
 }
 
 .overlay-hover-tarjeta-meta-item,
@@ -1910,22 +1915,37 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   align-items: center;
 }
 
-.overlay-hover-tarjeta-age {
+.overlay-hover-tarjeta .overlay-hover-tarjeta-meta>.overlay-hover-tarjeta-age {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 24px;
-  padding: 3px 7px;
+  flex: 0 0 auto;
+  align-self: center;
+
+  width: max-content;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  box-sizing: content-box;
+  padding: 6px 7px !important;
+  margin: 0;
+
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: #fff;
+
+  font-size: 20px !important;
   font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .overlay-hover-tarjeta-sinopsis {
   margin: 0;
   color: rgba(255, 255, 255, .88);
-  font-size: 16px;
+  font-size: 21px;
   line-height: 1.4;
   white-space: normal;
 }
