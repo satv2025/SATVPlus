@@ -791,13 +791,13 @@ button#btn-logout {
 /* Badge: ubicación preservada */
 .card-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 0;
+  right: 0;
   z-index: 5;
   max-width: calc(100% - 16px);
   padding: 4px 8px;
   border: 0;
-  border-radius: var(--media-card-radius);
+  border-radius: 0 var(--media-card-radius) 0 0;
   background: rgba(0, 0, 0, .74);
   color: #fff;
   font-size: 14px;
@@ -1672,7 +1672,10 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   z-index: 12000;
   width: var(--hover-tarjeta-ancho);
   max-width: calc(100vw - var(--hover-tarjeta-margen-seguro));
+  border: 1px solid transparent;
   border-radius: var(--hover-tarjeta-radio);
+  outline: var(--media-outline-size) solid transparent;
+  outline-offset: var(--media-outline-gap);
   background: var(--hover-tarjeta-bg);
   color: var(--hover-tarjeta-texto);
   overflow: hidden;
@@ -1687,6 +1690,8 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+  outline-color: #fff;
+  border-color: rgba(255, 255, 255, .16);
 }
 
 .overlay-hover-tarjeta-inner {
@@ -1973,9 +1978,16 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   border: 2px solid #fff;
   border-radius: 999px;
   background: #000;
-  color: #000;
+  color: #fff;
   font-size: 10px;
   font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.alerts-badge[hidden] {
+  display: none !important;
 }
 
 .alerts-modal-backdrop.control-center-backdrop[hidden],
@@ -2033,19 +2045,22 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   letter-spacing: .08em;
 }
 
-.alerts-tabs,
-.control-center-tabs {
-  width: 100%;
-  min-width: 0;
-
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+.control-center-modal .control-center-tabs {
+  flex-wrap: nowrap;
   gap: 8px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+}
 
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
+.control-center-modal .alerts-tab {
+  flex: 0 0 auto;
+}
 
-  overflow: hidden;
+button.alerts-tab:hover {
+  background: rgba(255, 255, 255, .12);
+  border-color: #fff;
 }
 
 .alerts-tabs::-webkit-scrollbar,
@@ -2057,10 +2072,10 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  display: flex;
+  display: inline-grid;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   padding: 8px 10px;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -2070,6 +2085,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   background: rgba(255, 255, 255, .05);
   color: #fff;
   cursor: pointer;
+  margin: 2px 0;
 }
 
 .alerts-tab:hover,
@@ -2677,15 +2693,12 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-inline: contain;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .control-center-modal .alerts-tab {
   flex: 0 0 auto;
-}
-
-button.alerts-tab:hover {
-  background: rgba(255, 255, 255, .12);
-  border-color: #fff;
 }
 
 .control-center-modal .control-center-body {

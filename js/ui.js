@@ -1205,12 +1205,30 @@ async function refreshAlertsBadge(session = null) {
   }
 
   try {
-    const items = await fetchReleaseAlerts(userId, { limit: 50 });
-    const count = items.filter((item) => item.unseen).length;
+    const items = await fetchReleaseAlerts(userId, {
+      limit: 80,
+      includePending: true,
+    });
 
-    badge.hidden = count <= 0;
-    badge.textContent = count > 9 ? '9+' : String(count || '');
-    bell.classList.toggle('has-alerts', count > 0);
+    // Debe coincidir con la pestaña "Notificaciones":
+    // sólo lanzamientos disponibles, sin leer.
+    const unreadCount = getAlertsGroups({ alerts: items }).new.length;
+    const hasUnread = unreadCount > 0;
+
+    badge.hidden = !hasUnread;
+    badge.textContent = hasUnread
+      ? unreadCount > 99
+        ? '99+'
+        : String(unreadCount)
+      : '';
+
+    bell.classList.toggle('has-alerts', hasUnread);
+    bell.setAttribute(
+      'aria-label',
+      hasUnread
+        ? `Abrir centro de control: ${unreadCount} ${unreadCount === 1 ? 'notificación sin leer' : 'notificaciones sin leer'}`
+        : 'Abrir centro de control'
+    );
   } catch (e) {
     console.warn('[ui] no se pudieron cargar alerts:', e);
     badge.hidden = true;
