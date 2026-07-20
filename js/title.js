@@ -466,34 +466,9 @@ function renderTitleNotFound() {
 let __episodeTitleWrappedRaf = 0;
 
 function applyCondensedFontToWrappedEpisodeTitles(root = document) {
-  const titles = root.querySelectorAll('h4.episode-title');
-
-  titles.forEach((title) => {
-    title.classList.remove('episode-title--wrapped');
-    title.style.removeProperty('font-family');
-
-    const style = window.getComputedStyle(title);
-
-    let lineHeight = parseFloat(style.lineHeight);
-    if (!Number.isFinite(lineHeight) || lineHeight <= 0) {
-      const fontSize = parseFloat(style.fontSize) || 16;
-      lineHeight = fontSize * 1.2;
-    }
-
-    const scrollHeight = title.scrollHeight;
-    const clientHeight = title.clientHeight;
-    const rectHeight = title.getBoundingClientRect().height;
-    const renderedHeight = Math.max(scrollHeight, clientHeight, rectHeight);
-
-    if (!Number.isFinite(renderedHeight) || renderedHeight <= 0) return;
-
-    const isWrapped = renderedHeight > lineHeight * 1.35;
-
-    if (isWrapped) {
-      title.classList.add('episode-title--wrapped');
-      title.style.setProperty('font-family', 'HBOMaxSansCond', 'important');
-    }
-  });
+  // Las tarjetas de episodios y colecciones ya no tienen body ni títulos visibles.
+  // Se mantiene la API interna, evitando mediciones de layout innecesarias.
+  void root;
 }
 
 function scheduleApplyCondensedFontToWrappedEpisodeTitles(root = document) {
@@ -964,7 +939,14 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
   const hasProgress = progressPercent > 0;
 
   return `
-    <article class="episode-card" tabindex="0" role="link" data-episode="${ep.id}">
+    <article
+      class="episode-card image-only-card"
+      tabindex="0"
+      role="link"
+      aria-label="${epTitle}"
+      title="${epTitle}"
+      data-episode="${ep.id}"
+    >
       <div class="episode-thumb-wrap">
         <img class="episode-thumb" src="${esc(thumb)}" alt="">
         ${durationText ? `<span class="duration">${esc(durationText)}</span>` : ''}
@@ -978,10 +960,6 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
       `
           : ''
       }
-      <div class="episode-body"> 
-        <h4 class="episode-title">${epTitle}</h4>
-        <span class="episode-sub">${esc(ep.sinopsis || '')}</span>
-      </div>
     </article>
   `;
 }
@@ -2035,33 +2013,24 @@ function getMoreCardBadgeLabel(movie) {
 }
 
 async function renderMoreCardHtml({ item, esc, api }) {
+  void api;
+
   const thumb = item.thumbnail_url || item.banner_url || '';
   const title = esc(shortenTitle(item.title || ''));
-  let meta = '';
-  const synopsis = esc(item.description || item.sinopsis || '');
-
-  if (item.category === 'series' && typeof api?.fetchEpisodes === 'function') {
-    try {
-      const eps = await api.fetchEpisodes(item.id);
-      item.__episodes_for_meta = Array.isArray(eps) ? eps : [];
-    } catch {
-      item.__episodes_for_meta = [];
-    }
-  }
-
-  meta = esc(getMoreMetaLine(item));
   const badgeLabel = getMoreCardBadgeLabel(item);
 
   return `
-    <article class="episode-card more-card" tabindex="0" role="link" data-title="${esc(item.id)}">
+    <article
+      class="episode-card more-card image-only-card"
+      tabindex="0"
+      role="link"
+      aria-label="${title}"
+      title="${title}"
+      data-title="${esc(item.id)}"
+    >
       <div class="more-card-thumb-wrap">
         <img class="episode-thumb" src="${esc(thumb)}" alt="">
         ${badgeLabel ? `<div class="card-badge card-badge-upcoming">${esc(badgeLabel)}</div>` : ``}
-      </div>
-      <div class="episode-body">
-        <h4 class="episode-title">${title}</h4>
-        ${meta ? `<p class="episode-sub more-card-meta">${meta}</p>` : ``}
-        ${synopsis ? `<p class="episode-sub more-card-synopsis">${synopsis}</p>` : ``}
       </div>
     </article>
   `;
@@ -2167,17 +2136,20 @@ async function renderMoreSection({ api, esc, currentMovieId }) {
 function renderCollectionCardHtml({ item, esc }) {
   const thumb = item.thumbnail_url || item.banner_url || '';
   const durationText = getMovieDurationBadgeText(item);
-  const synopsis = esc(item.description || item.sinopsis || '');
+  const title = esc(item.title || '');
 
   return `
-    <article class="episode-card more-card" tabindex="0" role="link" data-title="${esc(item.id)}">
+    <article
+      class="episode-card more-card image-only-card"
+      tabindex="0"
+      role="link"
+      aria-label="${title}"
+      title="${title}"
+      data-title="${esc(item.id)}"
+    >
       <div class="more-card-thumb-wrap">
         <img class="episode-thumb" src="${esc(thumb)}" alt="">
         ${durationText ? `<span class="duration">${esc(durationText)}</span>` : ''}
-      </div>
-      <div class="episode-body">
-        <h4 class="episode-title">${esc(item.title || '')}</h4>
-        ${synopsis ? `<p class="episode-sub more-card-synopsis">${synopsis}</p>` : ``}
       </div>
     </article>
   `;

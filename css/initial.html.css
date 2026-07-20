@@ -506,11 +506,6 @@ main.container {
     overflow: hidden !important;
 }
 
-/* Evita que el badge tape el borde superior derecho cuadrado */
-.card .card-badge {
-    border-top-right-radius: var(--radius) !important;
-}
-
 /* Evita que overlay de colección rompa visualmente el borde */
 .card .card-collection-overlay {
     overflow: hidden !important;
@@ -553,4 +548,37 @@ main.container {
     visibility: visible !important;
     opacity: 1 !important;
     z-index: 20 !important;
+}
+
+
+/* =========================================================
+   AJUSTE FINAL — SEARCH/OVERLAY CON TUS RADIOS
+   ========================================================= */
+.topnav-search,
+.search-overlay-inputbar {
+    border-radius: var(--media-card-radius, var(--radius)) !important;
+    overflow: hidden !important;
+}
+
+.topnav-search-input,
+.search-overlay-input {
+    border-radius: inherit !important;
+}
+
+.overlay-hover-tarjeta,
+.overlay-hover-tarjeta-inner,
+.card-hover-overlay,
+.card-hover-overlay-inner {
+    border-radius: var(--hover-tarjeta-radio) !important;
+    overflow: hidden !important;
+}
+
+.overlay-hover-tarjeta-media,
+.card-hover-overlay-media {
+    border-radius: var(--hover-tarjeta-radio) var(--hover-tarjeta-radio) 0 0 !important;
+    overflow: hidden !important;
+}
+
+.overlay-hover-tarjeta-cuerpo {
+    border-radius: 0 0 var(--hover-tarjeta-radio) var(--hover-tarjeta-radio) !important;
 }

@@ -1355,18 +1355,25 @@ export function cardHtml(
         collectionId: movie?.collection_id || null,
       });
 
-  const sub = subtitle
-    ? `<div class="card-subtitle">${escapeHtml(subtitle)}</div>`
+  const hasProgress = typeof progressPercent === 'number';
+  const continueTime = hasProgress ? String(subtitle || '').trim() : '';
+
+  const pb = hasProgress
+    ? `<div class="card-continue-meta">
+         <div class="progressbar" aria-hidden="true">
+           <div class="progressfill" style="width:${Math.min(100, Math.max(0, progressPercent))}%"></div>
+         </div>
+         <div class="card-continue-row">
+           <span class="card-continue-label">Continuar</span>
+           <span class="card-continue-time">${escapeHtml(continueTime)}</span>
+         </div>
+       </div>`
     : '';
 
-  const pb =
-    typeof progressPercent === 'number'
-      ? `<div class="progressbar">
-         <div class="progressfill" style="width:${Math.min(100, Math.max(0, progressPercent))}%"></div>
-       </div>`
-      : '';
-
-  const badgeLabel = getMovieBadgeLabel(movie);
+  // En cards sin progreso, el tercer argumento puede funcionar como badge
+  // de estado. En "Continuar viendo" se usa abajo del card como tiempo de reanudación.
+  const explicitBadgeLabel = !hasProgress ? String(subtitle || '').trim() : '';
+  const badgeLabel = explicitBadgeLabel || getMovieBadgeLabel(movie);
   const badge = badgeLabel
     ? `<div class="card-badge ${getMovieBadgeClass(movie)}">${escapeHtml(badgeLabel)}</div>`
     : '';
@@ -1383,14 +1390,19 @@ export function cardHtml(
     : '';
 
   return `
-    <div class="card no-select" role="link" tabindex="0" data-href="${href}">
+    <div
+      class="card no-select card-image-only${hasProgress ? ' card-continue' : ''}"
+      role="link"
+      tabindex="0"
+      aria-label="${title}"
+      title="${title}"
+      data-href="${href}"
+    >
       <div class="thumb" style="background-image:url('${thumb}'); position:relative;">
         ${collectionOverlay}
         ${badge}
-        ${pb}
       </div>
-      <div class="card-title">${title}</div>
-      ${sub}
+      ${pb}
     </div>
   `;
 }
