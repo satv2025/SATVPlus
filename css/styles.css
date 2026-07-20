@@ -791,13 +791,13 @@ button#btn-logout {
 /* Badge: ubicación preservada */
 .card-badge {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 6px;
+  right: 6px;
   z-index: 5;
   max-width: calc(100% - 16px);
   padding: 4px 8px;
   border: 0;
-  border-radius: 0 var(--media-card-radius) 0 0;
+  border-radius: var(--media-card-radius);
   background: rgba(0, 0, 0, .74);
   color: #fff;
   font-size: 14px;
@@ -822,24 +822,21 @@ button#btn-logout {
 
 .card-collection-overlay {
   position: absolute;
-  left: 6px;
-  top: 6px;
+  left: 3px;
+  top: 3px;
   z-index: 6;
   width: 50px;
   min-height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: .6em;
-  border: 2px solid #fff;
-  border-radius: var(--media-square-radius);
-  background: rgba(0, 0, 0, .78);
+  padding: .4em .6em .6em .4em;
   pointer-events: none;
 }
 
 .card-collection-overlay img {
   display: block;
-  width: 37px;
+  width: 50px;
   height: auto;
   object-fit: contain;
 }
@@ -1250,8 +1247,7 @@ media-player,
 /* ================= LANGUAGE MODAL ================= */
 body.lang-modal-open,
 body.search-open,
-body.card-quick-modal-open,
-body.alerts-modal-open {
+body.card-quick-modal-open {
   overflow: hidden;
 }
 
@@ -1277,6 +1273,28 @@ body.card-quick-modal-open #card-quick-modal-root:not([hidden])[aria-hidden="fal
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+/* Centro de control: popover anclado al icono, estilo campana de YouTube. */
+.alerts-modal-backdrop.control-center-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: block;
+  padding: 0;
+  background: transparent;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.alerts-modal-backdrop.control-center-backdrop[hidden] {
+  display: none !important;
+}
+
+body.alerts-modal-open #control-center-trigger {
+  position: relative;
+  z-index: 100001;
 }
 
 .lang-modal {
@@ -1654,10 +1672,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   z-index: 12000;
   width: var(--hover-tarjeta-ancho);
   max-width: calc(100vw - var(--hover-tarjeta-margen-seguro));
-  border: 1px solid transparent;
   border-radius: var(--hover-tarjeta-radio);
-  outline: var(--media-outline-size) solid transparent;
-  outline-offset: var(--media-outline-gap);
   background: var(--hover-tarjeta-bg);
   color: var(--hover-tarjeta-texto);
   overflow: hidden;
@@ -1672,8 +1687,6 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  outline-color: #fff;
-  border-color: rgba(255, 255, 255, .16);
 }
 
 .overlay-hover-tarjeta-inner {
@@ -1922,18 +1935,22 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
 .alerts-bell,
 .control-center-trigger {
   position: relative;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   min-width: 42px;
   display: grid;
   place-items: center;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 2px solid #fff;
   border-radius: var(--media-square-radius);
-  background: rgba(8, 8, 8, .80);
+  background: rgba(0, 0, 0, .48);
   color: #fff;
   cursor: pointer;
-  transition: background-color .16s ease, border-color .16s ease;
+  transition:
+    background-color .16s ease,
+    border-color .16s ease;
+
+  transform: translateY(.1em);
 }
 
 .alerts-bell:hover,
@@ -1953,9 +1970,9 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   display: grid;
   place-items: center;
   padding-inline: 4px;
-  border: 2px solid #010101;
+  border: 2px solid #fff;
   border-radius: 999px;
-  background: #fff;
+  background: #000;
   color: #000;
   font-size: 10px;
   font-weight: 800;
@@ -1966,8 +1983,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   display: none;
 }
 
-.alerts-modal,
-.control-center-modal {
+.alerts-modal {
   width: min(820px, 100%);
   max-height: min(88vh, 860px);
   border: 1px solid var(--line);
@@ -1975,6 +1991,39 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   background: #101010;
   color: #fff;
   overflow: hidden;
+}
+
+.control-center-modal {
+  position: fixed;
+  top: var(--control-center-top, 64px);
+  right: var(--control-center-right, 12px);
+  left: auto;
+  width: var(--control-center-width, min(460px, calc(100vw - 24px)));
+  max-width: calc(100vw - 24px);
+  min-width: 0;
+  container-type: inline-size;
+  container-name: control-center;
+  max-height: var(--control-center-max-height, calc(100dvh - 76px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: var(--media-card-radius);
+  background: #101010;
+  color: #fff;
+  overflow: hidden;
+  box-shadow: 0 14px 42px rgba(0, 0, 0, .58);
+}
+
+.control-center-modal .control-center-head,
+.control-center-modal .control-center-tabs {
+  flex: 0 0 auto;
+}
+
+.control-center-modal .control-center-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .alerts-modal-kicker {
@@ -1986,12 +2035,17 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
 
 .alerts-tabs,
 .control-center-tabs {
-  display: flex;
+  width: 100%;
+  min-width: 0;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 8px;
+
   padding: 12px 16px;
   border-bottom: 1px solid var(--line);
-  overflow-x: auto;
-  scrollbar-width: none;
+
+  overflow: hidden;
 }
 
 .alerts-tabs::-webkit-scrollbar,
@@ -2000,18 +2054,22 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
 }
 
 .alerts-tab {
-  min-height: 38px;
-  display: inline-flex;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 8px 11px;
-  border: 1px solid transparent;
+  padding: 8px 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: transparent;
-  color: var(--muted);
+  background: rgba(255, 255, 255, .05);
+  color: #fff;
   cursor: pointer;
-  white-space: nowrap;
-  transition: background-color .16s ease, border-color .16s ease, color .16s ease;
 }
 
 .alerts-tab:hover,
@@ -2129,7 +2187,8 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
 }
 
 .alerts-mini-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(auto-fit, minmax(min(320px, 100%), 1fr));
 }
 
 .alerts-mini-card {
@@ -2169,7 +2228,8 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
 
 .control-quick-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(auto-fit, minmax(min(var(--control-center-column-min, 260px), 100%), 1fr));
   gap: 10px;
 }
 
@@ -2192,11 +2252,82 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
 }
 
 .control-stats-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  align-items: stretch;
   gap: 12px;
   padding: 12px;
+}
+
+
+/* El contenido responde al ancho real del modal, no al viewport. */
+.control-center-modal[data-layout="wide"] .control-center-tabs,
+.control-center-modal[data-layout="medium"] .control-center-tabs {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+.control-center-modal[data-layout="wide"] .alerts-list {
+  grid-template-columns:
+    repeat(auto-fit, minmax(min(430px, 100%), 1fr));
+}
+
+.control-center-modal[data-layout="medium"] .alerts-list,
+.control-center-modal[data-layout="compact"] .alerts-list {
+  grid-template-columns: 1fr;
+}
+
+.control-center-modal[data-layout="wide"] .control-center-body {
+  padding: clamp(18px, 1.4vw, 28px);
+}
+
+.control-center-modal[data-layout="compact"] .control-center-head {
+  padding: 12px;
+}
+
+.control-center-modal[data-layout="compact"] .control-center-user-text p {
+  display: none;
+}
+
+.control-center-modal[data-layout="compact"] .control-center-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.control-center-modal[data-layout="compact"] .alerts-item {
+  grid-template-columns: 78px minmax(0, 1fr);
+}
+
+.control-center-modal[data-layout="compact"] .alerts-item-dot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.control-center-modal[data-layout="compact"] .alerts-item {
+  position: relative;
+}
+
+@container control-center (max-width: 560px) {
+  .alerts-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .alerts-mini-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .control-profile-card {
+    align-items: flex-start;
+  }
+
+  .control-center-avatar.is-large {
+    width: 52px;
+    height: 52px;
+  }
 }
 
 
@@ -2379,10 +2510,6 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
     overflow-y: hidden;
   }
 
-  .alerts-mini-grid,
-  .control-quick-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 640px) {
@@ -2490,5 +2617,227 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
     transition-duration: .01ms !important;
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .control-center-modal {
+    width: var(--control-center-width, calc(100vw - 16px));
+    max-width: calc(100vw - 16px);
+  }
+}
+
+/* =========================================================
+   CENTRO DE CONTROL — PANEL VERTICAL RESPONSIVO
+   El ancho queda contenido y todo el contenido se adapta
+   dentro del panel sin desbordamiento horizontal.
+========================================================= */
+.control-center-modal {
+  width: var(--control-center-width, min(460px, calc(100vw - 24px)));
+  max-width: calc(100vw - 24px);
+  min-width: 0;
+}
+
+.control-center-modal *,
+.control-center-modal *::before,
+.control-center-modal *::after {
+  min-width: 0;
+}
+
+.control-center-modal .control-center-head {
+  padding: clamp(12px, 3cqw, 16px);
+}
+
+.control-center-modal .control-center-user,
+.control-center-modal .control-profile-main,
+.control-center-modal .control-center-user-text {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.control-center-modal .control-center-user-text,
+.control-center-modal .control-profile-main {
+  overflow: hidden;
+}
+
+.control-center-modal .control-center-user-text h2,
+.control-center-modal .control-center-user-text p,
+.control-center-modal .control-profile-main strong,
+.control-center-modal .control-profile-main small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.control-center-modal .control-center-tabs {
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+}
+
+.control-center-modal .alerts-tab {
+  flex: 0 0 auto;
+}
+
+button.alerts-tab:hover {
+  background: rgba(255, 255, 255, .12);
+  border-color: #fff;
+}
+
+.control-center-modal .control-center-body {
+  width: 100%;
+  min-width: 0;
+  padding: clamp(12px, 3cqw, 18px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.control-center-modal .alerts-list,
+.control-center-modal .alerts-mini-grid,
+.control-center-modal .control-account-panel,
+.control-center-modal .control-quick-grid {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.control-center-modal .alerts-item {
+  position: relative;
+  width: 100%;
+  grid-template-columns: 86px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.control-center-modal .alerts-item-thumb,
+.control-center-modal .alerts-mini-thumb {
+  display: block;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.control-center-modal .alerts-item-dot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.control-center-modal .alerts-item-main,
+.control-center-modal .alerts-mini-main,
+.control-center-modal .control-quick-action span {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.control-center-modal .alerts-item-title,
+.control-center-modal .alerts-item-sub,
+.control-center-modal .alerts-mini-title,
+.control-center-modal .alerts-mini-meta,
+.control-center-modal .control-quick-action strong,
+.control-center-modal .control-quick-action small {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.control-center-modal .alerts-item-title,
+.control-center-modal .alerts-mini-title,
+.control-center-modal .control-quick-action strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.control-center-modal .alerts-item-sub,
+.control-center-modal .alerts-mini-meta,
+.control-center-modal .control-quick-action small {
+  margin-top: 3px;
+  white-space: normal;
+}
+
+.control-center-modal .alerts-item-mylist {
+  display: inline-flex;
+  max-width: 100%;
+  margin-top: 7px;
+  white-space: normal;
+}
+
+.control-center-modal .alerts-mini-card {
+  width: 100%;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+}
+
+.control-center-modal .alerts-section-head {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.control-center-modal .alerts-mini-action {
+  width: 100%;
+  justify-content: center;
+}
+
+.control-center-modal .control-profile-card {
+  width: 100%;
+  align-items: center;
+}
+
+.control-center-modal .control-quick-action {
+  width: 100%;
+  grid-template-columns: 36px minmax(0, 1fr);
+}
+
+.control-center-modal .control-stats-row {
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.control-center-modal .control-stats-row button {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 6px;
+  overflow: hidden;
+}
+
+.control-center-modal .control-stats-row button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container control-center (max-width: 370px) {
+  .control-center-head {
+    align-items: flex-start;
+  }
+
+  .control-center-user-text p {
+    display: none;
+  }
+
+  .control-center-avatar.is-large {
+    width: 50px;
+    height: 50px;
+  }
+
+  .alerts-item {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .alerts-mini-card {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .control-profile-card {
+    align-items: flex-start;
+  }
+
+  .control-stats-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

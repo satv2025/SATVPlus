@@ -464,7 +464,6 @@ main.container {
 
 /* Miniatura normal */
 .card>.thumb {
-    border-radius: var(--radius) var(--radius) 0 0 !important;
     overflow: hidden !important;
 }
 
@@ -519,7 +518,6 @@ main.container {
 
 /* La thumb mantiene bordes redondeados, pero deja salir la barra */
 .card>.thumb {
-    border-radius: var(--radius) var(--radius) 0 0 !important;
     overflow: visible !important;
 }
 

@@ -688,7 +688,7 @@ function ensureAlertsModalRoot() {
   root.className = 'alerts-modal-backdrop control-center-backdrop';
   root.setAttribute('hidden', '');
   root.innerHTML = `
-    <div class="alerts-modal control-center-modal" role="dialog" aria-modal="true" aria-labelledby="control-center-title">
+    <div class="alerts-modal control-center-modal" role="dialog" aria-modal="false" aria-labelledby="control-center-title">
       <div class="alerts-modal-head control-center-head">
         <div class="control-center-user">
           <span class="control-center-avatar" data-control-avatar>U</span>
@@ -748,6 +748,11 @@ function ensureAlertsModalRoot() {
     ?.addEventListener('click', closeAlertsModal);
 
   root.addEventListener('click', async (ev) => {
+    if (ev.target === root) {
+      closeAlertsModal();
+      return;
+    }
+
     const logoutBtn = ev.target?.closest?.('[data-control-logout]');
     if (logoutBtn) {
       ev.preventDefault();
@@ -778,6 +783,13 @@ function ensureAlertsModalRoot() {
     if (ev.key === 'Escape' && !root.hasAttribute('hidden')) closeAlertsModal();
   });
 
+  if (root.dataset.positionBound !== '1') {
+    root.dataset.positionBound = '1';
+    const reposition = () => positionControlCenterPopover(root);
+    window.addEventListener('resize', reposition, { passive: true });
+    window.addEventListener('scroll', reposition, { passive: true, capture: true });
+  }
+
   return root;
 }
 
@@ -793,6 +805,72 @@ function updateControlHeader(root, user = {}) {
       user.email || 'Perfil, lista, avisos y accesos rápidos.';
 }
 
+function getControlCenterLayout(width) {
+  return width < 370 ? 'compact' : 'vertical';
+}
+
+function positionControlCenterPopover(root = document.getElementById('alerts-modal-root')) {
+  const trigger = getControlCenterTrigger();
+  const modal = root?.querySelector?.('.control-center-modal');
+  if (!root || !trigger || !modal || root.hasAttribute('hidden')) return;
+
+  const rect = trigger.getBoundingClientRect();
+  const viewportWidth =
+    document.documentElement.clientWidth || window.innerWidth || 0;
+  const viewportHeight =
+    window.innerHeight || document.documentElement.clientHeight || 0;
+
+  const edge = viewportWidth <= 640 ? 8 : 12;
+  const gap = 8;
+
+  // Conserva el borde derecho alineado con el botón.
+  const triggerRight = Math.max(edge, viewportWidth - rect.right);
+  const viewportAvailable = Math.max(240, viewportWidth - edge * 2);
+  const availableFromTrigger = Math.max(
+    240,
+    viewportWidth - triggerRight - edge
+  );
+
+  /*
+    Panel vertical:
+    - escritorio: hasta 460 px;
+    - tablet: hasta 420 px;
+    - móvil: todo el ancho disponible.
+  */
+  const targetWidth =
+    viewportWidth <= 520
+      ? viewportAvailable
+      : viewportWidth <= 900
+        ? Math.min(420, viewportAvailable)
+        : Math.min(460, viewportAvailable);
+
+  const preferredWidth = Math.min(targetWidth, availableFromTrigger);
+  const right = Math.max(
+    edge,
+    Math.min(triggerRight, viewportWidth - preferredWidth - edge)
+  );
+
+  // Sigue al botón durante el scroll y desaparece junto con la navegación.
+  const top = rect.bottom + gap;
+  const visibleTop = Math.max(edge, top);
+  const maxHeight = Math.max(220, viewportHeight - visibleTop - edge);
+
+  root.style.removeProperty('--control-center-left');
+  root.style.setProperty('--control-center-right', `${Math.round(right)}px`);
+  root.style.setProperty('--control-center-top', `${Math.round(top)}px`);
+  root.style.setProperty(
+    '--control-center-width',
+    `${Math.round(preferredWidth)}px`
+  );
+  root.style.setProperty(
+    '--control-center-max-height',
+    `${Math.round(maxHeight)}px`
+  );
+
+  modal.dataset.layout = getControlCenterLayout(preferredWidth);
+  modal.style.removeProperty('--control-center-column-min');
+}
+
 function closeAlertsModal() {
   const root = document.getElementById('alerts-modal-root');
   if (!root) return;
@@ -804,6 +882,8 @@ function showAlertsModalRoot() {
   const root = ensureAlertsModalRoot();
   root.removeAttribute('hidden');
   document.body.classList.add('alerts-modal-open');
+  positionControlCenterPopover(root);
+  requestAnimationFrame(() => positionControlCenterPopover(root));
   return root;
 }
 
@@ -1188,6 +1268,13 @@ async function initAlertsBell(session = null) {
     bell.addEventListener('click', async (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
+
+      const root = document.getElementById('alerts-modal-root');
+      if (root && !root.hasAttribute('hidden')) {
+        closeAlertsModal();
+        return;
+      }
+
       await openAlertsModal(session || (await getSession()));
     });
   }
@@ -1348,6 +1435,11 @@ export function cardHtml(
 ) {
   const thumb = movie.thumbnail_url || '';
   const title = escapeHtml(movie.title || 'Sin título');
+  const safeSubtitle = subtitle ? escapeHtml(subtitle) : '';
+  const isContinueCard = Number.isFinite(progressPercent);
+  const safeProgress = isContinueCard
+    ? Math.min(100, Math.max(0, Number(progressPercent)))
+    : 0;
 
   const href = hrefOverride
     ? hrefOverride
@@ -1355,25 +1447,7 @@ export function cardHtml(
         collectionId: movie?.collection_id || null,
       });
 
-  const hasProgress = typeof progressPercent === 'number';
-  const continueTime = hasProgress ? String(subtitle || '').trim() : '';
-
-  const pb = hasProgress
-    ? `<div class="card-continue-meta">
-         <div class="progressbar" aria-hidden="true">
-           <div class="progressfill" style="width:${Math.min(100, Math.max(0, progressPercent))}%"></div>
-         </div>
-         <div class="card-continue-row">
-           <span class="card-continue-label">Continuar</span>
-           <span class="card-continue-time">${escapeHtml(continueTime)}</span>
-         </div>
-       </div>`
-    : '';
-
-  // En cards sin progreso, el tercer argumento puede funcionar como badge
-  // de estado. En "Continuar viendo" se usa abajo del card como tiempo de reanudación.
-  const explicitBadgeLabel = !hasProgress ? String(subtitle || '').trim() : '';
-  const badgeLabel = explicitBadgeLabel || getMovieBadgeLabel(movie);
+  const badgeLabel = getMovieBadgeLabel(movie);
   const badge = badgeLabel
     ? `<div class="card-badge ${getMovieBadgeClass(movie)}">${escapeHtml(badgeLabel)}</div>`
     : '';
@@ -1389,20 +1463,64 @@ export function cardHtml(
     `
     : '';
 
+  const continueSeason = Number(
+    options?.season ??
+      options?.seasonNumber ??
+      movie?.season ??
+      movie?.season_number ??
+      movie?.current_season
+  );
+
+  const continueEpisode = Number(
+    options?.episode ??
+      options?.episodeNumber ??
+      movie?.episode ??
+      movie?.episode_number ??
+      movie?.current_episode
+  );
+
+  const isEpisodeContinue =
+    Number.isFinite(continueSeason) &&
+    continueSeason > 0 &&
+    Number.isFinite(continueEpisode) &&
+    continueEpisode > 0;
+
+  const episodePrefix = isEpisodeContinue
+    ? `T${Math.trunc(continueSeason)}E${Math.trunc(continueEpisode)}`
+    : '';
+
+  const continueTimeText = safeSubtitle
+    ? episodePrefix && !/^T\d+E\d+\b/i.test(safeSubtitle)
+      ? `${episodePrefix} · ${safeSubtitle}`
+      : safeSubtitle
+    : episodePrefix;
+
+  const cardBody = isContinueCard
+    ? `
+      <div class="card-body card-continue-meta">
+        <div class="progressbar" aria-label="Progreso de reproducción">
+          <div class="progressfill" style="width:${safeProgress}%"></div>
+        </div>
+        <div class="card-continue-row">
+          <span class="card-continue-label">Continuar</span>
+          ${continueTimeText ? `<span class="card-continue-time">${continueTimeText}</span>` : ''}
+        </div>
+      </div>
+    `
+    : `
+      <div class="card-body">
+        <div class="card-title">${title}</div>
+        ${safeSubtitle ? `<div class="card-subtitle">${safeSubtitle}</div>` : ''}
+      </div>
+    `;
+
   return `
-    <div
-      class="card no-select card-image-only${hasProgress ? ' card-continue' : ''}"
-      role="link"
-      tabindex="0"
-      aria-label="${title}"
-      title="${title}"
-      data-href="${href}"
-    >
+    <div class="card${isContinueCard ? ' card-continue' : ''} no-select" role="link" tabindex="0" data-href="${href}">
       <div class="thumb" style="background-image:url('${thumb}'); position:relative;">
         ${collectionOverlay}
         ${badge}
       </div>
-      ${pb}
+      ${cardBody}
     </div>
   `;
 }
