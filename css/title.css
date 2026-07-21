@@ -181,23 +181,19 @@ section {
   /* Se alinea con el padding del contenido y con el max-width del container */
   right: max(clamp(18px, 3vw, 60px),
       calc((100vw - var(--container-max-titlecss)) / 2 + 60px));
-
   bottom: clamp(18px, 2vw, 28px);
-
   width: clamp(42px, 4vw, 64px);
   height: clamp(42px, 4vw, 64px);
   min-width: 0;
   min-height: 0;
-
   display: grid;
   place-items: center;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, .24);
+  border: 2px solid rgba(255, 255, 255, .24);
   border-radius: var(--title-square-radius);
-  background: rgba(8, 8, 8, .80);
+  background: rgba(51, 51, 51, .5);
   color: #fff;
   cursor: pointer;
-
   transition:
     background-color .16s ease,
     border-color .16s ease,
@@ -206,7 +202,7 @@ section {
 
 .title-hero-volume-btn:hover,
 .title-hero-volume-btn:focus-visible {
-  background: rgba(8, 8, 8, .96);
+  background: rgba(51, 51, 51, .5);
   border-color: #fff;
 }
 
