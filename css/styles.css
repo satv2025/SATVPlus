@@ -81,6 +81,10 @@
 
 * {
   font-family: AEmber, ParamountPN, Cabin, system-ui, sans-serif !important;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 ::selection {

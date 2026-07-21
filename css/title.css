@@ -1054,3 +1054,8 @@ article.episode-card.more-card.collection-card:hover .more-card-thumb-wrap {
   outline: var(--title-outline-size) solid #fff !important;
   outline-offset: var(--title-outline-gap);
 }
+
+minfo-link {
+  cursor: pointer;
+  text-decoration: none !important;
+}
