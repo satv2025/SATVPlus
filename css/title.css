@@ -17,7 +17,7 @@
   --title-square-radius: var(--media-square-radius, 24%);
   --title-outline-size: var(--media-outline-size, 4px);
   --title-outline-gap: var(--media-outline-gap, 5px);
-  --ep-gap: 40px;
+  --ep-gap: 17px;
   --ep-progress-h: 4px;
   --container-max-titlecss: 2000px;
 }
@@ -48,6 +48,11 @@ textarea,
   width: 100%;
   max-width: var(--container-max-titlecss) !important;
   margin-inline: auto;
+  padding-inline: 60px !important;
+}
+
+section {
+  padding-inline: 60px;
 }
 
 /* ================= HERO ================= */
@@ -171,13 +176,19 @@ textarea,
 
 .title-hero-volume-btn {
   position: absolute;
-  right: 0;
-  bottom: clamp(12px, 2vw, 24px);
   z-index: 4;
-  width: clamp(40px, 5vw, 64px);
-  height: clamp(40px, 5vw, 64px);
-  min-width: clamp(40px, 5vw, 64px);
-  min-height: clamp(40px, 5vw, 64px);
+
+  /* Se alinea con el padding del contenido y con el max-width del container */
+  right: max(clamp(18px, 3vw, 60px),
+      calc((100vw - var(--container-max-titlecss)) / 2 + 60px));
+
+  bottom: clamp(18px, 2vw, 28px);
+
+  width: clamp(42px, 4vw, 64px);
+  height: clamp(42px, 4vw, 64px);
+  min-width: 0;
+  min-height: 0;
+
   display: grid;
   place-items: center;
   padding: 0;
@@ -186,7 +197,11 @@ textarea,
   background: rgba(8, 8, 8, .80);
   color: #fff;
   cursor: pointer;
-  transition: background-color .16s ease, border-color .16s ease, opacity .16s ease;
+
+  transition:
+    background-color .16s ease,
+    border-color .16s ease,
+    opacity .16s ease;
 }
 
 .title-hero-volume-btn:hover,
@@ -763,6 +778,7 @@ span.meta-dropitem {
 section#more-section {
   width: 100%;
   margin-top: clamp(24px, 4vw, 48px);
+  padding-inline: 60px;
 }
 
 /* ================= COLLECTION ================= */
