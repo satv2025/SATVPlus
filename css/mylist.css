@@ -7,20 +7,20 @@
    Tokens
 ----------------------------- */
 :root {
-    --satv-bg: #010101;
-    --satv-bg-2: #101010;
-    --satv-surface: #141414;
-    --satv-surface-2: #1a1a1a;
+    --satv-bg: #222222;
+    --satv-bg-2: #313131;
+    --satv-surface: #353535;
+    --satv-surface-2: #3a3a3a;
 
     --satv-text: #f5f7fb;
     --satv-text-soft: rgba(245, 247, 251, 0.78);
     --satv-text-faint: rgba(182, 191, 209, 0.55);
 
-    --satv-line: rgba(255, 255, 255, 0.08);
-    --satv-line-strong: rgba(255, 255, 255, 0.14);
+    --satv-line: rgba(255, 255, 255, 0.10);
+    --satv-line-strong: rgba(255, 255, 255, 0.22);
 
-    --satv-accent: #222222;
-    --satv-accent-2: #2f2f2f;
+    --satv-accent: #434343;
+    --satv-accent-2: #565656;
     --satv-accent-glow: rgba(255, 255, 255, 0.06);
 
     --satv-card-bg: transparent;
@@ -88,7 +88,7 @@ body {
 
     background:
         radial-gradient(70% 80% at 80% 20%, rgba(255, 255, 255, 0.05), transparent 70%),
-        linear-gradient(180deg, #0b0b0b 0%, #090909 100%);
+        linear-gradient(180deg, #2a2a2a 0%, #222222 100%);
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
@@ -97,7 +97,7 @@ body {
     inset: 0;
     display: none;
     /* se activa por JS */
-    background-color: #101010;
+    background-color: #313131;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -111,9 +111,9 @@ body {
     inset: 0;
     background:
         linear-gradient(to bottom,
-            rgba(1, 1, 1, 0.25) 0%,
-            rgba(1, 1, 1, 0.58) 48%,
-            rgba(1, 1, 1, 0.96) 100%);
+            rgb(from var(--satv-bg) r g b / 0.25) 0%,
+            rgb(from var(--satv-bg) r g b / 0.58) 48%,
+            rgb(from var(--satv-bg) r g b / 0.96) 100%);
 }
 
 .title-hero::after {
@@ -122,9 +122,9 @@ body {
     inset: 0;
     background:
         linear-gradient(to right,
-            rgba(1, 1, 1, 0.76) 0%,
-            rgba(1, 1, 1, 0.38) 42%,
-            rgba(1, 1, 1, 0.12) 100%);
+            rgb(from var(--satv-bg) r g b / 0.76) 0%,
+            rgb(from var(--satv-bg) r g b / 0.38) 42%,
+            rgb(from var(--satv-bg) r g b / 0.12) 100%);
     pointer-events: none;
 }
 

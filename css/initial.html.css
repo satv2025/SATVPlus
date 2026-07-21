@@ -1,6 +1,13 @@
 /* home.css — overrides finales */
 
 :root {
+    --bg: #222222 !important;
+    --panel: #313131 !important;
+    --panel-2: #353535 !important;
+    --panel-3: #3a3a3a !important;
+    --satvblue: #434343 !important;
+    --hover-tarjeta-bg: #222222 !important;
+
     --ui-pad-x: clamp(24px, 4vw, 54px) !important;
     --hero-synopsis-maxw: clamp(320px, 66vw, 720px) !important;
 }
@@ -219,7 +226,7 @@ main.container {
     height: 42px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, .18);
-    background: rgba(14, 20, 32, .55);
+    background: rgb(from var(--panel) r g b / .55);
     backdrop-filter: blur(8px);
     color: #fff;
     display: inline-flex;
@@ -231,7 +238,7 @@ main.container {
 }
 
 #card-quick-modal-root .card-quick-modal-mylist-btn:hover {
-    background: rgba(14, 20, 32, .88);
+    background: rgb(from var(--panel) r g b / .88);
     border-color: #fff;
     transform: scale(1.06);
 }
@@ -245,7 +252,7 @@ main.container {
 #card-quick-modal-root .card-quick-modal-mylist-btn.is-active,
 .card-mylist-plus-btn.is-active {
     border: 1px solid rgba(255, 255, 255, .18);
-    background: rgba(14, 20, 32, .55);
+    background: rgb(from var(--panel) r g b / .55);
     color: #fff;
 }
 
@@ -407,7 +414,7 @@ main.container {
     height: 44px !important;
     border-radius: 999px !important;
     border: 1px solid rgba(255, 255, 255, .18) !important;
-    background: rgba(14, 20, 32, .55) !important;
+    background: rgb(from var(--panel) r g b / .55) !important;
     backdrop-filter: blur(6px) !important;
 
     display: inline-flex !important;
@@ -422,7 +429,7 @@ main.container {
 
 /* Hover */
 #card-quick-modal-root .card-quick-modal-mylist-float:hover {
-    background: rgba(14, 20, 32, .88) !important;
+    background: rgb(from var(--panel) r g b / .88) !important;
     border-color: #fff !important;
 }
 

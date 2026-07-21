@@ -1296,6 +1296,7 @@ const __cachePeliculasHoverTarjeta = new Map();
 let __tarjetaHoverActiva = null;
 let __secuenciaGlobalHoverTarjeta = 0;
 let __eventosGlobalesHoverInstalados = false;
+let __overlayHoverPositionRaf = 0;
 
 let __bloquearCierreHoverHasta = 0;
 let __ultimoPointerHoverX = 0;
@@ -1717,6 +1718,11 @@ function resetearHoverTarjeta(card, { eliminarOverlay = true } = {}) {
   clearTimeout(card.__hoverCloseTimer);
   clearTimeout(card.__hoverSafetyCloseTimer);
 
+  if (__overlayHoverPositionRaf) {
+    cancelAnimationFrame(__overlayHoverPositionRaf);
+    __overlayHoverPositionRaf = 0;
+  }
+
   card.dataset.hoverSeq = '';
 
   card.classList.remove('tarjeta-hover-abierta', 'tarjeta-hover-host');
@@ -1729,7 +1735,10 @@ function resetearHoverTarjeta(card, { eliminarOverlay = true } = {}) {
   });
 
   if (overlayNode) {
-    overlayNode.classList.remove('overlay-hover-abierto', 'overlay-hover-cerrando');
+    overlayNode.classList.remove(
+      'overlay-hover-abierto',
+      'overlay-hover-cerrando'
+    );
     overlayNode.setAttribute('aria-hidden', 'true');
 
     if (eliminarOverlay) {
@@ -1967,10 +1976,6 @@ function posicionarOverlayHoverTarjeta(card, overlay) {
   if (!card || !overlay) return;
 
   const rect = card.getBoundingClientRect();
-  const row = card.closest('.row');
-  const carousel = row?.closest('.carousel') || null;
-  const rowRect = row?.getBoundingClientRect?.() || null;
-  const rowStyles = row ? getComputedStyle(row) : null;
 
   const viewportW =
     window.innerWidth || document.documentElement.clientWidth || 0;
@@ -1980,85 +1985,80 @@ function posicionarOverlayHoverTarjeta(card, overlay) {
   const viewportMargin = 12;
   const maxOverlayWidth = Math.max(0, viewportW - viewportMargin * 2);
   const overlayWidth = Math.min(520, Math.max(360, maxOverlayWidth));
-  overlay.style.width = `${Math.round(overlayWidth)}px`;
 
-  const paddingLeft = parseFloat(rowStyles?.paddingLeft || '0') || 0;
-  const paddingRight = parseFloat(rowStyles?.paddingRight || '0') || 0;
+  /*
+    Portal real:
+    el overlay vive en document.body, por eso se posiciona con coordenadas
+    absolutas del documento. getBoundingClientRect() da coordenadas de viewport;
+    sumamos scrollX/scrollY para llevarlas al documento.
 
-  let freeLeft = rowRect ? rowRect.left + paddingLeft : viewportMargin;
-  let freeRight = rowRect
-    ? rowRect.right - paddingRight
-    : viewportW - viewportMargin;
-
-  const leftButton = carousel?.querySelector(':scope > .carousel-btn.left');
-  const rightButton = carousel?.querySelector(':scope > .carousel-btn.right');
-
-  if (isCarouselButtonVisible(leftButton)) {
-    const leftRect = leftButton.getBoundingClientRect();
-    freeLeft = Math.max(freeLeft, leftRect.right);
-  }
-
-  if (isCarouselButtonVisible(rightButton)) {
-    const rightRect = rightButton.getBoundingClientRect();
-    freeRight = Math.min(freeRight, rightRect.left);
-  }
-
-  freeLeft = Math.max(viewportMargin, freeLeft);
-  freeRight = Math.min(viewportW - viewportMargin, freeRight);
-
-  const visibleCards = row
-    ? getCarouselCards(row).filter((item) => {
-        if (
-          item.classList.contains('carousel-card-covered') ||
-          item.classList.contains('carousel-card-partial')
-        ) {
-          return false;
-        }
-
-        const itemRect = item.getBoundingClientRect();
-        return itemRect.left >= freeLeft - 1.5 && itemRect.right <= freeRight + 1.5;
-      })
-    : [];
-
-  const firstVisibleCard = visibleCards[0] || null;
-  const lastVisibleCard = visibleCards[visibleCards.length - 1] || null;
-  const isFirstVisible = card === firstVisibleCard;
-  const isLastVisible = card === lastVisibleCard;
-
+    No se ancla al primer/último item visible del carrusel: se centra sobre
+    la card hover real y solo se clampa contra el viewport. Así, después de
+    mover el carrusel, no aparece al costado de la card.
+  */
   let viewportLeft = rect.left + rect.width / 2 - overlayWidth / 2;
-  let originX = rect.left + rect.width / 2 - viewportLeft;
-
-  if (isFirstVisible) {
-    // La primera card se ancla al borde útil izquierdo y crece hacia la derecha.
-    viewportLeft = freeLeft;
-    originX = 0;
-  } else if (isLastVisible) {
-    // La última card completamente visible se ancla al borde útil derecho
-    // y crece desde la derecha hacia la izquierda.
-    viewportLeft = freeRight - overlayWidth;
-    originX = overlayWidth;
-  } else {
-    viewportLeft = Math.max(
-      freeLeft,
-      Math.min(viewportLeft, freeRight - overlayWidth)
-    );
-    originX = rect.left + rect.width / 2 - viewportLeft;
-  }
-
   viewportLeft = Math.max(
     viewportMargin,
     Math.min(viewportLeft, viewportW - viewportMargin - overlayWidth)
   );
 
-  originX = Math.max(0, Math.min(overlayWidth, originX));
-  const originY = Math.max(0, rect.height / 2);
+  const overlayTop = Math.floor(rect.top + scrollY);
+  const overlayLeft = Math.round(viewportLeft + scrollX);
 
-  overlay.style.position = 'absolute';
-  overlay.style.top = `${Math.round(rect.top + scrollY)}px`;
-  overlay.style.left = `${Math.round(viewportLeft + scrollX)}px`;
+  let originX = rect.left + rect.width / 2 - viewportLeft;
+  originX = Math.max(0, Math.min(overlayWidth, originX));
+
+  overlay.style.setProperty('position', 'absolute', 'important');
+  overlay.style.setProperty('top', `${overlayTop}px`, 'important');
+  overlay.style.setProperty('left', `${overlayLeft}px`, 'important');
+  overlay.style.setProperty(
+    'width',
+    `${Math.round(overlayWidth)}px`,
+    'important'
+  );
+  overlay.style.setProperty('z-index', '2147483000', 'important');
   overlay.style.setProperty('--hover-origin-x', `${Math.round(originX)}px`);
-  overlay.style.setProperty('--hover-origin-y', `${Math.round(originY)}px`);
+  overlay.style.setProperty('--hover-origin-y', '0px');
   overlay.style.removeProperty('--desplazamiento-hover-x');
+}
+
+function buscarOverlayHoverTarjeta(card) {
+  if (!card) return null;
+
+  let overlay = null;
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+    if (n.__hostCard === card) overlay = n;
+  });
+
+  return overlay;
+}
+
+function estabilizarPosicionOverlayHoverTarjeta(card, overlay, frames = 12) {
+  if (!card || !overlay) return;
+
+  if (__overlayHoverPositionRaf) {
+    cancelAnimationFrame(__overlayHoverPositionRaf);
+    __overlayHoverPositionRaf = 0;
+  }
+
+  let restantes = Math.max(1, frames | 0);
+
+  const tick = () => {
+    if (!document.body.contains(overlay)) return;
+    if (overlay.__hostCard !== card) return;
+    if (__tarjetaHoverActiva !== card) return;
+
+    posicionarOverlayHoverTarjeta(card, overlay);
+
+    restantes -= 1;
+    if (restantes > 0) {
+      __overlayHoverPositionRaf = requestAnimationFrame(tick);
+    } else {
+      __overlayHoverPositionRaf = 0;
+    }
+  };
+
+  __overlayHoverPositionRaf = requestAnimationFrame(tick);
 }
 
 function reiniciarAnimacionOverlayHover(card, overlay) {
@@ -2077,6 +2077,7 @@ function reiniciarAnimacionOverlayHover(card, overlay) {
     requestAnimationFrame(() => {
       card.classList.add('tarjeta-hover-abierta');
       overlay.classList.add('overlay-hover-abierto');
+      estabilizarPosicionOverlayHoverTarjeta(card, overlay, 18);
     });
   });
 }
@@ -2210,6 +2211,7 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
     }
 
     posicionarOverlayHoverTarjeta(card, overlay);
+    estabilizarPosicionOverlayHoverTarjeta(card, overlay, 6);
   } catch (e) {
     console.warn('[home] overlay hover tarjeta error:', e);
 
@@ -2238,6 +2240,8 @@ function abrirOverlayHoverTarjeta(card, movieId) {
   if (__overlayExistente?.classList?.contains?.('overlay-hover-abierto')) {
     __tarjetaHoverActiva = card;
     mantenerHoverVivo(card, 1500);
+    posicionarOverlayHoverTarjeta(card, __overlayExistente);
+    estabilizarPosicionOverlayHoverTarjeta(card, __overlayExistente, 8);
     return;
   }
 
@@ -2477,6 +2481,20 @@ function instalarLimpiezaGlobalHoverTarjeta() {
       }
 
       bloquearCierreHoverTarjeta(450);
+    },
+    true
+  );
+
+  document.addEventListener(
+    'scroll',
+    () => {
+      const activa = __tarjetaHoverActiva;
+      if (!activa) return;
+
+      const overlay = buscarOverlayHoverTarjeta(activa);
+      if (overlay?.classList?.contains?.('overlay-hover-abierto')) {
+        posicionarOverlayHoverTarjeta(activa, overlay);
+      }
     },
     true
   );
@@ -2797,6 +2815,75 @@ function renderGenreSections(catalog = []) {
     promoteCatalogCardBadges(row);
     buildCarousel(row);
   });
+}
+
+function getUniqueCatalogItems(catalog = []) {
+  const byId = new Map();
+
+  (catalog || []).forEach((item) => {
+    const id = item?.id ? String(item.id) : '';
+    if (!id || byId.has(id)) return;
+    byId.set(id, item);
+  });
+
+  return [...byId.values()];
+}
+
+function ensureAllCatalogSection() {
+  const main =
+    document.querySelector('main.container') || document.querySelector('main');
+  if (!main) return null;
+
+  let section = document.getElementById('all-catalog-section');
+  if (!section) {
+    section = document.createElement('section');
+    section.id = 'all-catalog-section';
+    section.className = 'section all-catalog-section';
+    section.dataset.generated = 'all-catalog';
+    section.innerHTML = `
+      <div class="section-head">
+        <h2 class="section-title">Todo nuestro contenido/catálogo</h2>
+      </div>
+      <div class="catalog-grid catalog-grid-5" id="allcataloggrid"></div>
+    `;
+  }
+
+  const latestSection =
+    document.getElementById('latest-row')?.closest?.('.section') || null;
+  const continueSection =
+    document.getElementById('continue-wrap')?.closest?.('.section') || null;
+
+  if (latestSection?.parentNode) {
+    latestSection.parentNode.insertBefore(section, latestSection);
+  } else if (continueSection?.parentNode) {
+    continueSection.parentNode.insertBefore(
+      section,
+      continueSection.nextSibling
+    );
+  } else if (!section.parentNode) {
+    main.appendChild(section);
+  }
+
+  return section;
+}
+
+function renderAllCatalogSection(catalog = []) {
+  const section = ensureAllCatalogSection();
+  if (!section) return;
+
+  const grid = section.querySelector('#allcataloggrid, #all-catalog-grid');
+  if (!grid) return;
+
+  const items = getUniqueCatalogItems(catalog);
+  if (!items.length) {
+    section.classList.add('hidden');
+    grid.innerHTML = '';
+    return;
+  }
+
+  section.classList.remove('hidden');
+  setRow(grid, items.map((m) => homeCatalogCardHtml(m)).join(''));
+  promoteCatalogCardBadges(grid);
 }
 
 function homeHeroMeta(movie) {
@@ -3169,7 +3256,10 @@ function updateCarouselArrows(row) {
     // En el final la flecha sigue activa: el próximo click vuelve al inicio.
     right.disabled = !canScroll;
     right.setAttribute('aria-hidden', String(!canScroll));
-    right.setAttribute('aria-label', isAtEnd ? 'Volver al inicio' : 'Siguiente');
+    right.setAttribute(
+      'aria-label',
+      isAtEnd ? 'Volver al inicio' : 'Siguiente'
+    );
   }
 
   updateCarouselCoveredCards(row);
@@ -3218,10 +3308,9 @@ function createCarouselButton(side) {
 function ensureCarouselWrapper(row) {
   if (!row) return null;
 
-  let carousel =
-    row.parentElement?.classList?.contains?.('carousel')
-      ? row.parentElement
-      : row.closest('.carousel');
+  let carousel = row.parentElement?.classList?.contains?.('carousel')
+    ? row.parentElement
+    : row.closest('.carousel');
 
   if (!carousel) {
     const parent = row.parentElement;
@@ -3615,6 +3704,7 @@ async function init() {
     let allCatalog = [];
     try {
       allCatalog = await fetchAllMovies(500);
+      renderAllCatalogSection(allCatalog);
       renderGenreSections(allCatalog);
     } catch (e) {
       console.warn('[home] no se pudieron cargar secciones por género:', e);
@@ -3624,6 +3714,7 @@ async function init() {
           fallbackMap.set(String(item.id), item);
       });
       allCatalog = [...fallbackMap.values()];
+      renderAllCatalogSection(allCatalog);
       renderGenreSections(allCatalog);
     }
 

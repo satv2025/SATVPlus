@@ -11,14 +11,14 @@
 
 :root {
     /* Paleta principal tomada de styles.css */
-    --bg: #010101;
-    --panel: #101010;
-    --panel2: #141414;
+    --bg: #222222;
+    --panel: #313131;
+    --panel2: #353535;
     --text: #f5f7fb;
     --muted: #b6bfd1;
-    --satvblue: #222222;
-    --line: rgba(255, 255, 255, .08);
-    --shadow: 0 18px 55px rgba(0, 0, 0, .34);
+    --satvblue: #434343;
+    --line: rgba(255, 255, 255, .10);
+    --shadow: none;
 
     --radius: .25em;
     --radius2: .25em;
@@ -140,7 +140,7 @@ code {
     background:
         radial-gradient(circle at 18% -10%, rgba(255, 255, 255, .10), transparent 30%),
         radial-gradient(circle at 88% 0%, rgba(255, 255, 255, .055), transparent 28%),
-        linear-gradient(180deg, #101010 0%, var(--bg) 42%, var(--bg) 100%);
+        linear-gradient(180deg, #313131 0%, var(--bg) 42%, var(--bg) 100%);
 }
 
 .page-shell::before {
@@ -159,7 +159,7 @@ code {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgba(1, 1, 1, 0) 0%, var(--bg) 72%);
+    background: linear-gradient(to bottom, rgb(from var(--bg) r g b / 0) 0%, var(--bg) 72%);
 }
 
 /* ================= LAYOUT ================= */
@@ -180,7 +180,7 @@ code {
     min-height: 58px;
     margin-bottom: clamp(20px, 4vw, 46px);
     padding: 10px 0;
-    background: linear-gradient(180deg, rgba(1, 1, 1, .92), rgba(1, 1, 1, .62) 72%, rgba(1, 1, 1, 0));
+    background: linear-gradient(180deg, rgb(from var(--bg) r g b / .92), rgb(from var(--bg) r g b / .62) 72%, rgb(from var(--bg) r g b / 0));
     backdrop-filter: blur(10px);
 }
 
@@ -238,7 +238,7 @@ code {
     border-radius: var(--radius2);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .028)),
-        rgba(16, 16, 16, .72);
+        rgb(from var(--panel) r g b / .72);
     box-shadow: var(--shadow);
 }
 
@@ -490,7 +490,7 @@ h1 {
     border-radius: var(--radius2);
     background:
         radial-gradient(circle at 50% 35%, rgba(255, 255, 255, .11), transparent 44%),
-        #010101;
+        #222222;
     overflow: hidden;
 }
 

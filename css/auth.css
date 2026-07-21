@@ -1,3 +1,10 @@
+:root {
+    --bg: #222222;
+    --panel: #313131;
+    --panel-2: #353535;
+    --text: #f5f7fb;
+}
+
 .password-field {
     position: relative;
     display: flex;

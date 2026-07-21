@@ -5,16 +5,16 @@
 
 /* ================= TOKENS ================= */
 :root {
-    --bg: #07090d;
-    --panel: #0e1420;
-    --panel2: #111724;
+    --bg: #222222;
+    --panel: #313131;
+    --panel2: #353535;
     --text: #f5f7fb;
     --muted: #b6bfd1;
-    --satvblue: #2563eb;
+    --satvblue: #434343;
     --selbg: #fff;
-    --seltext: #07090d;
-    --line: rgba(255, 255, 255, .08);
-    --shadow: 0 18px 55px rgba(0, 0, 0, .34);
+    --seltext: #222222;
+    --line: rgba(255, 255, 255, .10);
+    --shadow: none;
     --radius: .25em;
     --radius2: .25em;
     --ep-radius: .25em;

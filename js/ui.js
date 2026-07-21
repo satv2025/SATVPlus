@@ -1639,8 +1639,13 @@ function ensureSearchOverlay() {
   root.setAttribute('aria-hidden', 'true');
 
   root.innerHTML = `
-    <div class="search-overlay-shell">
+    <div class="search-overlay-shell" role="dialog" aria-modal="true" aria-label="Búsqueda">
       <div class="search-overlay-topbar">
+        <div class="search-overlay-brand" aria-hidden="true">
+          <span class="search-overlay-kicker">SATV+</span>
+          <strong>Buscar contenido</strong>
+        </div>
+
         <div class="search-overlay-inputbar">
           <span class="search-overlay-input-icon" aria-hidden="true">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -1649,20 +1654,30 @@ function ensureSearchOverlay() {
             id="search-overlay-input"
             class="search-overlay-input"
             type="search"
-            placeholder="Buscar películas, series..."
+            placeholder="Películas, series, géneros..."
             autocomplete="off"
             enterkeyhint="search"
             spellcheck="false"
           />
           <button
             type="button"
-            class="search-overlay-close"
-            data-search-close
-            aria-label="Cerrar búsqueda"
+            class="search-overlay-clear"
+            data-search-clear
+            aria-label="Limpiar búsqueda"
+            title="Limpiar"
           >
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
+
+        <button
+          type="button"
+          class="search-overlay-close"
+          data-search-close
+          aria-label="Cerrar búsqueda"
+        >
+          Cerrar
+        </button>
       </div>
 
       <div class="search-overlay-content">
@@ -1675,10 +1690,19 @@ function ensureSearchOverlay() {
   document.body.appendChild(root);
 
   const closeBtn = root.querySelector('[data-search-close]');
+  const clearBtn = root.querySelector('[data-search-clear]');
   const overlayInput = root.querySelector('#search-overlay-input');
 
   closeBtn?.addEventListener('click', () => {
     closeSearchOverlay({ clearQuery: true });
+  });
+
+  clearBtn?.addEventListener('click', () => {
+    syncSearchInputs('');
+    clearTimeout(__searchDebounceTimer);
+    overlayInput?.focus?.();
+    renderSearchResults([], '');
+    history.replaceState({ searchQuery: '' }, '', getFallbackBaseUrl());
   });
 
   root.addEventListener('click', (e) => {
@@ -1793,7 +1817,11 @@ export function renderSearchResults(items = [], query = '') {
   if (!safeQuery) {
     host.innerHTML = '';
     setSearchStatus(
-      `<div class="search-empty-state">Empezá a escribir para buscar.</div>`
+      `<div class="search-empty-state">
+        <span class="search-empty-kicker">Búsqueda SATV+</span>
+        <strong>Empezá a escribir para encontrar contenido.</strong>
+        <small>Películas, series, colecciones o géneros.</small>
+      </div>`
     );
     return;
   }
@@ -1802,7 +1830,9 @@ export function renderSearchResults(items = [], query = '') {
     host.innerHTML = '';
     setSearchStatus(`
       <div class="search-empty-state">
-        No encontramos resultados para <strong>${escapeHtml(safeQuery)}</strong>.
+        <span class="search-empty-kicker">Sin resultados</span>
+        <strong>No encontramos “${escapeHtml(safeQuery)}”.</strong>
+        <small>Probá con otro título, saga, género o palabra clave.</small>
       </div>
     `);
     return;
@@ -1810,7 +1840,9 @@ export function renderSearchResults(items = [], query = '') {
 
   setSearchStatus(`
     <div class="search-results-count">
-      Resultados para <strong>${escapeHtml(safeQuery)}</strong> · ${items.length}
+      <span>Resultados</span>
+      <strong>${items.length}</strong>
+      <span>para “${escapeHtml(safeQuery)}”</span>
     </div>
   `);
 
@@ -1910,7 +1942,8 @@ export function initSearchExperience() {
     openSearchOverlay(query);
     renderSearchMessage(`
       <div class="search-loading">
-        Buscando <strong>${escapeHtml(query)}</strong>...
+        <span class="search-spinner" aria-hidden="true"></span>
+        <span>Buscando <strong>${escapeHtml(query)}</strong>...</span>
       </div>
     `);
 
