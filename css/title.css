@@ -1055,7 +1055,7 @@ article.episode-card.more-card.collection-card:hover .more-card-thumb-wrap {
   outline-offset: var(--title-outline-gap);
 }
 
-minfo-link {
+.minfo-link {
   cursor: pointer;
   text-decoration: none !important;
 }
