@@ -1285,7 +1285,22 @@ function mountTitleHeroTrailerVideo(hero, movie) {
     if (p && typeof p.catch === 'function') p.catch(() => {});
   });
 
-  hero.appendChild(volBtn);
+  const watchBtn = document.getElementById('watch-btn');
+  const myListBtn = document.getElementById('episodes-jump');
+
+  const actionsWrap =
+    watchBtn?.parentElement &&
+    myListBtn &&
+    watchBtn.parentElement.contains(myListBtn)
+      ? watchBtn.parentElement
+      : null;
+
+  if (actionsWrap) {
+    actionsWrap.appendChild(volBtn);
+  } else {
+    hero.appendChild(volBtn);
+  }
+
   syncVolumeUi();
 
   video.addEventListener(

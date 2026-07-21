@@ -3,13 +3,14 @@
    Sin reglas heredadas que pisen radios ni grillas.
 ========================================================= */
 :root {
-  --title-bg: #010101;
-  --title-panel: #101010;
-  --title-panel-2: #161616;
+  --title-bg: #222222;
+  --title-panel: #313131;
+  --title-panel-2: #373737;
   --title-text: #f5f7fb;
   --title-muted: rgba(245, 247, 251, .74);
   --title-line: rgba(255, 255, 255, .12);
   --title-line-strong: rgba(255, 255, 255, .24);
+  --title-hero-fade-height: 45%;
 
   /* Una sola referencia de radio para toda la página */
   --title-radius: var(--media-card-radius, 9px);
@@ -18,7 +19,7 @@
   --title-outline-gap: var(--media-outline-gap, 5px);
   --ep-gap: 40px;
   --ep-progress-h: 4px;
-  --container-max: 1920px;
+  --container-max-titlecss: 2000px;
 }
 
 *,
@@ -45,7 +46,7 @@ textarea,
 
 .container {
   width: 100%;
-  max-width: var(--container-max);
+  max-width: var(--container-max-titlecss) !important;
   margin-inline: auto;
 }
 
@@ -59,7 +60,7 @@ textarea,
   aspect-ratio: 16 / 9;
   margin-top: -4.8em;
   overflow: hidden;
-  background-color: #07090d;
+  background-color: var(--title-bg);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -68,19 +69,16 @@ textarea,
 .title-hero::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: auto 0 0;
   z-index: 1;
+  height: var(--title-hero-fade-height);
   pointer-events: none;
   background: linear-gradient(to top,
-      rgba(1, 1, 1, 1) 0%,
-      rgba(1, 1, 1, .96) 8%,
-      rgba(1, 1, 1, .88) 16%,
-      rgba(1, 1, 1, .72) 28%,
-      rgba(1, 1, 1, .50) 42%,
-      rgba(1, 1, 1, .28) 58%,
-      rgba(1, 1, 1, .12) 74%,
-      rgba(1, 1, 1, .03) 88%,
-      rgba(1, 1, 1, 0) 100%);
+      var(--title-bg) 0%,
+      rgb(from var(--title-bg) r g b / .96) 18%,
+      rgb(from var(--title-bg) r g b / .74) 42%,
+      rgb(from var(--title-bg) r g b / .32) 70%,
+      rgb(from var(--title-bg) r g b / 0) 100%);
 }
 
 .title-hero.hero-video-ready::after {
@@ -93,7 +91,7 @@ textarea,
   right: 0;
   bottom: 0;
   z-index: 3;
-  width: 93%;
+  width: 100%;
   padding: 22px 0;
   color: #fff;
 }
@@ -126,18 +124,16 @@ textarea,
 }
 
 .title-hero .title-hero-video-shade {
+  inset: auto 0 0;
   z-index: 1;
+  height: var(--title-hero-fade-height);
   pointer-events: none;
   background: linear-gradient(to top,
-      rgba(1, 1, 1, 1) 0%,
-      rgba(1, 1, 1, .96) 8%,
-      rgba(1, 1, 1, .88) 16%,
-      rgba(1, 1, 1, .72) 28%,
-      rgba(1, 1, 1, .50) 42%,
-      rgba(1, 1, 1, .28) 58%,
-      rgba(1, 1, 1, .12) 74%,
-      rgba(1, 1, 1, .03) 88%,
-      rgba(1, 1, 1, 0) 100%);
+      var(--title-bg) 0%,
+      rgb(from var(--title-bg) r g b / .96) 18%,
+      rgb(from var(--title-bg) r g b / .74) 42%,
+      rgb(from var(--title-bg) r g b / .32) 70%,
+      rgb(from var(--title-bg) r g b / 0) 100%);
 }
 
 #t-title {
@@ -175,7 +171,7 @@ textarea,
 
 .title-hero-volume-btn {
   position: absolute;
-  right: clamp(12px, 2vw, 28px);
+  right: 0;
   bottom: clamp(12px, 2vw, 24px);
   z-index: 4;
   width: clamp(40px, 5vw, 64px);
@@ -411,7 +407,7 @@ span.meta-dropitem {
   padding: 6px;
   border: 1px solid var(--title-line);
   border-radius: var(--title-radius);
-  background: #101010;
+  background: var(--title-panel);
   color: #fff;
   overflow-y: auto;
   scrollbar-color: rgba(255, 255, 255, .28) transparent;
@@ -427,7 +423,7 @@ span.meta-dropitem {
 }
 
 .dropdown-menu::-webkit-scrollbar-thumb {
-  border: 2px solid #101010;
+  border: 2px solid var(--title-panel);
   border-radius: 999px;
   background: rgba(255, 255, 255, .28);
 }

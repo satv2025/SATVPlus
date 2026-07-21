@@ -10,11 +10,11 @@
    Una sola fuente de verdad para radios, hover y overlays.
 ========================================================= */
 :root {
-  --bg: #010101;
-  --panel: #101010;
-  --panel-2: #141414;
-  --panel-3: #191919;
-  --satvblue: #222222;
+  --bg: #222222;
+  --panel: #313131;
+  --panel-2: #353535;
+  --panel-3: #3a3a3a;
+  --satvblue: #434343;
   --text: #f5f7fb;
   --muted: #b6bfd1;
   --line: rgba(255, 255, 255, .10);
@@ -31,7 +31,7 @@
 
   /* Hover de cards */
   --media-outline-size: 4px;
-  --media-outline-gap: 5px;
+  --media-outline-gap: 4px;
   --media-outline-color: #fff;
 
   /* Layout */
@@ -44,7 +44,8 @@
   --logo-gap: 18px;
 
   /* Hero */
-  --hero-overlay: #010101;
+  --hero-overlay: #222222;
+  --hero-fade-height: 45%;
   --hero-h-desktop: clamp(420px, 56vw, 946px);
   --hero-title-max: min(720px, 96%);
   --hero-left-max: min(760px, 100%);
@@ -52,15 +53,16 @@
   --hero-volume-size: clamp(40px, 5vw, 64px);
 
   /* Carrusel */
-  --arrow-w: clamp(34px, 4vw, 56px);
-  --arrow-h: clamp(58px, 10vw, 112px);
+  --carousel-section-pad: clamp(24px, 3.125vw, 60px);
+  --arrow-w: clamp(38px, 2.55vw, 49px);
+  --arrow-h: clamp(132px, 11.46vw, 220px);
 
   /* Overlay de card */
-  --hover-tarjeta-bg: #010101;
+  --hover-tarjeta-bg: #222222;
   --hover-tarjeta-texto: #fff;
   --hover-tarjeta-radio: var(--media-card-radius);
   --hover-tarjeta-margen-seguro: 32px;
-  --hover-tarjeta-y-abierto: -26px;
+  --hover-tarjeta-y-abierto: 0px;
   --hover-tarjeta-accion-alto: 52px;
   --hover-tarjeta-icono-play: 34px;
   --hover-tarjeta-boton-icono: 52px;
@@ -80,7 +82,7 @@
 
 ::selection {
   background: #fff;
-  color: #010101;
+  color: var(--bg);
 }
 
 html {
@@ -400,15 +402,16 @@ button#btn-logout {
 .hero::before {
   content: "";
   position: absolute;
-  inset: -1px;
-  z-index: 0;
+  inset: auto -1px -1px;
+  z-index: 1;
+  height: var(--hero-fade-height);
   pointer-events: none;
   background: linear-gradient(to top,
-      rgba(1, 1, 1, 1) 0%,
-      rgba(1, 1, 1, .94) 28%,
-      rgba(1, 1, 1, .66) 55%,
-      rgba(1, 1, 1, .22) 78%,
-      rgba(1, 1, 1, 0) 100%);
+      var(--bg) 0%,
+      rgb(from var(--bg) r g b / .96) 18%,
+      rgb(from var(--bg) r g b / .74) 42%,
+      rgb(from var(--bg) r g b / .32) 70%,
+      rgb(from var(--bg) r g b / 0) 100%);
 }
 
 .hero.hero-video-ready::before {
@@ -443,12 +446,16 @@ button#btn-logout {
 }
 
 .hero .home-hero-video-shade {
+  inset: auto 0 0;
+  z-index: 1;
+  height: var(--hero-fade-height);
   pointer-events: none;
   background: linear-gradient(to top,
-      rgba(1, 1, 1, 1) 0%,
-      rgba(1, 1, 1, .92) 24%,
-      rgba(1, 1, 1, .50) 56%,
-      rgba(1, 1, 1, 0) 100%);
+      var(--bg) 0%,
+      rgb(from var(--bg) r g b / .96) 18%,
+      rgb(from var(--bg) r g b / .74) 42%,
+      rgb(from var(--bg) r g b / .32) 70%,
+      rgb(from var(--bg) r g b / 0) 100%);
 }
 
 .home-hero-inner {
@@ -604,6 +611,8 @@ button#btn-logout {
   z-index: 1;
   width: 100%;
   margin: clamp(12px, 2vw, 18px) 0 clamp(2.4rem, 6vw, 5em);
+  padding-inline: var(--carousel-section-pad);
+  overflow: visible;
 }
 
 .section-head {
@@ -630,6 +639,11 @@ button#btn-logout {
 
 /* ================= CAROUSEL ================= */
 .carousel {
+  --row-gap: clamp(8px, .6vw, 12px);
+  --carousel-row-pad-top: 16px;
+  --carousel-row-pad-bottom: 18px;
+  --carousel-card-basis: calc((100% - (var(--row-gap) * 4)) / 5);
+
   position: relative;
   width: 100vw;
   max-width: 100vw;
@@ -645,26 +659,29 @@ button#btn-logout {
 }
 
 .row {
-  --row-gap: clamp(8px, 1.2vw, 12px);
-
   position: relative;
+  width: 100%;
   display: flex;
   align-items: stretch;
   justify-content: flex-start;
   gap: var(--row-gap);
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 16px 12px 18px;
+  padding: var(--carousel-row-pad-top) var(--carousel-section-pad) var(--carousel-row-pad-bottom);
+  scroll-padding-inline: var(--carousel-section-pad);
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
+  overscroll-behavior-inline: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
 
 .row>.card {
-  flex: 0 0 calc((100% - (var(--row-gap) * 4)) / 5);
-  width: calc((100% - (var(--row-gap) * 4)) / 5);
+  flex: 0 0 var(--carousel-card-basis);
+  width: var(--carousel-card-basis);
   max-width: none;
+  scroll-snap-align: start;
+  scroll-snap-stop: normal;
 }
 
 .row::-webkit-scrollbar {
@@ -679,47 +696,94 @@ button#btn-logout {
 .carousel-btn {
   position: absolute;
   top: 50%;
-  z-index: 20;
+  z-index: 30;
   width: var(--arrow-w);
   height: var(--arrow-h);
-  margin-top: calc(var(--arrow-h) / -2);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: rgba(0, 0, 0, .62);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(20, 20, 20, .68);
   color: #fff;
   cursor: pointer;
   opacity: 1;
-  transition: background-color .16s ease, border-color .16s ease, opacity .16s ease;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(-50%);
+  transition: background-color .18s ease, opacity .18s ease, visibility .18s ease;
 }
 
 .carousel-btn:hover {
-  background: rgba(0, 0, 0, .90);
-  border-color: #fff;
+  background: rgba(8, 8, 8, .90);
 }
 
 .carousel-btn.left {
-  left: 8px;
+  left: 0;
 }
 
 .carousel-btn.right {
-  right: 8px;
+  right: 0;
 }
 
 .carousel-btn svg {
-  width: clamp(16px, 1.7vw, 22px);
-  height: clamp(16px, 1.7vw, 22px);
+  width: clamp(24px, 2vw, 38px);
+  height: clamp(24px, 2vw, 38px);
+  transition: transform .18s ease;
 }
 
+.carousel-btn:hover svg {
+  transform: scale(1.18);
+}
+
+.carousel.is-at-start .carousel-btn.left,
 .carousel.no-arrows .carousel-btn,
 .carousel-disabled .carousel-btn {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .carousel-disabled .row {
   overflow-x: hidden;
+}
+
+.carousel-card-covered,
+.carousel-card-partial {
+  pointer-events: none !important;
+  cursor: default;
+}
+
+.carousel-card-covered *,
+.carousel-card-partial *,
+.carousel-card-covered .thumb,
+.carousel-card-partial .thumb {
+  pointer-events: none !important;
+}
+
+.carousel-card-covered:hover,
+.carousel-card-partial:hover {
+  cursor: default;
+}
+
+
+@media (max-width: 980px) {
+  .carousel {
+    --carousel-card-basis: calc((100% - (var(--row-gap) * 3)) / 4);
+  }
+}
+
+@media (max-width: 768px) {
+  .carousel {
+    --carousel-card-basis: calc((100% - (var(--row-gap) * 2)) / 3);
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel {
+    --carousel-card-basis: calc((100% - var(--row-gap)) / 2);
+  }
 }
 
 /* ================= CARDS IMAGE-ONLY ================= */
@@ -768,16 +832,18 @@ button#btn-logout {
   background-position: center;
   background-repeat: no-repeat;
   overflow: hidden;
-  box-shadow: none;
+  box-shadow: rgba(0, 0, 0, 0.75) 0px 3px 10px;
   transition: outline-color .16s ease, background-color .16s ease;
 }
 
-.card:hover>.thumb,
-.card:focus-visible>.thumb,
-.card:focus-within>.thumb,
-.card.card-image-only:hover>.thumb,
-.card.card-image-only:focus-visible>.thumb,
-.card.card-image-only:focus-within>.thumb {}
+.card:not(.tarjeta-hover-host):not(.tarjeta-hover-abierta):not(.carousel-card-covered):not(.carousel-card-partial):hover>.thumb {
+  outline-color: var(--media-outline-color);
+}
+
+.card.tarjeta-hover-host>.thumb,
+.card.tarjeta-hover-abierta>.thumb {
+  outline-color: transparent;
+}
 
 .card:focus-visible,
 .card.card-image-only:focus-visible {
@@ -794,13 +860,13 @@ button#btn-logout {
 /* Badge: ubicación preservada */
 .card-badge {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 5px;
+  right: 5px;
   z-index: 5;
   max-width: calc(100% - 16px);
   padding: 4px 8px;
   border: 0;
-  border-radius: 0 var(--media-card-radius) 0 0;
+  border-radius: 10px;
   background: rgba(0, 0, 0, .74);
   color: #fff;
   font-size: 14px;
@@ -1174,7 +1240,7 @@ media-player,
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #101010;
+  background: var(--panel);
   overflow-y: auto;
 }
 
@@ -1225,7 +1291,7 @@ media-player,
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #111;
+  background: var(--panel);
   color: #fff;
   opacity: 0;
   transition: opacity .2s ease;
@@ -1304,7 +1370,7 @@ body.alerts-modal-open #control-center-trigger {
   width: min(520px, 100%);
   border: 1px solid var(--line);
   border-radius: var(--media-card-radius);
-  background: #101010;
+  background: var(--panel);
   color: #fff;
   overflow: hidden;
 }
@@ -1397,7 +1463,7 @@ body.alerts-modal-open #control-center-trigger {
   position: fixed;
   inset: 0;
   z-index: 99999;
-  background: #010101;
+  background: var(--bg);
 }
 
 .search-overlay-shell {
@@ -1414,7 +1480,7 @@ body.alerts-modal-open #control-center-trigger {
   align-items: center;
   gap: 12px;
   padding: 18px var(--ui-pad-x);
-  background: rgba(1, 1, 1, .96);
+  background: rgb(from var(--bg) r g b / .96);
   border-bottom: 1px solid var(--line);
 }
 
@@ -1549,7 +1615,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   max-height: min(88vh, 820px);
   border: 1px solid var(--line);
   border-radius: var(--media-card-radius);
-  background: #101010;
+  background: var(--panel);
   color: #fff;
   overflow: auto;
 }
@@ -1563,7 +1629,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   aspect-ratio: 16 / 9;
   border-radius: var(--media-card-radius) var(--media-card-radius) 0 0;
   overflow: hidden;
-  background: #010101;
+  background: var(--bg);
 }
 
 #card-quick-modal-root .card-quick-modal-video,
@@ -1586,7 +1652,9 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   position: absolute;
   inset: auto 0 0;
   height: 45%;
-  background: linear-gradient(to top, #101010, transparent);
+  background: linear-gradient(to top,
+      rgb(from var(--panel) r g b / 1),
+      rgb(from var(--panel) r g b / 0));
   pointer-events: none;
 }
 
@@ -1646,9 +1714,13 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   z-index: 80;
 }
 
-.carousel.carrusel-hover-abierto,
+.carousel.carrusel-hover-abierto {
+  overflow: hidden;
+}
+
 .row.fila-hover-abierta {
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .card.tarjeta-hover-host {
@@ -1669,34 +1741,49 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
 
 .overlay-hover-tarjeta {
   position: absolute;
-  left: calc(50% + var(--desplazamiento-hover-x, 0px));
+  left: 0;
   top: var(--hover-tarjeta-y-abierto);
   z-index: 12000;
   width: clamp(320px, 130%, 460px);
   max-width: calc(100vw - var(--hover-tarjeta-margen-seguro));
   margin-left: 0;
-  transform: translateX(-50%);
+  transform: scale(.72);
+  transform-origin: var(--hover-origin-x, 50%) var(--hover-origin-y, 50%);
+  will-change: transform, opacity;
   font-size: 16px !important;
-  border: 1px solid transparent;
   border-radius: var(--hover-tarjeta-radio);
   background: var(--hover-tarjeta-bg);
   color: var(--hover-tarjeta-texto);
+  box-shadow: rgba(0, 0, 0, 0.75) 0px 3px 10px;
   overflow: hidden;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   cursor: default;
   transition:
-    opacity .16s ease,
-    visibility .16s ease,
+    transform .24s cubic-bezier(.2, .8, .2, 1),
+    opacity .20s ease,
+    visibility 0s linear .24s,
     border-color .16s ease;
 }
 
 .overlay-hover-tarjeta.overlay-hover-abierto {
+  transform: scale(1);
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  border-color: rgba(255, 255, 255, .16);
+  transition:
+    transform .24s cubic-bezier(.2, .8, .2, 1),
+    opacity .20s ease,
+    visibility 0s linear 0s,
+    border-color .16s ease;
+}
+
+.overlay-hover-tarjeta.overlay-hover-cerrando {
+  transform: scale(.72);
+  opacity: 0;
+  visibility: visible;
+  pointer-events: none;
 }
 
 .overlay-hover-tarjeta-inner {
@@ -1752,7 +1839,9 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   position: absolute;
   inset: auto 0 0;
   height: 44%;
-  background: linear-gradient(to top, var(--hover-tarjeta-bg), transparent);
+  background: linear-gradient(to top,
+      rgb(from var(--hover-tarjeta-bg) r g b / 1),
+      rgb(from var(--hover-tarjeta-bg) r g b / 0));
   pointer-events: none;
 }
 
@@ -1782,14 +1871,14 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   padding: 0;
   border: 2px solid rgba(255, 255, 255, .28);
   border-radius: var(--media-square-radius);
-  background: rgba(1, 1, 1, .58);
+  background: rgb(from var(--bg) r g b / .58);
   color: #fff;
   transition: background-color .16s ease, border-color .16s ease, opacity .16s ease;
 }
 
 .overlay-hover-tarjeta-media .card-quick-modal-volume-btn:hover,
 .overlay-hover-tarjeta-media .card-quick-modal-volume-btn:focus-visible {
-  background: rgba(1, 1, 1, .90);
+  background: rgb(from var(--bg) r g b / .90);
   border-color: #fff;
 }
 
@@ -1923,19 +2012,19 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   align-self: center;
 
   width: max-content;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
+  height: auto;
+  min-height: 0;
+  max-height: none;
 
   box-sizing: content-box;
-  padding: 6px 7px !important;
+  padding: 6px 7px;
   margin: 0;
 
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: #fff;
 
-  font-size: 20px !important;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
@@ -2020,7 +2109,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   max-height: min(88vh, 860px);
   border: 1px solid var(--line);
   border-radius: var(--media-card-radius);
-  background: #101010;
+  background: var(--panel);
   color: #fff;
   overflow: hidden;
 }
@@ -2040,7 +2129,7 @@ body:not(.card-quick-modal-open) #card-quick-modal-root {
   flex-direction: column;
   border: 1px solid rgba(255, 255, 255, .18);
   border-radius: var(--media-card-radius);
-  background: #101010;
+  background: var(--panel);
   color: #fff;
   overflow: hidden;
   box-shadow: 0 14px 42px rgba(0, 0, 0, .58);
@@ -2246,7 +2335,7 @@ button.alerts-tab:hover {
   height: 42px;
   border-radius: var(--media-square-radius);
   object-fit: cover;
-  background: #222;
+  background: var(--bg);
 }
 
 .control-center-avatar.is-large {
@@ -2528,11 +2617,6 @@ button.alerts-tab:hover {
 }
 
 @media (max-width: 768px) {
-  :root {
-    --media-outline-size: 3px;
-    --media-outline-gap: 4px;
-  }
-
   .overlay-hover-tarjeta {
     display: none;
   }

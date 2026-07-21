@@ -1729,7 +1729,7 @@ function resetearHoverTarjeta(card, { eliminarOverlay = true } = {}) {
   });
 
   if (overlayNode) {
-    overlayNode.classList.remove('overlay-hover-abierto');
+    overlayNode.classList.remove('overlay-hover-abierto', 'overlay-hover-cerrando');
     overlayNode.setAttribute('aria-hidden', 'true');
 
     if (eliminarOverlay) {
@@ -1967,46 +1967,105 @@ function posicionarOverlayHoverTarjeta(card, overlay) {
   if (!card || !overlay) return;
 
   const rect = card.getBoundingClientRect();
+  const row = card.closest('.row');
+  const carousel = row?.closest('.carousel') || null;
+  const rowRect = row?.getBoundingClientRect?.() || null;
+  const rowStyles = row ? getComputedStyle(row) : null;
+
   const viewportW =
     window.innerWidth || document.documentElement.clientWidth || 0;
-
-  // Como estamos en body, necesitamos sumar el scroll actual
   const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
   const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
 
-  const anchoFinal = Math.min(520, Math.max(360, viewportW - 24));
-  overlay.style.width = `${Math.round(anchoFinal)}px`;
+  const viewportMargin = 12;
+  const maxOverlayWidth = Math.max(0, viewportW - viewportMargin * 2);
+  const overlayWidth = Math.min(520, Math.max(360, maxOverlayWidth));
+  overlay.style.width = `${Math.round(overlayWidth)}px`;
 
-  // Centro absoluto de la tarjeta
-  const absCenterX = rect.left + scrollX + rect.width / 2;
-  const absTopY = rect.top + scrollY;
+  const paddingLeft = parseFloat(rowStyles?.paddingLeft || '0') || 0;
+  const paddingRight = parseFloat(rowStyles?.paddingRight || '0') || 0;
 
-  overlay.style.position = 'absolute';
-  overlay.style.top = `${Math.round(absTopY)}px`;
-  overlay.style.left = `${Math.round(absCenterX)}px`;
+  let freeLeft = rowRect ? rowRect.left + paddingLeft : viewportMargin;
+  let freeRight = rowRect
+    ? rowRect.right - paddingRight
+    : viewportW - viewportMargin;
 
-  // Calculamos el desplazamiento necesario para que no se corte en los bordes del viewport
-  const viewportLeft = rect.left + rect.width / 2 - anchoFinal / 2;
-  let desplazamientoX = 0;
-  const margenViewport = 12;
+  const leftButton = carousel?.querySelector(':scope > .carousel-btn.left');
+  const rightButton = carousel?.querySelector(':scope > .carousel-btn.right');
 
-  if (viewportLeft < margenViewport) {
-    desplazamientoX = margenViewport - viewportLeft;
-  } else if (viewportLeft + anchoFinal > viewportW - margenViewport) {
-    desplazamientoX = viewportW - margenViewport - (viewportLeft + anchoFinal);
+  if (isCarouselButtonVisible(leftButton)) {
+    const leftRect = leftButton.getBoundingClientRect();
+    freeLeft = Math.max(freeLeft, leftRect.right);
   }
 
-  overlay.style.setProperty(
-    '--desplazamiento-hover-x',
-    `${Math.round(desplazamientoX)}px`
+  if (isCarouselButtonVisible(rightButton)) {
+    const rightRect = rightButton.getBoundingClientRect();
+    freeRight = Math.min(freeRight, rightRect.left);
+  }
+
+  freeLeft = Math.max(viewportMargin, freeLeft);
+  freeRight = Math.min(viewportW - viewportMargin, freeRight);
+
+  const visibleCards = row
+    ? getCarouselCards(row).filter((item) => {
+        if (
+          item.classList.contains('carousel-card-covered') ||
+          item.classList.contains('carousel-card-partial')
+        ) {
+          return false;
+        }
+
+        const itemRect = item.getBoundingClientRect();
+        return itemRect.left >= freeLeft - 1.5 && itemRect.right <= freeRight + 1.5;
+      })
+    : [];
+
+  const firstVisibleCard = visibleCards[0] || null;
+  const lastVisibleCard = visibleCards[visibleCards.length - 1] || null;
+  const isFirstVisible = card === firstVisibleCard;
+  const isLastVisible = card === lastVisibleCard;
+
+  let viewportLeft = rect.left + rect.width / 2 - overlayWidth / 2;
+  let originX = rect.left + rect.width / 2 - viewportLeft;
+
+  if (isFirstVisible) {
+    // La primera card se ancla al borde útil izquierdo y crece hacia la derecha.
+    viewportLeft = freeLeft;
+    originX = 0;
+  } else if (isLastVisible) {
+    // La última card completamente visible se ancla al borde útil derecho
+    // y crece desde la derecha hacia la izquierda.
+    viewportLeft = freeRight - overlayWidth;
+    originX = overlayWidth;
+  } else {
+    viewportLeft = Math.max(
+      freeLeft,
+      Math.min(viewportLeft, freeRight - overlayWidth)
+    );
+    originX = rect.left + rect.width / 2 - viewportLeft;
+  }
+
+  viewportLeft = Math.max(
+    viewportMargin,
+    Math.min(viewportLeft, viewportW - viewportMargin - overlayWidth)
   );
+
+  originX = Math.max(0, Math.min(overlayWidth, originX));
+  const originY = Math.max(0, rect.height / 2);
+
+  overlay.style.position = 'absolute';
+  overlay.style.top = `${Math.round(rect.top + scrollY)}px`;
+  overlay.style.left = `${Math.round(viewportLeft + scrollX)}px`;
+  overlay.style.setProperty('--hover-origin-x', `${Math.round(originX)}px`);
+  overlay.style.setProperty('--hover-origin-y', `${Math.round(originY)}px`);
+  overlay.style.removeProperty('--desplazamiento-hover-x');
 }
 
 function reiniciarAnimacionOverlayHover(card, overlay) {
   if (!card || !overlay) return;
 
   card.classList.remove('tarjeta-hover-abierta');
-  overlay.classList.remove('overlay-hover-abierto');
+  overlay.classList.remove('overlay-hover-abierto', 'overlay-hover-cerrando');
   overlay.setAttribute('aria-hidden', 'false');
 
   void overlay.offsetWidth;
@@ -2168,6 +2227,8 @@ async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
 
 function abrirOverlayHoverTarjeta(card, movieId) {
   if (!card || !movieId || hoverTarjetaDeshabilitado()) return;
+  if (card.classList.contains('carousel-card-covered')) return;
+  if (card.classList.contains('carousel-card-partial')) return;
 
   let __overlayExistente = null;
   document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
@@ -2207,7 +2268,7 @@ function abrirOverlayHoverTarjeta(card, movieId) {
 
     reiniciarAnimacionOverlayHover(card, overlay);
     hidratarOverlayHoverTarjeta(card, movieId, seq);
-  }, 400);
+  }, 1000);
 }
 
 function cerrarOverlayHoverTarjeta(card, options = {}) {
@@ -2251,10 +2312,14 @@ function cerrarOverlayHoverTarjeta(card, options = {}) {
   }
 
   overlay.classList.remove('overlay-hover-abierto');
+  overlay.classList.add('overlay-hover-cerrando');
   overlay.setAttribute('aria-hidden', 'true');
   card.classList.remove('tarjeta-hover-abierta');
 
-  card.__hoverCloseTimer = setTimeout(limpiar, 280);
+  card.__hoverCloseTimer = setTimeout(() => {
+    overlay.classList.remove('overlay-hover-cerrando');
+    limpiar();
+  }, 260);
 }
 
 function programarCierreHoverTarjetaSiFuera(card, delay = 180) {
@@ -2928,95 +2993,258 @@ function promoteCatalogCardBadges(rootEl) {
 }
 
 function getCarouselCards(row) {
-  return Array.from(row?.querySelectorAll?.('.card') || []);
+  if (!row?.querySelectorAll) return [];
+
+  try {
+    return Array.from(row.querySelectorAll(':scope > .card'));
+  } catch {
+    return Array.from(row.children || []).filter((node) =>
+      node?.classList?.contains?.('card')
+    );
+  }
 }
 
 function getMaxScrollLeft(row) {
   if (!row) return 0;
-  return Math.max(0, row.scrollWidth - row.clientWidth);
+  return Math.max(0, Math.ceil(row.scrollWidth - row.clientWidth));
 }
 
 function getScrollStep(row) {
   if (!row) return 360;
-  const card = row.querySelector('.card');
-  const gap =
-    parseFloat(
-      getComputedStyle(row).columnGap || getComputedStyle(row).gap || '12'
-    ) || 12;
-  const cardW = card?.getBoundingClientRect?.().width || 280;
-  const visibleCards = Math.max(
-    1,
-    Math.floor(row.clientWidth / Math.max(1, cardW + gap))
+
+  const firstCard = getCarouselCards(row)[0] || null;
+  if (!firstCard) return 360;
+
+  const rowStyles = getComputedStyle(row);
+  const gap = parseFloat(rowStyles.columnGap || rowStyles.gap || '0') || 0;
+  const cardWidth = firstCard.getBoundingClientRect().width || 280;
+
+  // Un click equivale siempre al ancho de UNA card más su gap.
+  return Math.max(1, cardWidth + gap);
+}
+
+function isCarouselButtonVisible(button) {
+  if (!button) return false;
+
+  const rect = button.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return false;
+
+  const styles = getComputedStyle(button);
+  return (
+    styles.display !== 'none' &&
+    styles.visibility !== 'hidden' &&
+    Number.parseFloat(styles.opacity || '1') > 0 &&
+    styles.pointerEvents !== 'none'
   );
-  return Math.max(cardW + gap, (cardW + gap) * Math.max(1, visibleCards - 1));
+}
+
+function storeCarouselCardAccessibility(card) {
+  if (!card || card.dataset.carouselA11yStored === '1') return;
+
+  card.dataset.carouselA11yStored = '1';
+  card.dataset.carouselPreviousAriaHidden = card.hasAttribute('aria-hidden')
+    ? card.getAttribute('aria-hidden') || ''
+    : '__none__';
+  card.dataset.carouselPreviousTabindex = card.hasAttribute('tabindex')
+    ? card.getAttribute('tabindex') || ''
+    : '__none__';
+  card.dataset.carouselPreviousInert = card.hasAttribute('inert') ? '1' : '0';
+}
+
+function restoreCarouselCardAccessibility(card) {
+  if (!card || card.dataset.carouselA11yStored !== '1') return;
+
+  const previousAria = card.dataset.carouselPreviousAriaHidden;
+  const previousTabindex = card.dataset.carouselPreviousTabindex;
+  const previousInert = card.dataset.carouselPreviousInert;
+
+  if (previousAria === '__none__') card.removeAttribute('aria-hidden');
+  else card.setAttribute('aria-hidden', previousAria || '');
+
+  if (previousTabindex === '__none__') card.removeAttribute('tabindex');
+  else card.setAttribute('tabindex', previousTabindex || '');
+
+  if (previousInert === '1') card.setAttribute('inert', '');
+  else card.removeAttribute('inert');
+
+  delete card.dataset.carouselA11yStored;
+  delete card.dataset.carouselPreviousAriaHidden;
+  delete card.dataset.carouselPreviousTabindex;
+  delete card.dataset.carouselPreviousInert;
+}
+
+function updateCarouselCoveredCards(row) {
+  if (!row) return;
+
+  const cards = getCarouselCards(row);
+  if (!cards.length) return;
+
+  const rowRect = row.getBoundingClientRect();
+  if (rowRect.width <= 0 || rowRect.height <= 0) return;
+
+  const carousel = row.closest('.carousel');
+  const leftButton = carousel?.querySelector(':scope > .carousel-btn.left');
+  const rightButton = carousel?.querySelector(':scope > .carousel-btn.right');
+
+  let freeLeft = rowRect.left;
+  let freeRight = rowRect.right;
+
+  if (isCarouselButtonVisible(leftButton)) {
+    const leftRect = leftButton.getBoundingClientRect();
+    if (leftRect.right > rowRect.left && leftRect.left < rowRect.right) {
+      freeLeft = Math.max(freeLeft, Math.min(rowRect.right, leftRect.right));
+    }
+  }
+
+  if (isCarouselButtonVisible(rightButton)) {
+    const rightRect = rightButton.getBoundingClientRect();
+    if (rightRect.right > rowRect.left && rightRect.left < rowRect.right) {
+      freeRight = Math.min(freeRight, Math.max(rowRect.left, rightRect.left));
+    }
+  }
+
+  const tolerance = 1.5;
+
+  cards.forEach((card) => {
+    const cardRect = card.getBoundingClientRect();
+    const intersectsRow =
+      cardRect.right > rowRect.left + tolerance &&
+      cardRect.left < rowRect.right - tolerance;
+    const isFullyVisible =
+      cardRect.width > tolerance &&
+      cardRect.left >= freeLeft - tolerance &&
+      cardRect.right <= freeRight + tolerance;
+    const isPartial = intersectsRow && !isFullyVisible;
+    const isCovered = !intersectsRow;
+    const mustBlock = !isFullyVisible;
+
+    card.classList.toggle('carousel-card-partial', isPartial);
+    card.classList.toggle('carousel-card-covered', isCovered);
+
+    if (mustBlock) {
+      storeCarouselCardAccessibility(card);
+      card.setAttribute('aria-hidden', 'true');
+      card.setAttribute('tabindex', '-1');
+      card.setAttribute('inert', '');
+
+      if (card.contains(document.activeElement)) {
+        document.activeElement?.blur?.();
+      }
+
+      if (__tarjetaHoverActiva === card) {
+        cerrarOverlayHoverTarjeta(card, {
+          inmediato: true,
+          forzar: true,
+        });
+      }
+    } else {
+      restoreCarouselCardAccessibility(card);
+    }
+  });
 }
 
 function updateCarouselArrows(row) {
   const carousel = row?.closest?.('.carousel');
   if (!row || !carousel) return;
 
-  const left = carousel.querySelector('.carousel-btn.left');
-  const right = carousel.querySelector('.carousel-btn.right');
+  const left = carousel.querySelector(':scope > .carousel-btn.left');
+  const right = carousel.querySelector(':scope > .carousel-btn.right');
   const max = getMaxScrollLeft(row);
-  const canScroll = max > 4;
+  const tolerance = 4;
+  const current = Math.max(0, Math.min(max, row.scrollLeft));
+  const canScroll = max > tolerance && row.dataset.arrows !== '0';
+  const isAtStart = current <= tolerance;
+  const isAtEnd = canScroll && current >= max - tolerance;
 
-  carousel.classList.toggle(
-    'no-arrows',
-    !canScroll || row.dataset.arrows === '0'
-  );
-  carousel.classList.toggle('is-at-start', row.scrollLeft <= 4);
-  carousel.classList.toggle('is-at-end', row.scrollLeft >= max - 4);
+  carousel.classList.toggle('no-arrows', !canScroll);
+  carousel.classList.toggle('is-at-start', isAtStart);
+  carousel.classList.toggle('is-at-end', isAtEnd);
 
-  if (left) left.disabled = !canScroll || row.scrollLeft <= 4;
-  if (right) right.disabled = !canScroll || row.scrollLeft >= max - 4;
+  if (left) {
+    left.disabled = !canScroll || isAtStart;
+    left.setAttribute('aria-hidden', String(!canScroll || isAtStart));
+  }
+
+  if (right) {
+    // En el final la flecha sigue activa: el próximo click vuelve al inicio.
+    right.disabled = !canScroll;
+    right.setAttribute('aria-hidden', String(!canScroll));
+    right.setAttribute('aria-label', isAtEnd ? 'Volver al inicio' : 'Siguiente');
+  }
+
+  updateCarouselCoveredCards(row);
 }
 
 function scrollCarouselPage(row, direction = 1) {
   if (!row) return;
+
   const max = getMaxScrollLeft(row);
-  const next = Math.max(
-    0,
-    Math.min(max, row.scrollLeft + getScrollStep(row) * direction)
-  );
+  const tolerance = 4;
+  const current = Math.max(0, Math.min(max, row.scrollLeft));
+  const step = getScrollStep(row);
+  const normalizedDirection = direction < 0 ? -1 : 1;
+  let next = current;
+
+  if (normalizedDirection > 0) {
+    next = current >= max - tolerance ? 0 : Math.min(max, current + step);
+  } else {
+    next = current <= tolerance ? 0 : Math.max(0, current - step);
+  }
+
   row.scrollTo({ left: next, behavior: 'smooth' });
+
+  requestAnimationFrame(() => {
+    updateCarouselArrows(row);
+    updateCarouselCoveredCards(row);
+  });
+}
+
+function createCarouselButton(side) {
+  const button = document.createElement('button');
+  const isLeft = side === 'left';
+
+  button.className = `carousel-btn ${isLeft ? 'left' : 'right'}`;
+  button.type = 'button';
+  button.setAttribute('aria-label', isLeft ? 'Anterior' : 'Siguiente');
+  button.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="${isLeft ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `;
+
+  return button;
 }
 
 function ensureCarouselWrapper(row) {
   if (!row) return null;
 
-  let carousel = row.closest('.carousel');
-  if (carousel) return carousel;
+  let carousel =
+    row.parentElement?.classList?.contains?.('carousel')
+      ? row.parentElement
+      : row.closest('.carousel');
 
-  carousel = document.createElement('div');
-  carousel.className = 'carousel';
+  if (!carousel) {
+    const parent = row.parentElement;
+    if (!parent) return null;
 
-  const leftBtn = document.createElement('button');
-  leftBtn.className = 'carousel-btn left';
-  leftBtn.type = 'button';
-  leftBtn.setAttribute('aria-label', 'Anterior');
-  leftBtn.innerHTML = `
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M15 6l-6 6 6 6" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  `;
+    carousel = document.createElement('div');
+    carousel.className = 'carousel';
+    parent.insertBefore(carousel, row);
+    carousel.appendChild(row);
+  }
 
-  const rightBtn = document.createElement('button');
-  rightBtn.className = 'carousel-btn right';
-  rightBtn.type = 'button';
-  rightBtn.setAttribute('aria-label', 'Siguiente');
-  rightBtn.innerHTML = `
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M9 6l6 6-6 6" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  `;
+  let leftButton = carousel.querySelector(':scope > .carousel-btn.left');
+  let rightButton = carousel.querySelector(':scope > .carousel-btn.right');
 
-  const parent = row.parentElement;
-  if (!parent) return null;
+  if (!leftButton) {
+    leftButton = createCarouselButton('left');
+    carousel.insertBefore(leftButton, row);
+  }
 
-  parent.insertBefore(carousel, row);
-  carousel.appendChild(leftBtn);
-  carousel.appendChild(row);
-  carousel.appendChild(rightBtn);
+  if (!rightButton) {
+    rightButton = createCarouselButton('right');
+    carousel.appendChild(rightButton);
+  }
 
   return carousel;
 }
@@ -3024,7 +3252,12 @@ function ensureCarouselWrapper(row) {
 function resetCarouselState(row) {
   if (!row) return;
 
-  delete row.dataset.carouselReady;
+  if (__tarjetaHoverActiva && row.contains(__tarjetaHoverActiva)) {
+    cerrarOverlayHoverTarjeta(__tarjetaHoverActiva, {
+      inmediato: true,
+      forzar: true,
+    });
+  }
 
   if (row.__carouselCleanup && typeof row.__carouselCleanup === 'function') {
     try {
@@ -3032,9 +3265,19 @@ function resetCarouselState(row) {
     } catch {}
   }
 
+  if (row.__carouselRaf) cancelAnimationFrame(row.__carouselRaf);
+
+  getCarouselCards(row).forEach((card) => {
+    card.classList.remove('carousel-card-covered', 'carousel-card-partial');
+    restoreCarouselCardAccessibility(card);
+  });
+
+  row.scrollLeft = 0;
+  delete row.dataset.carouselReady;
   delete row.__carouselCleanup;
   delete row.__resizeHandler;
   delete row.__scrollHandler;
+  delete row.__carouselRaf;
 
   const carousel = row.closest('.carousel');
   if (carousel) {
@@ -3049,7 +3292,12 @@ function resetCarouselState(row) {
 
 function buildCarousel(row) {
   if (!row) return;
-  if (row.dataset.carouselReady === '1') return;
+
+  if (row.dataset.carouselReady === '1') {
+    updateCarouselArrows(row);
+    updateCarouselCoveredCards(row);
+    return;
+  }
 
   const cards = getCarouselCards(row);
   if (!cards.length) return;
@@ -3057,15 +3305,21 @@ function buildCarousel(row) {
   const carousel = ensureCarouselWrapper(row);
   if (!carousel) return;
 
-  const btnLeft = carousel.querySelector('.carousel-btn.left');
-  const btnRight = carousel.querySelector('.carousel-btn.right');
+  const btnLeft = carousel.querySelector(':scope > .carousel-btn.left');
+  const btnRight = carousel.querySelector(':scope > .carousel-btn.right');
 
+  // Estado inicial real: sin clones, sin recentrado y con scrollLeft = 0.
+  row.scrollLeft = 0;
   row.dataset.carouselReady = '1';
 
-  const onScroll = () => {
-    if (row.__arrowRaf) cancelAnimationFrame(row.__arrowRaf);
-    row.__arrowRaf = requestAnimationFrame(() => {
+  const scheduleRowUpdate = () => {
+    if (row.__carouselRaf) cancelAnimationFrame(row.__carouselRaf);
+
+    row.__carouselRaf = requestAnimationFrame(() => {
+      row.__carouselRaf = 0;
       updateCarouselArrows(row);
+      updateCarouselCoveredCards(row);
+
       if (__tarjetaHoverActiva && row.contains(__tarjetaHoverActiva)) {
         cerrarOverlayHoverTarjeta(__tarjetaHoverActiva, {
           inmediato: true,
@@ -3075,41 +3329,53 @@ function buildCarousel(row) {
     });
   };
 
+  const onScroll = () => scheduleRowUpdate();
   const onResize = () => {
-    requestAnimationFrame(() => {
-      updateCarouselArrows(row);
-      scheduleTwoLinesScan(carousel);
-    });
+    scheduleRowUpdate();
+    scheduleTwoLinesScan(carousel);
+  };
+  const onLeftClick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    scrollCarouselPage(row, -1);
+    updateCarouselCoveredCards(row);
+  };
+  const onRightClick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    scrollCarouselPage(row, 1);
+    updateCarouselCoveredCards(row);
   };
 
-  if (btnLeft)
-    btnLeft.onclick = (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      scrollCarouselPage(row, -1);
-    };
-
-  if (btnRight)
-    btnRight.onclick = (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      scrollCarouselPage(row, 1);
-    };
-
+  btnLeft?.addEventListener('click', onLeftClick);
+  btnRight?.addEventListener('click', onRightClick);
   row.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onResize, { passive: true });
+
+  let resizeObserver = null;
+  try {
+    resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(row);
+  } catch {}
 
   row.__scrollHandler = onScroll;
   row.__resizeHandler = onResize;
   row.__carouselCleanup = () => {
-    if (row.__arrowRaf) cancelAnimationFrame(row.__arrowRaf);
+    if (row.__carouselRaf) cancelAnimationFrame(row.__carouselRaf);
+    btnLeft?.removeEventListener('click', onLeftClick);
+    btnRight?.removeEventListener('click', onRightClick);
     row.removeEventListener('scroll', onScroll);
     window.removeEventListener('resize', onResize);
+    resizeObserver?.disconnect?.();
   };
+
+  updateCarouselArrows(row);
+  updateCarouselCoveredCards(row);
 
   requestAnimationFrame(() => {
     row.scrollLeft = 0;
     updateCarouselArrows(row);
+    updateCarouselCoveredCards(row);
     scheduleTwoLinesScan(carousel);
   });
 }

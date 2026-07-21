@@ -1322,38 +1322,37 @@ export function enableDataHrefNavigation() {
   document.addEventListener('click', (e) => {
     if (e.defaultPrevented) return;
 
-    // ✅ Overlay hover: jamás navegues por data-href si el click nació dentro del overlay.
-    // (Mi Lista y Mute cambian el DOM y pueden romper closest(); esto lo hace estable.)
     try {
       const path =
         typeof e.composedPath === 'function' ? e.composedPath() : null;
       if (
         path &&
         path.some(
-          (n) =>
-            n && n.classList && n.classList.contains('overlay-hover-tarjeta')
+          (node) =>
+            node?.classList?.contains?.('overlay-hover-tarjeta') ||
+            node?.classList?.contains?.('carousel-card-covered') ||
+            node?.classList?.contains?.('carousel-card-partial')
         )
-      )
+      ) {
         return;
+      }
     } catch {}
-    if (e.target?.closest?.('.overlay-hover-tarjeta')) return;
 
     const target = e.target;
+    if (!target?.closest) return;
+    if (target.closest('.overlay-hover-tarjeta')) return;
+    if (target.closest('.carousel-card-covered')) return;
+    if (target.closest('.carousel-card-partial')) return;
 
-    /*
-      FIX:
-      El overlay hover maneja sus propios clicks.
-      Nunca debe activar la navegación global por data-href.
-    */
-    if (target?.closest?.('.overlay-hover-tarjeta')) return;
-
-    const interactive = target.closest?.(
-      "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist, .home-hero-reminder, .card-release-reminder-btn, .title-reminder-btn, .alerts-bell, .control-center-trigger, .alerts-modal, .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover"
+    const interactive = target.closest(
+      "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist, .home-hero-reminder, .card-release-reminder-btn, .title-reminder-btn, .alerts-bell, .control-center-trigger, .alerts-modal, .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover, .carousel-card-covered, .carousel-card-partial"
     );
     if (interactive) return;
 
-    const el = target.closest?.('[data-href]');
+    const el = target.closest('[data-href]');
     if (!el) return;
+    if (el.classList.contains('carousel-card-covered')) return;
+    if (el.classList.contains('carousel-card-partial')) return;
 
     const href = el.dataset.href || el.getAttribute('data-href');
     if (!href) return;
@@ -1367,19 +1366,21 @@ export function enableDataHrefNavigation() {
   });
 
   document.addEventListener('keydown', (e) => {
-    // ✅ Overlay hover: ignorar navegación por teclado iniciada dentro del overlay.
-    if (e.target?.closest?.('.overlay-hover-tarjeta')) return;
     const target = e.target;
+    if (!target?.closest) return;
+    if (target.closest('.overlay-hover-tarjeta')) return;
+    if (target.closest('.carousel-card-covered')) return;
+    if (target.closest('.carousel-card-partial')) return;
 
-    if (target?.closest?.('.overlay-hover-tarjeta')) return;
-
-    const interactive = target.closest?.(
-      "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist, .home-hero-reminder, .card-release-reminder-btn, .title-reminder-btn, .alerts-bell, .control-center-trigger, .alerts-modal, .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover"
+    const interactive = target.closest(
+      "button, input, select, textarea, a, [role='button'], .card-quick-plus-btn, .home-hero-mylist, .home-hero-reminder, .card-release-reminder-btn, .title-reminder-btn, .alerts-bell, .control-center-trigger, .alerts-modal, .boton-mi-lista-hover, .card-quick-modal-volume-btn, .boton-reproducir-hover, .carousel-card-covered, .carousel-card-partial"
     );
     if (interactive) return;
 
-    const el = target.closest?.('[data-href]');
+    const el = target.closest('[data-href]');
     if (!el) return;
+    if (el.classList.contains('carousel-card-covered')) return;
+    if (el.classList.contains('carousel-card-partial')) return;
 
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
