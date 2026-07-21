@@ -718,6 +718,7 @@ span.meta-dropitem {
 .title-extra {
   width: 100%;
   margin-top: clamp(22px, 4vw, 42px);
+  padding-bottom: 65px;
 }
 
 .title-extra-head {
