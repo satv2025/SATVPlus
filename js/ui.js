@@ -1,6 +1,7 @@
 // ui.js
 import { CONFIG } from './config.js';
 import { getSession, signOut } from './auth.js';
+import { getActiveViewerProfile, requireActiveViewerProfile } from './viewerProfiles.js';
 import {
   fetchMovie,
   fetchLanguagePreference,
@@ -599,11 +600,23 @@ export async function renderAuthButtons() {
     return;
   }
 
-  let display = null;
+  let activeViewerProfile = null;
   try {
-    display = await getUsernameFromProfilesTable(session);
+    activeViewerProfile = await requireActiveViewerProfile(session, { redirect: true });
+    if (!activeViewerProfile) return;
   } catch (e) {
-    console.warn('No se pudo leer profiles.username:', e);
+    console.warn('No se pudo verificar el perfil activo:', e);
+    window.location.replace('/profiles.html');
+    return;
+  }
+
+  let display = activeViewerProfile?.name || null;
+  if (!display) {
+    try {
+      display = await getUsernameFromProfilesTable(session);
+    } catch (e) {
+      console.warn('No se pudo leer profiles.username:', e);
+    }
   }
 
   if (!display) display = getFallbackDisplayName(session);
@@ -616,7 +629,7 @@ export async function renderAuthButtons() {
       id="control-center-trigger"
       type="button"
       aria-label="Abrir centro de control"
-      title="Centro de control"
+      title="Centro de control · Cambiar perfil desde /profiles"
       data-display-name="${name}"
     >
       <i class="fa-solid fa-sliders" aria-hidden="true"></i>

@@ -6,12 +6,20 @@ export async function getSession() {
   return data.session;
 }
 
-export async function requireAuthOrRedirect() {
+export async function requireAuthOrRedirect({ requireProfile = true } = {}) {
   const session = await getSession();
   if (!session) {
     window.location.href = "/login.html";
     return null;
   }
+
+  if (requireProfile) {
+    const { requireActiveViewerProfile } = await import("./viewerProfiles.js");
+    const activeProfile = await requireActiveViewerProfile(session, { redirect: true });
+    if (!activeProfile) return null;
+    session.viewerProfile = activeProfile;
+  }
+
   return session;
 }
 
@@ -44,5 +52,13 @@ export async function sendRecoveryEmail(email) {
 }
 
 export async function signOut() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const accountId = data?.session?.user?.id;
+    if (accountId) {
+      const { clearActiveViewerProfile } = await import("./viewerProfiles.js");
+      clearActiveViewerProfile(accountId);
+    }
+  } catch (_) {}
   await supabase.auth.signOut();
 }

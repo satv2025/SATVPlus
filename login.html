@@ -66,7 +66,7 @@
       // ✅ IMPORTANTE: que un error de Supabase NO rompa el login
       try {
         const session = await getSession();
-        if (session) window.location.replace("/index.html");
+        if (session) window.location.replace("/profiles.html");
       } catch (err) {
         console.warn("getSession falló (no bloquea login):", err);
         // opcional: toast suave para debug
@@ -137,7 +137,7 @@
           const password = $("#password").value;
           await signInWithEmail(email, password);
           toast("Bienvenido ✅", "success");
-          setTimeout(() => window.location.href = "/index.html", 250);
+          setTimeout(() => window.location.href = "/profiles.html", 250);
         } catch (err) {
           console.error(err);
           toast(err.message || "Error en login", "error");

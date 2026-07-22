@@ -117,7 +117,7 @@
 
       const session = await getSession();
       if (session) {
-        window.location.replace("/index.html");
+        window.location.replace("/profiles.html");
       }
 
       import { renderNav, renderAuthButtons, toast, $ } from "/js/ui.js";
@@ -172,8 +172,14 @@
             username: $("#username").value.trim(),
             phone: $("#phone").value.trim(),
           });
-          toast("Cuenta creada. Confirmá el email ✅", "success");
-          setTimeout(() => window.location.href = "/login.html", 700);
+          const currentSession = await getSession();
+          if (currentSession) {
+            toast("Cuenta creada. Ahora creá tu perfil ✅", "success");
+            setTimeout(() => window.location.href = "/profiles.html", 500);
+          } else {
+            toast("Cuenta creada. Confirmá el email ✅", "success");
+            setTimeout(() => window.location.href = "/login.html", 700);
+          }
         } catch (err) {
           console.error(err);
           toast(err.message || "Error en registro", "error");
