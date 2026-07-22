@@ -1668,8 +1668,8 @@ function alternarContextoHoverTarjeta(card, abierto) {
   if (!card) return;
 
   if (abierto) {
+    // La card conserva data-href: el overlay es un portal y corta su propio click.
     card.classList.add('tarjeta-hover-host');
-    suspenderNavegacionBaseCardHover(card);
   } else {
     card.classList.remove('tarjeta-hover-host');
   }
@@ -1788,8 +1788,8 @@ function asegurarOverlayHoverTarjeta(card, movieId) {
   if (!card || !movieId) return null;
 
   eliminarOverlayHoverTarjeta(card);
-  suspenderNavegacionBaseCardHover(card);
 
+  // No se suspende la navegación base: la card también debe ser clickeable.
   const overlay = document.createElement('div');
   overlay.className = 'overlay-hover-tarjeta';
   overlay.setAttribute('aria-hidden', 'true');
@@ -2257,8 +2257,7 @@ function abrirOverlayHoverTarjeta(card, movieId) {
   clearTimeout(card.__hoverCloseTimer);
   clearTimeout(card.__hoverSafetyCloseTimer);
 
-  suspenderNavegacionBaseCardHover(card);
-
+  // Mantener data-href permite abrir el título haciendo click antes de que aparezca el overlay.
   card.__hoverOpenTimer = setTimeout(() => {
     if (__tarjetaHoverActiva !== card) return;
 
