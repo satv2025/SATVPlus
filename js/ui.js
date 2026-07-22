@@ -623,7 +623,7 @@ export async function renderAuthButtons() {
 
   const name = escapeHtml(display || 'Usuario');
   const avatarUrl = escapeHtml(
-    activeViewerProfile?.avatar_url || '/images/profile-avatars/nova.svg'
+    activeViewerProfile?.avatar_url || '/images/profile-avatars/avatar-01.png'
   );
 
   host.innerHTML = `
@@ -695,7 +695,7 @@ function getControlUserData(session, userId = null) {
     displayName,
     email: u?.email || '',
     avatarUrl:
-      trigger?.dataset?.avatarUrl || '/images/profile-avatars/nova.svg',
+      trigger?.dataset?.avatarUrl || '/images/profile-avatars/avatar-01.png',
   };
 }
 
@@ -711,7 +711,7 @@ function ensureAlertsModalRoot() {
     <div class="alerts-modal control-center-modal" role="dialog" aria-modal="false" aria-labelledby="control-center-title">
       <div class="alerts-modal-head control-center-head">
         <div class="control-center-user">
-          <img class="control-center-avatar" data-control-avatar src="/images/profile-avatars/nova.svg" alt="" />
+          <img class="control-center-avatar" data-control-avatar src="/images/profile-avatars/avatar-01.png" alt="" />
           <span class="control-center-user-text">
             <span class="alerts-modal-kicker">Centro de control</span>
             <h2 id="control-center-title" data-control-title>Cuenta</h2>
@@ -819,7 +819,7 @@ function updateControlHeader(root, user = {}) {
   const subtitle = root.querySelector('[data-control-subtitle]');
 
   if (avatar) {
-    avatar.src = user.avatarUrl || '/images/profile-avatars/nova.svg';
+    avatar.src = user.avatarUrl || '/images/profile-avatars/avatar-01.png';
     avatar.alt = '';
   }
   if (title) title.textContent = user.displayName || 'Cuenta';
@@ -1101,7 +1101,7 @@ function renderControlAccountPanel(data = {}) {
   return `
     <div class="control-account-panel">
       <div class="control-profile-card">
-        <img class="control-center-avatar is-large" src="${escapeHtml(user.avatarUrl || '/images/profile-avatars/nova.svg')}" alt="" />
+        <img class="control-center-avatar is-large" src="${escapeHtml(user.avatarUrl || '/images/profile-avatars/avatar-01.png')}" alt="" />
         <span class="control-profile-main">
           <strong>${escapeHtml(user.displayName || 'Usuario')}</strong>
           <small>${escapeHtml(user.email || 'Cuenta SATV+')}</small>

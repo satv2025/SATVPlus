@@ -1,0 +1,23 @@
+SATV+ · Perfiles V3
+
+1) Ejecutá SUPABASE-PERFILES-V3.sql completo en Supabase.
+   También quedó copiado como supabase/profiles_setup.sql.
+
+2) Esta versión agrega:
+- selección obligatoria de perfil
+- máximo de 10 perfiles por cuenta
+- progreso guardado por perfil
+- botón del Centro de Control usando avatar del perfil activo
+- 50 avatares PNG pregenerados
+- edición de perfil: nombre, avatar, perfil infantil
+- subida de foto propia por perfil usando Storage de Supabase
+
+3) Bucket requerido:
+- viewer-profile-photos
+El SQL ya lo crea con sus políticas.
+
+4) Formatos permitidos para foto propia:
+- PNG
+- JPG / JPEG
+- WEBP
+Tamaño máximo: 5 MB

@@ -28,7 +28,7 @@
       <div class="profile-modal-head">
         <div>
           <h2 id="profile-modal-title">Crear perfil</h2>
-          <p class="muted">Nombre y avatar del perfil.</p>
+          <p class="muted">Nombre, avatar y foto personalizada del perfil.</p>
         </div>
         <button id="profile-modal-close" type="button" class="profile-modal-close" aria-label="Cerrar">×</button>
       </div>
@@ -36,7 +36,24 @@
       <label for="profile-name">Nombre</label>
       <input id="profile-name" maxlength="30" required placeholder="Nombre del perfil" />
 
-      <div class="avatar-label">Elegí un avatar</div>
+      <section class="profile-avatar-stage">
+        <div class="profile-avatar-preview-wrap">
+          <img id="profile-avatar-preview" class="profile-avatar-preview" src="/images/profile-avatars/avatar-01.png" alt="Avatar del perfil" />
+        </div>
+        <div class="profile-avatar-side">
+          <div class="avatar-label">Avatar del perfil</div>
+          <p class="muted avatar-help">Elegí un avatar del catálogo o subí tu propia foto.</p>
+          <div class="profile-upload-actions">
+            <button id="profile-upload-btn" class="btn ghost" type="button">Subir tu foto</button>
+            <button id="profile-use-preset-btn" class="btn ghost" type="button" hidden>Usar avatar del catálogo</button>
+            <input id="profile-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+          </div>
+          <p id="profile-avatar-custom-note" class="muted avatar-note">Usando avatar del catálogo.</p>
+          <p class="muted avatar-help small">Formatos: PNG, JPG o WEBP · máximo 5 MB.</p>
+        </div>
+      </section>
+
+      <div class="avatar-label">Catálogo de avatares</div>
       <div id="avatar-grid" class="avatar-grid"></div>
 
       <label class="kids-toggle">
