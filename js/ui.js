@@ -1109,11 +1109,18 @@ function renderControlAccountPanel(data = {}) {
       </div>
 
       <div class="control-quick-grid">
-        <a class="control-quick-action" href="/profile.html">
-          <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
+        <a class="control-quick-action" href="/profiles.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}">
+          <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
           <span>
-            <strong>Perfil y nickname</strong>
-            <small>Editar cuenta, nombre y ajustes</small>
+            <strong>Ver y editar perfiles</strong>
+            <small>Cambiar de perfil o administrar los perfiles</small>
+          </span>
+        </a>
+        <a class="control-quick-action" href="/profile.html">
+          <i class="fa-solid fa-id-card" aria-hidden="true"></i>
+          <span>
+            <strong>Cuenta</strong>
+            <small>Editar correo, nombre, usuario y teléfono</small>
           </span>
         </a>
         <a class="control-quick-action" href="${myListHref}">

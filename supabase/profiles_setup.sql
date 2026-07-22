@@ -505,3 +505,72 @@ union all
 select 'viewer_profiles', count(*) from public.viewer_profiles
 union all
 select 'watch_progress_con_perfil', count(*) from public.watch_progress where viewer_profile_id is not null;
+
+-- ============================================================
+-- 7) Cuenta editable y sincronización de correo Auth -> profiles
+-- ============================================================
+
+begin;
+
+alter table public.profiles enable row level security;
+
+grant select, insert, update on public.profiles to authenticated;
+
+drop policy if exists account_profiles_select_own on public.profiles;
+drop policy if exists account_profiles_insert_own on public.profiles;
+drop policy if exists account_profiles_update_own on public.profiles;
+
+create policy account_profiles_select_own
+on public.profiles
+for select
+to authenticated
+using (id = auth.uid());
+
+create policy account_profiles_insert_own
+on public.profiles
+for insert
+to authenticated
+with check (id = auth.uid());
+
+create policy account_profiles_update_own
+on public.profiles
+for update
+to authenticated
+using (id = auth.uid())
+with check (id = auth.uid());
+
+create or replace function public.sync_profile_email_from_auth()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+begin
+  if new.email is distinct from old.email then
+    update public.profiles
+    set email = new.email
+    where id = new.id;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_email_updated on auth.users;
+create trigger on_auth_user_email_updated
+after update of email on auth.users
+for each row
+when (old.email is distinct from new.email)
+execute function public.sync_profile_email_from_auth();
+
+-- Repara cualquier correo que ya estuviera desincronizado.
+update public.profiles p
+set email = u.email
+from auth.users u
+where p.id = u.id
+  and p.email is distinct from u.email;
+
+commit;
+
+-- Verificación de la cuenta autenticada desde el cliente:
+-- select id, email, full_name, username, phone from public.profiles where id = auth.uid();

@@ -1,98 +1,52 @@
-// /js/profile.js
-import { renderNav, renderAuthButtons, toast, $ } from "./ui.js";
+import { renderNav, renderAuthButtons, toast } from "./ui.js";
 import { requireAuthOrRedirect } from "./auth.js";
 import { supabase } from "./supabaseClient.js";
+import { getActiveViewerProfile } from "./viewerProfiles.js";
 
-const EDITMODE_GRANT_KEY = "satv_profile_edit_grant";
+const form = document.getElementById("account-form");
+const emailInput = document.getElementById("account-email");
+const nameInput = document.getElementById("account-name");
+const usernameInput = document.getElementById("account-username");
+const phoneInput = document.getElementById("account-phone");
+const createdEl = document.getElementById("account-created");
+const accountIdEl = document.getElementById("account-id");
+const statusEl = document.getElementById("account-status");
+const saveBtn = document.getElementById("account-save");
 
-function getUrl() {
-  return new URL(window.location.href);
+let session = null;
+let accountProfile = null;
+
+function clean(value) {
+  const text = String(value || "").trim();
+  return text || null;
 }
 
-function getParam(name) {
-  return getUrl().searchParams.get(name);
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("es-AR", {
+    dateStyle: "long",
+    timeStyle: "short",
+  });
 }
 
-function isEditModeRequested() {
-  return getParam("editmode") === "true";
+function setStatus(message = "", type = "") {
+  statusEl.textContent = message;
+  statusEl.dataset.type = type;
 }
 
-function buildProfileUrl(userId, editmode = false) {
-  const url = new URL(window.location.origin + "/profile");
-  url.searchParams.set("id", userId);
-  if (editmode) url.searchParams.set("editmode", "true");
-  return url.toString();
+function setBusy(busy) {
+  saveBtn.disabled = busy;
+  saveBtn.innerHTML = busy
+    ? '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Guardando…'
+    : '<i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Guardar cambios';
 }
 
-function ensureCanonicalProfileUrl(userId) {
-  if (!userId) return;
-  const url = getUrl();
-  let changed = false;
-
-  if (url.pathname !== "/profile" && url.pathname !== "/profile/") {
-    // Si tu server sirve /profile.html, cambiá esto a /profile.html
-    url.pathname = "/profile";
-    changed = true;
-  }
-
-  if (!url.searchParams.get("id")) {
-    url.searchParams.set("id", userId);
-    changed = true;
-  }
-
-  if (changed) {
-    window.history.replaceState({}, "", url.toString());
-  }
-}
-
-function clearEditModeFromUrl() {
-  const url = getUrl();
-  url.searchParams.delete("editmode");
-  window.history.replaceState({}, "", url.toString());
-}
-
-function setEditGrant(userId) {
-  try {
-    sessionStorage.setItem(EDITMODE_GRANT_KEY, String(userId));
-  } catch { }
-}
-
-function consumeEditGrant(userId) {
-  try {
-    const v = sessionStorage.getItem(EDITMODE_GRANT_KEY);
-    const ok = v === String(userId);
-    if (ok) sessionStorage.removeItem(EDITMODE_GRANT_KEY);
-    return ok;
-  } catch {
-    return false;
-  }
-}
-
-function formatDate(v) {
-  if (!v) return "-";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleString("es-AR");
-}
-
-/* =========================================================
-   Supabase (profiles)
-========================================================= */
-
-async function fetchProfileById(userId) {
-  if (!userId) return null;
-
+async function fetchAccountProfile(userId) {
   const { data, error } = await supabase
     .from("profiles")
-    .select(`
-      id,
-      email,
-      full_name,
-      username,
-      phone,
-      avatar_url,
-      created_at
-    `)
+    .select("id,email,full_name,username,phone,avatar_url,created_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -100,317 +54,195 @@ async function fetchProfileById(userId) {
   return data || null;
 }
 
-async function updateOwnProfile(userId, patch = {}) {
-  if (!userId) throw new Error("Falta userId");
+async function ensureAccountProfile(user) {
+  const existing = await fetchAccountProfile(user.id);
+  if (existing) return existing;
 
-  // OJO: email en profiles puede desincronizarse de auth.users.
-  // Por eso NO lo editamos acá.
-  const allowed = {
-    full_name: patch.full_name ?? undefined,
-    username: patch.username ?? undefined,
-    phone: patch.phone ?? undefined,
-    avatar_url: patch.avatar_url ?? undefined,
+  const metadata = user.user_metadata || {};
+  const row = {
+    id: user.id,
+    email: user.email || null,
+    full_name: clean(metadata.full_name),
+    username: clean(metadata.username),
+    phone: clean(metadata.phone),
   };
-
-  const clean = Object.fromEntries(
-    Object.entries(allowed).filter(([, v]) => v !== undefined)
-  );
-
-  if (!Object.keys(clean).length) {
-    return await fetchProfileById(userId);
-  }
 
   const { data, error } = await supabase
     .from("profiles")
-    .update(clean)
-    .eq("id", userId)
-    .select(`
-      id,
-      email,
-      full_name,
-      username,
-      phone,
-      avatar_url,
-      created_at
-    `)
-    .maybeSingle();
+    .upsert(row, { onConflict: "id" })
+    .select("id,email,full_name,username,phone,avatar_url,created_at")
+    .single();
 
   if (error) throw error;
-  return data || null;
+  return data;
 }
 
-/* =========================================================
-   UI helpers
-========================================================= */
+function populate(profile, user) {
+  emailInput.value = user.email || profile?.email || "";
+  nameInput.value = profile?.full_name || user.user_metadata?.full_name || "";
+  usernameInput.value = profile?.username || user.user_metadata?.username || "";
+  phoneInput.value = profile?.phone || user.user_metadata?.phone || "";
+  createdEl.textContent = formatDate(profile?.created_at || user.created_at);
+  accountIdEl.textContent = user.id || "—";
+}
 
-function ensureEditButton() {
-  let btn = $("#btn-edit-profile");
-  if (btn) return btn;
+async function updatePublicProfile(userId, values) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: values.fullName,
+      username: values.username,
+      phone: values.phone,
+    })
+    .eq("id", userId)
+    .select("id,email,full_name,username,phone,avatar_url,created_at")
+    .single();
 
-  // Si no existe en HTML, lo creamos automáticamente al lado del h2
-  const h2 = document.querySelector("h2");
-  if (!h2) return null;
+  if (error) throw error;
+  return data;
+}
 
-  const wrap = document.createElement("div");
-  wrap.style.display = "flex";
-  wrap.style.alignItems = "center";
-  wrap.style.justifyContent = "space-between";
-  wrap.style.gap = "12px";
-  wrap.style.flexWrap = "wrap";
+async function updateAuthMetadata(user, values) {
+  const oldMetadata = user.user_metadata || {};
+  const { data, error } = await supabase.auth.updateUser({
+    data: {
+      ...oldMetadata,
+      full_name: values.fullName,
+      username: values.username,
+      phone: values.phone,
+    },
+  });
 
-  const parent = h2.parentElement;
-  if (!parent) return null;
+  if (error) throw error;
+  return data?.user || user;
+}
 
-  // Si el h2 ya estaba dentro de un contenedor flex, solo agregamos el botón
-  if (parent.children.length >= 1) {
-    btn = document.createElement("a");
-    btn.id = "btn-edit-profile";
-    btn.className = "btn";
-    btn.href = "#";
-    btn.style.display = "none";
-    btn.textContent = "Editar datos";
-    parent.appendChild(btn);
-    return btn;
+async function requestEmailChange(currentEmail, nextEmail) {
+  if (!nextEmail || nextEmail === currentEmail) return false;
+
+  const { error } = await supabase.auth.updateUser({ email: nextEmail });
+  if (error) throw error;
+  return true;
+}
+
+function explainError(error) {
+  const message = String(error?.message || error || "");
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("profiles_username_key") ||
+    lower.includes("duplicate key") ||
+    lower.includes("username") && lower.includes("already")
+  ) {
+    return "Ese nombre de usuario ya está en uso.";
   }
-
-  // Fallback raro
-  btn = document.createElement("a");
-  btn.id = "btn-edit-profile";
-  btn.className = "btn";
-  btn.href = "#";
-  btn.style.display = "none";
-  btn.textContent = "Editar datos";
-  wrap.appendChild(h2);
-  wrap.appendChild(btn);
-  parent.prepend(wrap);
-  return btn;
+  if (lower.includes("email") && lower.includes("already")) {
+    return "Ese correo ya está vinculado a otra cuenta.";
+  }
+  if (lower.includes("invalid") && lower.includes("email")) {
+    return "Ingresá un correo electrónico válido.";
+  }
+  if (lower.includes("row-level security") || lower.includes("permission")) {
+    return "Supabase rechazó la edición. Ejecutá el SQL V4 completo.";
+  }
+  return message || "No se pudieron guardar los datos de la cuenta.";
 }
 
-function setProfileTitle(text) {
-  const h2 = document.querySelector("h2");
-  if (h2) h2.textContent = text;
-}
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!session?.user?.id) return;
 
-function renderProfileData(profile, sessionUserEmailFallback = "") {
-  $("#p-email").textContent = profile?.email || sessionUserEmailFallback || "-";
-  $("#p-name").textContent = profile?.full_name || "-";
-  $("#p-user").textContent = profile?.username || "-";
-  $("#p-phone").textContent = profile?.phone || "-";
-  $("#p-created").textContent = formatDate(profile?.created_at);
-}
-
-function setPrivateFieldsIfNeeded(isOwnProfile) {
-  if (isOwnProfile) return;
-  // Si querés ocultar datos en perfiles ajenos, descomentá:
-  // $("#p-email").textContent = "Privado";
-  // $("#p-phone").textContent = "Privado";
-}
-
-function removeExistingEditControls() {
-  const old = document.getElementById("profile-edit-controls");
-  if (old) old.remove();
-}
-
-function enterEditMode(profile, loggedUserId) {
-  removeExistingEditControls();
-
-  const nameEl = $("#p-name");
-  const userEl = $("#p-user");
-  const phoneEl = $("#p-phone");
-
-  const current = {
-    full_name: profile?.full_name || "",
-    username: profile?.username || "",
-    phone: profile?.phone || "",
+  const values = {
+    email: emailInput.value.trim().toLowerCase(),
+    fullName: clean(nameInput.value),
+    username: clean(usernameInput.value),
+    phone: clean(phoneInput.value),
   };
 
-  nameEl.innerHTML = "";
-  userEl.innerHTML = "";
-  phoneEl.innerHTML = "";
-
-  const nameInput = document.createElement("input");
-  nameInput.type = "text";
-  nameInput.id = "edit-full-name";
-  nameInput.value = current.full_name;
-  nameInput.placeholder = "Tu nombre";
-  nameInput.style.width = "100%";
-
-  const userInput = document.createElement("input");
-  userInput.type = "text";
-  userInput.id = "edit-username";
-  userInput.value = current.username;
-  userInput.placeholder = "Tu usuario";
-  userInput.autocomplete = "username";
-  userInput.style.width = "100%";
-
-  const phoneInput = document.createElement("input");
-  phoneInput.type = "tel";
-  phoneInput.id = "edit-phone";
-  phoneInput.value = current.phone;
-  phoneInput.placeholder = "Tu teléfono";
-  phoneInput.autocomplete = "tel";
-  phoneInput.style.width = "100%";
-
-  nameEl.appendChild(nameInput);
-  userEl.appendChild(userInput);
-  phoneEl.appendChild(phoneInput);
-
-  // Controles de edición
-  const createdRow = $("#p-created");
-  const controls = document.createElement("div");
-  controls.id = "profile-edit-controls";
-  controls.style.display = "flex";
-  controls.style.gap = "8px";
-  controls.style.flexWrap = "wrap";
-  controls.style.marginTop = "12px";
-
-  const saveBtn = document.createElement("button");
-  saveBtn.type = "button";
-  saveBtn.className = "btn";
-  saveBtn.textContent = "Guardar cambios";
-
-  const cancelBtn = document.createElement("button");
-  cancelBtn.type = "button";
-  cancelBtn.className = "btn";
-  cancelBtn.textContent = "Cancelar";
-
-  const hint = document.createElement("div");
-  hint.className = "muted";
-  hint.style.width = "100%";
-  hint.textContent = "Email se muestra desde profiles/auth y no se edita desde esta pantalla.";
-
-  controls.appendChild(saveBtn);
-  controls.appendChild(cancelBtn);
-  controls.appendChild(hint);
-
-  const panel = createdRow?.closest(".panel");
-  if (panel) panel.appendChild(controls);
-
-  let saving = false;
-
-  saveBtn.addEventListener("click", async () => {
-    if (saving) return;
-    saving = true;
-    saveBtn.disabled = true;
-    cancelBtn.disabled = true;
-
-    try {
-      const patch = {
-        full_name: nameInput.value.trim() || null,
-        username: userInput.value.trim() || null,
-        phone: phoneInput.value.trim() || null,
-      };
-
-      const updated = await updateOwnProfile(loggedUserId, patch);
-      toast("Perfil actualizado ✅", "success");
-
-      // Volver a modo vista (misma página sin editmode)
-      const viewUrl = buildProfileUrl(loggedUserId, false);
-      window.location.assign(viewUrl);
-      return updated;
-    } catch (e) {
-      console.error(e);
-
-      const msg = String(e?.message || "").toLowerCase();
-      if (msg.includes("profiles_username_key") || msg.includes("duplicate key") || msg.includes("username")) {
-        toast("Ese usuario ya está en uso.", "error");
-      } else if (msg.includes("row-level security") || msg.includes("permission")) {
-        toast("No tenés permiso para editar este perfil.", "error");
-      } else {
-        toast("No se pudo guardar el perfil.", "error");
-      }
-    } finally {
-      saving = false;
-      saveBtn.disabled = false;
-      cancelBtn.disabled = false;
-    }
-  });
-
-  cancelBtn.addEventListener("click", () => {
-    const viewUrl = buildProfileUrl(loggedUserId, false);
-    window.location.assign(viewUrl);
-  });
-}
-
-/* =========================================================
-   Init
-========================================================= */
-
-async function init() {
-  renderNav({ active: "profile" });
-  await renderAuthButtons();
-
-  const session = await requireAuthOrRedirect();
-  if (!session) return;
-
-  const loggedUserId = session.user?.id;
-  if (!loggedUserId) {
-    toast("Sesión inválida.", "error");
+  if (!values.email) {
+    toast("Ingresá un correo electrónico.", "error");
     return;
   }
 
-  const requestedId = getParam("id");
-  const targetProfileId = requestedId || loggedUserId;
-  ensureCanonicalProfileUrl(targetProfileId);
-
-  const isOwnProfile = String(loggedUserId) === String(targetProfileId);
-  const requestedEditMode = isEditModeRequested();
-
-  // Soft gate: editmode=true solo si venís desde el botón del perfil
-  let allowEditMode = false;
-  if (requestedEditMode) {
-    allowEditMode = isOwnProfile && consumeEditGrant(targetProfileId);
-    if (!allowEditMode) {
-      clearEditModeFromUrl();
-      toast("Modo edición no permitido desde acceso directo.", "error");
-    }
-  }
-
-  const editBtn = ensureEditButton();
+  setBusy(true);
+  setStatus();
 
   try {
-    const p = await fetchProfileById(targetProfileId);
+    const originalEmail = String(session.user.email || "").toLowerCase();
 
-    if (!p) {
-      toast("Perfil no encontrado.", "error");
-      setProfileTitle("Perfil");
-      renderProfileData(null, session.user?.email || "");
-      return;
+    const updatedUser = await updateAuthMetadata(session.user, values);
+    const updatedProfile = await updatePublicProfile(session.user.id, values);
+
+    accountProfile = updatedProfile;
+    session.user = updatedUser;
+
+    let emailChangeRequested = false;
+    let emailChangeError = null;
+    try {
+      emailChangeRequested = await requestEmailChange(originalEmail, values.email);
+    } catch (error) {
+      emailChangeError = error;
     }
 
-    setProfileTitle(isOwnProfile ? "Tu perfil" : `Perfil de ${p.username || p.full_name || "usuario"}`);
-    renderProfileData(p, session.user?.email || "");
-    setPrivateFieldsIfNeeded(isOwnProfile);
+    populate(accountProfile, session.user);
 
-    if (editBtn) {
-      if (isOwnProfile) {
-        editBtn.style.display = "inline-flex";
-
-        if (requestedEditMode && allowEditMode) {
-          editBtn.textContent = "Salir de edición";
-          editBtn.href = buildProfileUrl(targetProfileId, false);
-        } else {
-          editBtn.textContent = "Editar datos";
-          editBtn.href = buildProfileUrl(targetProfileId, true);
-
-          // Gate por sessionStorage
-          editBtn.addEventListener("click", (ev) => {
-            ev.preventDefault();
-            setEditGrant(targetProfileId);
-            window.location.assign(buildProfileUrl(targetProfileId, true));
-          });
-        }
-      } else {
-        editBtn.style.display = "none";
-      }
+    if (emailChangeError) {
+      emailInput.value = originalEmail;
+      const emailMessage = explainError(emailChangeError);
+      setStatus(`Los demás datos se guardaron, pero el correo no se pudo cambiar: ${emailMessage}`, "error");
+      toast("Datos guardados, excepto el correo.", "error");
+    } else if (emailChangeRequested) {
+      emailInput.value = originalEmail;
+      setStatus(
+        `Se guardaron los datos. Revisá ${originalEmail} y ${values.email} para confirmar el cambio de correo.`,
+        "pending"
+      );
+      toast("Datos guardados. Falta confirmar el correo.", "success");
+    } else {
+      setStatus("Los datos de la cuenta fueron actualizados.", "success");
+      toast("Cuenta actualizada.", "success");
     }
+  } catch (error) {
+    console.error("[account] save error:", error);
+    const message = explainError(error);
+    setStatus(message, "error");
+    toast(message, "error");
+  } finally {
+    setBusy(false);
+  }
+});
 
-    if (requestedEditMode && allowEditMode) {
-      enterEditMode(p, loggedUserId);
+async function init() {
+  renderNav({ active: "profile" });
+
+  session = await requireAuthOrRedirect({ requireProfile: false });
+  if (!session?.user) return;
+
+  try {
+    const activeProfile = await getActiveViewerProfile(session);
+    if (activeProfile) {
+      await renderAuthButtons();
+    } else {
+      const host = document.getElementById("nav-actions") || document.getElementById("nav-right");
+      if (host) host.innerHTML = '<a class="btn ghost" href="/profiles.html">Volver a perfiles</a>';
     }
-  } catch (e) {
-    console.error(e);
-    toast("No se pudo cargar el perfil. Revisá RLS de profiles.", "error");
+  } catch (error) {
+    console.warn("[account] no se pudo renderizar el control de perfil:", error);
+  }
+
+  try {
+    accountProfile = await ensureAccountProfile(session.user);
+    populate(accountProfile, session.user);
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("emailUpdated") === "1") {
+      setStatus("El cambio de correo fue confirmado.", "success");
+    }
+  } catch (error) {
+    console.error("[account] load error:", error);
+    const message = explainError(error);
+    setStatus(message, "error");
+    toast(message, "error");
   }
 }
 

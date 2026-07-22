@@ -1,0 +1,133 @@
+.account-page {
+  padding-top: 24px;
+  padding-bottom: 56px;
+}
+
+.account-panel {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 12px;
+  background: #292929;
+}
+
+.account-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.account-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: #ef008a;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.account-header h1 {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 46px);
+}
+
+.account-header p {
+  max-width: 560px;
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, .68);
+  line-height: 1.5;
+}
+
+.account-form {
+  display: grid;
+  gap: 22px;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.account-field {
+  display: grid;
+  gap: 8px;
+}
+
+.account-field > span {
+  font-weight: 800;
+}
+
+.account-field input {
+  width: 100%;
+}
+
+.account-field small {
+  color: rgba(255, 255, 255, .55);
+  line-height: 1.35;
+}
+
+.account-readonly-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.account-readonly-row > span {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .035);
+  overflow: hidden;
+}
+
+.account-readonly-row small {
+  color: rgba(255, 255, 255, .55);
+}
+
+.account-readonly-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.account-status {
+  min-height: 22px;
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .account-panel {
+    padding: 20px;
+  }
+
+  .account-header {
+    flex-direction: column;
+  }
+
+  .account-grid,
+  .account-readonly-row {
+    grid-template-columns: 1fr;
+  }
+
+  .account-header .btn,
+  .account-actions .btn {
+    width: 100%;
+  }
+}
+
+.account-status[data-type="success"] { color: #7ee2a8; }
+.account-status[data-type="pending"] { color: #ffd27a; }
+.account-status[data-type="error"] { color: #ff8f8f; }
