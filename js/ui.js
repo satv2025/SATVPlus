@@ -99,7 +99,7 @@ export function renderNav({ active = 'home' } = {}) {
   nav.innerHTML = `
     <div class="nav-left">
       <a class="brand" href="/index.html">
-        <img src="https://api.satvplus.com.ar/storage/v1/object/public/general/Thumbnails/SATV_logo_fondo_transparente_alpha_A_limpia.png" alt="Logo" class="brand-logo"/>
+        <img src="/images/satvpluslogopro.png" alt="Logo" class="brand-logo"/>
       </a>
       <a class="navlink ${active === 'home' ? 'active' : ''}" href="/index.html">Inicio</a>
     </div>

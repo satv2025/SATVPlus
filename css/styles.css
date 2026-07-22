@@ -3244,3 +3244,17 @@ input[type="search"]::-webkit-search-cancel-button {
   flex: 0 0 auto;
   object-fit: cover;
 }
+
+
+/* SATV+ · iconos mostrar/ocultar contraseña siempre blancos */
+.pw-toggle,
+.pw-toggle:hover,
+.pw-toggle:focus-visible {
+  color: #FFFFFF !important;
+}
+
+.pw-toggle svg,
+.pw-toggle svg path {
+  color: #FFFFFF !important;
+  fill: #FFFFFF !important;
+}

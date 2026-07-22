@@ -39,3 +39,16 @@
 .pw-toggle svg {
     display: block;
 }
+
+/* SATV+ · iconos mostrar/ocultar contraseña siempre blancos */
+.pw-toggle,
+.pw-toggle:hover,
+.pw-toggle:focus-visible {
+  color: #FFFFFF !important;
+}
+
+.pw-toggle svg,
+.pw-toggle svg path {
+  color: #FFFFFF !important;
+  fill: #FFFFFF !important;
+}

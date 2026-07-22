@@ -3602,6 +3602,10 @@ async function init() {
     disguisedSuffix: '.css',
   });
 
+  // El Home nunca se renderiza sin sesión y perfil de visualización activo.
+  const session = await requireAuthOrRedirect({ requireProfile: true });
+  if (!session) return;
+
   enableDataHrefNavigation();
   initTopnavSearch();
   initSearchExperience();
@@ -3613,7 +3617,6 @@ async function init() {
 
   installTwoLinesObservers();
 
-  const session = await getSession();
   __homeSessionCache = session || null;
   __homeUserIdCache = session?.user?.id || null;
 
