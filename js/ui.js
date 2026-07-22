@@ -1,7 +1,10 @@
 // ui.js
 import { CONFIG } from './config.js';
 import { getSession, signOut } from './auth.js';
-import { getActiveViewerProfile, requireActiveViewerProfile } from './viewerProfiles.js';
+import {
+  getActiveViewerProfile,
+  requireActiveViewerProfile,
+} from './viewerProfiles.js';
 import {
   fetchMovie,
   fetchLanguagePreference,
@@ -99,7 +102,7 @@ export function renderNav({ active = 'home' } = {}) {
   nav.innerHTML = `
     <div class="nav-left">
       <a class="brand" href="/index.html">
-        <img src="/images/satvpluslogopro.png" alt="Logo" class="brand-logo"/>
+        <img src="https://api.satvplus.com.ar/storage/v1/object/public/general/Thumbnails/SATV_logo_fondo_transparente_alpha_A_limpia.png" alt="Logo" class="brand-logo"/>
       </a>
       <a class="navlink ${active === 'home' ? 'active' : ''}" href="/index.html">Inicio</a>
     </div>
@@ -602,7 +605,9 @@ export async function renderAuthButtons() {
 
   let activeViewerProfile = null;
   try {
-    activeViewerProfile = await requireActiveViewerProfile(session, { redirect: true });
+    activeViewerProfile = await requireActiveViewerProfile(session, {
+      redirect: true,
+    });
     if (!activeViewerProfile) return;
   } catch (e) {
     console.warn('No se pudo verificar el perfil activo:', e);
@@ -807,7 +812,10 @@ function ensureAlertsModalRoot() {
     root.dataset.positionBound = '1';
     const reposition = () => positionControlCenterPopover(root);
     window.addEventListener('resize', reposition, { passive: true });
-    window.addEventListener('scroll', reposition, { passive: true, capture: true });
+    window.addEventListener('scroll', reposition, {
+      passive: true,
+      capture: true,
+    });
   }
 
   return root;
@@ -832,7 +840,9 @@ function getControlCenterLayout(width) {
   return width < 370 ? 'compact' : 'vertical';
 }
 
-function positionControlCenterPopover(root = document.getElementById('alerts-modal-root')) {
+function positionControlCenterPopover(
+  root = document.getElementById('alerts-modal-root')
+) {
   const trigger = getControlCenterTrigger();
   const modal = root?.querySelector?.('.control-center-modal');
   if (!root || !trigger || !modal || root.hasAttribute('hidden')) return;
