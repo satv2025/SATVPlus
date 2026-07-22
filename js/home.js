@@ -34,6 +34,7 @@ import {
   removeReleaseReminder,
 } from './api.js';
 import { supabase } from './supabaseClient.js';
+import { getActiveViewerProfile } from './viewerProfiles.js';
 
 /* =========================================================
    TIPOGRAFÍA INLINE SOLO PARA 2 LÍNEAS
@@ -3619,12 +3620,22 @@ async function init() {
   const userId = session?.user?.id || null;
   ensureMyListNavLink(userId);
 
+  let activeViewerProfile = null;
+  if (session) {
+    try {
+      activeViewerProfile = await getActiveViewerProfile(session);
+    } catch (error) {
+      console.warn('[home] no se pudo leer el perfil activo:', error);
+    }
+  }
+  const viewerProfileId = activeViewerProfile?.id || null;
+
   const contWrap = $('#continue-wrap');
   const contRow = $('#continue-row');
 
-  if (userId) {
+  if (viewerProfileId) {
     try {
-      const rows = await fetchContinueWatching(userId, 24);
+      const rows = await fetchContinueWatching(viewerProfileId, 24);
       const filtered = rows.filter(
         (r) => (Number(r.progress_seconds) || 0) >= 5
       );

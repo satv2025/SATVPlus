@@ -683,14 +683,15 @@ export async function updateMyProfile(userId, patch = {}) {
    CONTINUE WATCHING (desde watch_progress)
 ========================================================= */
 
-export async function fetchContinueWatching(userId, limit = 24) {
-  if (!userId) return [];
+export async function fetchContinueWatching(viewerProfileId, limit = 24) {
+  if (!viewerProfileId) return [];
 
   const safeLimit = clampLimit(limit, 1, 100, 24);
 
   const selectWPWithDuration = `
     id,
     user_id,
+    viewer_profile_id,
     movie_id,
     episode_id,
     progress_seconds,
@@ -713,6 +714,7 @@ export async function fetchContinueWatching(userId, limit = 24) {
   const selectWPFallback = `
     id,
     user_id,
+    viewer_profile_id,
     movie_id,
     episode_id,
     progress_seconds,
@@ -734,7 +736,7 @@ export async function fetchContinueWatching(userId, limit = 24) {
   let { data, error } = await supabase
     .from("watch_progress")
     .select(selectWPWithDuration)
-    .eq("user_id", userId)
+    .eq("viewer_profile_id", viewerProfileId)
     .order("updated_at", { ascending: false })
     .limit(safeLimit);
 
@@ -742,7 +744,7 @@ export async function fetchContinueWatching(userId, limit = 24) {
     const retry = await supabase
       .from("watch_progress")
       .select(selectWPFallback)
-      .eq("user_id", userId)
+      .eq("viewer_profile_id", viewerProfileId)
       .order("updated_at", { ascending: false })
       .limit(safeLimit);
 

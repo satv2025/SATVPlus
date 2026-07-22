@@ -3218,3 +3218,29 @@ input[type="search"]::-webkit-search-cancel-button {
   appearance: none;
   display: none;
 }
+
+/* SATV+ perfiles: el acceso al Centro de control es el avatar activo. */
+.control-center-trigger {
+  overflow: visible;
+  background: transparent;
+}
+
+.control-center-trigger-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.control-center-trigger:hover .control-center-trigger-avatar,
+.control-center-trigger:focus-visible .control-center-trigger-avatar {
+  filter: brightness(.88);
+}
+
+.control-center-avatar {
+  display: block;
+  flex: 0 0 auto;
+  object-fit: cover;
+}

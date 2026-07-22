@@ -622,17 +622,21 @@ export async function renderAuthButtons() {
   if (!display) display = getFallbackDisplayName(session);
 
   const name = escapeHtml(display || 'Usuario');
+  const avatarUrl = escapeHtml(
+    activeViewerProfile?.avatar_url || '/images/profile-avatars/nova.svg'
+  );
 
   host.innerHTML = `
     <button
       class="control-center-trigger"
       id="control-center-trigger"
       type="button"
-      aria-label="Abrir centro de control"
-      title="Centro de control · Cambiar perfil desde /profiles"
+      aria-label="Abrir centro de control del perfil ${name}"
+      title="Centro de control · ${name}"
       data-display-name="${name}"
+      data-avatar-url="${avatarUrl}"
     >
-      <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+      <img class="control-center-trigger-avatar" src="${avatarUrl}" alt="" />
       <span class="alerts-badge" id="alerts-badge" hidden></span>
     </button>
   `;
@@ -690,11 +694,8 @@ function getControlUserData(session, userId = null) {
     userId: userId || getAlertsUserId(session),
     displayName,
     email: u?.email || '',
-    initial:
-      String(displayName || 'U')
-        .trim()
-        .charAt(0)
-        .toUpperCase() || 'U',
+    avatarUrl:
+      trigger?.dataset?.avatarUrl || '/images/profile-avatars/nova.svg',
   };
 }
 
@@ -710,7 +711,7 @@ function ensureAlertsModalRoot() {
     <div class="alerts-modal control-center-modal" role="dialog" aria-modal="false" aria-labelledby="control-center-title">
       <div class="alerts-modal-head control-center-head">
         <div class="control-center-user">
-          <span class="control-center-avatar" data-control-avatar>U</span>
+          <img class="control-center-avatar" data-control-avatar src="/images/profile-avatars/nova.svg" alt="" />
           <span class="control-center-user-text">
             <span class="alerts-modal-kicker">Centro de control</span>
             <h2 id="control-center-title" data-control-title>Cuenta</h2>
@@ -817,7 +818,10 @@ function updateControlHeader(root, user = {}) {
   const title = root.querySelector('[data-control-title]');
   const subtitle = root.querySelector('[data-control-subtitle]');
 
-  if (avatar) avatar.textContent = escapeHtml(user.initial || 'U');
+  if (avatar) {
+    avatar.src = user.avatarUrl || '/images/profile-avatars/nova.svg';
+    avatar.alt = '';
+  }
   if (title) title.textContent = user.displayName || 'Cuenta';
   if (subtitle)
     subtitle.textContent =
@@ -1097,7 +1101,7 @@ function renderControlAccountPanel(data = {}) {
   return `
     <div class="control-account-panel">
       <div class="control-profile-card">
-        <span class="control-center-avatar is-large">${escapeHtml(user.initial || 'U')}</span>
+        <img class="control-center-avatar is-large" src="${escapeHtml(user.avatarUrl || '/images/profile-avatars/nova.svg')}" alt="" />
         <span class="control-profile-main">
           <strong>${escapeHtml(user.displayName || 'Usuario')}</strong>
           <small>${escapeHtml(user.email || 'Cuenta SATV+')}</small>

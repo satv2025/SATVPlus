@@ -1,6 +1,7 @@
 import { supabase } from "./supabaseClient.js";
 
 const ACTIVE_PREFIX = "satv_active_viewer_profile";
+let __avatarCatalogCache = null;
 
 function sessionUserId(session) {
   return session?.user?.id || session?.session?.user?.id || null;
@@ -25,14 +26,27 @@ export function getStoredActiveViewerProfileId(accountId) {
   try { return localStorage.getItem(activeKey(accountId)); } catch (_) { return null; }
 }
 
-export async function listProfileAvatars() {
+export async function listProfileAvatars({ force = false } = {}) {
+  if (!force && Array.isArray(__avatarCatalogCache)) {
+    return __avatarCatalogCache;
+  }
+
   const { data, error } = await supabase
     .from("profile_avatars")
     .select("avatar_key,label,image_url,sort_order")
     .eq("active", true)
     .order("sort_order", { ascending: true });
   if (error) throw error;
-  return data || [];
+
+  __avatarCatalogCache = data || [];
+  return __avatarCatalogCache;
+}
+
+export async function getProfileAvatarUrl(avatarKey) {
+  if (!avatarKey) return "/images/profile-avatars/nova.svg";
+  const avatars = await listProfileAvatars();
+  return avatars.find((avatar) => avatar.avatar_key === avatarKey)?.image_url
+    || "/images/profile-avatars/nova.svg";
 }
 
 export async function listViewerProfiles(accountId) {
@@ -60,8 +74,15 @@ export async function getActiveViewerProfile(session) {
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) clearActiveViewerProfile(accountId);
-  return data || null;
+  if (!data) {
+    clearActiveViewerProfile(accountId);
+    return null;
+  }
+
+  return {
+    ...data,
+    avatar_url: await getProfileAvatarUrl(data.avatar_key),
+  };
 }
 
 export async function requireActiveViewerProfile(session, { redirect = true } = {}) {

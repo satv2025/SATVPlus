@@ -1,3 +1,5 @@
+import { getActiveViewerProfile } from './viewerProfiles.js';
+
 /* ===========================
           title.js
 =========================== */
@@ -853,11 +855,15 @@ async function fetchEpisodeProgressMapForTitle({ movieId }) {
       return new Map();
     }
 
-    const userId = userData?.user?.id;
-    if (!userId) {
+    const user = userData?.user;
+    if (!user?.id) {
       console.log('[title] sin sesión activa (episode progress map)');
       return new Map();
     }
+
+    const activeViewerProfile = await getActiveViewerProfile({ user });
+    const viewerProfileId = activeViewerProfile?.id || null;
+    if (!viewerProfileId) return new Map();
 
     const { data, error } = await supabase
       .from('watch_progress')
@@ -869,7 +875,7 @@ async function fetchEpisodeProgressMapForTitle({ movieId }) {
                 updated_at
             `
       )
-      .eq('user_id', userId)
+      .eq('viewer_profile_id', viewerProfileId)
       .eq('movie_id', movieId)
       .not('episode_id', 'is', null)
       .gt('progress_seconds', 0)
@@ -1353,11 +1359,15 @@ async function fetchContinueWatchingForTitle({ movieId }) {
       return null;
     }
 
-    const userId = userData?.user?.id;
-    if (!userId) {
+    const user = userData?.user;
+    if (!user?.id) {
       console.log('[title] sin sesión activa');
       return null;
     }
+
+    const activeViewerProfile = await getActiveViewerProfile({ user });
+    const viewerProfileId = activeViewerProfile?.id || null;
+    if (!viewerProfileId) return null;
 
     let { data, error } = await supabase
       .from('watch_progress')
@@ -1376,7 +1386,7 @@ async function fetchContinueWatchingForTitle({ movieId }) {
                 )
             `
       )
-      .eq('user_id', userId)
+      .eq('viewer_profile_id', viewerProfileId)
       .eq('movie_id', movieId)
       .gt('progress_seconds', 0)
       .order('updated_at', { ascending: false })
@@ -1405,7 +1415,7 @@ async function fetchContinueWatchingForTitle({ movieId }) {
                     )
                 `
         )
-        .eq('user_id', userId)
+        .eq('viewer_profile_id', viewerProfileId)
         .eq('movie_id', movieId)
         .gt('progress_seconds', 0)
         .order('updated_at', { ascending: false })

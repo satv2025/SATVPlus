@@ -9,6 +9,7 @@
 import {
   supabase
 } from "./supabaseClient.js";
+import { getActiveViewerProfile } from "./viewerProfiles.js";
 
 /* ============================================================
  * Config
@@ -1193,7 +1194,8 @@ async function resolveRouteAndBuildProps() {
         forceThumbsLocal,
         collectionMeta
       }),
-      liveGate
+      liveGate,
+      progress: { movieId: movie[m.id], episodeId: null }
     };
   }
 
@@ -1254,7 +1256,8 @@ async function resolveRouteAndBuildProps() {
         recommendations,
         forceThumbsLocal
       }),
-      liveGate
+      liveGate,
+      progress: { movieId: movie[m.id], episodeId: null }
     };
   }
 
@@ -1328,7 +1331,11 @@ async function resolveRouteAndBuildProps() {
         autoplay,
         forceThumbsLocal
       }),
-      liveGate
+      liveGate,
+      progress: {
+        movieId: resolvedSeriesId || episode[e.seriesId],
+        episodeId: episode[e.id]
+      }
     };
   }
 
@@ -1554,6 +1561,217 @@ function inspectMountedVideoLater() {
 }
 
 /* ============================================================
+ * Progreso por perfil de visualización
+ * ============================================================ */
+async function getViewerProgressContext() {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+
+  const session = data?.session || null;
+  const accountId = session?.user?.id || null;
+  if (!session || !accountId) return null;
+
+  const viewerProfile = await getActiveViewerProfile(session);
+  if (!viewerProfile?.id) return null;
+
+  return {
+    session,
+    accountId,
+    viewerProfileId: viewerProfile.id,
+    viewerProfile,
+  };
+}
+
+async function findViewerProgressRow({ viewerProfileId, movieId, episodeId }) {
+  let query = supabase
+    .from("watch_progress")
+    .select("id,progress_seconds,duration_seconds,updated_at")
+    .eq("viewer_profile_id", viewerProfileId)
+    .eq("movie_id", movieId);
+
+  query = episodeId
+    ? query.eq("episode_id", episodeId)
+    : query.is("episode_id", null);
+
+  const { data, error } = await query
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+async function waitForMountedVideo(timeoutMs = 12000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const video = getRootEl()?.querySelector?.("video");
+    if (video) return video;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return null;
+}
+
+async function bindViewerProfileProgress(result) {
+  if (result?.props?.isLiveMode || result?.props?.disableResumeForLive) return;
+
+  const movieId = result?.progress?.movieId || result?.props?.contentId || null;
+  const episodeId = result?.progress?.episodeId || null;
+  if (!movieId) return;
+
+  const context = await getViewerProgressContext();
+  if (!context) return;
+
+  const video = await waitForMountedVideo();
+  if (!video || video.__satvViewerProgressBound) return;
+  video.__satvViewerProgressBound = true;
+
+  const { accountId, viewerProfileId } = context;
+  result.props.viewerProfileId = viewerProfileId;
+
+  let rowId = null;
+  let savePending = false;
+  let lastSavedSecond = -1;
+  let lastSaveAt = 0;
+  let restored = false;
+
+  try {
+    const existing = await findViewerProgressRow({
+      viewerProfileId,
+      movieId,
+      episodeId,
+    });
+    rowId = existing?.id || null;
+
+    const restore = () => {
+      if (restored || !existing) return;
+      const progress = Number(existing.progress_seconds || 0);
+      const duration = Number(video.duration || existing.duration_seconds || 0);
+      if (!Number.isFinite(progress) || progress < 5) return;
+      if (duration > 0 && progress >= duration - 15) return;
+
+      restored = true;
+      try {
+        video.currentTime = progress;
+        infoLog(`[watch] progreso restaurado para perfil ${viewerProfileId}:`, progress);
+      } catch (error) {
+        warnLog("[watch] no se pudo restaurar progreso:", error);
+      }
+    };
+
+    if (video.readyState >= 1) restore();
+    else video.addEventListener("loadedmetadata", restore, { once: true });
+  } catch (error) {
+    warnLog("[watch] no se pudo leer progreso del perfil:", error);
+  }
+
+  async function deleteFinishedProgress() {
+    try {
+      let query = supabase
+        .from("watch_progress")
+        .delete()
+        .eq("viewer_profile_id", viewerProfileId)
+        .eq("movie_id", movieId);
+      query = episodeId ? query.eq("episode_id", episodeId) : query.is("episode_id", null);
+      const { error } = await query;
+      if (error) throw error;
+      rowId = null;
+    } catch (error) {
+      warnLog("[watch] no se pudo limpiar progreso finalizado:", error);
+    }
+  }
+
+  async function saveProgress({ force = false } = {}) {
+    if (savePending) return;
+
+    const progressSeconds = Math.max(0, Math.floor(Number(video.currentTime || 0)));
+    const durationSeconds = Math.max(0, Math.floor(Number(video.duration || 0)));
+    if (!Number.isFinite(progressSeconds) || progressSeconds < 5) return;
+
+    if (video.ended || (durationSeconds > 0 && progressSeconds >= durationSeconds - 15)) {
+      await deleteFinishedProgress();
+      return;
+    }
+
+    const now = Date.now();
+    if (!force) {
+      if (progressSeconds === lastSavedSecond) return;
+      if (now - lastSaveAt < 5000) return;
+    }
+
+    savePending = true;
+    const payload = {
+      user_id: accountId,
+      viewer_profile_id: viewerProfileId,
+      movie_id: movieId,
+      episode_id: episodeId,
+      progress_seconds: progressSeconds,
+      duration_seconds: durationSeconds || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      if (rowId) {
+        const { error } = await supabase
+          .from("watch_progress")
+          .update(payload)
+          .eq("id", rowId)
+          .eq("viewer_profile_id", viewerProfileId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from("watch_progress")
+          .insert(payload)
+          .select("id")
+          .single();
+
+        if (error) {
+          if (String(error.code || "") === "23505") {
+            const existing = await findViewerProgressRow({ viewerProfileId, movieId, episodeId });
+            rowId = existing?.id || null;
+            if (rowId) {
+              const retry = await supabase
+                .from("watch_progress")
+                .update(payload)
+                .eq("id", rowId)
+                .eq("viewer_profile_id", viewerProfileId);
+              if (retry.error) throw retry.error;
+            } else {
+              throw error;
+            }
+          } else {
+            throw error;
+          }
+        } else {
+          rowId = data?.id || null;
+        }
+      }
+
+      lastSavedSecond = progressSeconds;
+      lastSaveAt = now;
+    } catch (error) {
+      warnLog("[watch] no se pudo guardar progreso por perfil:", error);
+    } finally {
+      savePending = false;
+    }
+  }
+
+  video.addEventListener("timeupdate", () => { saveProgress().catch(() => {}); });
+  video.addEventListener("pause", () => { saveProgress({ force: true }).catch(() => {}); });
+  video.addEventListener("ended", () => { deleteFinishedProgress().catch(() => {}); });
+  video.addEventListener("seeking", () => { lastSavedSecond = -1; });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      saveProgress({ force: true }).catch(() => {});
+    }
+  });
+  window.addEventListener("pagehide", () => {
+    saveProgress({ force: true }).catch(() => {});
+  });
+}
+
+/* ============================================================
  * Render pipeline
  * ============================================================ */
 async function renderAndWaitPlayer(result) {
@@ -1577,8 +1795,9 @@ async function renderAndWaitPlayer(result) {
 
   const renderResult = window.renderAkiraPlayer(result.props);
 
-
-
+  const progressBindingPromise = bindViewerProfileProgress(result).catch((error) => {
+    warnLog("[watch] no se pudo inicializar progreso por perfil:", error);
+  });
 
   // NUEVO
   installAspectAutoDetection();
@@ -1603,6 +1822,7 @@ async function renderAndWaitPlayer(result) {
 
   }
 
+  await progressBindingPromise;
   inspectMountedVideoLater();
 }
 
