@@ -127,6 +127,12 @@ export function renderNav({ active = 'home' } = {}) {
       <div class="nav-actions" id="nav-actions"></div>
     </div>
   `;
+
+  // El buscador pertenece a la navegación global. Al iniciarlo acá,
+  // cualquier página que use renderNav() recibe la experiencia completa.
+  // Las funciones son idempotentes, así que home.js puede seguir llamándolas.
+  initTopnavSearch();
+  initSearchExperience();
 }
 
 /* =========================
@@ -1851,6 +1857,14 @@ export function renderSearchResults(items = [], query = '') {
       cardHtml(movie, null, null, null, { showCollectionOverlay: true })
     )
     .join('');
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent('app:searchrendered', {
+        detail: { root: host, query: safeQuery, items },
+      })
+    );
+  } catch (_) {}
 }
 
 function debouncedSearch(query, source = 'input') {
@@ -1921,6 +1935,8 @@ export function initSearchExperience() {
   if (__searchExperienceInit) return;
   __searchExperienceInit = true;
 
+  // Las cards del overlay usan data-href; activamos su navegación global.
+  enableDataHrefNavigation();
   ensureSearchOverlay();
 
   const currentUrl = getCurrentNonSearchUrl();

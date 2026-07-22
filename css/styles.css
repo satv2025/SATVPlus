@@ -322,7 +322,7 @@ button#btn-logout {
 .topnav-search-wrap,
 .nav-right .topnav-search-wrap {
   width: clamp(220px, 28vw, 386px);
-  max-width: 386px;
+  max-width: 255px;
   min-width: 180px;
   flex: 0 1 386px;
 }
@@ -336,7 +336,7 @@ button#btn-logout {
   padding: 0 14px;
   border: 2px solid #fff;
   border-radius: var(--radius);
-  background: rgba(0, 0, 0, .48);
+  background: rgba(51, 51, 51, .48);
   cursor: text;
   overflow: hidden;
   transition: background-color .16s ease, border-color .16s ease;
@@ -348,7 +348,7 @@ button#btn-logout {
 }
 
 .topnav-search-icon {
-  width: 20px;
+  width: 0;
   min-width: 13px;
   height: 100%;
   display: inline-flex;
@@ -356,6 +356,7 @@ button#btn-logout {
   color: #fff;
   font-size: 19px;
   order: 2;
+  margin-left: -1.3em;
 }
 
 .topnav-search-input {
@@ -2304,13 +2305,12 @@ body>.overlay-hover-tarjeta.overlay-hover-cerrando {
   padding: 0;
   border: 2px solid #fff;
   border-radius: var(--media-square-radius);
-  background: rgba(0, 0, 0, .48);
+  background: rgba(51, 51, 51, .48);
   color: #fff;
   cursor: pointer;
   transition:
     background-color .16s ease,
     border-color .16s ease;
-
   transform: translateY(.1em);
 }
 
@@ -3095,6 +3095,7 @@ button.alerts-tab:hover {
 .control-center-modal .control-quick-action span {
   min-width: 0;
   max-width: 100%;
+  text-decoration: none;
 }
 
 .control-center-modal .alerts-item-title,
@@ -3114,6 +3115,7 @@ button.alerts-tab:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .control-center-modal .alerts-item-sub,
@@ -3121,6 +3123,11 @@ button.alerts-tab:hover {
 .control-center-modal .control-quick-action small {
   margin-top: 3px;
   white-space: normal;
+  text-decoration: none;
+}
+
+.control-quick-action {
+  text-decoration: none !important;
 }
 
 .control-center-modal .alerts-item-mylist {
@@ -3204,4 +3211,10 @@ button.alerts-tab:hover {
   .control-stats-row {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
 }

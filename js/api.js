@@ -919,7 +919,7 @@ export async function searchMovies(query, limit = 24) {
         episodes_count
       )
     `)
-    .or(`title.ilike.${pattern},description.ilike.${pattern}`)
+    .ilike("title", pattern)
     .order("created_at", { ascending: false })
     .limit(safeLimit);
 

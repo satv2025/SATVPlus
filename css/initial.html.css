@@ -55,12 +55,6 @@
     min-width: 0 !important;
 }
 
-.topnav-search-wrap {
-    width: 100% !important;
-    max-width: 386px !important;
-    min-width: 0 !important;
-}
-
 .topnav-search,
 .topnav-search-input {
     width: 100% !important;
