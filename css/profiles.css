@@ -219,9 +219,9 @@ section button:hover {
 .profile-avatar-preview-wrap {
   width: 158px;
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: 50%;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, .16);
+  outline: 1px solid rgba(255, 255, 255, .16);
   background: #111;
 }
 
@@ -270,11 +270,13 @@ section button:hover {
 
 .avatar-choice {
   padding: 0;
-  border: 3px solid transparent;
+  outline: 4px solid transparent;
   border-radius: 50%;
   background: transparent;
   overflow: hidden;
   cursor: pointer;
+  outline-offset: -3px;
+  border: none;
 }
 
 .avatar-choice img {
@@ -285,8 +287,7 @@ section button:hover {
 }
 
 .avatar-choice.selected {
-  border-color: #fff;
-  box-shadow: 0 0 0 2px #ef008a;
+  outline-color: #fff;
 }
 
 .kids-toggle {
