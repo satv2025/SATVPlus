@@ -23,7 +23,7 @@
   margin: 0 0 8px;
 }
 
-.profiles-shell > .muted {
+.profiles-shell>.muted {
   font-size: 17px;
   margin: 0 0 34px;
 }
@@ -39,12 +39,17 @@
   position: relative;
 }
 
+.viewer-profile-card:hover .viewer-profile-name,
+section button:hover {
+  color: #fff;
+}
+
 .viewer-profile-main,
 .add-profile-card {
   width: 100%;
   border: 0;
   background: transparent;
-  color: inherit;
+  color: #9a9a9a;
   cursor: pointer;
   font: inherit;
 }
@@ -53,9 +58,10 @@
   position: relative;
   display: block;
   aspect-ratio: 1;
-  border-radius: 9px;
+  border-radius: 50%;
   overflow: hidden;
-  border: 3px solid transparent;
+  outline: 4px solid transparent;
+  outline-offset: -2px;
   transition: .18s ease;
 }
 
@@ -69,8 +75,7 @@
 .viewer-profile-main:hover .viewer-profile-avatar-wrap,
 .viewer-profile-main:focus-visible .viewer-profile-avatar-wrap,
 .add-profile-card:hover .add-profile-icon {
-  border-color: #fff;
-  transform: scale(1.035);
+  outline-color: #fff;
 }
 
 .viewer-profile-name {
@@ -81,6 +86,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #9a9a9a;
 }
 
 .kids-badge {
@@ -107,8 +113,9 @@
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  border: 3px solid rgba(255, 255, 255, .28);
-  border-radius: 9px;
+  outline: 4px solid rgba(255, 255, 255, .28);
+  outline-offset: -2px;
+  border-radius: 50%;
   font-size: 72px;
   font-weight: 200;
   color: #ddd;
@@ -264,7 +271,7 @@
 .avatar-choice {
   padding: 0;
   border: 3px solid transparent;
-  border-radius: 9px;
+  border-radius: 50%;
   background: transparent;
   overflow: hidden;
   cursor: pointer;
