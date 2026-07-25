@@ -2675,9 +2675,7 @@ function mountHomeHeroTrailerVideo(hero, movie) {
     if (p && typeof p.catch === 'function') p.catch(() => {});
   });
 
-  const rightSlot = hero.querySelector('.home-hero-right');
-  if (rightSlot) rightSlot.appendChild(volBtn);
-  else hero.appendChild(volBtn);
+  hero.appendChild(volBtn);
 
   syncVolumeUi();
 
