@@ -942,7 +942,7 @@ article.episode-card.more-card.collection-card:hover .more-card-thumb-wrap {
   inset: 0;
   z-index: 2;
   border-radius: inherit;
-  background: rgba(0, 0, 0, .18);
+  background: rgb(0 0 0 / 0%);
   opacity: 0;
   pointer-events: none;
   transition: opacity .16s ease;
@@ -955,16 +955,27 @@ article.episode-card.more-card.collection-card:hover .more-card-thumb-wrap {
   left: 50%;
   top: 50%;
   z-index: 3;
+
   width: 58px;
   height: 58px;
   transform: translate(-50%, -50%);
+
   border: 1px solid rgba(255, 255, 255, .75);
-  border-radius: var(--title-square-radius);
-  background: rgba(0, 0, 0, .52) center / 28px 28px no-repeat;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='white' d='M8 5v14l11-7z'/></svg>");
+  border-radius: 50%;
+
+  background-color: rgba(0, 0, 0, .52);
+  background-position: center;
+  background-repeat: no-repeat;
+
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='white' d='M7 5.6Q7 4 8.36 4.84L18.64 11.16Q20 12 18.64 12.84L8.36 19.16Q7 20 7 18.4Z'/></svg>");
+
   opacity: 0;
   pointer-events: none;
-  transition: opacity .16s ease, background-color .16s ease, border-color .16s ease;
+
+  transition:
+    opacity .16s ease,
+    background-color .16s ease,
+    border-color .16s ease;
 }
 
 .episode-card:hover .episode-thumb-wrap::before,
