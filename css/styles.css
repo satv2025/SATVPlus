@@ -80,7 +80,7 @@
 }
 
 * {
-  font-family: AEmber, ParamountPN, Cabin, system-ui, sans-serif !important;
+  font-family: AEmber !important;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
