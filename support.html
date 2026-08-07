@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="images/satvpluslogopro.png">
+  <meta name="theme-color" content="#222222">
+  <meta name="color-scheme" content="dark">
+
+  <title>Soporte de cuenta | SATV+</title>
+
+  <link rel="stylesheet" href="css/support.css">
+</head>
+
+<body>
+  <div class="page-shell">
+
+    <div class="topbar">
+      <div class="brand" id="brandHome" role="link" tabindex="0" aria-label="Ir a SATV+">
+        <span class="brand-name">SATV+</span>
+      </div>
+
+      <div class="topbar-copy">
+        <span>Soporte de cuenta</span>
+      </div>
+    </div>
+
+    <div class="page-grid">
+
+      <div class="intro-column">
+        <div class="intro-sticky">
+          <span class="kicker">Cuenta SATV+</span>
+
+          <h1>Soporte de cuenta</h1>
+
+          <p class="lead">
+            Gestioná solicitudes relacionadas con tu cuenta de SATV+: eliminación,
+            restauración o cualquier otra consulta.
+          </p>
+
+          <div class="summary-stack">
+            <div class="summary-item">
+              <div class="summary-index">01</div>
+              <div class="summary-copy">
+                <span class="summary-title">Tu solicitud</span>
+                <span class="summary-text">
+                  Completás los datos de tu cuenta y elegís qué querés solicitar.
+                </span>
+              </div>
+            </div>
+
+            <div class="summary-item">
+              <div class="summary-index">02</div>
+              <div class="summary-copy">
+                <span class="summary-title">Revisión</span>
+                <span class="summary-text">
+                  SATV+ Accounts recibe el pedido y puede contactarte para verificarlo.
+                </span>
+              </div>
+            </div>
+
+            <div class="summary-item">
+              <div class="summary-index">03</div>
+              <div class="summary-copy">
+                <span class="summary-title">Restauración posterior</span>
+                <span class="summary-text">
+                  Después de 30 días podés volver a contactarnos si querés solicitar
+                  la restauración de la cuenta.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="data-panel">
+            <span class="data-panel-title">Datos asociados a la cuenta</span>
+
+            <div class="data-tags">
+              <span>Cuenta</span>
+              <span>Perfiles</span>
+              <span>Mi Lista</span>
+              <span>Progreso</span>
+              <span>Recordatorios</span>
+              <span>Preferencias</span>
+            </div>
+
+            <p>
+              Determinados datos pueden conservarse durante el tiempo necesario
+              por motivos legales, de seguridad, prevención del fraude o para
+              gestionar una eventual restauración.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-column">
+        <div class="form-card">
+
+          <div class="form-head">
+            <div>
+              <span class="form-eyebrow">Solicitud</span>
+              <span class="form-title">¿Qué necesitás?</span>
+            </div>
+
+            <div class="status-dot-wrap" aria-hidden="true">
+              <span class="status-dot"></span>
+              <span class="status-label">SATV+ Accounts</span>
+            </div>
+          </div>
+
+          <div id="requestForm" class="custom-form">
+
+            <div class="field-row">
+              <div class="field">
+                <span class="field-label">Nombre y apellido</span>
+                <div
+                  class="control text-control"
+                  data-field="name"
+                  data-placeholder="Tu nombre"
+                  contenteditable="true"
+                  role="textbox"
+                  tabindex="0"
+                  aria-label="Nombre y apellido"
+                  spellcheck="false"
+                ></div>
+              </div>
+
+              <div class="field">
+                <span class="field-label">Email de tu cuenta SATV+</span>
+                <div
+                  class="control text-control"
+                  data-field="email"
+                  data-placeholder="nombre@correo.com"
+                  contenteditable="true"
+                  role="textbox"
+                  tabindex="0"
+                  aria-label="Email de tu cuenta SATV+"
+                  spellcheck="false"
+                ></div>
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="field-label">Tipo de solicitud</span>
+
+              <div class="dropdown" id="requestDropdown">
+                <div
+                  class="control dropdown-trigger"
+                  role="button"
+                  tabindex="0"
+                  aria-expanded="false"
+                >
+                  <span class="dropdown-value">Eliminar cuenta</span>
+                  <span class="dropdown-chevron" aria-hidden="true"></span>
+                </div>
+
+                <div class="dropdown-menu" hidden>
+                  <div
+                    class="dropdown-option is-selected"
+                    role="option"
+                    tabindex="0"
+                    data-value="Eliminar cuenta"
+                  >
+                    <span class="option-title">Eliminar cuenta</span>
+                    <span class="option-copy">Solicitar la eliminación de tu cuenta y datos asociados.</span>
+                  </div>
+
+                  <div
+                    class="dropdown-option"
+                    role="option"
+                    tabindex="0"
+                    data-value="Restaurar cuenta"
+                  >
+                    <span class="option-title">Restaurar cuenta</span>
+                    <span class="option-copy">Consultar la restauración de una cuenta solicitada previamente.</span>
+                  </div>
+
+                  <div
+                    class="dropdown-option"
+                    role="option"
+                    tabindex="0"
+                    data-value="Otra consulta"
+                  >
+                    <span class="option-title">Otra consulta</span>
+                    <span class="option-copy">Realizar una consulta relacionada con la gestión de tu cuenta.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="field-label">Asunto</span>
+              <div
+                class="control text-control"
+                data-field="subject"
+                contenteditable="true"
+                role="textbox"
+                tabindex="0"
+                aria-label="Asunto"
+                spellcheck="true"
+              >Eliminar mi cuenta de SATV+</div>
+            </div>
+
+            <div class="field">
+              <div class="field-label-row">
+                <span class="field-label">Mensaje</span>
+                <span class="field-counter"><span id="messageCount">80</span>/3000</span>
+              </div>
+
+              <div
+                class="control text-control textarea-control"
+                data-field="message"
+                contenteditable="true"
+                role="textbox"
+                tabindex="0"
+                aria-multiline="true"
+                aria-label="Mensaje"
+                spellcheck="true"
+              >Solicito la eliminación de mi cuenta de SATV+ y de los datos asociados a ella.</div>
+            </div>
+
+            <div class="verify-row">
+              <div
+                class="custom-check"
+                id="confirmCheck"
+                role="checkbox"
+                tabindex="0"
+                aria-checked="false"
+              >
+                <span class="check-box">
+                  <span class="check-mark">✓</span>
+                </span>
+
+                <span class="check-copy">
+                  Confirmo que el email indicado corresponde a mi cuenta de SATV+.
+                </span>
+              </div>
+            </div>
+
+            <div class="submit-row">
+              <div
+                class="submit-button"
+                id="submitRequest"
+                role="button"
+                tabindex="0"
+              >
+                <span class="submit-label">Enviar solicitud</span>
+                <span class="submit-arrow" aria-hidden="true">→</span>
+                <span class="submit-spinner" aria-hidden="true"></span>
+              </div>
+
+              <span class="submit-note">
+                Se enviará a support@accounts.satvplus.com.ar
+              </span>
+            </div>
+
+            <div id="formStatus" class="form-status" hidden></div>
+          </div>
+        </div>
+
+        <div class="privacy-note" id="account-deletion-information">
+          <span class="privacy-title">Sobre la restauración</span>
+          <p>
+            Después de 30 días desde tu solicitud podés volver a comunicarte con
+            SATV+ Accounts para solicitar una restauración. La posibilidad de
+            recuperación dependerá de que los datos necesarios continúen disponibles.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="js/support.js"></script>
+</body>
+</html>
