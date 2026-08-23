@@ -824,6 +824,12 @@ span.meta-dropitem {
   pointer-events: none;
 }
 
+.card-badge-upcoming,
+.card-badge-other {
+  background: #fff;
+  color: #000;
+}
+
 /* ================= EPISODE PROGRESS ================= */
 #episodes-grid .episode-card .episode-progress,
 #episodes-grid .episode-card.image-only-card .episode-progress {
