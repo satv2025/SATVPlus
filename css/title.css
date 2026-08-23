@@ -806,12 +806,22 @@ span.meta-dropitem {
 /* Badge de recomendaciones: ubicación original preservada */
 #more-grid .more-card-thumb-wrap .card-badge {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 5px;
+  right: 5px;
   z-index: 5;
+  max-width: calc(100% - 16px);
+  padding: 4px 8px;
   border: 0;
-  border-radius: 0 var(--title-radius) 0 0;
-  outline: 0;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, .74);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 /* ================= EPISODE PROGRESS ================= */
