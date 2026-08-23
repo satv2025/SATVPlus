@@ -824,8 +824,8 @@ span.meta-dropitem {
   pointer-events: none;
 }
 
-.card-badge-upcoming,
-.card-badge-other {
+#more-grid .more-card-thumb-wrap .card-badge-upcoming,
+#more-grid .more-card-thumb-wrap .card-badge-other {
   background: #fff;
   color: #000;
 }
