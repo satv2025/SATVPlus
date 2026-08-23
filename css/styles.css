@@ -3077,6 +3077,12 @@ button.alerts-tab:hover {
   gap: 10px;
 }
 
+a:visited {text-decoration: none;}
+
+a {
+    text-decoration: none;
+}
+
 .control-center-modal .alerts-item-thumb,
 .control-center-modal .alerts-mini-thumb {
   display: block;
