@@ -629,7 +629,7 @@ button#btn-logout {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  margin: 0 0 10px;
+  margin: 0 0 -4px;
   padding: 0;
 }
 
@@ -648,11 +648,10 @@ button#btn-logout {
 
 /* ================= CAROUSEL ================= */
 .carousel {
-  --row-gap: clamp(8px, .6vw, 12px);
+  --row-gap: 20px;
   --carousel-row-pad-top: 16px;
   --carousel-row-pad-bottom: 18px;
   --carousel-card-basis: calc((100% - (var(--row-gap) * 4)) / 5);
-
   position: relative;
   width: 100vw;
   max-width: 100vw;
@@ -804,17 +803,19 @@ button#btn-logout {
   margin-right: calc(50% - 50vw);
   margin-top: clamp(10px, 1.6vw, 18px);
   padding-inline: var(--carousel-section-pad);
+  display: none;
 }
 
 #allcataloggrid,
 #all-catalog-grid,
 .catalog-grid-5 {
-  --catalog-grid-gap: var(--row-gap, clamp(8px, .6vw, 12px));
+  --catalog-grid-gap: 24px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--catalog-grid-gap);
   width: 100%;
   padding-block: 16px 18px;
+  display: none;
 }
 
 /* Desktop: 5 columnas x 5 filas = 25 cards.
