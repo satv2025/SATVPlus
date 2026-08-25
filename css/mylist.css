@@ -7,7 +7,7 @@
    Tokens
 ----------------------------- */
 :root {
-    --satv-bg: #222222;
+    --satv-bg: #313131;
     --satv-bg-2: #313131;
     --satv-surface: #353535;
     --satv-surface-2: #3a3a3a;
@@ -88,7 +88,7 @@ body {
 
     background:
         radial-gradient(70% 80% at 80% 20%, rgba(255, 255, 255, 0.05), transparent 70%),
-        linear-gradient(180deg, #2a2a2a 0%, #222222 100%);
+        linear-gradient(180deg, #2a2a2a 0%, #313131 100%);
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 

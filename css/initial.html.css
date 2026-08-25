@@ -1,12 +1,12 @@
 /* home.css — overrides finales */
 
 :root {
-    --bg: #222222 !important;
+    --bg: #313131 !important;
     --panel: #313131 !important;
     --panel-2: #353535 !important;
     --panel-3: #3a3a3a !important;
     --satvblue: #434343 !important;
-    --hover-tarjeta-bg: #222222 !important;
+    --hover-tarjeta-bg: #313131 !important;
 
     --ui-pad-x: clamp(24px, 4vw, 54px) !important;
     --hero-synopsis-maxw: clamp(320px, 66vw, 720px) !important;

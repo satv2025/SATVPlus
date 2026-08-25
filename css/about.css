@@ -11,7 +11,7 @@
 
 :root {
     /* Paleta principal tomada de styles.css */
-    --bg: #222222;
+    --bg: #313131;
     --panel: #313131;
     --panel2: #353535;
     --text: #f5f7fb;
@@ -490,7 +490,7 @@ h1 {
     border-radius: var(--radius2);
     background:
         radial-gradient(circle at 50% 35%, rgba(255, 255, 255, .11), transparent 44%),
-        #222222;
+        #313131;
     overflow: hidden;
 }
 

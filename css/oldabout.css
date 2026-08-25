@@ -5,14 +5,14 @@
 
 /* ================= TOKENS ================= */
 :root {
-    --bg: #222222;
+    --bg: #313131;
     --panel: #313131;
     --panel2: #353535;
     --text: #f5f7fb;
     --muted: #b6bfd1;
     --satvblue: #434343;
     --selbg: #fff;
-    --seltext: #222222;
+    --seltext: #313131;
     --line: rgba(255, 255, 255, .10);
     --shadow: none;
     --radius: .25em;

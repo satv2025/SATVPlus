@@ -12,7 +12,7 @@
    Una sola fuente de verdad para radios, hover y overlays.
 ========================================================= */
 :root {
-  --bg: #222222;
+  --bg: #313131;
   --panel: #313131;
   --panel-2: #353535;
   --panel-3: #3a3a3a;
@@ -46,7 +46,7 @@
   --logo-gap: 18px;
 
   /* Hero */
-  --hero-overlay: #222222;
+  --hero-overlay: #313131;
   --hero-fade-height: 45%;
   --hero-h-desktop: clamp(420px, 56vw, 946px);
   --hero-title-max: min(720px, 96%);
@@ -60,7 +60,7 @@
   --arrow-h: clamp(132px, 11.46vw, 220px);
 
   /* Overlay de card */
-  --hover-tarjeta-bg: #222222;
+  --hover-tarjeta-bg: #313131;
   --hover-tarjeta-texto: #fff;
   --hover-tarjeta-radio: var(--media-card-radius);
   --hover-tarjeta-margen-seguro: 32px;
@@ -2000,7 +2000,7 @@ body>.overlay-hover-tarjeta {
 
   font-size: 16px !important;
   border-radius: var(--hover-tarjeta-radio, 9px);
-  background: var(--hover-tarjeta-bg, #222222);
+  background: var(--hover-tarjeta-bg, #313131);
   color: var(--hover-tarjeta-texto, #fff);
   box-shadow: rgba(0, 0, 0, 0.75) 0px 3px 10px;
   overflow: hidden;
@@ -2040,7 +2040,7 @@ body>.overlay-hover-tarjeta.overlay-hover-cerrando {
   width: 100%;
   min-height: 100%;
   border-radius: inherit;
-  background: var(--hover-tarjeta-bg, #222222);
+  background: var(--hover-tarjeta-bg, #313131);
   overflow: hidden;
 }
 
