@@ -619,7 +619,7 @@ button#btn-logout {
   position: relative;
   z-index: 1;
   width: 100%;
-  margin: clamp(12px, 2vw, 18px) 0 clamp(2.4rem, 6vw, 5em);
+  margin: clamp(12px, 2vw, 18px) 0 clamp(2.4rem, 6vw, 3em);
   padding-inline: var(--carousel-section-pad);
   overflow: visible;
 }
