@@ -835,7 +835,7 @@ span.meta-dropitem {
 #episodes-grid .episode-card.image-only-card .episode-progress {
   position: relative;
   z-index: 4;
-  width: 73%;
+  width: 95%;
   height: var(--ep-progress-h);
   margin: 8px auto 0;
   border-radius: 999px;
