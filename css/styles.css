@@ -713,7 +713,7 @@ button#btn-logout {
   padding: 0;
   border: 0;
   border-radius: 0;
-  background: rgba(20, 20, 20, .68);
+  background: #313131ad;
   color: #fff;
   cursor: pointer;
   opacity: 1;
@@ -724,7 +724,7 @@ button#btn-logout {
 }
 
 .carousel-btn:hover {
-  background: rgba(8, 8, 8, .90);
+  background: #313131f0;
 }
 
 .carousel-btn.left {
@@ -733,6 +733,10 @@ button#btn-logout {
 
 .carousel-btn.right {
   right: 0;
+}
+
+#continue-wrap .carousel-btn {
+  margin-top: clamp(-1em, -1vw, -0.35em);
 }
 
 .carousel-btn svg {
