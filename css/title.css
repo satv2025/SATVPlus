@@ -792,12 +792,12 @@ span.meta-dropitem {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px 7px;
+  padding: 3px 10px;
   border: 0;
-  border-radius: var(--title-radius);
-  background: rgba(0, 0, 0, .76);
+  border-radius: 6px;
+  text-shadow: 1.5px 0.5px 3.5px rgba(0, 0, 0, 1.5);
   color: #fff;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1;
   pointer-events: none;
