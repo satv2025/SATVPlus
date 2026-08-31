@@ -567,6 +567,7 @@ button#btn-logout {
 .home-hero-reminder.is-active {
   background: rgba(255, 255, 255, .16);
   border-color: #fff;
+  color: #fff;
 }
 
 .home-hero-mylist-icon,
