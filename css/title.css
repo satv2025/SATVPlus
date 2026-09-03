@@ -12,6 +12,9 @@
   --title-line-strong: rgba(255, 255, 255, .24);
   --title-hero-fade-height: 45%;
 
+  --item-radius: 5px;
+  --item-before-radius: 50%;
+
   /* Una sola referencia de radio para toda la página */
   --title-radius: var(--media-card-radius, 9px);
   --title-square-radius: var(--media-square-radius, 24%);
@@ -562,7 +565,7 @@ span.meta-dropitem {
   gap: 10px;
   padding: 9px 11px;
   border: 0;
-  border-radius: var(--title-radius);
+  border-radius: var(--item-radius);
   background: transparent;
   color: #fff;
   cursor: pointer;
@@ -578,7 +581,7 @@ span.meta-dropitem {
   width: 7px;
   height: 7px;
   flex: 0 0 7px;
-  border-radius: var(--title-square-radius);
+  border-radius: var(--itme-before-radius);
   background: transparent;
 }
 
