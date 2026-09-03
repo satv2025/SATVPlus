@@ -81,12 +81,14 @@ section {
   z-index: 1;
   height: var(--title-hero-fade-height);
   pointer-events: none;
-  background: linear-gradient(to top,
-      var(--title-bg) 0%,
-      rgb(from var(--title-bg) r g b / .96) 18%,
-      rgb(from var(--title-bg) r g b / .74) 42%,
-      rgb(from var(--title-bg) r g b / .32) 70%,
-      rgb(from var(--title-bg) r g b / 0) 100%);
+  background: linear-gradient(
+    to top,
+    var(--title-bg) 0%,
+    rgb(from var(--title-bg) r g b / .96) 18%,
+    rgb(from var(--title-bg) r g b / .74) 42%,
+    rgb(from var(--title-bg) r g b / .32) 70%,
+    rgb(from var(--title-bg) r g b / 0) 100%
+  );
 }
 
 .title-hero.hero-video-ready::after {
@@ -136,12 +138,14 @@ section {
   z-index: 1;
   height: var(--title-hero-fade-height);
   pointer-events: none;
-  background: linear-gradient(to top,
-      var(--title-bg) 0%,
-      rgb(from var(--title-bg) r g b / .96) 18%,
-      rgb(from var(--title-bg) r g b / .74) 42%,
-      rgb(from var(--title-bg) r g b / .32) 70%,
-      rgb(from var(--title-bg) r g b / 0) 100%);
+  background: linear-gradient(
+    to top,
+    var(--title-bg) 0%,
+    rgb(from var(--title-bg) r g b / .96) 18%,
+    rgb(from var(--title-bg) r g b / .74) 42%,
+    rgb(from var(--title-bg) r g b / .32) 70%,
+    rgb(from var(--title-bg) r g b / 0) 100%
+  );
 }
 
 #t-title {
@@ -436,8 +440,9 @@ span.meta-dropitem {
   top: calc(100% + 8px);
   left: 0;
   z-index: 1000;
-  min-width: 250px;
-  max-width: min(92vw, 420px);
+  width: max-content;
+  min-width: 100%;
+  max-width: 92vw;
   max-height: min(420px, 70vh);
   padding-inline: 6px;
   border: 1px solid var(--title-line);
@@ -576,12 +581,14 @@ span.meta-dropitem {
   margin-block: 6px;
 }
 
+/* Indicador desactivado */
 .dropdown-item::before {
   content: "";
+  display: none;
   width: 7px;
   height: 7px;
   flex: 0 0 7px;
-  border-radius: var(--itme-before-radius);
+  border-radius: var(--item-before-radius);
   background: transparent;
 }
 
@@ -592,11 +599,9 @@ span.meta-dropitem {
   color: #fff;
 }
 
-.dropdown-item.active::before {
-  background: #fff;
-}
-
 .dropdown-item.dropdown-all {
+  justify-content: center;
+  text-align: center;
   font-weight: 700;
 }
 
