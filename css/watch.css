@@ -24,21 +24,18 @@ body {
     position: relative;
 }
 
-/* ✅ Loader global de watch ultra prioritario */
+/* Loader global de watch: SIEMPRE por encima de Akira */
 #watch-loading-overlay {
     position: fixed;
     inset: 0;
     z-index: 2147483647 !important;
-    /* <--- CLAVE: Tapa cualquier cosa que inyecte Akira */
     display: grid;
     place-items: center;
     background: #000000 !important;
-    /* Fondo negro puro */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.22s ease, visibility 0.22s ease;
     pointer-events: all;
-    /* Bloquea clicks en el reproductor de fondo */
     box-sizing: border-box;
 }
 
@@ -47,20 +44,16 @@ body {
     visibility: visible;
 }
 
-/* Spinner modificado */
 .watch-loading-spinner {
     width: 84px;
     height: 84px;
     border-radius: 999px;
     border: 5px solid rgb(255 255 255 / 0%) !important;
-    /* Base blanca al 15% */
     border-top-color: #ffffff !important;
-    /* Giro blanco puro */
     animation: satv-watch-spin 0.8s linear infinite;
     box-sizing: border-box;
 }
 
-/* Texto del loader (opcional) */
 .watch-loading-text {
     font-size: 14px !important;
     opacity: 0.9;
@@ -72,9 +65,7 @@ body {
 }
 
 @keyframes satv-watch-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 
 .watch-error {
@@ -148,34 +139,15 @@ body {
     backdrop-filter: blur(6px);
 }
 
-#satv-debug-overlay.visible {
-    display: block;
-}
+#satv-debug-overlay.visible { display: block; }
+#satv-debug-overlay .line { margin-bottom: 6px; white-space: pre-wrap; word-break: break-word; }
+#satv-debug-overlay .line.err { color: #fca5a5; }
+#satv-debug-overlay .line.warn { color: #fde68a; }
+#satv-debug-overlay .line.ok { color: #86efac; }
 
-#satv-debug-overlay .line {
-    margin-bottom: 6px;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
+.akira-video.boltrue { object-fit: contain !important; }
 
-#satv-debug-overlay .line.err {
-    color: #fca5a5;
-}
-
-#satv-debug-overlay .line.warn {
-    color: #fde68a;
-}
-
-#satv-debug-overlay .line.ok {
-    color: #86efac;
-}
-
-.akira-video.boltrue {
-    object-fit: contain !important;
-}
-
-/* Esto hace que cuando se traba (waiting), el fondo sea transparente 
-   y solo se vea el spinner (o lo que tengas en .watch-loading-card) */
+/* Después del primer `playing`, waiting/stalled deja ver el video y muestra solo el spinner. */
 #watch-loading-overlay.middle-buffer {
     background: transparent !important;
 }

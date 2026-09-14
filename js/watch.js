@@ -1394,7 +1394,6 @@ function applyAspectModeFromVideo(video) {
   const enabled = window.__SATV_WATCH_LAST_PROPS__?.video_fit === "contain";
 
   video.classList.toggle("boltrue", enabled);
-  setForceVideoContain(enabled);
 }
 
 function getVideoAspectInfo(video) {
@@ -1416,9 +1415,6 @@ function installAspectAutoDetection() {
   const root = getRootEl();
   if (!root) return;
 
-
-
-  ensureAspectContainStyle();
 
   let lastVideo = null;
 
@@ -1885,137 +1881,123 @@ async function boot() {
 
 
 /* ============================================================
- * Escudo de Buffer: esperar OK real del player (UNMUTE)
- * - La overlay NO se va por timeout fijo (12s), sino cuando el <video> queda desmuteado.
- * - Mantiene el "middle-buffer" (waiting/playing) una vez que ya arrancó.
- * - Tiene fallback de seguridad para no quedar trabado si nunca llega el unmute.
+ * Escudo de Buffer — ARRANQUE + BUFFER INTERMEDIO
+ *
+ * CAPAS:
+ * 1) Akira conserva debajo su UI "Preparando reproducción...".
+ * 2) #watch-loading-overlay la tapa con negro + spinner mientras el video
+ *    TODAVÍA NO disparó su primer evento `playing`.
+ * 3) Después del primer `playing`, el overlay inicial se retira.
+ * 4) Si luego hay `waiting` / `stalled`, vuelve el MISMO spinner pero con
+ *    `.middle-buffer`, o sea fondo transparente y video visible.
  * ============================================================ */
 (function () {
   const overlay = document.getElementById("watch-loading-overlay");
-
   if (!overlay) return;
 
-  // Importante: no bloquear la interacción del usuario con el player (necesaria para desmutear)
+  // La capa puede tapar visualmente el player sin bloquear la interacción.
   overlay.style.pointerEvents = "none";
 
   const originalHide =
-    typeof window.hideWatchLoadingOverlay === "function" ?
-      window.hideWatchLoadingOverlay :
-      null;
+    typeof window.hideWatchLoadingOverlay === "function"
+      ? window.hideWatchLoadingOverlay
+      : null;
 
-  let unlocked = false;
   let videoEl = null;
   let started = false;
+  let initialShieldReleased = false;
 
-
-  const MAX_WAIT_MS = 45000; // fallback duro para evitar overlay infinita
+  const MAX_WAIT_MS = 45000;
   const POLL_MS = 250;
 
-  const showOverlay = () => {
+  const showOverlay = ({ middle = false } = {}) => {
+    overlay.classList.toggle("middle-buffer", !!middle);
     overlay.style.visibility = "visible";
     overlay.style.opacity = "1";
+    overlay.setAttribute("aria-hidden", "false");
   };
 
   const hideOverlay = () => {
     overlay.classList.remove("middle-buffer");
     overlay.style.visibility = "hidden";
     overlay.style.opacity = "0";
+    overlay.setAttribute("aria-hidden", "true");
   };
 
-  const isUnmuted = (v) => {
-    if (!v) return false;
-
-    const vol = typeof v.volume === "number" ? v.volume : 1;
-
-    return v.muted === false && vol > 0;
+  const callOriginalHide = () => {
+    if (typeof originalHide !== "function") return;
+    try {
+      originalHide();
+    } catch (e) {
+      console.warn("[watch] originalHide error:", e);
+    }
   };
 
-  const unlock = (reason) => {
-    if (unlocked) return;
-
-    unlocked = true;
+  const releaseInitialShield = (reason) => {
+    if (initialShieldReleased) return;
+    initialShieldReleased = true;
+    started = true;
 
     if (DEBUG) {
-      console.log("[watch] overlay unlock:", {
+      console.log("[watch] initial buffer released:", {
         reason,
-        muted: videoEl?.muted ?? null,
-        volume: videoEl?.volume ?? null,
         readyState: videoEl?.readyState ?? null,
         paused: videoEl?.paused ?? null,
         currentTime: videoEl?.currentTime ?? null
       });
     }
 
-    // Pedimos ocultar (si alguien ya lo pidió, ahora sí se va)
-    try {
-      window.hideWatchLoadingOverlay();
-    } catch { }
+    hideOverlay();
+    callOriginalHide();
   };
 
-  // Interceptamos el hide global: hasta que NO haya unmute, no se cierra.
+  // Cualquier intento externo de ocultarlo ANTES de `playing` se ignora.
+  // Así "Preparando reproducción..." sigue debajo, pero nunca queda visible
+  // durante el arranque porque el buffering negro está arriba.
   window.hideWatchLoadingOverlay = function () {
-    if (!unlocked) {
-      showOverlay();
-      overlay.classList.remove("middle-buffer");
+    if (!initialShieldReleased) {
+      showOverlay({ middle: false });
       return;
     }
 
     hideOverlay();
-
-
-    if (typeof originalHide === "function") {
-      try {
-        originalHide();
-      } catch (e) {
-        console.warn("[watch] originalHide error:", e);
-      }
-    }
+    callOriginalHide();
   };
-
-
-
 
   const bindVideo = (v) => {
     if (!v || v === videoEl) return;
-
     videoEl = v;
 
-    const markStarted = () => {
-      started = true;
-    };
-
-    // "OK real" = el usuario desmuteó (o el player quedó con audio ON)
-    const maybeUnlock = (why) => {
-      if (isUnmuted(videoEl)) unlock(why);
-    };
-
     v.addEventListener("playing", () => {
-      markStarted();
-      // Si ya estamos unlocked, el playing saca overlay de middle-buffer
-      if (unlocked) {
-        overlay.classList.remove("middle-buffer");
-        hideOverlay();
-
+      if (!started) {
+        releaseInitialShield("playing");
+        return;
       }
-      // si justo arrancó con audio on
-      maybeUnlock("playing");
+
+      // Salida de un buffering intermedio.
+      hideOverlay();
     });
 
-    v.addEventListener("volumechange", () => {
-      // muted/unmuted y cambios de volumen disparan esto
-      maybeUnlock("volumechange");
+    // Buffer intermedio: solo una vez que ya hubo reproducción real.
+    const showMiddleBuffer = () => {
+      if (!started || v.paused || v.ended) return;
+      showOverlay({ middle: true });
+    };
+
+    v.addEventListener("waiting", showMiddleBuffer);
+    v.addEventListener("stalled", showMiddleBuffer);
+
+    v.addEventListener("pause", () => {
+      if (started) hideOverlay();
     });
 
-    // Buffer intermedio (solo después de arrancar)
-    v.addEventListener("waiting", () => {
-      if (started && unlocked) {
-        overlay.classList.add("middle-buffer");
-        showOverlay();
-      }
+    v.addEventListener("ended", () => {
+      if (started) hideOverlay();
     });
 
-    // Por si ya vino desmuteado
-    maybeUnlock("bind");
+    v.addEventListener("error", () => {
+      if (started) hideOverlay();
+    });
   };
 
   const findVideo = () =>
@@ -2023,51 +2005,37 @@ async function boot() {
     document.querySelector("#akira-player-root .akira-video") ||
     document.querySelector("video");
 
-
-
-
-  // Intento inmediato
+  // Mientras esperamos el <video>, el escudo inicial SIEMPRE está visible.
+  showOverlay({ middle: false });
   bindVideo(findVideo());
 
-
-  // Observamos DOM para detectar cuando el player inserta el <video>
   const root = document.getElementById("akira-player-root") || document.body;
-
   const observer = new MutationObserver(() => {
-    if (!videoEl) bindVideo(findVideo());
-
-
-
-
+    const currentVideo = findVideo();
+    if (currentVideo && currentVideo !== videoEl) bindVideo(currentVideo);
   });
 
   try {
-    observer.observe(root, {
-      childList: true,
-      subtree: true
-    });
-
-
-
+    observer.observe(root, { childList: true, subtree: true });
   } catch { }
 
-  // Poll liviano por si el observer no dispara (o el video cambia)
   const poll = setInterval(() => {
-    if (unlocked) return;
-    if (!videoEl) bindVideo(findVideo());
-    else if (isUnmuted(videoEl)) unlock("poll");
+    const currentVideo = findVideo();
+    if (currentVideo && currentVideo !== videoEl) bindVideo(currentVideo);
   }, POLL_MS);
 
-  // Fallback duro (no debería pasar, pero evita quedarte colgado)
+  // Solo safety-net: si el navegador bloquea autoplay o nunca llega `playing`,
+  // no dejamos la página visualmente secuestrada para siempre.
   setTimeout(() => {
-    if (!unlocked) unlock("timeout");
+    if (!initialShieldReleased) {
+      console.warn("[watch] buffer inicial liberado por timeout de seguridad");
+      initialShieldReleased = true;
+      hideOverlay();
+      callOriginalHide();
+    }
     clearInterval(poll);
-    try {
-      observer.disconnect();
-    } catch { }
+    try { observer.disconnect(); } catch { }
   }, MAX_WAIT_MS);
-
-
 })();
 
 boot();
