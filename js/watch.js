@@ -883,7 +883,7 @@ function buildAkiraProps({
 
     recommendations: safeArray(recommendations),
     episodes: safeArray(episodes),
-    recommendationsLabel: "Te podría gustar",
+    recommendationsLabel: "Quizá también te guste",
 
     playlistMode: true,
 
