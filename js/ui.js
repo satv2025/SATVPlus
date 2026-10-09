@@ -16,7 +16,7 @@ import {
   fetchReleaseAlerts,
   fetchMyListPreview,
   markReleaseAlertsSeen,
-} from './api.js';
+} from './api.js?v=20261009-mundial-6';
 
 export function $(sel) {
   return document.querySelector(sel);
@@ -92,19 +92,70 @@ export function formatTime(secs) {
    NAVBAR
 ========================= */
 
+// Secciones compartidas: URLs normales, compatibles con recarga y Atrás.
+export const CATALOG_SECTIONS = Object.freeze({
+  peliculas: { label: 'Películas' },
+  series: { label: 'Series' },
+  deportes: { label: 'Deportes' },
+  tycsports: { label: 'TyC Sports', logo: 'tycsports.png' },
+  tntsportspremium: { label: 'TNT Sports Premium', logo: 'tntsports-premium.png' },
+  espnpremium: { label: 'ESPN Premium · LPF', logo: 'espn-premium.png' },
+  espn: { label: 'ESPN', logo: 'espn.png' },
+  mundial2026: { label: 'Mundial 2026', logo: 'mundial2026.png' },
+});
+
+export function getCatalogSection(search = window.location.search) {
+  const key = new URLSearchParams(search).get('section') || '';
+  return Object.prototype.hasOwnProperty.call(CATALOG_SECTIONS, key) ? key : '';
+}
+
+export function catalogSectionUrl(key) {
+  return Object.prototype.hasOwnProperty.call(CATALOG_SECTIONS, key)
+    ? `/?section=${encodeURIComponent(key)}` : '/';
+}
+
+// La clasificación se guarda explícitamente desde el panel.
+// Deportes incluye todos los marcados; ESPN reúne ESPN y ESPN Premium.
+export function matchesCatalogSection(movie, section) {
+  if (section === 'peliculas') return movie?.category === 'movie';
+  if (section === 'series') return movie?.category === 'series';
+  if (!Object.prototype.hasOwnProperty.call(CATALOG_SECTIONS, section)) return true;
+  if (movie?.is_sports !== true) return false;
+  if (section === 'deportes') return true;
+  const sections = Array.isArray(movie?.sports_sections) ? movie.sports_sections : [];
+  if (section === 'espn') return sections.includes('espn') || sections.includes('espnpremium');
+  return sections.includes(section);
+}
+
 export function renderNav({ active = 'home' } = {}) {
   const nav = document.getElementById('topnav');
   if (!nav) return;
 
   const url = new URL(window.location.href);
   const currentQuery = url.searchParams.get('q') || '';
+  const section = active === 'home' ? getCatalogSection(url.search) : '';
+  const navState = key => (key === 'home' ? active === 'home' && !section : section === key)
+    ? ' active' : '';
+  const ariaCurrent = key => navState(key) ? ' aria-current="page"' : '';
 
   nav.innerHTML = `
     <div class="nav-left">
-      <a class="brand" href="/index.html">
+      <a class="brand" href="/">
         <img src="https://api.satvplus.com.ar/storage/v1/object/public/general/Thumbnails/SATV_logo_fondo_transparente_alpha_A_limpia.png" alt="Logo" class="brand-logo"/>
       </a>
-      <a class="navlink ${active === 'home' ? 'active' : ''}" href="/index.html">Inicio</a>
+      <a class="navlink${navState('home')}" href="/"${ariaCurrent('home')}>Inicio</a>
+      <a class="navlink${active === 'mylist' ? ' active' : ''}" data-mylist-nav="1" href="/mylist"${active === 'mylist' ? ' aria-current="page"' : ''}>Mi Lista</a>
+      ${['peliculas', 'series', 'deportes'].map(key => `
+        <a class="navlink${navState(key)}" href="${catalogSectionUrl(key)}"${ariaCurrent(key)}>${CATALOG_SECTIONS[key].label}</a>
+      `).join('')}
+      <div class="nav-sports" role="group" aria-label="Deportes y canales">
+        <span class="navlink-separator" aria-hidden="true"></span>
+        ${['tycsports', 'tntsportspremium', 'espnpremium', 'espn', 'mundial2026'].map(key => `
+          <a class="navlink navlink-${key}${navState(key)}" href="${catalogSectionUrl(key)}" aria-label="${CATALOG_SECTIONS[key].label}" title="${CATALOG_SECTIONS[key].label}"${ariaCurrent(key)}>
+            <img class="nav-sports-logo" src="/images/nav/${CATALOG_SECTIONS[key].logo}" alt="${CATALOG_SECTIONS[key].label}">
+          </a>
+        `).join('')}
+      </div>
     </div>
 
     <div class="nav-right" id="nav-right" style="grid-column: 2 / -1;">
@@ -1058,7 +1109,7 @@ function renderMyListPreview(items = [], userId = null) {
     return `
       <div class="alerts-empty">
         Tu lista está vacía.
-        <a class="alerts-inline-link" href="/index.html">Explorar títulos</a>
+        <a class="alerts-inline-link" href="/">Explorar títulos</a>
       </div>
     `;
   }

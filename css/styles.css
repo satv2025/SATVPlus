@@ -3179,3 +3179,372 @@ input[type="search"]::-webkit-search-cancel-button {
   color: #FFFFFF !important;
   fill: #FFFFFF !important;
 }
+
+
+/* =========================================================
+   SATV+ — NAVEGACIÓN DEPORTIVA ESTILO PRIME VIDEO
+   Este bloque está al final para respetar el resto del sitio.
+   Los cuatro PNG son placeholders locales hasta subir los logos.
+   ========================================================= */
+
+/* Barra negra y opciones de menú compactas, sin borde permanente. */
+header.topnav {
+  background: transparent;
+}
+
+.topnav .nav-left {
+  gap: clamp(5px, .6vw, 11px);
+}
+
+.topnav .nav-left > a.navlink {
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: #f4f5f7;
+  font-size: 15px;
+  font-weight: 700;
+  background: transparent;
+  transition: color .16s ease, background-color .16s ease;
+}
+
+.topnav .nav-left > a.navlink:hover,
+.topnav .nav-left > a.navlink.active {
+  background: #fff;
+  color: #000;
+  border-color: transparent;
+}
+
+.topnav .nav-left .nav-sports {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+  gap: clamp(2px, .35vw, 7px);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* Separador de 1px como el del menú Prime Video. */
+.topnav .nav-left .navlink-separator {
+  display: block;
+  width: 1px;
+  height: 23px;
+  flex: 0 0 1px;
+  margin: 0 clamp(6px, .7vw, 12px);
+  background: rgba(225, 232, 241, .5);
+  pointer-events: none;
+}
+
+/* Áreas pulsables iguales en altura, con fondo solo en hover. */
+.topnav .nav-left .nav-sports > a.navlink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 7px clamp(5px, .5vw, 10px);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color .16s ease;
+}
+
+.topnav .nav-left .nav-sports > a.navlink:hover,
+.topnav .nav-left .nav-sports > a.navlink:focus-visible {
+  background: #fff;
+  border-color: transparent;
+}
+
+.navlink-espnpremium:hover {
+  background: #f00 !important;
+}
+
+/* Se conserva la proporción real de cada logo (sin estirar). */
+.topnav .nav-left .nav-sports .nav-sports-logo {
+  display: block;
+  width: auto;
+  height: 25px;
+  max-width: 95px;
+  object-fit: contain;
+  object-position: center;
+  opacity: .95;
+  transition: opacity .16s ease;
+}
+
+.topnav .nav-left .nav-sports > a.navlink:hover .nav-sports-logo {
+  opacity: 1;
+}
+
+.topnav .nav-left .navlink-tycsports .nav-sports-logo { max-width: 83px; }
+.topnav .nav-left .navlink-tntsportspremium .nav-sports-logo { max-width: 108px; }
+.topnav .nav-left .navlink-espnpremium .nav-sports-logo { max-width: 98px; }
+.topnav .nav-left .navlink-espn .nav-sports-logo { max-width: 75px; }
+
+/* Notebook: el buscador pasa a su propia fila para evitar colisiones.
+   Mayor especificidad por los !important de initial.html.css. */
+@media (max-width: 1200px) {
+  header.topnav {
+    position: relative !important;
+  }
+
+  .topnav #topnav.nav-inner {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas: "left" "right" !important;
+    row-gap: 4px !important;
+  }
+
+  .topnav #topnav.nav-inner > .nav-left {
+    grid-area: left !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+
+  .topnav #topnav.nav-inner > #nav-right {
+    grid-area: right !important;
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    justify-self: stretch !important;
+    justify-content: space-between !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .topnav #nav-right .topnav-search-wrap {
+    max-width: 360px !important;
+    min-width: 160px;
+    flex: 1 1 220px;
+  }
+}
+
+@media (max-width: 760px) {
+  /* SATV+, Inicio y Mi Lista arriba; canales en la fila siguiente. */
+  .topnav #topnav.nav-inner > .nav-left {
+    column-gap: 5px !important;
+    row-gap: 4px !important;
+  }
+
+  .topnav .nav-left .nav-sports {
+    flex-basis: 100%;
+    width: 100%;
+    gap: 5px;
+  }
+
+  .topnav .nav-left .navlink-separator {
+    display: none;
+  }
+
+  .topnav .nav-left .nav-sports .nav-sports-logo {
+    height: 22px;
+    max-width: 85px;
+  }
+}
+
+@media (max-width: 640px) {
+  .topnav #topnav.nav-inner {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas: "left" "right" !important;
+    padding-block: 9px;
+  }
+
+  .topnav #topnav.nav-inner > #nav-right {
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+    gap: 7px;
+  }
+
+  .topnav #nav-right .topnav-search-wrap {
+    max-width: none !important;
+    flex: 1 1 200px;
+  }
+
+  .topnav .nav-left > a.navlink {
+    padding: 7px 8px;
+    min-height: 36px;
+    font-size: 13px;
+  }
+
+  /* Scrolling horizontal solo del bloque de señales; sin barra visible. */
+  .topnav .nav-left .nav-sports {
+    width: 100%;
+    flex-basis: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+    padding: 2px 0;
+  }
+
+  .topnav .nav-left .nav-sports::-webkit-scrollbar { display: none; }
+
+  .topnav .nav-left .nav-sports > a.navlink {
+    min-height: 36px;
+    padding: 5px 8px;
+  }
+
+  .topnav .nav-left .nav-sports .nav-sports-logo {
+    height: 21px;
+    max-width: 80px;
+  }
+}
+
+@media (max-width: 380px) {
+  .topnav .nav-left .nav-sports > a.navlink { padding: 5px 6px; }
+  .topnav .nav-left .nav-sports .nav-sports-logo { height: 19px; }
+}
+
+
+/* Secciones y espacio para Películas / Series / Deportes.
+   Se conservan el fondo transparente y los hover del CSS enviado. */
+.topnav .nav-left > a.navlink { flex: 0 0 auto; white-space: nowrap; }
+.topnav .nav-left .nav-sports > a.navlink.active { background: #fff; }
+.topnav .nav-left .nav-sports > a.navlink-espnpremium.active { background: #f00; }
+.topnav .nav-left a.navlink:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+body.catalog-section-page header.topnav { position: relative !important; }
+body.catalog-section-page main > [hidden] { display: none !important; }
+.catalog-section-view { padding-block: 24px 48px; min-height: 55vh; }
+.catalog-section-view .section-title { font-size: clamp(24px, 3vw, 36px); }
+.catalog-section-view [data-section-status] { margin: 0 0 20px; }
+.catalog-section-view [data-section-retry][hidden] { display: none; }
+.catalog-section-view [data-section-retry] { margin-bottom: 20px; }
+
+/* La nueva cantidad de opciones necesita dos filas antes de 1800px. */
+@media (max-width: 1800px) {
+  header.topnav { position: relative !important; }
+  .topnav #topnav.nav-inner {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas: "left" "right" !important;
+    row-gap: 4px !important;
+  }
+  .topnav #topnav.nav-inner > .nav-left {
+    grid-area: left !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+  .topnav #topnav.nav-inner > #nav-right {
+    grid-area: right !important;
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    justify-self: stretch !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+  .topnav #nav-right .topnav-search-wrap {
+    max-width: 360px !important;
+    min-width: min(160px, 100%);
+    flex: 1 1 220px;
+  }
+}
+@media (max-width: 640px) {
+  .topnav #nav-right .topnav-search-wrap { max-width: none !important; }
+}
+
+
+/* Secciones: mostrar las tarjetas aunque la grilla general esté oculta. */
+.catalog-section-view [data-section-grid] {
+  display: grid;
+}
+.catalog-section-view [data-section-grid][hidden],
+.catalog-section-view [data-section-empty][hidden],
+.catalog-section-view [data-section-status][hidden] {
+  display: none !important;
+}
+.catalog-section-view .catalog-section-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(220px, 42vh, 480px);
+  width: 100%;
+  padding: clamp(24px, 5vw, 64px) 16px;
+  color: #fff;
+  text-align: center;
+}
+.catalog-section-view .catalog-section-empty-copy { max-width: 880px; }
+.catalog-section-view .catalog-section-empty h2 {
+  margin: 0;
+  font-size: clamp(26px, 3.2vw, 46px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+
+.catalog-section-view .catalog-section-empty p {
+  margin: 16px 0 0;
+  color: var(--muted, #a9afba);
+  font-size: clamp(15px, 1.3vw, 18px);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+
+/* Mundial 2026: negro, coral, violeta y verde menta del marcador de referencia.
+   Las franjas quedan dentro del botón para no recortarse en el nav móvil. */
+.topnav .nav-left .nav-sports > a.navlink-mundial2026 {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 14px;
+  transition: background-color .16s ease, box-shadow .16s ease;
+}
+.topnav .nav-left .nav-sports > a.navlink-mundial2026::before,
+.topnav .nav-left .nav-sports > a.navlink-mundial2026::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  width: 5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+.topnav .nav-left .nav-sports > a.navlink-mundial2026::before {
+  left: 0;
+  background: #f2a194;
+}
+.topnav .nav-left .nav-sports > a.navlink-mundial2026::after {
+  right: 0;
+  background: #b980e8;
+}
+.topnav .nav-left .nav-sports > a.navlink-mundial2026:hover,
+.topnav .nav-left .nav-sports > a.navlink-mundial2026:focus-visible,
+.topnav .nav-left .nav-sports > a.navlink-mundial2026.active {
+  background: linear-gradient(90deg, #f2a194 0%, #f2a194 28%, #3fffc1 50%, #b980e8 78%, #b980e8 100%)
+                left bottom / 100% 3px no-repeat,
+              #080a0b;
+  border-color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2),
+              inset 0 -1px 0 rgba(255, 255, 255, .12);
+}
+.topnav .nav-left .nav-sports > a.navlink-mundial2026:hover::before,
+.topnav .nav-left .nav-sports > a.navlink-mundial2026:hover::after,
+.topnav .nav-left .nav-sports > a.navlink-mundial2026:focus-visible::before,
+.topnav .nav-left .nav-sports > a.navlink-mundial2026:focus-visible::after,
+.topnav .nav-left .nav-sports > a.navlink-mundial2026.active::before,
+.topnav .nav-left .nav-sports > a.navlink-mundial2026.active::after {
+  opacity: 1;
+}
+.topnav .nav-left .nav-sports > a.navlink-mundial2026 .nav-sports-logo {
+  position: relative;
+  z-index: 1;
+  max-width: 86px;
+}
+@media (max-width: 640px) {
+  .topnav .nav-left .nav-sports > a.navlink-mundial2026 .nav-sports-logo {
+    max-width: 70px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topnav .nav-left .nav-sports > a.navlink-mundial2026,
+  .topnav .nav-left .nav-sports > a.navlink-mundial2026::before,
+  .topnav .nav-left .nav-sports > a.navlink-mundial2026::after,
+  .topnav .nav-left .nav-sports > a.navlink-mundial2026 .nav-sports-logo {
+    transition: none;
+  }
+}

@@ -24,7 +24,9 @@ const MOVIE_CARD_FIELDS = `
   live_starts_at,
   publish_state,
   publish_state_text,
-  collection_id
+  collection_id,
+  is_sports,
+  sports_sections
 `;
 
 const GEO_COUNTRY_CACHE_KEY = "satv_geo_country_v2";
@@ -851,6 +853,8 @@ export async function fetchMoreExcluding(movieId, limit = 24) {
       publish_state,
       publish_state_text,
       collection_id,
+      is_sports,
+      sports_sections,
       movie_meta!movie_id (
         seasons_count,
         episodes_count
@@ -891,6 +895,8 @@ export async function fetchCollection(collectionId, limit = 200) {
       publish_state,
       publish_state_text,
       collection_id,
+      is_sports,
+      sports_sections,
       movie_meta!movie_id (
         seasons_count,
         episodes_count

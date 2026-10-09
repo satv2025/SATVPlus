@@ -9,6 +9,9 @@
 
 import {
   renderNav,
+  CATALOG_SECTIONS,
+  getCatalogSection,
+  matchesCatalogSection,
   renderAuthButtons,
   toast,
   cardHtml,
@@ -20,7 +23,7 @@ import {
   buildTitleUrl,
   initTopnavSearch,
   initSearchExperience,
-} from './ui.js';
+} from './ui.js?v=20261009-mundial-6';
 
 import { getSession, requireAuthOrRedirect } from './auth.js';
 import {
@@ -32,7 +35,7 @@ import {
   isReleaseReminderSet,
   setReleaseReminder,
   removeReleaseReminder,
-} from './api.js';
+} from './api.js?v=20261009-mundial-6';
 import { supabase } from './supabaseClient.js';
 import { getActiveViewerProfile } from './viewerProfiles.js';
 
@@ -1158,6 +1161,8 @@ function ensureMyListNavLink(userId) {
   }
 
   link.href = buildMyListUrl(userId);
+  const inicio = navLeft.querySelector('a.navlink[href="/"]');
+  if (inicio) inicio.after(link);
 }
 
 /* =========================================================
@@ -3605,7 +3610,99 @@ function buildContinuePct(row) {
    INIT
 ========================================================= */
 
+/* Secciones del catálogo. Se cargan todas las páginas, sin el límite del Inicio. */
+async function fetchSectionCatalog(section) {
+  const catalog = [];
+  const pageSize = 500;
+  for (let offset = 0; ; ) {
+    let query = supabase.from('movies').select(`
+      id, title, description, thumbnail_url, banner_url, m3u8_url, vtt_url,
+      trailer_url, category, created_at, release_year, duration_minutes,
+      genres, live_mode, live_starts_at, publish_state, publish_state_text, collection_id,
+      is_sports, sports_sections
+    `).order('created_at', { ascending: false }).order('id', { ascending: true });
+    if (section === 'peliculas') query = query.eq('category', 'movie');
+    if (section === 'series') query = query.eq('category', 'series');
+    if (section !== 'peliculas' && section !== 'series') query = query.eq('is_sports', true);
+    const { data, error } = await query.range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    if (!data?.length) break;
+    catalog.push(...data.filter(movie => matchesCatalogSection(movie, section)));
+    // Avanzar por filas recibidas también respeta límites menores del servidor.
+    offset += data.length;
+  }
+  return getUniqueCatalogItems(catalog);
+}
+
+function hideHomeForCatalogSection() {
+  const main = document.querySelector('main.container') || document.querySelector('main');
+  if (!main) return null;
+  document.body.classList.add('catalog-section-page');
+  // .hidden tiene prioridad sobre display:flex/grid de los carruseles y el hero.
+  [...main.children].forEach(node => {
+    node.hidden = true;
+    node.classList.add('hidden');
+  });
+  return main;
+}
+
+async function renderCatalogPage(section) {
+  const main = hideHomeForCatalogSection();
+  if (!main) return;
+  const label = CATALOG_SECTIONS[section].label;
+  document.title = `${label} · SATV+`;
+  const host = document.createElement('section');
+  host.className = 'section catalog-section-view';
+  host.innerHTML = `
+    <div class="section-head"><h1 class="section-title">${escapeHtml(label)}</h1></div>
+    <p class="muted" data-section-status role="status" aria-live="polite">Cargando contenido…</p>
+    <button type="button" class="btn ghost" data-section-retry hidden>Reintentar</button>
+    <div class="catalog-section-empty" data-section-empty hidden role="status" aria-live="polite">
+      <div class="catalog-section-empty-copy">
+        <h2>Lo próximo está por llegar.</h2>
+        <p>Volvé pronto para descubrir nuevos títulos.</p>
+      </div>
+    </div>
+    <div class="catalog-grid catalog-grid-5" data-section-grid aria-busy="true" hidden></div>
+  `;
+  main.appendChild(host);
+  const status = host.querySelector('[data-section-status]');
+  const grid = host.querySelector('[data-section-grid]');
+  const retry = host.querySelector('[data-section-retry]');
+  const empty = host.querySelector('[data-section-empty]');
+  const load = async () => {
+    retry.hidden = true;
+    empty.hidden = true;
+    grid.hidden = true;
+    status.hidden = false;
+    status.textContent = 'Cargando contenido…';
+    grid.setAttribute('aria-busy', 'true');
+    try {
+      const items = await fetchSectionCatalog(section);
+      setRow(grid, items.map(movie => homeCatalogCardHtml(movie)).join(''));
+      promoteCatalogCardBadges(grid);
+      const hasTitles = items.length > 0;
+      grid.hidden = !hasTitles;
+      empty.hidden = hasTitles;
+      status.textContent = '';
+      status.hidden = true;
+      scheduleTwoLinesScan();
+    } catch (error) {
+      console.error('[home] error cargando sección:', error);
+      status.textContent = 'No se pudo cargar esta sección. Intentá de nuevo.';
+      retry.hidden = false;
+    } finally {
+      grid.setAttribute('aria-busy', 'false');
+    }
+  };
+  retry.addEventListener('click', load);
+  await load();
+}
+
 async function init() {
+  const catalogSection = getCatalogSection();
+  if (catalogSection) hideHomeForCatalogSection();
+
   applyDisguisedCssFromId(0, {
     linkId: 'app-style',
     disguisedPrefix: '/css/satvplusClient.',
@@ -3632,6 +3729,11 @@ async function init() {
 
   const userId = session?.user?.id || null;
   ensureMyListNavLink(userId);
+
+  if (catalogSection) {
+    await renderCatalogPage(catalogSection);
+    return;
+  }
 
   let activeViewerProfile = null;
   if (session) {
@@ -3785,6 +3887,7 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (getCatalogSection()) hideHomeForCatalogSection();
   const session = await requireAuthOrRedirect();
   if (!session) return;
   init();

@@ -2328,11 +2328,11 @@ async function main() {
 
   await ensureSupabaseGlobal();
 
-  const ui = await import('./ui.js');
-  const api = await import('./api.js');
+  const ui = await import('./ui.js?v=20261009-mundial-6');
+  const api = await import('./api.js?v=20261009-mundial-6');
 
   ui.setAppName?.();
-  ui.renderNav?.({ active: 'home' });
+  ui.renderNav?.({ active: 'title' });
   await ui.renderAuthButtons?.();
   ui.enableDataHrefNavigation?.();
   ui.applyDisguisedCssFromMovieId?.();

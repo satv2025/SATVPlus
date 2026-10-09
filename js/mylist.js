@@ -8,7 +8,7 @@
 // ✅ En /mylist: "Mi Lista" queda active e inclicable
 
 import { supabase } from "./supabaseClient.js";
-import * as ui from "./ui.js";
+import * as ui from "./ui.js?v=20261009-mundial-6";
 
 const LOCAL_MY_LIST_KEY = "satv_my_list_ids";
 
@@ -382,7 +382,7 @@ async function showMyList(profileId) {
 async function init() {
     try {
         ui.setAppName?.();
-        ui.renderNav?.({ active: "mylist" }); // ui.js no soporta mylist nativo
+        ui.renderNav?.({ active: "mylist" });
         await ui.renderAuthButtons?.();
         ui.enableDataHrefNavigation?.();
 
