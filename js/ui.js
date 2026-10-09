@@ -1,10 +1,11 @@
 // ui.js
 import { CONFIG } from './config.js';
-import { getSession, signOut } from './auth.js';
+import { getSession, signOut, requireAuthOrRedirect } from './auth.js?v=20261009-copas-10';
+import { profilePickerUrl, loginUrl } from './navigation.js?v=20261009-copas-10';
 import {
   getActiveViewerProfile,
   requireActiveViewerProfile,
-} from './viewerProfiles.js';
+} from './viewerProfiles.js?v=20261009-copas-10';
 import {
   fetchMovie,
   fetchLanguagePreference,
@@ -16,7 +17,7 @@ import {
   fetchReleaseAlerts,
   fetchMyListPreview,
   markReleaseAlertsSeen,
-} from './api.js?v=20261009-mundial-6';
+} from './api.js?v=20261009-copas-10';
 
 export function $(sel) {
   return document.querySelector(sel);
@@ -102,7 +103,69 @@ export const CATALOG_SECTIONS = Object.freeze({
   espnpremium: { label: 'ESPN Premium · LPF', logo: 'espn-premium.png' },
   espn: { label: 'ESPN', logo: 'espn.png' },
   mundial2026: { label: 'Mundial 2026', logo: 'mundial2026.png' },
+  libertadores: { label: 'Libertadores', logo: 'libertadores.png', summary: 'Muestra los partidos de la Copa Libertadores.' },
+  sudamericana: { label: 'Sudamericana', logo: 'sudamericana.png', summary: 'Muestra los partidos de la Copa Sudamericana.' },
 });
+
+const CUP_RULES = Object.freeze({
+  libertadores: { teams: [/\bestudiantes\b/, /\bflamengo\b/], terms: ['estudiantes', 'flamengo'] },
+  sudamericana: { teams: [/\bboca\b/, /\bvasco\b/], terms: ['boca', 'vasco'] },
+});
+
+function normalizeCupText(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function cupText(movie) {
+  return normalizeCupText([movie?.title, movie?.description, movie?.publish_state_text].filter(Boolean).join(' '));
+}
+
+function cupLocalDate(movie) {
+  const time = Date.parse(movie?.live_starts_at || '');
+  // Fechas de este fixture en Argentina/Uruguay (UTC-3).
+  return Number.isFinite(time) ? new Date(time - 3 * 60 * 60 * 1000).toISOString().slice(0, 10) : '';
+}
+
+export function isCupSemifinal2026(movie) {
+  const titleText = normalizeCupText(movie?.title);
+  const titleYear = titleText.match(/\b(20\d{2})\b/);
+  const date = cupLocalDate(movie);
+  const year = titleYear ? Number(titleYear[1]) : Number(date.slice(0, 4) || movie?.release_year || 0);
+  if (year && year !== 2026) return false;
+  // Una final no cambia de fase por mencionar las semifinales en su sinopsis.
+  if (/\bfinal\b/.test(titleText) && !/\b(?:semi\s?final(?:es)?|semis)\b/.test(titleText)) return false;
+  return /\b(?:semi\s?final(?:es)?|semis)\b/.test(cupText(movie))
+    || ['2026-10-13','2026-10-14','2026-10-15','2026-10-20','2026-10-21','2026-10-22'].includes(date);
+}
+
+function matchesCupPair(movie, section) {
+  const rule = CUP_RULES[section];
+  return !!rule && rule.teams.every(team => team.test(cupText(movie)));
+}
+
+export function inferredCupSection(movie) {
+  if (movie?.is_sports !== true || !isCupSemifinal2026(movie)) return '';
+  const candidates = Object.keys(CUP_RULES).filter(section => matchesCupPair(movie, section));
+  return candidates.length === 1 ? candidates[0] : '';
+}
+
+export function matchesCupSection(movie, section) {
+  if (!Object.prototype.hasOwnProperty.call(CUP_RULES, section) || movie?.is_sports !== true) return false;
+  const sections = Array.isArray(movie?.sports_sections) ? movie.sports_sections : [];
+  const explicitCup = sections.includes('libertadores') || sections.includes('sudamericana');
+  // Una semifinal de otra llave queda afuera aunque se marque esa copa.
+  if (isCupSemifinal2026(movie) && !matchesCupPair(movie, section)) return false;
+  if (sections.includes(section)) return true;
+  // Compatibilidad con títulos ya cargados; nunca reasigna una copa explícita.
+  return !explicitCup && inferredCupSection(movie) === section;
+}
+
+export function cupCatalogFilter(section) {
+  if (!Object.prototype.hasOwnProperty.call(CUP_RULES, section)) return '';
+  const [first, second] = CUP_RULES[section].terms;
+  return `sports_sections.cs.{${section}},and(or(title.ilike.%${first}%,description.ilike.%${first}%),or(title.ilike.%${second}%,description.ilike.%${second}%))`;
+}
 
 export function getCatalogSection(search = window.location.search) {
   const key = new URLSearchParams(search).get('section') || '';
@@ -122,6 +185,7 @@ export function matchesCatalogSection(movie, section) {
   if (!Object.prototype.hasOwnProperty.call(CATALOG_SECTIONS, section)) return true;
   if (movie?.is_sports !== true) return false;
   if (section === 'deportes') return true;
+  if (Object.prototype.hasOwnProperty.call(CUP_RULES, section)) return matchesCupSection(movie, section);
   const sections = Array.isArray(movie?.sports_sections) ? movie.sports_sections : [];
   if (section === 'espn') return sections.includes('espn') || sections.includes('espnpremium');
   return sections.includes(section);
@@ -150,8 +214,8 @@ export function renderNav({ active = 'home' } = {}) {
       `).join('')}
       <div class="nav-sports" role="group" aria-label="Deportes y canales">
         <span class="navlink-separator" aria-hidden="true"></span>
-        ${['tycsports', 'tntsportspremium', 'espnpremium', 'espn', 'mundial2026'].map(key => `
-          <a class="navlink navlink-${key}${navState(key)}" href="${catalogSectionUrl(key)}" aria-label="${CATALOG_SECTIONS[key].label}" title="${CATALOG_SECTIONS[key].label}"${ariaCurrent(key)}>
+        ${['tycsports', 'tntsportspremium', 'espnpremium', 'espn', 'mundial2026', 'libertadores', 'sudamericana'].map(key => `
+          <a class="navlink navlink-${key}${navState(key)}" href="${catalogSectionUrl(key)}" aria-label="${CATALOG_SECTIONS[key].label}" title="${CATALOG_SECTIONS[key].summary || CATALOG_SECTIONS[key].label}"${ariaCurrent(key)}>
             <img class="nav-sports-logo" src="/images/nav/${CATALOG_SECTIONS[key].logo}" alt="${CATALOG_SECTIONS[key].label}">
           </a>
         `).join('')}
@@ -637,33 +701,39 @@ async function maybeSuggestLanguageChange(session) {
   window.location.reload();
 }
 
-export async function renderAuthButtons() {
+export async function renderAuthButtons({ session: suppliedSession = null } = {}) {
   const host =
     document.getElementById('nav-actions') ||
     document.getElementById('nav-right');
 
   if (!host) return;
 
-  const session = await getSession();
+  const session = suppliedSession || (await getSession());
 
   if (!session) {
     host.innerHTML = `
-      <a class="btn ghost" href="/login.html">Entrar</a>
-      <a class="btn" href="/register.html">Crear cuenta</a>
+      <a class="btn ghost" href="${escapeHtml(loginUrl())}">Entrar</a>
+      <a class="btn" href="/register">Crear cuenta</a>
     `;
     return;
   }
 
-  let activeViewerProfile = null;
-  try {
-    activeViewerProfile = await requireActiveViewerProfile(session, {
-      redirect: true,
-    });
-    if (!activeViewerProfile) return;
-  } catch (e) {
-    console.warn('No se pudo verificar el perfil activo:', e);
-    window.location.replace('/profiles.html');
-    return;
+  // requireAuthOrRedirect ya verificó este perfil para esta misma cuenta.
+  // Las páginas que no entregan una sesión verificada conservan la validación.
+  const verifiedProfile = suppliedSession?.viewerProfile;
+  let activeViewerProfile = verifiedProfile?.account_id === session?.user?.id
+    ? verifiedProfile : null;
+  if (!activeViewerProfile) {
+    try {
+      activeViewerProfile = await requireActiveViewerProfile(session, {
+        redirect: true,
+      });
+      if (!activeViewerProfile) return null;
+    } catch (e) {
+      console.warn('No se pudo verificar el perfil activo:', e);
+      window.location.replace(profilePickerUrl());
+      return null;
+    }
   }
 
   let display = activeViewerProfile?.name || null;
@@ -697,17 +767,15 @@ export async function renderAuthButtons() {
     </button>
   `;
 
-  try {
-    await initAlertsBell(session);
-  } catch (e) {
+  // Los avisos y el idioma siguen funcionando sin bloquear el catálogo.
+  void initAlertsBell(session).catch(e => {
     console.warn('[ui] initAlertsBell error:', e);
-  }
-
-  try {
-    await maybeSuggestLanguageChange(session);
-  } catch (e) {
+  });
+  void maybeSuggestLanguageChange(session).catch(e => {
     console.warn('[ui] maybeSuggestLanguageChange error:', e);
-  }
+  });
+
+  return activeViewerProfile;
 }
 
 /* =========================
@@ -837,7 +905,7 @@ function ensureAlertsModalRoot() {
       try {
         await signOut();
       } finally {
-        window.location.href = '/login.html';
+        window.location.href = '/login';
       }
       return;
     }
@@ -1170,14 +1238,14 @@ function renderControlAccountPanel(data = {}) {
       </div>
 
       <div class="control-quick-grid">
-        <a class="control-quick-action" href="/profiles.html?next=${encodeURIComponent(window.location.pathname + window.location.search)}">
+        <a class="control-quick-action" href="/profiles?next=${encodeURIComponent(window.location.pathname + window.location.search)}">
           <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
           <span>
             <strong>Ver y editar perfiles</strong>
             <small>Cambiar de perfil o administrar los perfiles</small>
           </span>
         </a>
-        <a class="control-quick-action" href="/profile.html">
+        <a class="control-quick-action" href="/profile">
           <i class="fa-solid fa-id-card" aria-hidden="true"></i>
           <span>
             <strong>Cuenta</strong>
@@ -1626,7 +1694,8 @@ export function cardHtml(
 
   return `
     <div class="card${isContinueCard ? ' card-continue' : ''} no-select" role="link" tabindex="0" data-href="${href}">
-      <div class="thumb" style="background-image:url('${thumb}'); position:relative;">
+      <div class="thumb" style="position:relative;">
+        ${thumb ? `<img class="card-thumbnail-image" src="${escapeHtml(thumb)}" alt="" loading="lazy" decoding="async" width="640" height="360">` : ''}
         ${collectionOverlay}
         ${badge}
       </div>
@@ -1674,7 +1743,7 @@ function rememberSearchBaseUrl() {
 }
 
 function getFallbackBaseUrl() {
-  return __searchBaseUrl || '/index.html';
+  return __searchBaseUrl || '/';
 }
 
 function buildSearchUrl(query) {
@@ -2049,6 +2118,8 @@ export function initSearchExperience() {
     `);
 
     try {
+      const session = await requireAuthOrRedirect({ requireProfile: true });
+      if (!session || requestId !== __searchRequestSeq) return;
       const results = await searchMovies(query, 36);
       if (requestId !== __searchRequestSeq) return;
       renderSearchResults(results || [], query);

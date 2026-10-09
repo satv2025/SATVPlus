@@ -1,5 +1,6 @@
-import { getSession, signOut } from "./auth.js";
-import { toast, escapeHtml } from "./ui.js";
+import { requestedContentDestination, loginUrl } from "./navigation.js?v=20261009-copas-10";
+import { getSession, signOut } from "./auth.js?v=20261009-copas-10";
+import { toast, escapeHtml } from "./ui.js?v=20261009-copas-10";
 import {
   listProfileAvatars,
   listViewerProfiles,
@@ -11,7 +12,7 @@ import {
   clearActiveViewerProfile,
   explainViewerProfileError,
   DEFAULT_PROFILE_AVATAR,
-} from "./viewerProfiles.js";
+} from "./viewerProfiles.js?v=20261009-copas-10";
 
 const grid = document.getElementById("profiles-grid");
 const modal = document.getElementById("profile-modal");
@@ -65,9 +66,7 @@ function resetAvatarEditorState() {
 }
 
 function destination() {
-  const raw = new URL(location.href).searchParams.get("next");
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/profiles")) return "/index.html";
-  return raw;
+  return requestedContentDestination();
 }
 
 function renderAvatarPreview() {
@@ -175,8 +174,10 @@ function render() {
     const profile = profiles.find((p) => p.id === card.dataset.profileId);
     card.querySelector(".viewer-profile-main")?.addEventListener("click", () => {
       if (managing) return openModal(profile);
-      setActiveViewerProfile(accountId, profile.id);
-      window.location.replace(destination());
+      try {
+        setActiveViewerProfile(accountId, profile.id);
+        window.location.replace(destination());
+      } catch (error) { toast(error.message, 'error'); }
     });
     card.querySelector(".profile-delete")?.addEventListener("click", async (event) => {
       event.stopPropagation();
@@ -254,7 +255,7 @@ manageBtn.addEventListener("click", () => { managing = !managing; render(); });
 document.getElementById("logout-btn").addEventListener("click", async () => {
   clearActiveViewerProfile(accountId);
   await signOut();
-  window.location.replace("/login.html");
+  window.location.replace("/login");
 });
 
 uploadBtn?.addEventListener("click", () => avatarFileInput?.click());
@@ -293,7 +294,7 @@ document.addEventListener("keydown", (event) => {
 
 async function init() {
   session = await getSession();
-  if (!session) return window.location.replace("/login.html");
+  if (!session) return window.location.replace(loginUrl(destination()));
   accountId = session.user.id;
   try {
     [avatars, profiles] = await Promise.all([listProfileAvatars(), listViewerProfiles(accountId)]);
@@ -306,4 +307,7 @@ async function init() {
   }
 }
 
-init();
+init().catch(error => {
+  console.error('[profiles] init error:', error);
+  toast(explainViewerProfileError(error), 'error');
+});

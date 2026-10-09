@@ -1,10 +1,10 @@
 /* styles.css */
 
 /* ================= CUSTOM FONTS ================= */
-@import url("fonts/amazon/AEmber.css");
-@import url("fonts/discord/ggsans/GGSans.css");
+@import url("fonts/amazon/AEmber.css?v=20261009-copas-10");
+@import url("fonts/discord/ggsans/GGSans.css?v=20261009-copas-10");
 @import url("fonts/satvplusfont/satvplusfont.css");
-@import url("fonts/premium/proximanova/ParamountPN.css");
+@import url("fonts/premium/proximanova/ParamountPN.css?v=20261009-copas-10");
 @import url("https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400..700;1,400..700&display=swap");
 
 /* =========================================================
@@ -3197,8 +3197,8 @@ header.topnav {
 }
 
 .topnav .nav-left > a.navlink {
-  min-height: 42px;
-  padding: 9px 11px;
+  padding: 3px 11px 3px 11px;
+  min-height: 33px;
   border: 1px solid transparent;
   border-radius: 5px;
   color: #f4f5f7;
@@ -3208,11 +3208,16 @@ header.topnav {
   transition: color .16s ease, background-color .16s ease;
 }
 
-.topnav .nav-left > a.navlink:hover,
-.topnav .nav-left > a.navlink.active {
+.topnav .nav-left > a.navlink:hover {
   background: #fff;
   color: #000;
   border-color: transparent;
+}
+
+.navlink.active {
+    backdrop-filter: blur(17px);
+    color: #fff;
+    background: transparent;
 }
 
 .topnav .nav-left .nav-sports {
@@ -3547,4 +3552,176 @@ body.catalog-section-page main > [hidden] { display: none !important; }
   .topnav .nav-left .nav-sports > a.navlink-mundial2026 .nav-sports-logo {
     transition: none;
   }
+}
+
+
+/* Miniaturas: carga nativa según cercanía a la pantalla; mismo recorte 16:9. */
+.card > .thumb > img.card-thumbnail-image {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+
+/* CONMEBOL: logos locales incluidos y estados visibles sobre fondo oscuro. */
+.topnav .nav-left .nav-sports > a.navlink-libertadores,
+.topnav .nav-left .nav-sports > a.navlink-sudamericana {
+  border-radius: 5px;
+  gap: 7px;
+  --cup-accent: #c9aa63;
+}
+.topnav .nav-left .nav-sports > a.navlink-sudamericana { --cup-accent: #a6cdd3; }
+.topnav .nav-left .nav-sports > a.navlink-libertadores .nav-sports-logo,
+.topnav .nav-left .nav-sports > a.navlink-sudamericana .nav-sports-logo {
+  height: 28px;
+  width: auto;
+  max-width: 40px;
+  object-fit: contain;
+}
+.topnav .nav-cup-name {
+  color: #f4f5f7;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  white-space: nowrap;
+}
+.topnav .nav-left .nav-sports > a.navlink-libertadores:hover,
+.topnav .nav-left .nav-sports > a.navlink-libertadores:focus-visible,
+.topnav .nav-left .nav-sports > a.navlink-libertadores.active,
+.topnav .nav-left .nav-sports > a.navlink-sudamericana:hover,
+.topnav .nav-left .nav-sports > a.navlink-sudamericana:focus-visible,
+.topnav .nav-left .nav-sports > a.navlink-sudamericana.active {
+  background: #10191b;
+  box-shadow: inset 0 -3px 0 var(--cup-accent);
+}
+.catalog-section-view .catalog-section-summary {
+  max-width: 950px;
+  margin: -4px 0 22px;
+  color: var(--muted, #b2b8c2);
+  font-size: clamp(14px, 1.2vw, 16px);
+  line-height: 1.6;
+}
+@media (min-width: 641px) {
+  .topnav .nav-left .nav-sports { flex-wrap: wrap; }
+}
+@media (max-width: 640px) {
+  .topnav .nav-left .nav-sports > a.navlink-libertadores .nav-sports-logo,
+  .topnav .nav-left .nav-sports > a.navlink-sudamericana .nav-sports-logo {
+    height: 25px;
+    max-width: 36px;
+  }
+}
+
+/* ==============================================
+   CONMEBOL 2026 — FIXTURE INDEPENDIENTE DEL CATÁLOGO
+   Datos editables en js/cupFixtures.js
+============================================== */
+.catalog-section-view .cup-fixtures { margin: 10px 0 34px; --fixture-accent: #d6b66d; }
+.catalog-section-view .cup-fixtures-sudamericana { --fixture-accent: #9acbd8; }
+.catalog-section-view .cup-fixtures-heading {
+  display: flex; align-items: end; justify-content: space-between; gap: 16px;
+  margin: 0 0 18px;
+}
+.catalog-section-view .cup-fixtures-kicker {
+  margin: 0 0 5px; color: var(--fixture-accent); letter-spacing: .16em;
+  font-size: 11px; font-weight: 800;
+}
+.catalog-section-view .cup-fixtures-heading h2,
+.catalog-section-view .catalog-section-transmissions h2 {
+  margin: 0; color: #f9fafb; font-size: clamp(21px, 2vw, 27px);
+  line-height: 1.2; font-weight: 800;
+}
+.catalog-section-view .cup-fixtures-count {
+  color: #bbc1ca; font-size: 12px; font-weight: 700;
+  border: 1px solid rgba(255,255,255,.13); padding: 7px 12px;
+  border-radius: 999px; white-space: nowrap;
+}
+.catalog-section-view .cup-fixture-list {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;
+}
+.catalog-section-view .cup-fixture-card {
+  min-width: 0; overflow: hidden; border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.13);
+  background: linear-gradient(145deg, rgba(255,255,255,.055), transparent 52%), #11151c;
+  box-shadow: 0 10px 26px rgba(0,0,0,.14);
+}
+.catalog-section-view .cup-fixture-top {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; padding: 14px 17px;
+  border-bottom: 1px solid rgba(255,255,255,.09);
+}
+.catalog-section-view .cup-fixture-phase {
+  font-size: 12px; font-weight: 800; color: var(--fixture-accent);
+  letter-spacing: .02em;
+}
+.catalog-section-view .cup-fixture-year {
+  font-size: 11px; color: #aeb6c0; font-weight: 750;
+  border: 1px solid rgba(255,255,255,.12); border-radius: 5px; padding: 3px 6px;
+}
+.catalog-section-view .cup-fixture-match {
+  display: grid; grid-template-columns: minmax(0,1fr) 34px minmax(0,1fr);
+  gap: 10px; align-items: center; padding: 22px 16px;
+}
+.catalog-section-view .cup-fixture-team {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  min-width: 0; gap: 12px;
+}
+.catalog-section-view .cup-fixture-shield {
+  height: 66px; width: 66px; display: grid; place-items: center;
+  border-radius: 12px; background: rgba(255,255,255,.055);
+}
+.catalog-section-view .cup-fixture-shield img {
+  display: block; width: 58px; height: 58px; object-fit: contain;
+}
+.catalog-section-view .cup-fixture-team strong {
+  color: #f7f8fb; font-size: 14px; font-weight: 800;
+  line-height: 1.3; min-height: 2.6em; overflow-wrap: anywhere;
+}
+.catalog-section-view .cup-fixture-versus {
+  display: grid; place-items: center; width: 33px; height: 33px;
+  border-radius: 50%; font-size: 11px; font-weight: 900;
+  color: #e7eaf0; background: #242b37;
+}
+.catalog-section-view .cup-fixture-details {
+  border-top: 1px solid rgba(255,255,255,.09);
+  display: grid; grid-template-columns: repeat(2,minmax(0,1fr));
+}
+.catalog-section-view .cup-fixture-detail {
+  display: flex; align-items: flex-start; gap: 9px;
+  min-width: 0; padding: 14px 13px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.catalog-section-view .cup-fixture-detail:nth-child(odd) { border-right: 1px solid rgba(255,255,255,.07); }
+.catalog-section-view .cup-fixture-detail:nth-last-child(-n+2) { border-bottom: none; }
+.catalog-section-view .cup-fixture-detail > i {
+  margin-top: 2px; flex-shrink: 0; font-size: 13px; width: 15px;
+  text-align: center; color: var(--fixture-accent);
+}
+.catalog-section-view .cup-fixture-detail div { min-width: 0; }
+.catalog-section-view .cup-fixture-detail span {
+  display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600;
+  color: #a5afbd;
+}
+.catalog-section-view .cup-fixture-detail strong {
+  display: block; color: #e5e9ef; line-height: 1.45; font-size: 12px;
+  font-weight: 700; overflow-wrap: anywhere;
+}
+.catalog-section-view .cup-fixtures-footnote {
+  margin: 13px 0 0; color: #9ea8b5; font-size: 12px; line-height: 1.5;
+}
+.catalog-section-view .catalog-section-transmissions { margin: 34px 0 18px; }
+.catalog-section-view .catalog-section-transmissions[hidden] { display: none; }
+@media (max-width: 1150px) {
+  .catalog-section-view .cup-fixture-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 680px) {
+  .catalog-section-view .cup-fixture-list { grid-template-columns: minmax(0,1fr); gap: 14px; }
+  .catalog-section-view .cup-fixture-match { padding: 21px 16px; }
+  .catalog-section-view .cup-fixture-detail { padding: 13px 12px; }
+  .catalog-section-view .cup-fixtures-count { font-size: 11px; }
 }

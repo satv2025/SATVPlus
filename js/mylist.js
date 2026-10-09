@@ -1,3 +1,4 @@
+import { requireAuthOrRedirect } from "./auth.js?v=20261009-copas-10";
 // /js/mylist.js
 // ✅ Usa supabaseClient.js (sin modificarlo)
 // ✅ my_list(profile_id, content_id, added_at)
@@ -8,7 +9,7 @@
 // ✅ En /mylist: "Mi Lista" queda active e inclicable
 
 import { supabase } from "./supabaseClient.js";
-import * as ui from "./ui.js?v=20261009-mundial-6";
+import * as ui from "./ui.js?v=20261009-copas-10";
 
 const LOCAL_MY_LIST_KEY = "satv_my_list_ids";
 
@@ -149,15 +150,6 @@ function setHeroBackground(items) {
     hero.style.backgroundSize = "cover";
     hero.style.backgroundPosition = "center";
     hero.style.backgroundRepeat = "no-repeat";
-}
-
-async function getCurrentUserId() {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) {
-        console.error("[mylist] auth.getUser error:", error);
-        return null;
-    }
-    return data?.user?.id || null;
 }
 
 /* =========================================================
@@ -381,12 +373,15 @@ async function showMyList(profileId) {
 
 async function init() {
     try {
+        const session = await requireAuthOrRedirect({ requireProfile: true });
+        if (!session) return;
         ui.setAppName?.();
         ui.renderNav?.({ active: "mylist" });
-        await ui.renderAuthButtons?.();
+        const activeProfile = await ui.renderAuthButtons?.({ session });
+        if (!activeProfile) return;
         ui.enableDataHrefNavigation?.();
 
-        const profileId = await getCurrentUserId();
+        const profileId = session.user.id;
 
         // ✅ Topnav: "Mi Lista" a la derecha de "Inicio", active e inclicable
         ensureMyListNavLink(profileId, { active: true, disabled: true });

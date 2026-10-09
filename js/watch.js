@@ -1,3 +1,5 @@
+import { requireAuthOrRedirect } from "./auth.js?v=20261009-copas-10";
+
 // js/watch.js
 // SATV+ Watch loader
 // - Soporta movie / episode / series
@@ -9,7 +11,7 @@
 import {
   supabase
 } from "./supabaseClient.js";
-import { getActiveViewerProfile } from "./viewerProfiles.js";
+import { getActiveViewerProfile } from "./viewerProfiles.js?v=20261009-copas-10";
 
 /* ============================================================
  * Config
@@ -1274,28 +1276,16 @@ async function resolveRouteAndBuildProps() {
 
     const resolvedSeriesId = seriesId || episode[e.seriesId] || null;
 
-    let series = null;
-    let episodesList = [];
-
-    if (resolvedSeriesId && isUuid(resolvedSeriesId)) {
-      try {
-        series = await fetchSeriesById(resolvedSeriesId);
-        series = await normalizeFinishedLiveRow(series, {
-          liveModeKey: m.liveMode,
-          liveStartsAtKey: m.liveStartsAt
-        });
-      } catch (err) {
-        warnLog("[watch] No se pudo cargar serie:", err);
-      }
-
-      try {
-        episodesList = await fetchEpisodesForSeries(resolvedSeriesId);
-      } catch (err) {
-        warnLog("[watch] No se pudo cargar lista de episodios:", err);
-      }
-    }
-
-    const recommendations = await fetchRecommendations(resolvedSeriesId || null);
+    const validSeries = resolvedSeriesId && isUuid(resolvedSeriesId);
+    const [series, episodesList, recommendations] = await Promise.all([
+      validSeries ? fetchSeriesById(resolvedSeriesId).then(row => normalizeFinishedLiveRow(row, {
+        liveModeKey: m.liveMode, liveStartsAtKey: m.liveStartsAt
+      })).catch(error => { warnLog('[watch] No se pudo cargar serie:', error); return null; }) : Promise.resolve(null),
+      validSeries ? fetchEpisodesForSeries(resolvedSeriesId).catch(error => {
+        warnLog('[watch] No se pudo cargar lista de episodios:', error); return [];
+      }) : Promise.resolve([]),
+      fetchRecommendations(resolvedSeriesId || null),
+    ]);
 
     if (probe) {
       probeM3u8(episode[e.m3u8]);
@@ -1345,13 +1335,12 @@ async function resolveRouteAndBuildProps() {
       throw new Error("Parámetro ?series inválido (UUID esperado)");
     }
 
-    const series = await fetchSeriesById(seriesId);
+    const [series, episodesList] = await Promise.all([
+      fetchSeriesById(seriesId), fetchEpisodesForSeries(seriesId),
+    ]);
     await normalizeFinishedLiveRow(series, {
-      liveModeKey: m.liveMode,
-      liveStartsAtKey: m.liveStartsAt
+      liveModeKey: m.liveMode, liveStartsAtKey: m.liveStartsAt
     });
-
-    const episodesList = await fetchEpisodesForSeries(seriesId);
 
     if (!episodesList.length) {
       throw new Error("La serie no tiene episodios cargados");
@@ -1825,9 +1814,30 @@ async function renderAndWaitPlayer(result) {
 /* ============================================================
  * Boot
  * ============================================================ */
+let __playerAssetsPromise = null;
+function loadPlayerScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = () => { script.remove(); reject(new Error('No se pudo cargar el reproductor. Volvé a intentarlo.')); };
+    document.head.appendChild(script);
+  });
+}
+function ensurePlayerAssets() {
+  if (__playerAssetsPromise) return __playerAssetsPromise;
+  __playerAssetsPromise = (async () => {
+    if (!window.Hls) await loadPlayerScript('https://cdn.jsdelivr.net/npm/hls.js@1.5.18/dist/hls.min.js');
+    if (!window.AkiraPlayer) await loadPlayerScript('https://akira.satvplus.com.ar/AkiraPlayer.js');
+  })().catch(error => { __playerAssetsPromise = null; throw error; });
+  return __playerAssetsPromise;
+}
+
 async function boot() {
   try {
     setLoading();
+    const session = await requireAuthOrRedirect({ requireProfile: true });
+    if (!session) return;
 
 
 
@@ -1838,7 +1848,10 @@ async function boot() {
       throw new Error("Cliente Supabase inválido en supabaseClient.js");
     }
 
-    const result = await resolveRouteAndBuildProps();
+    const [result] = await Promise.all([
+      resolveRouteAndBuildProps(),
+      ensurePlayerAssets(),
+    ]);
 
 
     if (!result) return;

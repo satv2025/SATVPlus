@@ -1,4 +1,7 @@
-import { getActiveViewerProfile } from './viewerProfiles.js';
+import { requireAuthOrRedirect, getSession } from "./auth.js?v=20261009-copas-10";
+let __titleSession = null;
+
+import { getActiveViewerProfile } from './viewerProfiles.js?v=20261009-copas-10';
 
 /* ===========================
           title.js
@@ -445,7 +448,7 @@ function renderTitleNotFound() {
     const btn = document.getElementById('title-not-found-btn');
     if (btn) {
       btn.onclick = () => {
-        window.location.href = '/index.html';
+        window.location.href = '/';
       };
     }
   }
@@ -849,19 +852,9 @@ async function fetchEpisodeProgressMapForTitle({ movieId }) {
       return new Map();
     }
 
-    const { data: userData, error: userErr } = await supabase.auth.getUser();
-    if (userErr) {
-      console.warn('[title] getUser error (episode progress map):', userErr);
-      return new Map();
-    }
-
-    const user = userData?.user;
-    if (!user?.id) {
-      console.log('[title] sin sesión activa (episode progress map)');
-      return new Map();
-    }
-
-    const activeViewerProfile = await getActiveViewerProfile({ user });
+    const session = await getSession();
+    if (!session?.user?.id) return new Map();
+    const activeViewerProfile = await getActiveViewerProfile(session);
     const viewerProfileId = activeViewerProfile?.id || null;
     if (!viewerProfileId) return new Map();
 
@@ -954,7 +947,7 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
       data-episode="${ep.id}"
     >
       <div class="episode-thumb-wrap">
-        <img class="episode-thumb" src="${esc(thumb)}" alt="">
+        <img class="episode-thumb" src="${esc(thumb)}" alt="" loading="lazy" decoding="async" width="640" height="360">
         ${durationText ? `<span class="duration">${esc(durationText)}</span>` : ''}
       </div>
       ${
@@ -1353,19 +1346,9 @@ async function fetchContinueWatchingForTitle({ movieId }) {
       return null;
     }
 
-    const { data: userData, error: userErr } = await supabase.auth.getUser();
-    if (userErr) {
-      console.warn('[title] getUser error:', userErr);
-      return null;
-    }
-
-    const user = userData?.user;
-    if (!user?.id) {
-      console.log('[title] sin sesión activa');
-      return null;
-    }
-
-    const activeViewerProfile = await getActiveViewerProfile({ user });
+    const session = await getSession();
+    if (!session?.user?.id) return null;
+    const activeViewerProfile = await getActiveViewerProfile(session);
     const viewerProfileId = activeViewerProfile?.id || null;
     if (!viewerProfileId) return null;
 
@@ -1564,13 +1547,8 @@ async function getMyListAuthContext() {
     if (!supabase)
       return { supabase: null, profileId: null, isLoggedIn: false };
 
-    const { data, error } = await supabase.auth.getUser();
-    if (error) {
-      console.warn('[title] getUser (Mi Lista) error:', error);
-      return { supabase, profileId: null, isLoggedIn: false, error };
-    }
-
-    const profileId = data?.user?.id || null;
+    const session = await getSession();
+    const profileId = session?.user?.id || null;
     return { supabase, profileId, isLoggedIn: !!profileId };
   } catch (e) {
     console.warn('[title] getMyListAuthContext error:', e);
@@ -2063,7 +2041,7 @@ async function renderMoreCardHtml({ item, esc, api }) {
       data-title="${esc(item.id)}"
     >
       <div class="more-card-thumb-wrap">
-        <img class="episode-thumb" src="${esc(thumb)}" alt="">
+        <img class="episode-thumb" src="${esc(thumb)}" alt="" loading="lazy" decoding="async" width="640" height="360">
         ${badgeLabel ? `<div class="card-badge card-badge-upcoming">${esc(badgeLabel)}</div>` : ``}
       </div>
       <div class="episode-body more-card-body">
@@ -2191,7 +2169,7 @@ function renderCollectionCardHtml({ item, esc }) {
       data-title="${esc(item.id)}"
     >
       <div class="more-card-thumb-wrap">
-        <img class="episode-thumb" src="${esc(thumb)}" alt="">
+        <img class="episode-thumb" src="${esc(thumb)}" alt="" loading="lazy" decoding="async" width="640" height="360">
         ${durationText ? `<span class="duration">${esc(durationText)}</span>` : ''}
       </div>
       <div class="episode-body more-card-body collection-card-body">
@@ -2321,6 +2299,8 @@ async function renderCollectionSection({
 =========================== */
 
 async function main() {
+  __titleSession = await requireAuthOrRedirect({ requireProfile: true });
+  if (!__titleSession) return;
   const movieId = qs('title') || qs('movie');
   const collectionId = qs('collection');
 
@@ -2328,22 +2308,19 @@ async function main() {
 
   await ensureSupabaseGlobal();
 
-  const ui = await import('./ui.js?v=20261009-mundial-6');
-  const api = await import('./api.js?v=20261009-mundial-6');
+  const [ui, api] = await Promise.all([
+    import('./ui.js?v=20261009-copas-10'),
+    import('./api.js?v=20261009-copas-10'),
+  ]);
 
   ui.setAppName?.();
   ui.renderNav?.({ active: 'title' });
-  await ui.renderAuthButtons?.();
+  const activeProfile = await ui.renderAuthButtons?.({ session: __titleSession });
+  if (!activeProfile) return;
   ui.enableDataHrefNavigation?.();
   ui.applyDisguisedCssFromMovieId?.();
 
-  try {
-    const navCtx = await getMyListAuthContext();
-    ensureMyListNavLink(navCtx?.profileId || null);
-  } catch (e) {
-    console.warn('[title] no se pudo preparar link Mi Lista en topnav:', e);
-    ensureMyListNavLink(null);
-  }
+  ensureMyListNavLink(__titleSession.user.id);
 
   if (!movieId || !isUuidLike(movieId)) {
     renderTitleNotFound();
@@ -2392,36 +2369,9 @@ async function main() {
 
   applyAkiraVideoContainOverrideIfNeeded(movie.id);
 
-  let episodes = [];
-  let episodeProgressMap = new Map();
-
-  if (movie.category === 'series' && typeof api.fetchEpisodes === 'function') {
-    try {
-      episodes = await api.fetchEpisodes(movie.id);
-      episodes = await hydrateEpisodeDurations(episodes);
-    } catch (e) {
-      console.warn(
-        '[title] no se pudieron cargar episodios para meta robusta:',
-        e
-      );
-      episodes = [];
-    }
-
-    try {
-      episodeProgressMap = await fetchEpisodeProgressMapForTitle({
-        movieId: movie.id,
-      });
-    } catch (e) {
-      console.warn('[title] no se pudo cargar progress map de episodios:', e);
-      episodeProgressMap = new Map();
-    }
-  }
-
-  movie.__episodes_for_meta = episodes;
-
   document.title = `${movie.title || 'Título'} · SATV+`;
 
-  await bindMyListButton(myListBtn, movie);
+  void bindMyListButton(myListBtn, movie).catch(error => console.warn('[title] Mi Lista:', error));
 
   const NIVELX_ID = '0acf7d27-5a80-4682-873a-760dd1ffdb51';
   document.body.classList.toggle('is-nivelx', movie.id === NIVELX_ID);
@@ -2439,7 +2389,7 @@ async function main() {
   const publishState = getMoviePublishState(movie);
   const publishStateLabel = getMoviePublishStateLabel(movie);
 
-  await bindTitleReleaseReminderButton(remindBtn, movie, api);
+  void bindTitleReleaseReminderButton(remindBtn, movie, api).catch(error => console.warn('[title] aviso:', error));
 
   const isUpcomingLiveCountdown = setWatchBtnLiveCountdown(watchBtn, movie);
 
@@ -2453,16 +2403,33 @@ async function main() {
         setWatchBtnVerAhora(watchBtn, movie);
       }
 
-      try {
-        const progress = await fetchContinueWatchingForTitle({
-          movieId: movie.id,
-        });
+      void fetchContinueWatchingForTitle({ movieId: movie.id }).then(progress => {
         if (progress) setWatchBtnReanudar(watchBtn, movie, progress);
-      } catch (e) {
-        console.warn('No se pudo leer watch_progress:', e);
-      }
+      }).catch(error => console.warn('[title] watch_progress:', error));
     }
   }
+
+  const secondarySections = [renderMoreSection({ api, esc, currentMovieId: movie.id })];
+  if (collectionId) secondarySections.push(renderCollectionSection({ api, esc, collectionId, currentMovieId: movie.id }));
+  void Promise.allSettled(secondarySections).then(results => {
+    for (const result of results) if (result.status === 'rejected') console.warn('[title] sección adicional:', result.reason);
+  });
+
+  let episodes = [];
+  let episodeProgressMap = new Map();
+  let refreshEpisodeProgress = null;
+  if (movie.category === 'series' && typeof api.fetchEpisodes === 'function') {
+    const episodesPromise = api.fetchEpisodes(movie.id).then(hydrateEpisodeDurations).catch(error => {
+      console.warn('[title] no se pudieron cargar episodios:', error);
+      return [];
+    });
+    void fetchEpisodeProgressMapForTitle({ movieId: movie.id }).then(map => {
+      episodeProgressMap = map;
+      refreshEpisodeProgress?.();
+    }).catch(error => console.warn('[title] no se pudo cargar progreso:', error));
+    episodes = await episodesPromise;
+  }
+  movie.__episodes_for_meta = episodes;
 
   const year = movie.release_year ? String(movie.release_year) : '';
   let right = '';
@@ -2534,32 +2501,12 @@ async function main() {
   }
 
   if (!episodesSection || !episodesTitle || !seasonFilter || !episodesGrid) {
-    if (collectionId) {
-      await renderCollectionSection({
-        api,
-        esc,
-        collectionId,
-        currentMovieId: movie.id,
-      });
-    }
-
-    await renderMoreSection({ api, esc, currentMovieId: movie.id });
     return;
   }
 
   if (movie.category !== 'series') {
     episodesSection.classList.add('hidden');
 
-    if (collectionId) {
-      await renderCollectionSection({
-        api,
-        esc,
-        collectionId,
-        currentMovieId: movie.id,
-      });
-    }
-
-    await renderMoreSection({ api, esc, currentMovieId: movie.id });
     return;
   }
 
@@ -2571,16 +2518,6 @@ async function main() {
   if (!episodes?.length) {
     episodesGrid.innerHTML = `<div class="muted">No hay episodios cargados.</div>`;
 
-    if (collectionId) {
-      await renderCollectionSection({
-        api,
-        esc,
-        collectionId,
-        currentMovieId: movie.id,
-      });
-    }
-
-    await renderMoreSection({ api, esc, currentMovieId: movie.id });
     return;
   }
 
@@ -2837,16 +2774,7 @@ async function main() {
   renderSeasonSelector();
   renderEpisodesGrid();
 
-  if (collectionId) {
-    await renderCollectionSection({
-      api,
-      esc,
-      collectionId,
-      currentMovieId: movie.id,
-    });
-  }
-
-  await renderMoreSection({ api, esc, currentMovieId: movie.id });
+  refreshEpisodeProgress = renderEpisodesGrid;
 }
 
 main().catch(console.error);

@@ -2,11 +2,16 @@
 <html lang="es">
 
   <head>
+    <link rel="preload" as="style" href="/css/fonts/amazon/AEmber.css?v=20261009-copas-10">
+    <link rel="preload" as="style" href="/css/fonts/discord/ggsans/GGSans.css?v=20261009-copas-10">
+    <link rel="preload" as="style" href="/css/fonts/satvplusfont/satvplusfont.css">
+    <link rel="preload" as="style" href="/css/fonts/premium/proximanova/ParamountPN.css?v=20261009-copas-10">
+
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Registrarse · SATV+</title>
-    <link rel="stylesheet" href="/css/styles.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/styles.css?v=20261009-copas-10" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css?v=20261009-copas-10">
     <link rel="icon" href="images/satvpluslogopro.png">
 
     <!-- estilos SOLO para el ojo -->
@@ -103,7 +108,7 @@
 
           <div class="form-actions">
             <button class="btn" type="submit">Registrarme</button>
-            <a class="btn ghost" href="/login.html">Ya tengo cuenta</a>
+            <a class="btn ghost" href="/login">Ya tengo cuenta</a>
           </div>
         </form>
       </div>
@@ -113,18 +118,29 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
-      import { getSession } from "/js/auth.js";
-
-      const session = await getSession();
-      if (session) {
-        window.location.replace("/profiles.html");
+      import { profilePickerUrl, requestedContentDestination, loginUrl } from "/js/navigation.js?v=20261009-copas-10";
+      import { clearActiveViewerProfile } from "/js/viewerProfiles.js?v=20261009-copas-10";
+      const nextDestination = requestedContentDestination();
+      const switchAuthLink = document.querySelector('a[href="/register"], a[href="/login"]');
+      if (switchAuthLink) {
+        const target = switchAuthLink.getAttribute('href').replace(/\.html$/, '');
+        switchAuthLink.href = target + '?next=' + encodeURIComponent(nextDestination);
       }
+      import { getSession } from "/js/auth.js?v=20261009-copas-10";
 
-      import { renderNav, renderAuthButtons, toast, $ } from "/js/ui.js";
-      import { signUpWithEmail } from "/js/auth.js";
+      try {
+        const session = await getSession();
+        if (session) {
+          clearActiveViewerProfile(session.user.id);
+          window.location.replace(profilePickerUrl(nextDestination));
+        }
+      } catch (error) { console.warn('[register] no se pudo verificar sesión:', error); }
+
+      import { renderNav, toast, $ } from "/js/ui.js?v=20261009-copas-10";
+      import { signUpWithEmail } from "/js/auth.js?v=20261009-copas-10";
 
       renderNav({ active: "" });
-      renderAuthButtons();
+
 
       // ====== OJO CONTRASEÑA (SVG #2563eb via currentColor) ======
       const ICON_HIDE = `
@@ -175,10 +191,10 @@
           const currentSession = await getSession();
           if (currentSession) {
             toast("Cuenta creada. Ahora creá tu perfil ✅", "success");
-            setTimeout(() => window.location.href = "/profiles.html", 500);
+            setTimeout(() => window.location.replace(profilePickerUrl(nextDestination)), 500);
           } else {
             toast("Cuenta creada. Confirmá el email ✅", "success");
-            setTimeout(() => window.location.href = "/login.html", 700);
+            setTimeout(() => window.location.replace(loginUrl(nextDestination)), 700);
           }
         } catch (err) {
           console.error(err);

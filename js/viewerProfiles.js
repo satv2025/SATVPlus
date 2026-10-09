@@ -1,10 +1,29 @@
 import { supabase } from "./supabaseClient.js";
+import { profilePickerUrl } from "./navigation.js?v=20261009-copas-10";
 
 const ACTIVE_PREFIX = "satv_active_viewer_profile";
 export const DEFAULT_PROFILE_AVATAR = "/images/profile-avatars/avatar-01.png";
 export const VIEWER_PROFILE_PHOTOS_BUCKET = "viewer-profile-photos";
 
+const SELECTED_PREFIX = "satv_selected_viewer_profile_v1";
+const AVATAR_CACHE_KEY = "satv_profile_avatars_v1";
+const AVATAR_CACHE_TTL = 5 * 60 * 1000;
 let __avatarCatalogCache = null;
+let __avatarCatalogExpiresAt = 0;
+let __avatarCatalogPromise = null;
+let __activeProfileCache = null;
+let __activeProfilePromise = null;
+let __activeProfileGeneration = 0;
+
+function invalidateActiveProfileCache() {
+  __activeProfileGeneration++;
+  __activeProfileCache = null;
+  __activeProfilePromise = null;
+}
+
+function selectedKey(accountId) {
+  return `${SELECTED_PREFIX}:${accountId}`;
+}
 
 function sessionUserId(session) {
   return session?.user?.id || session?.session?.user?.id || null;
@@ -51,34 +70,58 @@ function extractStoragePathFromPublicUrl(url) {
 }
 
 export function clearActiveViewerProfile(accountId) {
+  invalidateActiveProfileCache();
   if (!accountId) return;
+  try { sessionStorage.removeItem(selectedKey(accountId)); } catch (_) {}
   try { localStorage.removeItem(activeKey(accountId)); } catch (_) {}
 }
 
+// Sólo la elección explícita en el selector habilita esta visita.
 export function setActiveViewerProfile(accountId, profileId) {
   if (!accountId || !profileId) return;
-  localStorage.setItem(activeKey(accountId), String(profileId));
+  try {
+    sessionStorage.setItem(selectedKey(accountId), String(profileId));
+  } catch (_) {
+    throw new Error("Permití el almacenamiento de esta pestaña para elegir tu perfil.");
+  }
+  try { localStorage.setItem(activeKey(accountId), String(profileId)); } catch (_) {}
+  invalidateActiveProfileCache();
 }
 
 export function getStoredActiveViewerProfileId(accountId) {
   if (!accountId) return null;
-  try { return localStorage.getItem(activeKey(accountId)); } catch (_) { return null; }
+  try { return sessionStorage.getItem(selectedKey(accountId)); } catch (_) { return null; }
 }
 
 export async function listProfileAvatars({ force = false } = {}) {
-  if (!force && Array.isArray(__avatarCatalogCache)) {
-    return __avatarCatalogCache;
+  if (!force && Array.isArray(__avatarCatalogCache) && Date.now() < __avatarCatalogExpiresAt) return __avatarCatalogCache;
+  if (__avatarCatalogPromise) return __avatarCatalogPromise;
+  if (!force) {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(AVATAR_CACHE_KEY) || 'null');
+      if (Array.isArray(saved?.items) && Date.now() - saved.ts < AVATAR_CACHE_TTL && saved.ts <= Date.now()) {
+        __avatarCatalogCache = saved.items;
+        __avatarCatalogExpiresAt = saved.ts + AVATAR_CACHE_TTL;
+        return __avatarCatalogCache;
+      }
+    } catch (_) {}
   }
-
-  const { data, error } = await supabase
-    .from("profile_avatars")
-    .select("avatar_key,label,image_url,sort_order")
-    .eq("active", true)
-    .order("sort_order", { ascending: true });
-  if (error) throw error;
-
-  __avatarCatalogCache = data || [];
-  return __avatarCatalogCache;
+  const promise = (async () => {
+    const { data, error } = await supabase
+      .from("profile_avatars")
+      .select("avatar_key,label,image_url,sort_order")
+      .eq("active", true)
+      .order("sort_order", { ascending: true });
+    if (error) throw error;
+    __avatarCatalogCache = data || [];
+    const ts = Date.now();
+    __avatarCatalogExpiresAt = ts + AVATAR_CACHE_TTL;
+    try { sessionStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify({ ts, items: __avatarCatalogCache })); } catch (_) {}
+    return __avatarCatalogCache;
+  })();
+  __avatarCatalogPromise = promise;
+  try { return await promise; }
+  finally { if (__avatarCatalogPromise === promise) __avatarCatalogPromise = null; }
 }
 
 export async function getProfileAvatarUrl(avatarKey) {
@@ -120,39 +163,48 @@ export async function listViewerProfiles(accountId) {
   return decorateProfiles(data, avatars);
 }
 
-export async function getActiveViewerProfile(session) {
+export async function getActiveViewerProfile(session, { force = false } = {}) {
+  if (force) invalidateActiveProfileCache();
   const accountId = sessionUserId(session);
   if (!accountId) return null;
   const profileId = getStoredActiveViewerProfileId(accountId);
   if (!profileId) return null;
+  const key = `${accountId}:${profileId}`;
+  const generation = __activeProfileGeneration;
+  if (__activeProfileCache?.key === key && Date.now() < __activeProfileCache.expiresAt) return __activeProfileCache.profile;
+  if (__activeProfilePromise?.key === key && __activeProfilePromise.generation === generation) return __activeProfilePromise.promise;
 
-  const { data, error } = await supabase
-    .from("viewer_profiles")
-    .select("id,account_id,name,avatar_key,custom_avatar_url,is_kids,created_at,updated_at")
-    .eq("id", profileId)
-    .eq("account_id", accountId)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) {
-    clearActiveViewerProfile(accountId);
-    return null;
-  }
-
-  return {
-    ...data,
-    avatar_url: await resolveViewerProfileAvatar(data),
-  };
+  const promise = (async () => {
+    const { data, error } = await supabase
+      .from("viewer_profiles")
+      .select("id,account_id,name,avatar_key,custom_avatar_url,is_kids,created_at,updated_at")
+      .eq("id", profileId)
+      .eq("account_id", accountId)
+      .maybeSingle();
+    if (error) throw error;
+    if (generation !== __activeProfileGeneration || getStoredActiveViewerProfileId(accountId) !== profileId) return null;
+    if (!data || data.id !== profileId || data.account_id !== accountId) {
+      clearActiveViewerProfile(accountId);
+      return null;
+    }
+    let avatarUrl = DEFAULT_PROFILE_AVATAR;
+    try { avatarUrl = await resolveViewerProfileAvatar(data); }
+    catch (error) { console.warn('[profiles] no se pudo cargar el avatar:', error); }
+    if (generation !== __activeProfileGeneration || getStoredActiveViewerProfileId(accountId) !== profileId) return null;
+    const profile = { ...data, avatar_url: avatarUrl };
+    // Sólo se comparte dentro de la página; cada navegación verifica de nuevo.
+    __activeProfileCache = { key, profile, expiresAt: Date.now() + 30000 };
+    return profile;
+  })();
+  __activeProfilePromise = { key, generation, promise };
+  try { return await promise; }
+  finally { if (__activeProfilePromise?.promise === promise) __activeProfilePromise = null; }
 }
 
-export async function requireActiveViewerProfile(session, { redirect = true } = {}) {
-  const accountId = sessionUserId(session);
-  if (!accountId) return null;
-  const active = await getActiveViewerProfile(session);
-  if (!active && redirect) {
-    const next = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.replace(`/profiles.html?next=${next}`);
-  }
+export async function requireActiveViewerProfile(session, { redirect = true, force = false } = {}) {
+  if (!sessionUserId(session)) return null;
+  const active = await getActiveViewerProfile(session, { force });
+  if (!active && redirect) window.location.replace(profilePickerUrl());
   return active;
 }
 
@@ -195,6 +247,7 @@ export async function updateViewerProfile(profileId, patch = {}) {
     .select("id,account_id,name,avatar_key,custom_avatar_url,is_kids,created_at,updated_at")
     .single();
   if (error) throw error;
+  invalidateActiveProfileCache();
 
   return {
     ...data,
@@ -248,6 +301,9 @@ export async function deleteViewerProfile(profileOrId) {
 
   const { error } = await supabase.from("viewer_profiles").delete().eq("id", profileId);
   if (error) throw error;
+  invalidateActiveProfileCache();
+  const accountId = typeof profileOrId === 'object' ? profileOrId?.account_id : null;
+  if (accountId && getStoredActiveViewerProfileId(accountId) === profileId) clearActiveViewerProfile(accountId);
 
   const oldPath = extractStoragePathFromPublicUrl(customUrl);
   if (oldPath) {

@@ -1,7 +1,7 @@
-import { renderNav, renderAuthButtons, toast } from "./ui.js";
-import { requireAuthOrRedirect } from "./auth.js";
+import { renderNav, renderAuthButtons, toast } from "./ui.js?v=20261009-copas-10";
+import { requireAuthOrRedirect } from "./auth.js?v=20261009-copas-10";
 import { supabase } from "./supabaseClient.js";
-import { getActiveViewerProfile } from "./viewerProfiles.js";
+import { getActiveViewerProfile } from "./viewerProfiles.js?v=20261009-copas-10";
 
 const form = document.getElementById("account-form");
 const emailInput = document.getElementById("account-email");
@@ -221,10 +221,10 @@ async function init() {
   try {
     const activeProfile = await getActiveViewerProfile(session);
     if (activeProfile) {
-      await renderAuthButtons();
+      await renderAuthButtons({ session: { ...session, viewerProfile: activeProfile } });
     } else {
       const host = document.getElementById("nav-actions") || document.getElementById("nav-right");
-      if (host) host.innerHTML = '<a class="btn ghost" href="/profiles.html">Volver a perfiles</a>';
+      if (host) host.innerHTML = '<a class="btn ghost" href="/profiles">Volver a perfiles</a>';
     }
   } catch (error) {
     console.warn("[account] no se pudo renderizar el control de perfil:", error);
