@@ -5,13 +5,10 @@
 :root {
   --title-bg: #313131;
   --title-panel: #313131;
-  
   --title-text: #f5f7fb;
   --title-muted: rgba(245, 247, 251, .74);
   --title-line: rgba(255, 255, 255, .12);
-  
   --title-hero-fade-height: 45%;
-
   --item-radius: 5px;
   --item-before-radius: 50%;
 
@@ -21,7 +18,7 @@
   --title-outline-size: var(--media-outline-size, 4px);
   --title-outline-gap: var(--media-outline-gap, 5px);
   --ep-gap: 17px;
-  --ep-progress-h: 4px;
+  --ep-progress-h: 6px;
   --container-max-titlecss: 2000px;
 }
 
@@ -833,10 +830,9 @@ span.meta-dropitem {
 #episodes-grid .episode-card.image-only-card .episode-progress {
   position: relative;
   z-index: 4;
-  width: 95%;
+  width: 100%;
   height: var(--ep-progress-h);
-  margin: 8px auto 0;
-  border-radius: 999px;
+  margin: -6px auto 0;
   background: rgba(255, 255, 255, .16);
   overflow: hidden;
   pointer-events: none;

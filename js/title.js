@@ -949,16 +949,16 @@ function renderEpisodeCardHtml({ ep, fallbackThumb, esc, progressMap }) {
       <div class="episode-thumb-wrap">
         <img class="episode-thumb" src="${esc(thumb)}" alt="" loading="lazy" decoding="async" width="640" height="360">
         ${durationText ? `<span class="duration">${esc(durationText)}</span>` : ''}
+        ${
+          hasProgress
+            ? `
+          <div class="episode-progress" aria-hidden="true">
+            <div class="episode-progress-bar" style="width:${progressPercent}%;"></div>
+          </div>
+        `
+            : ''
+        }
       </div>
-      ${
-        hasProgress
-          ? `
-        <div class="episode-progress" aria-hidden="true">
-          <div class="episode-progress-bar" style="width:${progressPercent}%;"></div>
-        </div>
-      `
-          : ''
-      }
       <div class="episode-body">
         <h3 class="episode-title">${epTitle}</h3>
         ${synopsis ? `<p class="episode-sub">${esc(synopsis)}</p>` : ''}
