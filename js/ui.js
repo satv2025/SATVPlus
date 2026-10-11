@@ -1,11 +1,11 @@
 // ui.js
 import { CONFIG } from './config.js';
-import { getSession, signOut, requireAuthOrRedirect } from './auth.js?v=20261009-copas-10';
-import { profilePickerUrl, loginUrl } from './navigation.js?v=20261009-copas-10';
+import { getSession, signOut, requireAuthOrRedirect } from './auth.js';
+import { profilePickerUrl, loginUrl } from './navigation.js';
 import {
   getActiveViewerProfile,
   requireActiveViewerProfile,
-} from './viewerProfiles.js?v=20261009-copas-10';
+} from './viewerProfiles.js';
 import {
   fetchMovie,
   fetchLanguagePreference,
@@ -17,7 +17,10 @@ import {
   fetchReleaseAlerts,
   fetchMyListPreview,
   markReleaseAlertsSeen,
-} from './api.js?v=20261009-copas-10';
+} from './api.js';
+
+// Gráfica VR independiente: NO modifica renderNav(), #topnav ni el header.
+import './vr-overlay.js';
 
 export function $(sel) {
   return document.querySelector(sel);

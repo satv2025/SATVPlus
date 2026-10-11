@@ -1,6 +1,6 @@
-import { requestedContentDestination, loginUrl } from "./navigation.js?v=20261009-copas-10";
-import { getSession, signOut } from "./auth.js?v=20261009-copas-10";
-import { toast, escapeHtml } from "./ui.js?v=20261009-copas-10";
+import { requestedContentDestination, loginUrl } from "./navigation.js";
+import { getSession, signOut } from "./auth.js";
+import { toast, escapeHtml } from "./ui.js";
 import {
   listProfileAvatars,
   listViewerProfiles,
@@ -12,7 +12,7 @@ import {
   clearActiveViewerProfile,
   explainViewerProfileError,
   DEFAULT_PROFILE_AVATAR,
-} from "./viewerProfiles.js?v=20261009-copas-10";
+} from "./viewerProfiles.js";
 
 const grid = document.getElementById("profiles-grid");
 const modal = document.getElementById("profile-modal");

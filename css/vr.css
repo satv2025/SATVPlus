@@ -1,0 +1,221 @@
+/* ==============================================================
+   SATV+ VR / micrositio de lanzamiento
+   Identidad: grafito tornasolado, titanio, azul acero, plata hielo
+   Importante: clases aisladas para no afectar las cards de SATV+
+   ============================================================== */
+.vrpage-body {
+  --vrpage-bg: #0e1420;
+  --vrpage-panel: #192231;
+  --vrpage-ink: #eef4ff;
+  --vrpage-silver: #bfcbd9;
+  --vrpage-ice: #b2d4ff;
+  --vrpage-line: rgba(190, 211, 242, .16);
+  background: var(--vrpage-bg);
+  color: var(--vrpage-ink);
+  margin: 0;
+  min-width: 320px;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.vrpage-body *, .vrpage-body *::before, .vrpage-body *::after { box-sizing: border-box; }
+.vrpage-body a { color: inherit; }
+.vrpage-body .vrpage-sitebar { position: relative; z-index: 60; min-height: 65px; background: #101622; }
+/* En el home, el navbar puede estar superpuesto al hero. Acá debe
+   integrarse al flujo normal, pero mantiene su renderizado de ui.js. */
+.vrpage-body #topnav {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  width: 100%;
+  min-height: 65px;
+  z-index: 2;
+  background: linear-gradient(100deg, #121825, #1b2739 63%, #121c2c);
+  border-bottom: 1px solid rgba(195, 218, 252, .1);
+}
+.vrpage-body .vrpage-nav-fallback { display: inline-flex; margin: 20px 30px; text-decoration: none; font-weight: 950; font-style: italic; font-size: 23px; }
+.vrpage-body .vrpage-nav-fallback span { color: #9ec7fc; }
+.vrpage-body .vrpage-container { width: min(100% - 88px, 1280px); margin-inline: auto; }
+.vrpage-body .vrpage-main { overflow: hidden; }
+/* HERO */
+.vrpage-body .vrpage-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: clamp(610px, 75vh, 850px);
+  padding: 90px max(44px, calc((100vw - 1280px)/2)) 88px;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 83% 43%, rgba(85, 135, 201, .38), transparent 36%),
+    radial-gradient(ellipse at 62% -22%, rgba(210, 220, 235, .16), transparent 40%),
+    linear-gradient(117deg, #111722 4%, #303a47 44%, #1c2b41 70%, #101827 100%);
+}
+.vrpage-body .vrpage-hero::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(100deg, rgba(4,8,15,.55), rgba(7,12,20,.08) 65%),
+    repeating-linear-gradient(135deg, transparent 0 96px, rgba(255,255,255,.012) 97px 99px);
+}
+.vrpage-body .vrpage-hero::after {
+  content: ''; position: absolute; inset: auto 0 0; height: 175px;
+  background: linear-gradient(0deg, #0e1420, transparent);
+  z-index: -1; pointer-events: none;
+}
+.vrpage-body .vrpage-atmosphere {
+  pointer-events: none; position: absolute; width: 50vw; height: 90vh;
+  top: -45vh; left: 18%; transform: rotate(-28deg);
+  background: linear-gradient(90deg, transparent, rgba(207,225,252,.075), transparent);
+  filter: blur(35px); z-index: -1;
+}
+.vrpage-body .vrpage-hero-content { position: relative; z-index: 2; max-width: 810px; }
+.vrpage-body .vrpage-eyebrow {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  margin: 0 0 49px; color: #dbe8fa;
+  font-size: 11px; font-weight: 850; letter-spacing: 2.4px;
+}
+.vrpage-body .vrpage-eyebrow-line { display: inline-block; width: 30px; height: 2px; background: #b1d5ff; box-shadow: 0 0 12px #7eaee8; }
+.vrpage-body .vrpage-eyebrow-sep { color: #7e95b4; }
+.vrpage-body .vrpage-pretitle { font-size: 12px; letter-spacing: 2.3px; font-weight: 820; color: #9cbfeb; margin: 0 0 18px; }
+.vrpage-body .vrpage-hero h1 {
+  margin: 0; max-width: 890px;
+  font-size: clamp(48px, 6.2vw, 91px); line-height: .99;
+  letter-spacing: -.064em; font-weight: 950; color: #fff;
+  text-shadow: 0 9px 35px rgba(0, 0, 0, .23);
+}
+.vrpage-body .vrpage-hero h1 span {
+  display: block; margin-top: 8px; color: #b4c7df;
+  background: linear-gradient(100deg, #fff 0%, #bcd5f4 36%, #78a2d7 69%, #d8e5f4 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.vrpage-body .vrpage-lede { max-width: 690px; color: #f1f5fc; font-size: clamp(19px, 2vw, 25px); font-weight: 700; line-height: 1.5; margin: 31px 0 14px; }
+.vrpage-body .vrpage-hero-description { max-width: 645px; color: #c9d3e1; font-size: 15px; line-height: 1.85; margin: 0; }
+.vrpage-body .vrpage-hero-actions { margin-top: 37px; display: flex; align-items: center; flex-wrap: wrap; gap: 17px 24px; }
+.vrpage-body .vrpage-primary, .vrpage-body .vrpage-secondary {
+  text-decoration: none; display: inline-flex; align-items: center; gap: 19px;
+  justify-content: space-between; min-height: 49px; padding: 12px 21px;
+  font-size: 13px; font-weight: 850; border-radius: 7px;
+  transition: transform .2s, background .2s, box-shadow .2s;
+}
+.vrpage-body .vrpage-primary { color: #121a2a; background: linear-gradient(120deg, #e5f1ff, #9bbce7); box-shadow: 0 9px 28px rgba(14, 30, 55, .3); }
+.vrpage-body .vrpage-primary:hover { transform: translateY(-2px); background: #fff; box-shadow: 0 13px 36px rgba(16, 33, 58, .36); }
+.vrpage-body a:focus-visible { outline: 2px solid #a4ceff; outline-offset: 4px; }
+.vrpage-body .vrpage-launch { display: inline-flex; align-items: center; gap: 10px; color: #bbcbe0; font-size: 10px; font-weight: 850; letter-spacing: 1.2px; }
+.vrpage-body .vrpage-launch-dot { width: 6px; height: 6px; background: #bad9ff; border-radius: 50%; box-shadow: 0 0 12px #95c5ff; }
+/* Visor abstracto hecho solo con CSS: no descarga imágenes. */
+.vrpage-body .vrpage-object {
+  position: absolute; z-index: 0; pointer-events: none;
+  width: min(48vw, 740px); height: min(48vw, 740px);
+  right: -5%; top: 45%; transform: translateY(-50%);
+  display: grid; place-items: center;
+}
+.vrpage-body .vrpage-halo { position: absolute; border-radius: 50%; transform: rotate(-21deg); }
+.vrpage-body .vrpage-halo-one { width: 85%; height: 85%; border: 1px solid rgba(198, 226, 255, .14); box-shadow: inset 0 0 90px rgba(104, 152, 219, .06), 0 0 70px rgba(100, 156, 231, .1); }
+.vrpage-body .vrpage-halo-two { width: 63%; height: 63%; border: 1px solid rgba(210, 232, 255, .22); }
+.vrpage-body .vrpage-visor {
+  position: relative; width: 75%; height: 32%; border: 2px solid rgba(218, 232, 255, .5);
+  border-radius: 28% 28% 31% 31% / 40% 40% 47% 47%;
+  background: linear-gradient(135deg, #5e7187, #1c2b40 42%, #0b1526 72%, #809aba);
+  box-shadow: inset 0 4px 22px rgba(242, 248, 255, .24), inset 0 -28px 45px #08121e, 0 33px 85px #050b14a8, 0 0 100px #76b4ff2b;
+  transform: rotate(-12deg) perspective(750px) rotateY(-13deg);
+}
+.vrpage-body .vrpage-visor::before, .vrpage-body .vrpage-visor::after {
+  content: ''; position: absolute; top: 23%; width: 14%; height: 55%;
+  background: linear-gradient(100deg, rgba(132, 159, 194, .34), transparent);
+  border: 1px solid rgba(224, 237, 255, .17);
+  border-radius: 30%; z-index: -1;
+}
+.vrpage-body .vrpage-visor::before { left: -10%; }
+.vrpage-body .vrpage-visor::after { right: -10%; }
+.vrpage-body .vrpage-visor-lens {
+  position: absolute; inset: 12% 7%; border-radius: 24% 24% 30% 30% / 35% 35% 55% 55%;
+  border: 1px solid rgba(224, 237, 255, .17);
+  background: linear-gradient(125deg, #18263d 10%, #091321 52%, #182e48 85%);
+  box-shadow: inset 0 0 30px rgba(145, 186, 244, .17);
+}
+.vrpage-body .vrpage-visor-shine { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(145deg, rgba(239,246,255,.3), transparent 45%); }
+.vrpage-body .vrpage-visor-core { position: absolute; inset: 0; display: grid; place-items: center; color: #e2f0ff; font-size: clamp(65px, 9vw, 160px); font-weight: 950; letter-spacing: -.08em; opacity: .7; text-shadow: 0 0 30px rgba(136,184,248,.6); }
+.vrpage-body .vrpage-floating-tag { position: absolute; bottom: 15%; right: 16%; color: #afc8e6; font-size: 10px; font-weight: 850; letter-spacing: 2.8px; }
+.vrpage-body .vrpage-hero-bottom { position: absolute; left: max(44px, calc((100vw - 1280px)/2)); right: max(44px, calc((100vw - 1280px)/2)); bottom: 27px; display: flex; justify-content: space-between; gap: 15px; color: #8fa5c2; font-size: 10px; font-weight: 700; letter-spacing: 1.7px; }
+/* STORY */
+.vrpage-body .vrpage-story { padding-block: 112px 122px; }
+.vrpage-body .vrpage-story-meta { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
+.vrpage-body .vrpage-overline { color: #a6cafa; font-size: 11px; font-weight: 850; letter-spacing: 2.3px; }
+.vrpage-body .vrpage-line { height: 1px; flex: 1; background: linear-gradient(90deg, var(--vrpage-line), transparent); }
+.vrpage-body .vrpage-story-grid { display: grid; grid-template-columns: 1fr .85fr; gap: 12%; align-items: start; }
+.vrpage-body .vrpage-story h2 { color: #fff; font-size: clamp(37px, 4vw, 62px); font-weight: 900; letter-spacing: -.055em; line-height: 1.07; margin: 0; }
+.vrpage-body .vrpage-story h2 span { display: block; color: #a7bdda; }
+.vrpage-body .vrpage-story-copy p { color: #bac7d8; font-size: 15px; line-height: 1.95; margin: 0 0 18px; }
+.vrpage-body .vrpage-story-copy strong { color: #f2f6ff; }
+/* FORMATS */
+.vrpage-body .vrpage-experiences { background: linear-gradient(180deg, #151e2d 0%, #202b3b 46%, #151d2b 100%); padding: 108px 0 102px; border-block: 1px solid rgba(194, 217, 253, .09); }
+.vrpage-body .vrpage-section-head { max-width: 820px; margin-bottom: 39px; }
+.vrpage-body .vrpage-section-head h2 { font-size: clamp(35px, 4vw, 61px); letter-spacing: -.05em; line-height: 1.12; margin: 16px 0 14px; font-weight: 900; color: #fff; }
+.vrpage-body .vrpage-section-head h2 span { color: #9fb5d1; }
+.vrpage-body .vrpage-section-head p { max-width: 620px; color: #bac7d7; line-height: 1.7; font-size: 15px; }
+.vrpage-body .vrpage-cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 15px; }
+.vrpage-body .vrpage-card {
+  display: flex; flex-direction: column; position: relative; isolation: isolate; overflow: hidden;
+  min-height: 380px; padding: 27px 25px 21px; border-radius: 13px;
+  background: linear-gradient(145deg, rgba(203,218,238,.115), rgba(130,164,212,.05) 55%, rgba(55,78,109,.12));
+  border: 1px solid rgba(203, 221, 244, .2); box-shadow: inset 0 1px rgba(248,251,255,.085);
+  transition: transform .25s, border-color .25s, background .25s;
+}
+.vrpage-body .vrpage-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 100% 0, rgba(178,205,244,.1), transparent 52%); z-index: -1; }
+.vrpage-body .vrpage-card:hover { transform: translateY(-5px); border-color: rgba(190, 222, 255, .43); }
+.vrpage-body .vrpage-card-top { display: flex; align-items: start; justify-content: space-between; gap: 10px; margin-bottom: 45px; }
+.vrpage-body .vrpage-card-index { font-size: 10px; letter-spacing: 1.5px; color: #9fbce0; font-weight: 850; }
+.vrpage-body .vrpage-card-glyph { width: 47px; height: 47px; display: grid; place-items: center; border-radius: 11px; background: rgba(183, 208, 242, .1); color: #c4dafa; font-size: 24px; }
+.vrpage-body .vrpage-card h3 { margin: 0 0 15px; color: white; font-size: clamp(37px, 3vw, 53px); font-weight: 950; letter-spacing: -.055em; line-height: 1; }
+.vrpage-body .vrpage-card h3 span { display: block; margin-top: 10px; color: #b4c8df; font-size: 14px; font-weight: 700; letter-spacing: 0; }
+.vrpage-body .vrpage-card p { color: #c1cedd; font-size: 13px; line-height: 1.8; margin: 0 0 25px; }
+.vrpage-body .vrpage-card p strong { color: #edf5ff; font-weight: 750; }
+.vrpage-body .vrpage-card-foot { padding-top: 17px; border-top: 1px solid rgba(180, 213, 246, .14); margin-top: auto; color: #94b5df; font-size: 10px; font-weight: 850; letter-spacing: 1.4px; }
+.vrpage-body .vrpage-explainer { margin: 22px 2px 0; max-width: 950px; color: #97a8bd; font-size: 12px; line-height: 1.65; }
+/* FINALE */
+.vrpage-body .vrpage-finale { margin-top: 94px; margin-bottom: 94px; border: 1px solid rgba(181, 206, 239, .22); background: linear-gradient(120deg, #2e394a, #182638 60%, #1e2d43); border-radius: 17px; padding: 66px clamp(28px,5vw,70px); position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: center; justify-content: space-between; gap: 45px; }
+.vrpage-body .vrpage-finale-shimmer { position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 90% 50%, rgba(180, 214, 253, .17), transparent 40%); }
+.vrpage-body .vrpage-finale-copy { max-width: 710px; }
+.vrpage-body .vrpage-finale h2 { font-size: clamp(35px, 4.4vw, 65px); line-height: 1.08; letter-spacing: -.05em; margin: 20px 0 15px; color: #fff; font-weight: 950; }
+.vrpage-body .vrpage-finale h2 span { display: block; color: #b9d2ee; }
+.vrpage-body .vrpage-finale p { font-size: 15px; color: #c5d2e1; line-height: 1.8; }
+.vrpage-body .vrpage-secondary { margin-top: 13px; border: 1px solid rgba(199, 224, 255, .45); color: #f1f7ff; background: rgba(210, 230, 255, .1); }
+.vrpage-body .vrpage-secondary:hover { transform: translateY(-2px); background: rgba(202, 228, 255, .2); }
+.vrpage-body .vrpage-finale-stamp { flex: 0 0 200px; width: 200px; height: 200px; border-radius: 50%; border: 1px solid rgba(208, 230, 255, .29); display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: inset 0 0 55px rgba(193,224,255,.085), 0 0 66px rgba(146,199,255,.08); }
+.vrpage-body .vrpage-finale-stamp span { font-size: 84px; font-weight: 950; letter-spacing: -.075em; color: #e3efff; line-height: 1; }
+.vrpage-body .vrpage-finale-stamp small { text-align: center; color: #adc9eb; font-weight: 850; letter-spacing: 1.6px; font-size: 9px; margin-top: 6px; }
+.vrpage-body .vrpage-footer { min-height: 78px; border-top: 1px solid rgba(192, 215, 243, .12); display: flex; align-items: center; justify-content: space-between; padding: 20px max(44px,calc((100vw - 1280px)/2)); gap: 22px; color: #8193aa; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; }
+@media (max-width: 1100px) {
+  .vrpage-body .vrpage-object { opacity: .45; right: -16%; }
+  .vrpage-body .vrpage-hero-content { max-width: 670px; }
+  .vrpage-body .vrpage-hero { min-height: 680px; }
+  .vrpage-body .vrpage-cards { gap: 12px; }
+  .vrpage-body .vrpage-card { padding: 23px 20px; }
+}
+@media (max-width: 760px) {
+  .vrpage-body .vrpage-container { width: min(100% - 38px, 1280px); }
+  .vrpage-body .vrpage-hero { min-height: 660px; padding: 65px 20px 100px; }
+  .vrpage-body .vrpage-eyebrow { font-size: 9px; letter-spacing: 1.2px; margin-bottom: 40px; }
+  .vrpage-body .vrpage-pretitle { font-size: 10px; letter-spacing: 1.4px; }
+  .vrpage-body .vrpage-hero h1 { font-size: clamp(44px, 9.4vw, 72px); }
+  .vrpage-body .vrpage-hero-description { font-size: 14px; }
+  .vrpage-body .vrpage-object { width: 560px; height: 560px; right: -350px; top: 41%; opacity: .2; }
+  .vrpage-body .vrpage-hero-bottom { left: 20px; right: 20px; font-size: 8px; letter-spacing: 1px; }
+  .vrpage-body .vrpage-story { padding-block: 76px 81px; }
+  .vrpage-body .vrpage-story-grid { grid-template-columns: 1fr; gap: 26px; }
+  .vrpage-body .vrpage-experiences { padding: 76px 0; }
+  .vrpage-body .vrpage-cards { grid-template-columns: 1fr; }
+  .vrpage-body .vrpage-card { min-height: 275px; }
+  .vrpage-body .vrpage-card-top { margin-bottom: 27px; }
+  .vrpage-body .vrpage-finale { flex-direction: column; align-items: flex-start; margin-block: 60px; padding: 36px 26px; }
+  .vrpage-body .vrpage-finale-stamp { display: none; }
+  .vrpage-body .vrpage-footer { padding: 22px 20px; flex-wrap: wrap; }
+}
+@media (max-width: 440px) {
+  .vrpage-body .vrpage-hero h1 { font-size: 42px; }
+  .vrpage-body .vrpage-hero-actions { align-items: flex-start; flex-direction: column; }
+  .vrpage-body .vrpage-lede { font-size: 18px; }
+  .vrpage-body .vrpage-hero-bottom span:last-child { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vrpage-body .vrpage-card, .vrpage-body .vrpage-primary, .vrpage-body .vrpage-secondary { transition: none; }
+}

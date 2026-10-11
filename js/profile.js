@@ -1,7 +1,7 @@
-import { renderNav, renderAuthButtons, toast } from "./ui.js?v=20261009-copas-10";
-import { requireAuthOrRedirect } from "./auth.js?v=20261009-copas-10";
+import { renderNav, renderAuthButtons, toast } from "./ui.js";
+import { requireAuthOrRedirect } from "./auth.js";
 import { supabase } from "./supabaseClient.js";
-import { getActiveViewerProfile } from "./viewerProfiles.js?v=20261009-copas-10";
+import { getActiveViewerProfile } from "./viewerProfiles.js";
 
 const form = document.getElementById("account-form");
 const emailInput = document.getElementById("account-email");

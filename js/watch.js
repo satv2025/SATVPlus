@@ -1,4 +1,4 @@
-import { requireAuthOrRedirect } from "./auth.js?v=20261009-copas-10";
+import { requireAuthOrRedirect } from "./auth.js";
 
 // js/watch.js
 // SATV+ Watch loader
@@ -11,7 +11,7 @@ import { requireAuthOrRedirect } from "./auth.js?v=20261009-copas-10";
 import {
   supabase
 } from "./supabaseClient.js";
-import { getActiveViewerProfile } from "./viewerProfiles.js?v=20261009-copas-10";
+import { getActiveViewerProfile } from "./viewerProfiles.js";
 
 /* ============================================================
  * Config

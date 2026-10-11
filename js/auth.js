@@ -1,6 +1,6 @@
 import { supabase } from "./supabaseClient.js";
-import { loginUrl } from "./navigation.js?v=20261009-copas-10";
-import { requireActiveViewerProfile, clearActiveViewerProfile } from "./viewerProfiles.js?v=20261009-copas-10";
+import { loginUrl } from "./navigation.js";
+import { requireActiveViewerProfile, clearActiveViewerProfile } from "./viewerProfiles.js";
 
 let __returnGuardInstalled = false;
 let __returnGuardIdentity = null;

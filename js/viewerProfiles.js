@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient.js";
-import { profilePickerUrl } from "./navigation.js?v=20261009-copas-10";
+import { profilePickerUrl } from "./navigation.js";
 
 const ACTIVE_PREFIX = "satv_active_viewer_profile";
 export const DEFAULT_PROFILE_AVATAR = "/images/profile-avatars/avatar-01.png";

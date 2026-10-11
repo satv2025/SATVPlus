@@ -1,4 +1,4 @@
-import { requireAuthOrRedirect } from "./auth.js?v=20261009-copas-10";
+import { requireAuthOrRedirect } from "./auth.js";
 // /js/mylist.js
 // ✅ Usa supabaseClient.js (sin modificarlo)
 // ✅ my_list(profile_id, content_id, added_at)
@@ -9,7 +9,7 @@ import { requireAuthOrRedirect } from "./auth.js?v=20261009-copas-10";
 // ✅ En /mylist: "Mi Lista" queda active e inclicable
 
 import { supabase } from "./supabaseClient.js";
-import * as ui from "./ui.js?v=20261009-copas-10";
+import * as ui from "./ui.js";
 
 const LOCAL_MY_LIST_KEY = "satv_my_list_ids";
 

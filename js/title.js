@@ -1,7 +1,7 @@
-import { requireAuthOrRedirect, getSession } from "./auth.js?v=20261009-copas-10";
+import { requireAuthOrRedirect, getSession } from "./auth.js";
 let __titleSession = null;
 
-import { getActiveViewerProfile } from './viewerProfiles.js?v=20261009-copas-10';
+import { getActiveViewerProfile } from './viewerProfiles.js';
 
 /* ===========================
           title.js
@@ -2309,8 +2309,8 @@ async function main() {
   await ensureSupabaseGlobal();
 
   const [ui, api] = await Promise.all([
-    import('./ui.js?v=20261009-copas-10'),
-    import('./api.js?v=20261009-copas-10'),
+    import('./ui.js'),
+    import('./api.js'),
   ]);
 
   ui.setAppName?.();

@@ -24,9 +24,9 @@ import {
   buildTitleUrl,
   initTopnavSearch,
   initSearchExperience,
-} from './ui.js?v=20261009-copas-10';
+} from './ui.js';
 
-import { getSession, requireAuthOrRedirect } from './auth.js?v=20261009-copas-10';
+import { getSession, requireAuthOrRedirect } from './auth.js';
 import {
   fetchContinueWatching,
   fetchLatest,
@@ -36,7 +36,7 @@ import {
   isReleaseReminderSet,
   setReleaseReminder,
   removeReleaseReminder,
-} from './api.js?v=20261009-copas-10';
+} from './api.js';
 import { supabase } from './supabaseClient.js';
 import { isCupFixtureSection, renderCupFixtures, installCupShieldFallback } from './cupFixtures.js?v=20261009-fixtures-2';
 
