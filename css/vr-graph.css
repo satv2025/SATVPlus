@@ -8,7 +8,6 @@
   max-width: 100%;
   margin: 0;
   color: #f9fbff;
-  font-family: inherit;
   background:
     linear-gradient(115deg, transparent 20%, rgba(228,242,255,.08) 38%, transparent 62%),
     linear-gradient(110deg, rgba(31,42,58,.95), rgba(64,80,101,.93) 38%, rgba(24,37,56,.95));
