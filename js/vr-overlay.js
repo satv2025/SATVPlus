@@ -6,54 +6,9 @@ const VR_HOST_ID = 'satv-vr-overlay-portal';
 const VR_CLOSED_KEY = 'satv:vr-midnight-overlay:closed:v1';
 const VR_PATHS = new Set(['/', '/index.html', '/title', '/title.html', '/mylist', '/mylist.html']);
 
+const VR_CSS_URL = "/css/vr-overlay.css";
+
 const VR_HTML = `
-<style>
-  :host { display: block; /* Hereda el font-family de styles.css (selector global *). */ }
-  *, *::before, *::after { box-sizing: border-box; }
-  [hidden] { display: none !important; }
-  .card {
-    position: relative;
-    font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
-    width: 100%; max-height: calc(100dvh - 28px); overflow: auto;
-    color: #fff; pointer-events: auto; isolation: isolate;
-    background: linear-gradient(158deg, #101d4f 0%, #0b1539 44%, #070d26 100%);
-    border: 1px solid #344ea3; border-radius: 10px;
-    box-shadow: 0 20px 54px rgba(2, 5, 19, .66), 0 0 0 1px rgba(41, 66, 156, .15);
-    scrollbar-color: #29459b #080f29;
-  }
-  .head { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 17px;border-bottom:1px solid #24356c; }
-  .logo { display:flex;align-items:center;gap:10px;font-size:13px;font-weight:900;letter-spacing:.035em;color:#fff; }
-  .logo strong {color:#fff;font-size:19px;letter-spacing:-.06em;}
-  .close { display:grid;place-items:center;flex:none;width:31px;height:31px;background:#162457;border:1px solid #3956a9;border-radius:6px;color:#fff;cursor:pointer; }
-  .close:hover {background:#233b83;color:#fff;}
-  .close svg {width:16px;height:16px;}
-  .content {padding:20px 21px 17px;}
-  .label {font-size:11px;font-weight:900;letter-spacing:.12em;color:#fff;margin-bottom:13px;}
-  h2 {margin:0;font-size:clamp(24px, 3vw, 31px);font-weight:950;line-height:1.08;letter-spacing:-.045em;color:#fff;}
-  h2 span {display:block;color:#fff;margin-top:5px;}
-  .desc {margin:14px 0 0;font-size:13px;font-weight:560;line-height:1.55;color:#fff;}
-  .bottom {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 17px 14px;border-top:1px solid #24356c;background:#09112f;}
-  .date {display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
-  .date small {font-size:9px;font-weight:900;letter-spacing:.09em;color:#fff;}
-  .date strong {font-size:14px;font-weight:950;line-height:1.15;color:#fff;}
-  .cta {display:flex;align-items:center;justify-content:center;gap:11px;padding:11px 12px;min-height:42px;text-align:center;text-decoration:none;font-size:11px;font-weight:950;letter-spacing:.035em;border-radius:6px;border:1px solid #466be2;background:#2143b3;color:#fff;pointer-events:auto;}
-  .cta:hover {background:#3056d0;}
-  .cta svg {height:16px;width:16px;flex:none;}
-  .reopen {font-family:inherit;display:flex;align-items:center;gap:9px;margin-left:auto;pointer-events:auto;cursor:pointer;padding:10px 13px;background:#101d4f;border:1px solid #3954ae;color:#fff;border-radius:10px;box-shadow:0 10px 36px #030715b8;font-weight:900;font-size:12px;}
-  .reopen:hover {background:#1a3079;}
-  .reopen svg {height:25px;width:25px;}
-  button:focus-visible,a:focus-visible {outline:2px solid #5674ee;outline-offset:3px;}
-  @media(max-width:450px) {
-    .head {padding:10px 13px;}
-    .content {padding:15px 15px 13px;}
-    .label {margin-bottom:10px;}
-    h2 {font-size:24px;}
-    .desc {font-size:12px;}
-    .bottom {padding:10px 13px;}
-    .date strong {font-size:12px;}
-    .cta {padding:10px;font-size:10px;}
-  }
-</style>
 <section class="card" id="vr-card" aria-label="Lanzamiento de SATV+ VR en diciembre de 2026">
   <div class="head">
     <div class="logo"><strong>SATV+</strong> / VR</div>
@@ -95,14 +50,19 @@ function mountVrOverlay() {
   if (!document.body || !VR_PATHS.has(window.location.pathname) || document.getElementById(VR_HOST_ID)) return;
   const host = document.createElement('div');
   host.id = VR_HOST_ID;
-  Object.assign(host.style, {
-    position: 'fixed', right: 'max(14px, env(safe-area-inset-right))',
-    bottom: 'max(14px, env(safe-area-inset-bottom))',
-    width: 'min(410px, calc(100vw - 28px))', maxWidth: '100%',
-    margin: '0', padding: '0', zIndex: '90', pointerEvents: 'none'
-  });
+  // CSS exclusivamente externo: se carga mediante un link en Shadow DOM.
+  // Ocultamos el componente hasta que su hoja de estilos esté lista.
+  host.hidden = true;
   const root = host.attachShadow({mode: 'open'});
   root.innerHTML = VR_HTML;
+  const stylesheet = document.createElement('link');
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = VR_CSS_URL;
+  stylesheet.addEventListener('load', () => { host.hidden = false; }, {once: true});
+  stylesheet.addEventListener('error', () => {
+    console.error('[SATV+ VR] No se pudo cargar el CSS externo:', VR_CSS_URL);
+  }, {once: true});
+  root.prepend(stylesheet);
   document.body.appendChild(host);
   setClosed(root, readClosed());
   root.querySelector('[data-vr-close]')?.addEventListener('click', () => {
