@@ -1275,6 +1275,11 @@ async function resolveRouteAndBuildProps() {
     if (!episode[e.m3u8]) throw new Error("El episodio no tiene m3u8_url");
 
     const resolvedSeriesId = seriesId || episode[e.seriesId] || null;
+    // Con ?episode= solo, el ID de serie se conoce despues del fetch.
+    if (resolvedSeriesId && window.SATVCssIds) {
+      window.SATVCssIds.update(resolvedSeriesId, episodeId);
+    }
+
 
     const validSeries = resolvedSeriesId && isUuid(resolvedSeriesId);
     const [series, episodesList, recommendations] = await Promise.all([

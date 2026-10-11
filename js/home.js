@@ -3890,11 +3890,7 @@ async function init() {
   const catalogSection = getCatalogSection();
   if (catalogSection) hideHomeForCatalogSection();
 
-  applyDisguisedCssFromId(0, {
-    linkId: 'app-style',
-    disguisedPrefix: '/css/satvplusClient.',
-    disguisedSuffix: '.css',
-  });
+  // CSS por ID se carga sincronicamente desde /js/css-ids.js.
 
   // El Home nunca se renderiza sin sesión y perfil de visualización activo.
   const session = await requireAuthOrRedirect({ requireProfile: true });

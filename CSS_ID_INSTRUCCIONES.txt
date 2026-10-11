@@ -1,0 +1,22 @@
+SATV+ WEB — CSS POR ID
+
+Subir todos los archivos del ZIP al proyecto. No cambiar los CSS originales.
+
+URLS:
+- Inicio: /css/<UUID-ALEATORIO>.css
+- Title: /css/<ID-TITULO>.css
+- Mi Lista: /css/<ID-LISTA>.css
+- Watch película: /css/<ID-TITULO>.css
+- Watch episodio: /css/<ID-SERIE>?episode=<ID-EPISODIO>.css
+- AkiraPlayer (subdominio): mismas URLs que watch, pero en akira.satvplus.com.ar.
+
+IMPORTANTE:
+- El script /js/css-ids.js se ejecuta sincronicamente desde cada HTML y crea un unico CSS por ID para los estilos locales de esa pagina.
+- El endpoint /api/css.js sirve la combinacion de CSS originales segun el Referer (misma pagina), preservando el orden de estilos.
+- El endpoint responde Cache-Control: no-store porque una misma ID puede ser solicitada desde /title o /watch y devolver CSS distintos.
+- El navegador debe enviar Referer same-origin (politica por defecto). Con Referer bloqueado se usa estilos de Inicio como fallback.
+- Los CSS de fuentes y los estilos externos (Font Awesome, Shadow DOM de VR overlay) mantienen sus enlaces normales.
+- El CSS de AkiraPlayer usa su propio despliegue en Vercel, con rewrite al archivo compilado.
+- Si un episodio se visita solo con ?episode=, watch.js corrige la URL al obtener el ID de serie.
+- En local sin Vercel no funciona el rewrite; hay que probarlo en un despliegue Preview/Production o con vercel dev.
+- Una URL disfrazada no oculta el CSS ni constituye una medida de seguridad.

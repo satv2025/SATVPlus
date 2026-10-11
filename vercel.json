@@ -1,22 +1,27 @@
 {
-    "$schema": "https://openapi.vercel.sh/vercel.json",
-    "cleanUrls": true,
-    "trailingSlash": false,
-    "redirects": [
-        {
-            "source": "/:path(.*)\\.html",
-            "destination": "/:path",
-            "permanent": true
-        }
-    ],
-    "rewrites": [
-        {
-            "source": "/css/satvplusClient.:hash.css",
-            "destination": "/css/styles.css"
-        },
-        {
-            "source": "/css/styles.css",
-            "destination": "/css/styles.css"
-        }
-    ]
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/:path(.*)\\.html",
+      "destination": "/:path",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "^/css/([a-fA-F0-9-]{36})\\.css$",
+      "destination": "/api/css?id=$1"
+    },
+    {
+      "source": "^/css/([a-fA-F0-9-]{36})$",
+      "destination": "/api/css?id=$1"
+    }
+  ],
+  "functions": {
+    "api/css.js": {
+      "includeFiles": "css/*.css"
+    }
+  }
 }

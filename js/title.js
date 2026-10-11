@@ -2318,7 +2318,7 @@ async function main() {
   const activeProfile = await ui.renderAuthButtons?.({ session: __titleSession });
   if (!activeProfile) return;
   ui.enableDataHrefNavigation?.();
-  ui.applyDisguisedCssFromMovieId?.();
+  // CSS por ID se carga desde /js/css-ids.js antes del render.
 
   ensureMyListNavLink(__titleSession.user.id);
 
