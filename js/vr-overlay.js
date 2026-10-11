@@ -1,211 +1,123 @@
-/* SATV+ | Gráfica VR 2026 (aislada del navbar)
-   - Este módulo no toca #topnav, nav-left, nav-right, el buscador ni el avatar.
-   - El diseño vive en Shadow DOM y no hereda selectores de styles.css.
-   - Se monta en document.body, con position:absolute y fuera del flujo.
-   - Solo se muestra en las páginas de catálogo con navbar inicializado.
-*/
+/* SATV+ VR — Azul Esencial 2026
+ * Card flotante independiente. Sin modificar el navbar ni el flujo del documento.
+ * El único lanzamiento anunciado por SATV+ es VR.
+ */
+const VR_HOST_ID = 'satv-vr-overlay-portal';
+const VR_CLOSED_KEY = 'satv:vr-midnight-overlay:closed:v1';
+const VR_PATHS = new Set(['/', '/index.html', '/title', '/title.html', '/mylist', '/mylist.html']);
 
-const ID = 'satv-vr-overlay-portal';
-const LANDING = '/vr.html';
-const allowedPaths = new Set(['/', '/index.html', '/title', '/title.html', '/mylist', '/mylist.html']);
-let mounted = false;
-let resizeObserver = null;
-let mutationObserver = null;
-let positionScheduled = false;
-let initialized = false;
-
-const markup = `
+const VR_HTML = `
 <style>
-:host { display:block; color:#f8fbff; font-family:inherit; }
-*, *::before, *::after { box-sizing:border-box; }
-.graph {
-  position:relative; width:100%; overflow:hidden;
-  border:1px solid rgba(193,213,238,.43); border-radius:5px;
-  background:linear-gradient(117deg,rgba(25,34,46,.97),rgba(67,85,109,.95) 45%,rgba(17,31,49,.97));
-  box-shadow:0 14px 34px rgba(0,0,0,.34), inset 0 1px rgba(250,253,255,.19);
-  isolation:isolate; pointer-events:none;
-}
-.graph::before { content:''; position:absolute; inset:0 auto 0 0; width:4px;
-  background:linear-gradient(#e4f1ff,#80afe4,#496f9c); }
-.graph::after { content:''; position:absolute; inset:0 0 0 auto; width:25%;
-  background:repeating-linear-gradient(125deg, transparent 0 26px,rgba(215,234,255,.06) 27px,transparent 28px 50px); pointer-events:none; }
-.body {position:relative;z-index:1;display:grid;grid-template-columns:90px minmax(0,1fr) 150px;gap:13px;align-items:center;min-height:69px;padding:7px 12px 7px 7px;}
-.plate {display:flex;flex-direction:column;align-items:center;justify-content:center;align-self:stretch;text-align:center;padding:6px 12px 6px 5px;
- clip-path:polygon(0 0,88% 0,100% 50%,88% 100%,0 100%);
- background:linear-gradient(135deg,#718eae,#354b68 58%,#1c2d43);border-left:2px solid #badbff;}
-.plate-brand {font-size:8px;font-weight:900;line-height:1.1;letter-spacing:.07em;}
-.plate-brand b {color:#c6e3ff;}
-.plate-vr {font-size:28px;font-weight:950;line-height:1;letter-spacing:-.065em;}
-.plate-date {font-size:7px;color:#cbdeee;font-weight:850;white-space:nowrap;}
-.story {display:flex;min-width:0;flex-direction:column;justify-content:center;gap:4px;}
-.label {display:flex;align-items:center;gap:7px;font-size:9px;font-weight:850;letter-spacing:.105em;color:#bcd8f5;}
-.label::before {content:'';width:5px;height:5px;border-radius:50%;background:#c2e1ff;box-shadow:0 0 9px #89beee;}
-.headline {font-size:clamp(12px,1.15vw,17px);font-weight:950;letter-spacing:-.022em;line-height:1.2;color:white;}
-.headline em {font-style:normal;color:#d3e9ff;}
-.subline {font-size:10px;font-weight:650;line-height:1.3;color:#ccd8e8;}
-.action {min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:8px;
-  border-left:1px solid rgba(204,230,255,.24);padding-left:10px;}
-.action-date {white-space:nowrap;font-size:8px;font-weight:850;letter-spacing:.08em;color:#b6cde6;}
-.link {display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:30px;padding:0 10px;
- color:#fff!important;text-decoration:none;font-size:10px;font-weight:900;letter-spacing:.02em;border-radius:3px;
- border:1px solid rgba(230,242,255,.52);background:linear-gradient(120deg,#7da6d2,#41678d);
- box-shadow:inset 0 1px rgba(255,255,255,.19);pointer-events:auto;cursor:pointer;
- transition:filter .15s ease;}
-.link:hover {filter:brightness(1.16);}
-.link:focus-visible {outline:2px solid #fff;outline-offset:2px;}
-.link svg {width:13px;height:13px;flex:none;}
-.footer {position:relative;z-index:1;display:flex;align-items:center;gap:10px;min-height:19px;padding:3px 14px;
- border-top:1px solid rgba(209,231,252,.18);background:rgba(5,16,29,.44);
- color:#b1c7dd;font-size:8px;font-weight:850;letter-spacing:.10em;}
-.footer-rule {flex:1;height:1px;background:linear-gradient(90deg,rgba(196,220,247,.3),transparent);}
-.footer .tech {white-space:nowrap;}
-@media(max-width:680px) {
- .body {grid-template-columns:65px minmax(0,1fr) 34px;gap:8px;min-height:76px;padding:7px 8px;}
- .plate {padding:4px 8px 4px 2px;}
- .plate-vr {font-size:23px;}
- .plate-date {font-size:6px;}
- .label {font-size:7px;letter-spacing:.02em;}
- .headline {font-size:12px;}
- .subline {font-size:9px;}
- .action {padding-left:4px;}
- .action-date {display:none;}
- .link {font-size:0;padding:0;width:30px;min-height:30px;}
- .link svg {width:17px;height:17px;}
- .footer {font-size:7px;padding-inline:10px;}
-}
-@media(max-width:390px) {
- .label {font-size:6px;}
- .headline {font-size:11px;}
- .footer-brand {display:none;}
-}
-@media(prefers-reduced-motion:reduce){.link{transition:none}}
+  :host { display: block; font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  .card {
+    position: relative;
+    width: 100%; max-height: calc(100dvh - 28px); overflow: auto;
+    color: #fff; pointer-events: auto; isolation: isolate;
+    background: linear-gradient(158deg, #101d4f 0%, #0b1539 44%, #070d26 100%);
+    border: 1px solid #344ea3; border-radius: 10px;
+    box-shadow: 0 20px 54px rgba(2, 5, 19, .66), 0 0 0 1px rgba(41, 66, 156, .15);
+    scrollbar-color: #29459b #080f29;
+  }
+  .head { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 17px;border-bottom:1px solid #24356c; }
+  .logo { display:flex;align-items:center;gap:10px;font-size:13px;font-weight:900;letter-spacing:.035em;color:#fff; }
+  .logo strong {color:#fff;font-size:19px;letter-spacing:-.06em;}
+  .close { display:grid;place-items:center;flex:none;width:31px;height:31px;background:#162457;border:1px solid #3956a9;border-radius:6px;color:#fff;cursor:pointer; }
+  .close:hover {background:#233b83;color:#fff;}
+  .close svg {width:16px;height:16px;}
+  .content {padding:20px 21px 17px;}
+  .label {font-size:11px;font-weight:900;letter-spacing:.12em;color:#fff;margin-bottom:13px;}
+  h2 {margin:0;font-size:clamp(24px, 3vw, 31px);font-weight:950;line-height:1.08;letter-spacing:-.045em;color:#fff;}
+  h2 span {display:block;color:#fff;margin-top:5px;}
+  .desc {margin:14px 0 0;font-size:13px;font-weight:560;line-height:1.55;color:#fff;}
+  .bottom {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 17px 14px;border-top:1px solid #24356c;background:#09112f;}
+  .date {display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
+  .date small {font-size:9px;font-weight:900;letter-spacing:.09em;color:#fff;}
+  .date strong {font-size:14px;font-weight:950;line-height:1.15;color:#fff;}
+  .cta {display:flex;align-items:center;justify-content:center;gap:11px;padding:11px 12px;min-height:42px;text-align:center;text-decoration:none;font-size:11px;font-weight:950;letter-spacing:.035em;border-radius:6px;border:1px solid #466be2;background:#2143b3;color:#fff;pointer-events:auto;}
+  .cta:hover {background:#3056d0;}
+  .cta svg {height:16px;width:16px;flex:none;}
+  .reopen {display:flex;align-items:center;gap:9px;margin-left:auto;pointer-events:auto;cursor:pointer;padding:10px 13px;background:#101d4f;border:1px solid #3954ae;color:#fff;border-radius:10px;box-shadow:0 10px 36px #030715b8;font-weight:900;font-size:12px;}
+  .reopen:hover {background:#1a3079;}
+  .reopen svg {height:25px;width:25px;}
+  button:focus-visible,a:focus-visible {outline:2px solid #5674ee;outline-offset:3px;}
+  @media(max-width:450px) {
+    .head {padding:10px 13px;}
+    .content {padding:15px 15px 13px;}
+    .label {margin-bottom:10px;}
+    h2 {font-size:24px;}
+    .desc {font-size:12px;}
+    .bottom {padding:10px 13px;}
+    .date strong {font-size:12px;}
+    .cta {padding:10px;font-size:10px;}
+  }
 </style>
-<div class="graph" role="region" aria-label="Anuncio VR, diciembre de 2026">
-  <div class="body">
-    <div class="plate" aria-hidden="true">
-      <span class="plate-brand">SATV<b>+</b></span>
-      <span class="plate-vr">VR</span>
-      <span class="plate-date">DIC · 2026</span>
-    </div>
-    <div class="story">
-      <span class="label">EL PRÓXIMO CAPÍTULO DEL CINE</span>
-      <strong class="headline">LA PANTALLA GRANDE <em>FUE SOLO EL COMIENZO.</em></strong>
-      <span class="subline">La realidad virtual llega a SATV+ este diciembre.</span>
-    </div>
-    <div class="action">
-      <span class="action-date">PRÓXIMAMENTE · 2026</span>
-      <a class="link" href="${LANDING}" aria-label="Descubrí la próxima experiencia VR de SATV+">DESCUBRÍ MÁS
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </a>
-    </div>
+<section class="card" id="vr-card" aria-label="Lanzamiento de SATV+ VR en diciembre de 2026">
+  <div class="head">
+    <div class="logo"><strong>SATV+</strong> / VR</div>
+    <button class="close" type="button" data-vr-close title="Cerrar anuncio" aria-label="Cerrar anuncio de SATV+ VR">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
   </div>
-  <div class="footer" aria-hidden="true">
-    <span class="footer-brand">SATV+ ORIGINAL EXPERIENCE</span>
-    <span class="footer-rule"></span>
-    <span class="tech">VR / VR360 / 360°</span>
+  <div class="content">
+    <div class="label">PRÓXIMAMENTE EN SATV+</div>
+    <h2>MÁS ALLÁ DEL CINE.<span>Sentite parte de tu película favorita.</span></h2>
+    <p class="desc">Viví tus historias favoritas más cerca que nunca. En diciembre llega SATV+ VR: películas, series y programas en una gran pantalla virtual a través de un visor.</p>
   </div>
-</div>`;
+  <div class="bottom">
+    <div class="date"><small>LANZAMIENTO VR</small><strong>DICIEMBRE 2026</strong></div>
+    <a class="cta" href="/vr.html">DESCUBRÍ MÁS
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</section>
+<button class="reopen" data-vr-open type="button" hidden aria-label="Volver a abrir anuncio de SATV+ VR" title="Abrir anuncio de SATV+ VR">
+  <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="5" y="15" width="38" height="20" rx="8" stroke="currentColor" stroke-width="3"/><path d="M14 25c2-6 7-6 10-1 3-5 8-5 10 1" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="16" cy="25" r="3" fill="currentColor"/><circle cx="32" cy="25" r="3" fill="currentColor"/></svg>
+  SATV+ VR
+</button>`;
 
-function navIsReady() {
-  const nav = document.getElementById('topnav');
-  if (!nav || !nav.querySelector('.nav-left') || !nav.querySelector('.nav-right')) return null;
-  return nav;
+function readClosed() {
+  try { return sessionStorage.getItem(VR_CLOSED_KEY) === '1'; }
+  catch { return false; }
 }
-
-function desktopNavWrapped(nav) {
-  // En escritorio no mostramos el gráfico si el navbar ya está desarmado:
-  // evita ocultar un problema de maquetación existente o tapar controles.
-  if (window.innerWidth < 1000) return false;
-  const left = nav.querySelector('.nav-left');
-  const right = nav.querySelector('.nav-right');
-  if (!left || !right) return false;
-  const a = left.getBoundingClientRect();
-  const b = right.getBoundingClientRect();
-  return a.height > 0 && b.height > 0 && Math.abs((a.top+a.bottom)/2-(b.top+b.bottom)/2) > 20;
+function saveClosed(value) {
+  try { sessionStorage.setItem(VR_CLOSED_KEY, value ? '1' : '0'); }
+  catch { /* almacenamiento deshabilitado */ }
 }
-
-function placeOverlay() {
-  positionScheduled = false;
-  const nav = navIsReady();
-  const host = document.getElementById(ID);
-  if (!nav || !host) return;
-
-  if (desktopNavWrapped(nav)) {
-    host.style.visibility = 'hidden';
-    console.warn('[SATV+ VR] Barra de navegación desalineada; oculto el overlay para no tapar el header. Revisar CSS original del navbar.');
-    return;
-  }
-
-  host.style.visibility = 'visible';
-  const rect = nav.getBoundingClientRect();
-  // El overlay empieza BAJO el navbar: no se agregan márgenes, alturas o rellenos.
-  const top = Math.max(0, rect.bottom + window.scrollY + 12);
-  const left = Math.max(12, rect.left + window.scrollX + 22);
-  const maxLeft = Math.max(12, document.documentElement.clientWidth - host.offsetWidth - 12);
-  host.style.top = `${Math.round(top)}px`;
-  host.style.left = `${Math.round(Math.min(left, maxLeft))}px`;
+function setClosed(root, closed) {
+  const card = root.getElementById('vr-card');
+  const reopen = root.querySelector('[data-vr-open]');
+  if (card && reopen) { card.hidden = closed; reopen.hidden = !closed; }
 }
-
-function schedulePlacement() {
-  if (positionScheduled) return;
-  positionScheduled = true;
-  requestAnimationFrame(placeOverlay);
-}
-
-function mount() {
-  if (mounted || !allowedPaths.has(window.location.pathname)) return;
-  const nav = navIsReady();
-  if (!nav || !document.body) return;
-  const rect = nav.getBoundingClientRect();
-  if (rect.width < 1 || rect.height < 1) return;
-  mounted = true;
-  // A diferencia de la versión anterior, NO se añade ningún CSS global.
+function mountVrOverlay() {
+  if (!document.body || !VR_PATHS.has(window.location.pathname) || document.getElementById(VR_HOST_ID)) return;
   const host = document.createElement('div');
-  host.id = ID;
-  host.setAttribute('data-satv-vr-overlay','');
+  host.id = VR_HOST_ID;
   Object.assign(host.style, {
-    position:'absolute',
-    zIndex:'220',
-    width:'min(840px, calc(100vw - 28px))',
-    maxWidth:'100%',
-    margin:'0',
-    padding:'0',
-    left:'0px',
-    top:'0px',
-    pointerEvents:'none',
-    visibility:'hidden'
+    position: 'fixed', right: 'max(14px, env(safe-area-inset-right))',
+    bottom: 'max(14px, env(safe-area-inset-bottom))',
+    width: 'min(410px, calc(100vw - 28px))', maxWidth: '100%',
+    margin: '0', padding: '0', zIndex: '90', pointerEvents: 'none'
   });
-  const shadow = host.attachShadow({mode:'open'});
-  shadow.innerHTML = markup;
+  const root = host.attachShadow({mode: 'open'});
+  root.innerHTML = VR_HTML;
   document.body.appendChild(host);
-  schedulePlacement();
-  if ('ResizeObserver' in window) {
-    resizeObserver = new ResizeObserver(schedulePlacement);
-    resizeObserver.observe(nav);
-  }
-  window.addEventListener('resize', schedulePlacement, {passive:true});
-  window.addEventListener('pageshow', schedulePlacement, {passive:true});
-  window.addEventListener('load', schedulePlacement, {once:true,passive:true});
-}
-
-function setup() {
-  if (initialized || !allowedPaths.has(window.location.pathname)) return;
-  initialized = true;
-  mount();
-  if (mounted) return;
-  // Esperar a que el JS de la página ejecute renderNav(), sin tocarlo.
-  mutationObserver = new MutationObserver(() => {
-    mount();
-    if (mounted) {
-      mutationObserver.disconnect();
-      mutationObserver = null;
+  setClosed(root, readClosed());
+  root.querySelector('[data-vr-close]')?.addEventListener('click', () => {
+    saveClosed(true); setClosed(root, true);
+    root.querySelector('[data-vr-open]')?.focus();
+  });
+  root.querySelector('[data-vr-open]')?.addEventListener('click', () => {
+    saveClosed(false); setClosed(root, false);
+    root.querySelector('[data-vr-close]')?.focus();
+  });
+  root.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !root.getElementById('vr-card')?.hidden) {
+      saveClosed(true); setClosed(root, true);
+      root.querySelector('[data-vr-open]')?.focus();
     }
   });
-  mutationObserver.observe(document.body, {subtree:true, childList:true});
 }
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setup, {once:true});
-} else {
-  setup();
-}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountVrOverlay, {once:true});
+else mountVrOverlay();

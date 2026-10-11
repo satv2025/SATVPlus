@@ -1,221 +1,105 @@
-/* ==============================================================
-   SATV+ VR / micrositio de lanzamiento
-   Identidad: grafito tornasolado, titanio, azul acero, plata hielo
-   Importante: clases aisladas para no afectar las cards de SATV+
-   ============================================================== */
-.vrpage-body {
-  --vrpage-bg: #0e1420;
-  --vrpage-panel: #192231;
-  --vrpage-ink: #eef4ff;
-  --vrpage-silver: #bfcbd9;
-  --vrpage-ice: #b2d4ff;
-  --vrpage-line: rgba(190, 211, 242, .16);
-  background: var(--vrpage-bg);
-  color: var(--vrpage-ink);
+/* SATV+ VR Cinema — landing limpia, cine premium, azul noche + texto blanco.
+   Únicamente afecta los elementos de .vr-cinema-page: no altera el header del resto del sitio. */
+.vr-cinema-page {
+  --vrc-bg: #050c1c;
+  --vrc-surface: #0b1832;
+  --vrc-surface-lift: #101e3c;
+  --vrc-border: #203865;
+  --vrc-accent: #2458c5;
+  --vrc-white: #fff;
+  color: #fff;
+  background: linear-gradient(180deg,#071328 0%,#050d1d 40%,#08142b 100%);
   margin: 0;
   min-width: 320px;
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
-.vrpage-body *, .vrpage-body *::before, .vrpage-body *::after { box-sizing: border-box; }
-.vrpage-body a { color: inherit; }
-.vrpage-body .vrpage-sitebar { position: relative; z-index: 60; min-height: 65px; background: #101622; }
-/* En el home, el navbar puede estar superpuesto al hero. Acá debe
-   integrarse al flujo normal, pero mantiene su renderizado de ui.js. */
-.vrpage-body #topnav {
-  position: relative !important;
-  inset: auto !important;
-  transform: none !important;
-  width: 100%;
-  min-height: 65px;
-  z-index: 2;
-  background: linear-gradient(100deg, #121825, #1b2739 63%, #121c2c);
-  border-bottom: 1px solid rgba(195, 218, 252, .1);
+.vr-cinema-page *, .vr-cinema-page *::before, .vr-cinema-page *::after { box-sizing: border-box; }
+.vr-cinema-page .vr-main { overflow: clip; }
+.vr-cinema-page a { color: inherit; }
+.vr-cinema-page strong { color: #fff; font-weight: 800; }
+.vr-cinema-page .vr-sitehead { position: relative; z-index: 10; min-height: 65px; background:#071329; }
+.vr-cinema-page #topnav { position: relative !important; inset: auto !important; transform: none !important; width: 100%; min-height: 65px; background: #071329; border-bottom: 1px solid #18315b; }
+.vr-cinema-page .vr-fallback { display: inline-block; padding: 20px 28px; text-decoration:none; font-weight:950; font-size:22px; color:#fff; }
+.vr-cinema-page .vr-width, .vr-cinema-page .vr-hero { max-width: 1210px; margin-inline: auto; padding-inline: 32px; }
+.vr-cinema-page .vr-eyebrow { margin:0 0 18px; font-size:11px; font-weight:900; letter-spacing:.16em; color:#fff; text-transform:uppercase; opacity:.82; }
+.vr-cinema-page .vr-brandline { margin:0 0 15px; font-size:16px; font-weight:950; letter-spacing:.08em; color:#fff; }
+.vr-cinema-page .vr-brandline span { border-left:1px solid #4563a1; padding-left:10px; margin-left:5px; }
+.vr-cinema-page h1, .vr-cinema-page h2, .vr-cinema-page h3, .vr-cinema-page p { max-width:100%; }
+
+/* Hero: texto editorial + fotografía generada, sin sobrecarga de elementos. */
+.vr-cinema-page .vr-hero { display:grid; grid-template-columns:minmax(0,1.03fr) minmax(320px,.92fr); gap:clamp(25px,4.5vw,70px); align-items:center; min-height:635px; padding-top:58px; padding-bottom:80px; }
+.vr-cinema-page .vr-hero-copy { position:relative; z-index:1; }
+.vr-cinema-page .vr-hero h1 { margin:0; color:#fff; font-size:clamp(46px,5.6vw,78px); font-weight:950; line-height:1.015; letter-spacing:-.055em; text-wrap:balance; }
+.vr-cinema-page .vr-hero h1 span { display:block; color:#fff; }
+.vr-cinema-page .vr-lede { margin:23px 0 26px; color:#fff; opacity:.88; font-size:clamp(16px,1.65vw,19px); font-weight:520; line-height:1.62; max-width:610px; }
+.vr-cinema-page .vr-hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:20px; }
+.vr-cinema-page .vr-button { display:inline-flex; align-items:center; justify-content:center; gap:13px; min-height:45px; padding:12px 17px; text-decoration:none; font-size:13px; font-weight:850; letter-spacing:.015em; color:#fff; border:1px solid #466cb8; border-radius:8px; background:#162b58; transition:background-color .18s,border-color .18s; }
+.vr-cinema-page .vr-button:hover { background:#1d4084; border-color:#5b80ce; }
+.vr-cinema-page .vr-button-primary { background:#1e4ca8; border-color:#3566c8; }
+.vr-cinema-page .vr-hero-date { display:inline-flex; align-items:center; gap:9px; color:#fff; font-size:11px; font-weight:850; letter-spacing:.08em; }
+.vr-cinema-page .vr-live-dot { width:7px;height:7px;border-radius:50%; background:#396ae1; box-shadow:0 0 10px #355cba; }
+.vr-cinema-page .vr-hero-media { position:relative; min-width:0; border-radius:20px; isolation:isolate; }
+.vr-cinema-page .vr-hero-media::before { content:''; position:absolute; z-index:-1; inset:5% -7%; border-radius:40%; background:rgba(29,65,150,.3); filter:blur(48px); pointer-events:none; }
+.vr-cinema-page .vr-hero-image { display:block; width:100%; height:auto; aspect-ratio:4/3; object-fit:cover; object-position:center; border-radius:19px; border:1px solid #294371; box-shadow:0 24px 65px rgba(0,0,0,.45); }
+.vr-cinema-page .vr-media-caption { position:absolute; bottom:15px; left:17px; right:17px; font-size:10px; font-weight:880; letter-spacing:.11em; color:#fff; text-shadow:0 1px 12px #000; }
+
+/* Pequeño texto editorial, sin otra tarjeta decorativa. */
+.vr-cinema-page .vr-experience { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:clamp(28px,5vw,76px); padding-block:67px 75px; border-top:1px solid #1b335e; }
+.vr-cinema-page .vr-experience h2 { margin:0; font-size:clamp(32px,3.8vw,49px); line-height:1.11; letter-spacing:-.045em; color:#fff; font-weight:930; }
+.vr-cinema-page .vr-experience h2 span { display:block; color:#fff; }
+.vr-cinema-page .vr-experience-copy { padding-top:4px; }
+.vr-cinema-page .vr-experience-copy p { margin:0 0 15px; color:#fff; opacity:.84; font-size:15px; line-height:1.76; }
+
+/* Comparativa compacta, pero con información técnica completa en detalles. */
+.vr-cinema-page .vr-differences { padding-block:72px 100px; border-top:1px solid #1b335e; }
+.vr-cinema-page .vr-section-heading { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,.76fr); align-items:end; gap:34px; margin-bottom:32px; }
+.vr-cinema-page .vr-section-heading h2 { margin:0; color:#fff; font-size:clamp(33px,4.1vw,53px); line-height:1.1; letter-spacing:-.047em; font-weight:930; }
+.vr-cinema-page .vr-section-heading h2 span { display:block; color:#fff; }
+.vr-cinema-page .vr-section-lede { color:#fff; opacity:.84; font-size:14px; line-height:1.72; margin:0 0 4px; }
+.vr-cinema-page .vr-compare { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:stretch; }
+.vr-cinema-page .vr-compare-card { padding:26px 27px 22px; border:1px solid #233f73; background:linear-gradient(155deg,#0d1d3b,#0a152c); border-radius:15px; color:#fff; min-width:0; }
+.vr-cinema-page .vr-compare-featured { grid-column:1 / -1; border-color:#3260ad; background:linear-gradient(140deg,#122a57,#0a1732 65%); }
+.vr-cinema-page .vr-compare-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:15px; }
+.vr-cinema-page .vr-index { display:block; margin-bottom:11px; color:#fff; opacity:.7; font-size:10px; font-weight:900; letter-spacing:.12em; }
+.vr-cinema-page .vr-compare-card h3 { margin:0 0 4px; color:#fff; font-size:clamp(29px,3.5vw,44px); letter-spacing:-.055em; line-height:1; font-weight:960; }
+.vr-cinema-page .vr-subtitle { font-size:13px; color:#fff; opacity:.84; font-weight:650; }
+.vr-cinema-page .vr-status { border-radius:5px; padding:8px 9px; background:#142744; border:1px solid #32517e; color:#fff; font-size:10px; font-weight:900; letter-spacing:.04em; text-align:center; white-space:nowrap; }
+.vr-cinema-page .vr-status-yes { background:#18418e; border-color:#4674cf; }
+.vr-cinema-page .vr-compare-description { margin:0 0 19px; color:#fff; opacity:.86; font-size:14px; line-height:1.7; max-width:840px; }
+.vr-cinema-page .vr-more { border-top:1px solid #2a4168; }
+.vr-cinema-page .vr-more summary { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:16px 0 5px; list-style:none; color:#fff; font-size:12px; font-weight:850; cursor:pointer; }
+.vr-cinema-page .vr-more summary::-webkit-details-marker { display:none; }
+.vr-cinema-page .vr-more summary span { display:inline-flex; width:22px; height:22px; flex:none; align-items:center; justify-content:center; font-size:20px; font-weight:400; color:#fff; line-height:1; border:1px solid #3a5990; border-radius:5px; }
+.vr-cinema-page .vr-more[open] summary span { transform:rotate(45deg); }
+.vr-cinema-page .vr-more summary:focus-visible { outline:2px solid #4778d4; outline-offset:4px; }
+.vr-cinema-page .vr-more-content { padding-top:9px; }
+.vr-cinema-page .vr-more-content p { margin:0 0 12px; color:#fff; opacity:.86; font-size:13px; line-height:1.68; }
+.vr-cinema-page .vr-compare-footnote { margin:22px 0 0; color:#fff; opacity:.68; font-size:12px; line-height:1.7; }
+
+.vr-cinema-page .vr-finale { display:flex; justify-content:space-between; align-items:center; gap:30px; padding-block:57px 66px; border-top:1px solid #1b335e; }
+.vr-cinema-page .vr-finale h2 { margin:0; font-size:clamp(28px,3.4vw,43px); font-weight:925; letter-spacing:-.045em; line-height:1.1; color:#fff; }
+.vr-cinema-page .vr-footer { padding:23px 25px; border-top:1px solid #142a50; color:#fff; opacity:.65; font-size:11px; font-weight:700; letter-spacing:.1em; text-align:center; }
+@media(max-width:950px) {
+  .vr-cinema-page .vr-hero { grid-template-columns:minmax(0,1fr) minmax(280px,.9fr); gap:28px; min-height:0; padding-top:54px; padding-bottom:65px; }
+  .vr-cinema-page .vr-hero h1 { font-size:clamp(38px,5vw,60px); }
+  .vr-cinema-page .vr-section-heading { grid-template-columns:1fr; gap:12px; }
 }
-.vrpage-body .vrpage-nav-fallback { display: inline-flex; margin: 20px 30px; text-decoration: none; font-weight: 950; font-style: italic; font-size: 23px; }
-.vrpage-body .vrpage-nav-fallback span { color: #9ec7fc; }
-.vrpage-body .vrpage-container { width: min(100% - 88px, 1280px); margin-inline: auto; }
-.vrpage-body .vrpage-main { overflow: hidden; }
-/* HERO */
-.vrpage-body .vrpage-hero {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: clamp(610px, 75vh, 850px);
-  padding: 90px max(44px, calc((100vw - 1280px)/2)) 88px;
-  overflow: hidden;
-  isolation: isolate;
-  background:
-    radial-gradient(ellipse at 83% 43%, rgba(85, 135, 201, .38), transparent 36%),
-    radial-gradient(ellipse at 62% -22%, rgba(210, 220, 235, .16), transparent 40%),
-    linear-gradient(117deg, #111722 4%, #303a47 44%, #1c2b41 70%, #101827 100%);
+@media(max-width:710px) {
+  .vr-cinema-page .vr-width, .vr-cinema-page .vr-hero { padding-inline:20px; }
+  .vr-cinema-page .vr-hero { display:flex; flex-direction:column-reverse; align-items:stretch; gap:28px; padding-block:30px 60px; }
+  .vr-cinema-page .vr-hero h1 { font-size:clamp(39px,8.7vw,58px); }
+  .vr-cinema-page .vr-hero-media { max-width:620px; width:100%; margin-inline:auto; }
+  .vr-cinema-page .vr-media-caption { font-size:9px; }
+  .vr-cinema-page .vr-experience { grid-template-columns:1fr; gap:20px; padding-block:55px; }
+  .vr-cinema-page .vr-differences { padding-block:55px 75px; }
+  .vr-cinema-page .vr-compare { grid-template-columns:1fr; }
+  .vr-cinema-page .vr-compare-featured { grid-column:auto; }
+  .vr-cinema-page .vr-finale { flex-direction:column; align-items:flex-start; padding-block:52px; }
 }
-.vrpage-body .vrpage-hero::before {
-  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background:
-    linear-gradient(100deg, rgba(4,8,15,.55), rgba(7,12,20,.08) 65%),
-    repeating-linear-gradient(135deg, transparent 0 96px, rgba(255,255,255,.012) 97px 99px);
+@media(max-width:430px) {
+  .vr-cinema-page .vr-compare-card { padding:22px 18px; }
+  .vr-cinema-page .vr-compare-head { flex-wrap:wrap; gap:13px; }
+  .vr-cinema-page .vr-hero-actions { align-items:flex-start; }
 }
-.vrpage-body .vrpage-hero::after {
-  content: ''; position: absolute; inset: auto 0 0; height: 175px;
-  background: linear-gradient(0deg, #0e1420, transparent);
-  z-index: -1; pointer-events: none;
-}
-.vrpage-body .vrpage-atmosphere {
-  pointer-events: none; position: absolute; width: 50vw; height: 90vh;
-  top: -45vh; left: 18%; transform: rotate(-28deg);
-  background: linear-gradient(90deg, transparent, rgba(207,225,252,.075), transparent);
-  filter: blur(35px); z-index: -1;
-}
-.vrpage-body .vrpage-hero-content { position: relative; z-index: 2; max-width: 810px; }
-.vrpage-body .vrpage-eyebrow {
-  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-  margin: 0 0 49px; color: #dbe8fa;
-  font-size: 11px; font-weight: 850; letter-spacing: 2.4px;
-}
-.vrpage-body .vrpage-eyebrow-line { display: inline-block; width: 30px; height: 2px; background: #b1d5ff; box-shadow: 0 0 12px #7eaee8; }
-.vrpage-body .vrpage-eyebrow-sep { color: #7e95b4; }
-.vrpage-body .vrpage-pretitle { font-size: 12px; letter-spacing: 2.3px; font-weight: 820; color: #9cbfeb; margin: 0 0 18px; }
-.vrpage-body .vrpage-hero h1 {
-  margin: 0; max-width: 890px;
-  font-size: clamp(48px, 6.2vw, 91px); line-height: .99;
-  letter-spacing: -.064em; font-weight: 950; color: #fff;
-  text-shadow: 0 9px 35px rgba(0, 0, 0, .23);
-}
-.vrpage-body .vrpage-hero h1 span {
-  display: block; margin-top: 8px; color: #b4c7df;
-  background: linear-gradient(100deg, #fff 0%, #bcd5f4 36%, #78a2d7 69%, #d8e5f4 100%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.vrpage-body .vrpage-lede { max-width: 690px; color: #f1f5fc; font-size: clamp(19px, 2vw, 25px); font-weight: 700; line-height: 1.5; margin: 31px 0 14px; }
-.vrpage-body .vrpage-hero-description { max-width: 645px; color: #c9d3e1; font-size: 15px; line-height: 1.85; margin: 0; }
-.vrpage-body .vrpage-hero-actions { margin-top: 37px; display: flex; align-items: center; flex-wrap: wrap; gap: 17px 24px; }
-.vrpage-body .vrpage-primary, .vrpage-body .vrpage-secondary {
-  text-decoration: none; display: inline-flex; align-items: center; gap: 19px;
-  justify-content: space-between; min-height: 49px; padding: 12px 21px;
-  font-size: 13px; font-weight: 850; border-radius: 7px;
-  transition: transform .2s, background .2s, box-shadow .2s;
-}
-.vrpage-body .vrpage-primary { color: #121a2a; background: linear-gradient(120deg, #e5f1ff, #9bbce7); box-shadow: 0 9px 28px rgba(14, 30, 55, .3); }
-.vrpage-body .vrpage-primary:hover { transform: translateY(-2px); background: #fff; box-shadow: 0 13px 36px rgba(16, 33, 58, .36); }
-.vrpage-body a:focus-visible { outline: 2px solid #a4ceff; outline-offset: 4px; }
-.vrpage-body .vrpage-launch { display: inline-flex; align-items: center; gap: 10px; color: #bbcbe0; font-size: 10px; font-weight: 850; letter-spacing: 1.2px; }
-.vrpage-body .vrpage-launch-dot { width: 6px; height: 6px; background: #bad9ff; border-radius: 50%; box-shadow: 0 0 12px #95c5ff; }
-/* Visor abstracto hecho solo con CSS: no descarga imágenes. */
-.vrpage-body .vrpage-object {
-  position: absolute; z-index: 0; pointer-events: none;
-  width: min(48vw, 740px); height: min(48vw, 740px);
-  right: -5%; top: 45%; transform: translateY(-50%);
-  display: grid; place-items: center;
-}
-.vrpage-body .vrpage-halo { position: absolute; border-radius: 50%; transform: rotate(-21deg); }
-.vrpage-body .vrpage-halo-one { width: 85%; height: 85%; border: 1px solid rgba(198, 226, 255, .14); box-shadow: inset 0 0 90px rgba(104, 152, 219, .06), 0 0 70px rgba(100, 156, 231, .1); }
-.vrpage-body .vrpage-halo-two { width: 63%; height: 63%; border: 1px solid rgba(210, 232, 255, .22); }
-.vrpage-body .vrpage-visor {
-  position: relative; width: 75%; height: 32%; border: 2px solid rgba(218, 232, 255, .5);
-  border-radius: 28% 28% 31% 31% / 40% 40% 47% 47%;
-  background: linear-gradient(135deg, #5e7187, #1c2b40 42%, #0b1526 72%, #809aba);
-  box-shadow: inset 0 4px 22px rgba(242, 248, 255, .24), inset 0 -28px 45px #08121e, 0 33px 85px #050b14a8, 0 0 100px #76b4ff2b;
-  transform: rotate(-12deg) perspective(750px) rotateY(-13deg);
-}
-.vrpage-body .vrpage-visor::before, .vrpage-body .vrpage-visor::after {
-  content: ''; position: absolute; top: 23%; width: 14%; height: 55%;
-  background: linear-gradient(100deg, rgba(132, 159, 194, .34), transparent);
-  border: 1px solid rgba(224, 237, 255, .17);
-  border-radius: 30%; z-index: -1;
-}
-.vrpage-body .vrpage-visor::before { left: -10%; }
-.vrpage-body .vrpage-visor::after { right: -10%; }
-.vrpage-body .vrpage-visor-lens {
-  position: absolute; inset: 12% 7%; border-radius: 24% 24% 30% 30% / 35% 35% 55% 55%;
-  border: 1px solid rgba(224, 237, 255, .17);
-  background: linear-gradient(125deg, #18263d 10%, #091321 52%, #182e48 85%);
-  box-shadow: inset 0 0 30px rgba(145, 186, 244, .17);
-}
-.vrpage-body .vrpage-visor-shine { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(145deg, rgba(239,246,255,.3), transparent 45%); }
-.vrpage-body .vrpage-visor-core { position: absolute; inset: 0; display: grid; place-items: center; color: #e2f0ff; font-size: clamp(65px, 9vw, 160px); font-weight: 950; letter-spacing: -.08em; opacity: .7; text-shadow: 0 0 30px rgba(136,184,248,.6); }
-.vrpage-body .vrpage-floating-tag { position: absolute; bottom: 15%; right: 16%; color: #afc8e6; font-size: 10px; font-weight: 850; letter-spacing: 2.8px; }
-.vrpage-body .vrpage-hero-bottom { position: absolute; left: max(44px, calc((100vw - 1280px)/2)); right: max(44px, calc((100vw - 1280px)/2)); bottom: 27px; display: flex; justify-content: space-between; gap: 15px; color: #8fa5c2; font-size: 10px; font-weight: 700; letter-spacing: 1.7px; }
-/* STORY */
-.vrpage-body .vrpage-story { padding-block: 112px 122px; }
-.vrpage-body .vrpage-story-meta { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
-.vrpage-body .vrpage-overline { color: #a6cafa; font-size: 11px; font-weight: 850; letter-spacing: 2.3px; }
-.vrpage-body .vrpage-line { height: 1px; flex: 1; background: linear-gradient(90deg, var(--vrpage-line), transparent); }
-.vrpage-body .vrpage-story-grid { display: grid; grid-template-columns: 1fr .85fr; gap: 12%; align-items: start; }
-.vrpage-body .vrpage-story h2 { color: #fff; font-size: clamp(37px, 4vw, 62px); font-weight: 900; letter-spacing: -.055em; line-height: 1.07; margin: 0; }
-.vrpage-body .vrpage-story h2 span { display: block; color: #a7bdda; }
-.vrpage-body .vrpage-story-copy p { color: #bac7d8; font-size: 15px; line-height: 1.95; margin: 0 0 18px; }
-.vrpage-body .vrpage-story-copy strong { color: #f2f6ff; }
-/* FORMATS */
-.vrpage-body .vrpage-experiences { background: linear-gradient(180deg, #151e2d 0%, #202b3b 46%, #151d2b 100%); padding: 108px 0 102px; border-block: 1px solid rgba(194, 217, 253, .09); }
-.vrpage-body .vrpage-section-head { max-width: 820px; margin-bottom: 39px; }
-.vrpage-body .vrpage-section-head h2 { font-size: clamp(35px, 4vw, 61px); letter-spacing: -.05em; line-height: 1.12; margin: 16px 0 14px; font-weight: 900; color: #fff; }
-.vrpage-body .vrpage-section-head h2 span { color: #9fb5d1; }
-.vrpage-body .vrpage-section-head p { max-width: 620px; color: #bac7d7; line-height: 1.7; font-size: 15px; }
-.vrpage-body .vrpage-cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 15px; }
-.vrpage-body .vrpage-card {
-  display: flex; flex-direction: column; position: relative; isolation: isolate; overflow: hidden;
-  min-height: 380px; padding: 27px 25px 21px; border-radius: 13px;
-  background: linear-gradient(145deg, rgba(203,218,238,.115), rgba(130,164,212,.05) 55%, rgba(55,78,109,.12));
-  border: 1px solid rgba(203, 221, 244, .2); box-shadow: inset 0 1px rgba(248,251,255,.085);
-  transition: transform .25s, border-color .25s, background .25s;
-}
-.vrpage-body .vrpage-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 100% 0, rgba(178,205,244,.1), transparent 52%); z-index: -1; }
-.vrpage-body .vrpage-card:hover { transform: translateY(-5px); border-color: rgba(190, 222, 255, .43); }
-.vrpage-body .vrpage-card-top { display: flex; align-items: start; justify-content: space-between; gap: 10px; margin-bottom: 45px; }
-.vrpage-body .vrpage-card-index { font-size: 10px; letter-spacing: 1.5px; color: #9fbce0; font-weight: 850; }
-.vrpage-body .vrpage-card-glyph { width: 47px; height: 47px; display: grid; place-items: center; border-radius: 11px; background: rgba(183, 208, 242, .1); color: #c4dafa; font-size: 24px; }
-.vrpage-body .vrpage-card h3 { margin: 0 0 15px; color: white; font-size: clamp(37px, 3vw, 53px); font-weight: 950; letter-spacing: -.055em; line-height: 1; }
-.vrpage-body .vrpage-card h3 span { display: block; margin-top: 10px; color: #b4c8df; font-size: 14px; font-weight: 700; letter-spacing: 0; }
-.vrpage-body .vrpage-card p { color: #c1cedd; font-size: 13px; line-height: 1.8; margin: 0 0 25px; }
-.vrpage-body .vrpage-card p strong { color: #edf5ff; font-weight: 750; }
-.vrpage-body .vrpage-card-foot { padding-top: 17px; border-top: 1px solid rgba(180, 213, 246, .14); margin-top: auto; color: #94b5df; font-size: 10px; font-weight: 850; letter-spacing: 1.4px; }
-.vrpage-body .vrpage-explainer { margin: 22px 2px 0; max-width: 950px; color: #97a8bd; font-size: 12px; line-height: 1.65; }
-/* FINALE */
-.vrpage-body .vrpage-finale { margin-top: 94px; margin-bottom: 94px; border: 1px solid rgba(181, 206, 239, .22); background: linear-gradient(120deg, #2e394a, #182638 60%, #1e2d43); border-radius: 17px; padding: 66px clamp(28px,5vw,70px); position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: center; justify-content: space-between; gap: 45px; }
-.vrpage-body .vrpage-finale-shimmer { position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 90% 50%, rgba(180, 214, 253, .17), transparent 40%); }
-.vrpage-body .vrpage-finale-copy { max-width: 710px; }
-.vrpage-body .vrpage-finale h2 { font-size: clamp(35px, 4.4vw, 65px); line-height: 1.08; letter-spacing: -.05em; margin: 20px 0 15px; color: #fff; font-weight: 950; }
-.vrpage-body .vrpage-finale h2 span { display: block; color: #b9d2ee; }
-.vrpage-body .vrpage-finale p { font-size: 15px; color: #c5d2e1; line-height: 1.8; }
-.vrpage-body .vrpage-secondary { margin-top: 13px; border: 1px solid rgba(199, 224, 255, .45); color: #f1f7ff; background: rgba(210, 230, 255, .1); }
-.vrpage-body .vrpage-secondary:hover { transform: translateY(-2px); background: rgba(202, 228, 255, .2); }
-.vrpage-body .vrpage-finale-stamp { flex: 0 0 200px; width: 200px; height: 200px; border-radius: 50%; border: 1px solid rgba(208, 230, 255, .29); display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: inset 0 0 55px rgba(193,224,255,.085), 0 0 66px rgba(146,199,255,.08); }
-.vrpage-body .vrpage-finale-stamp span { font-size: 84px; font-weight: 950; letter-spacing: -.075em; color: #e3efff; line-height: 1; }
-.vrpage-body .vrpage-finale-stamp small { text-align: center; color: #adc9eb; font-weight: 850; letter-spacing: 1.6px; font-size: 9px; margin-top: 6px; }
-.vrpage-body .vrpage-footer { min-height: 78px; border-top: 1px solid rgba(192, 215, 243, .12); display: flex; align-items: center; justify-content: space-between; padding: 20px max(44px,calc((100vw - 1280px)/2)); gap: 22px; color: #8193aa; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; }
-@media (max-width: 1100px) {
-  .vrpage-body .vrpage-object { opacity: .45; right: -16%; }
-  .vrpage-body .vrpage-hero-content { max-width: 670px; }
-  .vrpage-body .vrpage-hero { min-height: 680px; }
-  .vrpage-body .vrpage-cards { gap: 12px; }
-  .vrpage-body .vrpage-card { padding: 23px 20px; }
-}
-@media (max-width: 760px) {
-  .vrpage-body .vrpage-container { width: min(100% - 38px, 1280px); }
-  .vrpage-body .vrpage-hero { min-height: 660px; padding: 65px 20px 100px; }
-  .vrpage-body .vrpage-eyebrow { font-size: 9px; letter-spacing: 1.2px; margin-bottom: 40px; }
-  .vrpage-body .vrpage-pretitle { font-size: 10px; letter-spacing: 1.4px; }
-  .vrpage-body .vrpage-hero h1 { font-size: clamp(44px, 9.4vw, 72px); }
-  .vrpage-body .vrpage-hero-description { font-size: 14px; }
-  .vrpage-body .vrpage-object { width: 560px; height: 560px; right: -350px; top: 41%; opacity: .2; }
-  .vrpage-body .vrpage-hero-bottom { left: 20px; right: 20px; font-size: 8px; letter-spacing: 1px; }
-  .vrpage-body .vrpage-story { padding-block: 76px 81px; }
-  .vrpage-body .vrpage-story-grid { grid-template-columns: 1fr; gap: 26px; }
-  .vrpage-body .vrpage-experiences { padding: 76px 0; }
-  .vrpage-body .vrpage-cards { grid-template-columns: 1fr; }
-  .vrpage-body .vrpage-card { min-height: 275px; }
-  .vrpage-body .vrpage-card-top { margin-bottom: 27px; }
-  .vrpage-body .vrpage-finale { flex-direction: column; align-items: flex-start; margin-block: 60px; padding: 36px 26px; }
-  .vrpage-body .vrpage-finale-stamp { display: none; }
-  .vrpage-body .vrpage-footer { padding: 22px 20px; flex-wrap: wrap; }
-}
-@media (max-width: 440px) {
-  .vrpage-body .vrpage-hero h1 { font-size: 42px; }
-  .vrpage-body .vrpage-hero-actions { align-items: flex-start; flex-direction: column; }
-  .vrpage-body .vrpage-lede { font-size: 18px; }
-  .vrpage-body .vrpage-hero-bottom span:last-child { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .vrpage-body .vrpage-card, .vrpage-body .vrpage-primary, .vrpage-body .vrpage-secondary { transition: none; }
-}
+@media(prefers-reduced-motion:reduce) { .vr-cinema-page .vr-button { transition:none; } }
