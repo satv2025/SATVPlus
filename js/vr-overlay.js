@@ -8,11 +8,12 @@ const VR_PATHS = new Set(['/', '/index.html', '/title', '/title.html', '/mylist'
 
 const VR_HTML = `
 <style>
-  :host { display: block; font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  :host { display: block; /* Hereda el font-family de styles.css (selector global *). */ }
   *, *::before, *::after { box-sizing: border-box; }
   [hidden] { display: none !important; }
   .card {
     position: relative;
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
     width: 100%; max-height: calc(100dvh - 28px); overflow: auto;
     color: #fff; pointer-events: auto; isolation: isolate;
     background: linear-gradient(158deg, #101d4f 0%, #0b1539 44%, #070d26 100%);
@@ -38,7 +39,7 @@ const VR_HTML = `
   .cta {display:flex;align-items:center;justify-content:center;gap:11px;padding:11px 12px;min-height:42px;text-align:center;text-decoration:none;font-size:11px;font-weight:950;letter-spacing:.035em;border-radius:6px;border:1px solid #466be2;background:#2143b3;color:#fff;pointer-events:auto;}
   .cta:hover {background:#3056d0;}
   .cta svg {height:16px;width:16px;flex:none;}
-  .reopen {display:flex;align-items:center;gap:9px;margin-left:auto;pointer-events:auto;cursor:pointer;padding:10px 13px;background:#101d4f;border:1px solid #3954ae;color:#fff;border-radius:10px;box-shadow:0 10px 36px #030715b8;font-weight:900;font-size:12px;}
+  .reopen {font-family:inherit;display:flex;align-items:center;gap:9px;margin-left:auto;pointer-events:auto;cursor:pointer;padding:10px 13px;background:#101d4f;border:1px solid #3954ae;color:#fff;border-radius:10px;box-shadow:0 10px 36px #030715b8;font-weight:900;font-size:12px;}
   .reopen:hover {background:#1a3079;}
   .reopen svg {height:25px;width:25px;}
   button:focus-visible,a:focus-visible {outline:2px solid #5674ee;outline-offset:3px;}

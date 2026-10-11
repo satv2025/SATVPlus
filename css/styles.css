@@ -3725,3 +3725,7 @@ body.catalog-section-page main > [hidden] { display: none !important; }
   .catalog-section-view .cup-fixture-detail { padding: 13px 12px; }
   .catalog-section-view .cup-fixtures-count { font-size: 11px; }
 }
+
+*.reopen {
+  font-family: AEmber !important;
+}

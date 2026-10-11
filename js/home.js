@@ -38,7 +38,7 @@ import {
   removeReleaseReminder,
 } from './api.js';
 import { supabase } from './supabaseClient.js';
-import { isCupFixtureSection, renderCupFixtures, installCupShieldFallback } from './cupFixtures.js?v=20261009-fixtures-2';
+import { isCupFixtureSection, renderCupFixtures, installCupShieldFallback } from './cupFixtures.js';
 
 /* =========================================================
    TIPOGRAFÍA INLINE SOLO PARA 2 LÍNEAS
