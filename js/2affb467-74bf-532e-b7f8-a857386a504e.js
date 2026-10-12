@@ -218,7 +218,7 @@ export function renderNav({ active = 'home' } = {}) {
       <div class="nav-sports" role="group" aria-label="Deportes y canales">
         <span class="navlink-separator" aria-hidden="true"></span>
         ${['tycsports', 'tntsportspremium', 'espnpremium', 'espn', 'mundial2026', 'libertadores', 'sudamericana'].map(key => `
-          <a class="navlink navlink-${key}${navState(key)}" href="${catalogSectionUrl(key)}" aria-label="${CATALOG_SECTIONS[key].label}" title="${CATALOG_SECTIONS[key].summary || CATALOG_SECTIONS[key].label}"${ariaCurrent(key)}>
+          <a class="navlink navlink-${key}${navState(key)}" href="${catalogSectionUrl(key)}" aria-label="${CATALOG_SECTIONS[key].label}"${ariaCurrent(key)}>
             <img class="nav-sports-logo" src="/images/nav/${CATALOG_SECTIONS[key].logo}" alt="${CATALOG_SECTIONS[key].label}">
           </a>
         `).join('')}
