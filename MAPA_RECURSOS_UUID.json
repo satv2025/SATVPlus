@@ -35,23 +35,6 @@
     "/css/oldabout.css": "/css/9adc0760-d3bb-542a-aed4-1f1275d6a41f.css",
     "/css/privacy.css": "/css/7e4af5b8-2d91-54fd-b0d3-9e1ead6b0981.css",
     "/css/profiles.css": "/css/d8906211-092e-5538-81d4-c8f76db9fa77.css",
-    "/css/satv-route-about.css": "/css/246ed69e-c6a3-5f37-82c3-0b7012a06168.css",
-    "/css/satv-route-emailchange-approve.css": "/css/dd62ed80-87f9-5600-86f3-cb1f2cbee3f6.css",
-    "/css/satv-route-emailchange.css": "/css/107bce16-a000-5e04-b938-17451d1c670c.css",
-    "/css/satv-route-index.css": "/css/b2065b77-0867-5da1-9e69-e43c7b5b037b.css",
-    "/css/satv-route-login.css": "/css/55a36bb4-cae1-5944-a590-ba2e59db7c56.css",
-    "/css/satv-route-mylist.css": "/css/724bc985-c464-5b1a-818f-7c1f5235bcf8.css",
-    "/css/satv-route-oldabout.css": "/css/caefa962-1282-5f76-882b-a2d38860bf30.css",
-    "/css/satv-route-privacy.css": "/css/fb33c7c7-d5db-51b1-9be6-97d42f189a8a.css",
-    "/css/satv-route-profile.css": "/css/3eb111bb-fdeb-585e-a39e-8b707825ea6a.css",
-    "/css/satv-route-profiles.css": "/css/e32ec473-d682-565e-b32e-8aa0f7729860.css",
-    "/css/satv-route-recovery-pass.css": "/css/44061fcb-dcbd-5474-8e2b-a482e0ef5df3.css",
-    "/css/satv-route-recovery.css": "/css/735d1b0b-1ed1-5e9b-8ccd-ea4895950bbc.css",
-    "/css/satv-route-register.css": "/css/d9722b75-982d-5333-a7e3-5142460b2ee1.css",
-    "/css/satv-route-support.css": "/css/51328088-b3a6-5836-8a48-ff593da1e7e3.css",
-    "/css/satv-route-title.css": "/css/c33d9be3-e3fd-5902-bf0a-0e555be2d30f.css",
-    "/css/satv-route-vr.css": "/css/e89ac30f-2000-51a1-9a47-69593260488c.css",
-    "/css/satv-route-watch.css": "/css/8c8bc7f9-a4a3-5b04-aafb-72c424f1c273.css",
     "/css/styles.css": "/css/fac96421-04ac-5bfd-92d9-b943d18ce41a.css",
     "/css/support.css": "/css/f8d18d13-37c1-55e9-aafb-2cc84599e331.css",
     "/css/title.css": "/css/f764dace-cad8-550a-ba4a-dcad04b0a9a1.css",
@@ -353,5 +336,6 @@
     "/images/teams/flamengo.svg": "/images/1b6f873b-2498-5222-92b8-ec991dfe3d18.svg",
     "/images/teams/por-definir.svg": "/images/fe830c8b-4498-520a-82d2-d521e539500b.svg",
     "/images/teams/vasco.svg": "/images/adf53c7c-a51e-51d2-9db3-e12eda86a931.svg"
-  }
+  },
+  "nota_JS": "Los UUID JS son rutas virtuales de Vercel, resueltas a los archivos /js/*.js originales por rewrites; no son archivos fisicos."
 }

@@ -1,0 +1,199 @@
+Esta entrega NO redistribuye archivos binarios de fuentes. Conserve de su proyecto original:
+
+css/fonts/amazon/Amazon-Ember-Medium.ttf
+css/fonts/amazon/Amazon-Ember-MediumItalic.ttf
+css/fonts/amazon/AmazonEmberCdRC_Bd.ttf
+css/fonts/amazon/AmazonEmberCdRC_BdIt.ttf
+css/fonts/amazon/AmazonEmberCdRC_Lt.ttf
+css/fonts/amazon/AmazonEmberCdRC_LtIt.ttf
+css/fonts/amazon/AmazonEmberCdRC_Rg.ttf
+css/fonts/amazon/AmazonEmberCdRC_RgIt.ttf
+css/fonts/amazon/AmazonEmberCdRC_Th.ttf
+css/fonts/amazon/AmazonEmberCdRC_ThIt.ttf
+css/fonts/amazon/AmazonEmberDisplay_Bd.ttf
+css/fonts/amazon/AmazonEmberDisplay_He.ttf
+css/fonts/amazon/AmazonEmberDisplay_Lt.ttf
+css/fonts/amazon/AmazonEmberDisplay_Md.ttf
+css/fonts/amazon/AmazonEmberDisplay_Rg.ttf
+css/fonts/amazon/AmazonEmber_Bd.ttf
+css/fonts/amazon/AmazonEmber_BdIt.ttf
+css/fonts/amazon/AmazonEmber_He.ttf
+css/fonts/amazon/AmazonEmber_HeIt.ttf
+css/fonts/amazon/AmazonEmber_Lt.ttf
+css/fonts/amazon/AmazonEmber_LtIt.ttf
+css/fonts/amazon/AmazonEmber_Rg.ttf
+css/fonts/amazon/AmazonEmber_RgIt.ttf
+css/fonts/amazon/AmazonEmber_Th.ttf
+css/fonts/amazon/AmazonEmber_ThIt.ttf
+css/fonts/discord/ggsans/GG Sans Bold Italic.eot
+css/fonts/discord/ggsans/GG Sans Bold Italic.ttf
+css/fonts/discord/ggsans/GG Sans Bold Italic.woff
+css/fonts/discord/ggsans/GG Sans Bold Italic.woff2
+css/fonts/discord/ggsans/GG Sans Bold.eot
+css/fonts/discord/ggsans/GG Sans Bold.ttf
+css/fonts/discord/ggsans/GG Sans Bold.woff
+css/fonts/discord/ggsans/GG Sans Bold.woff2
+css/fonts/discord/ggsans/GG Sans Extra Bold Italic.eot
+css/fonts/discord/ggsans/GG Sans Extra Bold Italic.ttf
+css/fonts/discord/ggsans/GG Sans Extra Bold Italic.woff
+css/fonts/discord/ggsans/GG Sans Extra Bold Italic.woff2
+css/fonts/discord/ggsans/GG Sans Extra Bold.eot
+css/fonts/discord/ggsans/GG Sans Extra Bold.ttf
+css/fonts/discord/ggsans/GG Sans Extra Bold.woff
+css/fonts/discord/ggsans/GG Sans Extra Bold.woff2
+css/fonts/discord/ggsans/GG Sans Medium Italic.eot
+css/fonts/discord/ggsans/GG Sans Medium Italic.ttf
+css/fonts/discord/ggsans/GG Sans Medium Italic.woff
+css/fonts/discord/ggsans/GG Sans Medium Italic.woff2
+css/fonts/discord/ggsans/GG Sans Medium.eot
+css/fonts/discord/ggsans/GG Sans Medium.ttf
+css/fonts/discord/ggsans/GG Sans Medium.woff
+css/fonts/discord/ggsans/GG Sans Medium.woff2
+css/fonts/discord/ggsans/GG Sans Normal Italic.eot
+css/fonts/discord/ggsans/GG Sans Normal Italic.ttf
+css/fonts/discord/ggsans/GG Sans Normal Italic.woff
+css/fonts/discord/ggsans/GG Sans Normal Italic.woff2
+css/fonts/discord/ggsans/GG Sans Normal.eot
+css/fonts/discord/ggsans/GG Sans Normal.ttf
+css/fonts/discord/ggsans/GG Sans Normal.woff
+css/fonts/discord/ggsans/GG Sans Normal.woff2
+css/fonts/discord/ggsans/GG Sans Semibold Italic.eot
+css/fonts/discord/ggsans/GG Sans Semibold Italic.ttf
+css/fonts/discord/ggsans/GG Sans Semibold Italic.woff
+css/fonts/discord/ggsans/GG Sans Semibold Italic.woff2
+css/fonts/discord/ggsans/GG Sans Semibold.eot
+css/fonts/discord/ggsans/GG Sans Semibold.ttf
+css/fonts/discord/ggsans/GG Sans Semibold.woff
+css/fonts/discord/ggsans/GG Sans Semibold.woff2
+css/fonts/hbomaxsans/HBOMaxSansBold.woff2
+css/fonts/hbomaxsans/HBOMaxSansCondBold.woff2
+css/fonts/hbomaxsans/HBOMaxSansCondRegular.woff2
+css/fonts/hbomaxsans/HBOMaxSansRegular.woff2
+css/fonts/premium/proximanova/Proxima Nova Black Italic.otf
+css/fonts/premium/proximanova/Proxima Nova Black.otf
+css/fonts/premium/proximanova/Proxima Nova Bold Italic.otf
+css/fonts/premium/proximanova/Proxima Nova Bold.otf
+css/fonts/premium/proximanova/Proxima Nova Extrabold Italic.otf
+css/fonts/premium/proximanova/Proxima Nova Extrabold.otf
+css/fonts/premium/proximanova/Proxima Nova Light Italic.otf
+css/fonts/premium/proximanova/Proxima Nova Light.otf
+css/fonts/premium/proximanova/Proxima Nova Regular Italic.otf
+css/fonts/premium/proximanova/Proxima Nova Regular.otf
+css/fonts/premium/proximanova/Proxima Nova Semibold Italic.otf
+css/fonts/premium/proximanova/Proxima Nova Semibold.otf
+css/fonts/premium/proximanova/Proxima Nova Thin Italic.otf
+css/fonts/premium/proximanova/Proxima Nova Thin.otf
+css/fonts/premium/proximanova/Proxima-Nova-Black-Italic.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Black-Italic.woff
+css/fonts/premium/proximanova/Proxima-Nova-Black-Italic.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Black.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Black.woff
+css/fonts/premium/proximanova/Proxima-Nova-Black.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Bold-Italic.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Bold-Italic.woff
+css/fonts/premium/proximanova/Proxima-Nova-Bold-Italic.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Bold.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Bold.woff
+css/fonts/premium/proximanova/Proxima-Nova-Bold.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Extrabold-Italic.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Extrabold-Italic.woff
+css/fonts/premium/proximanova/Proxima-Nova-Extrabold-Italic.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Extrabold.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Extrabold.woff
+css/fonts/premium/proximanova/Proxima-Nova-Extrabold.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Light-Italic.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Light-Italic.woff
+css/fonts/premium/proximanova/Proxima-Nova-Light-Italic.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Light.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Light.woff
+css/fonts/premium/proximanova/Proxima-Nova-Light.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Regular-Italic.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Regular-Italic.woff
+css/fonts/premium/proximanova/Proxima-Nova-Regular-Italic.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Regular.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Regular.woff
+css/fonts/premium/proximanova/Proxima-Nova-Regular.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Semibold-Italic.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Semibold-Italic.woff
+css/fonts/premium/proximanova/Proxima-Nova-Semibold-Italic.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Semibold.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Semibold.woff
+css/fonts/premium/proximanova/Proxima-Nova-Semibold.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Thin-Italic.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Thin-Italic.woff
+css/fonts/premium/proximanova/Proxima-Nova-Thin-Italic.woff2
+css/fonts/premium/proximanova/Proxima-Nova-Thin.ttf
+css/fonts/premium/proximanova/Proxima-Nova-Thin.woff
+css/fonts/premium/proximanova/Proxima-Nova-Thin.woff2
+css/fonts/satvplusfont/SATVPlus-Bold.ttf
+css/fonts/satvplusfont/SATVPlus-Bold.woff
+css/fonts/satvplusfont/SATVPlus-Bold.woff2
+css/fonts/satvplusfont/SATVPlus-BoldItalic.ttf
+css/fonts/satvplusfont/SATVPlus-BoldItalic.woff
+css/fonts/satvplusfont/SATVPlus-BoldItalic.woff2
+css/fonts/satvplusfont/SATVPlus-CondensedBold.ttf
+css/fonts/satvplusfont/SATVPlus-CondensedBold.woff
+css/fonts/satvplusfont/SATVPlus-CondensedBold.woff2
+css/fonts/satvplusfont/SATVPlus-CondensedBoldItalic.ttf
+css/fonts/satvplusfont/SATVPlus-CondensedBoldItalic.woff
+css/fonts/satvplusfont/SATVPlus-CondensedBoldItalic.woff2
+css/fonts/satvplusfont/SATVPlus-CondensedItalic.ttf
+css/fonts/satvplusfont/SATVPlus-CondensedItalic.woff
+css/fonts/satvplusfont/SATVPlus-CondensedItalic.woff2
+css/fonts/satvplusfont/SATVPlus-CondensedMedium.ttf
+css/fonts/satvplusfont/SATVPlus-CondensedMedium.woff
+css/fonts/satvplusfont/SATVPlus-CondensedMedium.woff2
+css/fonts/satvplusfont/SATVPlus-CondensedMediumItalic.ttf
+css/fonts/satvplusfont/SATVPlus-CondensedMediumItalic.woff
+css/fonts/satvplusfont/SATVPlus-CondensedMediumItalic.woff2
+css/fonts/satvplusfont/SATVPlus-CondensedRegular.ttf
+css/fonts/satvplusfont/SATVPlus-CondensedRegular.woff
+css/fonts/satvplusfont/SATVPlus-CondensedRegular.woff2
+css/fonts/satvplusfont/SATVPlus-CondensedSemiBold.ttf
+css/fonts/satvplusfont/SATVPlus-CondensedSemiBold.woff
+css/fonts/satvplusfont/SATVPlus-CondensedSemiBold.woff2
+css/fonts/satvplusfont/SATVPlus-CondensedSemiBoldItalic.ttf
+css/fonts/satvplusfont/SATVPlus-CondensedSemiBoldItalic.woff
+css/fonts/satvplusfont/SATVPlus-CondensedSemiBoldItalic.woff2
+css/fonts/satvplusfont/SATVPlus-Italic.ttf
+css/fonts/satvplusfont/SATVPlus-Italic.woff
+css/fonts/satvplusfont/SATVPlus-Italic.woff2
+css/fonts/satvplusfont/SATVPlus-Medium.ttf
+css/fonts/satvplusfont/SATVPlus-Medium.woff
+css/fonts/satvplusfont/SATVPlus-Medium.woff2
+css/fonts/satvplusfont/SATVPlus-MediumItalic.ttf
+css/fonts/satvplusfont/SATVPlus-MediumItalic.woff
+css/fonts/satvplusfont/SATVPlus-MediumItalic.woff2
+css/fonts/satvplusfont/SATVPlus-Regular.ttf
+css/fonts/satvplusfont/SATVPlus-Regular.woff
+css/fonts/satvplusfont/SATVPlus-Regular.woff2
+css/fonts/satvplusfont/SATVPlus-SemiBold.ttf
+css/fonts/satvplusfont/SATVPlus-SemiBold.woff
+css/fonts/satvplusfont/SATVPlus-SemiBold.woff2
+css/fonts/satvplusfont/SATVPlus-SemiBoldItalic.ttf
+css/fonts/satvplusfont/SATVPlus-SemiBoldItalic.woff
+css/fonts/satvplusfont/SATVPlus-SemiBoldItalic.woff2
+css/fonts/satvplusfont/SATVPlus-SemiCondensedBold.ttf
+css/fonts/satvplusfont/SATVPlus-SemiCondensedBold.woff
+css/fonts/satvplusfont/SATVPlus-SemiCondensedBold.woff2
+css/fonts/satvplusfont/SATVPlus-SemiCondensedBoldItalic.ttf
+css/fonts/satvplusfont/SATVPlus-SemiCondensedBoldItalic.woff
+css/fonts/satvplusfont/SATVPlus-SemiCondensedBoldItalic.woff2
+css/fonts/satvplusfont/SATVPlus-SemiCondensedItalic.ttf
+css/fonts/satvplusfont/SATVPlus-SemiCondensedItalic.woff
+css/fonts/satvplusfont/SATVPlus-SemiCondensedItalic.woff2
+css/fonts/satvplusfont/SATVPlus-SemiCondensedMedium.ttf
+css/fonts/satvplusfont/SATVPlus-SemiCondensedMedium.woff
+css/fonts/satvplusfont/SATVPlus-SemiCondensedMedium.woff2
+css/fonts/satvplusfont/SATVPlus-SemiCondensedMediumItalic.ttf
+css/fonts/satvplusfont/SATVPlus-SemiCondensedMediumItalic.woff
+css/fonts/satvplusfont/SATVPlus-SemiCondensedMediumItalic.woff2
+css/fonts/satvplusfont/SATVPlus-SemiCondensedRegular.ttf
+css/fonts/satvplusfont/SATVPlus-SemiCondensedRegular.woff
+css/fonts/satvplusfont/SATVPlus-SemiCondensedRegular.woff2
+css/fonts/satvplusfont/SATVPlus-SemiCondensedSemiBold.ttf
+css/fonts/satvplusfont/SATVPlus-SemiCondensedSemiBold.woff
+css/fonts/satvplusfont/SATVPlus-SemiCondensedSemiBold.woff2
+css/fonts/satvplusfont/SATVPlus-SemiCondensedSemiBoldItalic.ttf
+css/fonts/satvplusfont/SATVPlus-SemiCondensedSemiBoldItalic.woff
+css/fonts/satvplusfont/SATVPlus-SemiCondensedSemiBoldItalic.woff2

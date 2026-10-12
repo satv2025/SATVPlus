@@ -1,0 +1,37 @@
+SATV+ Web + AkiraPlayer - CSS con IDs, función CENTRAL de Vercel
+
+ARQUITECTURA
+
+- ÚNICA función: SATV+ Web /api/css.js en satvplus.com.ar.
+- SATV+ Web: /css/UUID.css -> /api/css?id=UUID -> hojas CSS existentes.
+- Overlay VR: /css/UUID.css -> /api/css?id=UUID -> vr-overlay.css, mediante namespace.
+- AkiraPlayer: https://akira.satvplus.com.ar/css/UUID.css -> rewrite externo a
+  https://satvplus.com.ar/api/css?kind=akira&id=UUID.
+- La función de SATV+ obtiene https://akira.satvplus.com.ar/AkiraPlayer.css
+  (CSS COMPILADO real, no la URL UUID, para evitar bucles).
+  Dispone de copia de respaldo en css/akiraplayer/AkiraPlayer.css si el CDN no responde.
+- CSS de fuentes, iconos y otros recursos conservan el enrutamiento anterior.
+- No se agregaron query strings ?v= ni se cambiaron los JS/HTML del cliente.
+- AkiraPlayer ya no necesita su propia función /api/css.js.
+
+DESPLIEGUE (ORDEN)
+
+1. Conservar en SATV+ Web las fuentes binarias existentes de /css/fonts/
+   (no están redistribuidas en este archivo).
+2. Desplegar SATV+ Web primero.
+3. Probar https://satvplus.com.ar/api/css?kind=akira&id=550e8400-e29b-41d4-a716-446655440000
+   Debe responder 200, Content-Type text/css, X-SATV-CSS-Origin akira-live o akira-backup.
+4. Desplegar AkiraPlayer y verificar
+   https://akira.satvplus.com.ar/css/550e8400-e29b-41d4-a716-446655440000.css
+   Debe responder el CSS de Akira, sin cambiar la URL visible.
+5. Verificar película/serie/episodio, overlay VR, fuentes y estilos en ambos.
+
+NOTAS
+
+- No se cambió ni recompiló el bundle de AkiraPlayer. Los originales dist/ están incluidos.
+- El build de Akira requiere dependencias Rollup nativas para Linux, que Vercel suele
+  instalar en su entorno de compilación. Esta entrega no valida el build en producción.
+- El CSS de respaldo de Akira se actualiza al actualizar este paquete.
+- Las reglas CSS por UUID dependen de las URLs generadas por la lógica existente.
+- CSS de SATV+ específico de página puede depender del encabezado Referer; si no está,
+  la función actual usa Inicio como fallback (comportamiento heredado).

@@ -1,0 +1,19 @@
+SATV+ Web y AkiraPlayer — implementación CSS por ID inspirada en SATV Sports
+
+El ZIP Sol-Argentino-TV-Sports-2026.zip se usó COMO REFERENCIA y NO fue modificado.
+
+En SATV+ Web:
+* /css/UUID.css y /css/ID-TITULO.css: Vercel -> /api/css -> lee el contenido físico de css/*.css.
+* /css/ID-SERIE?episode=ID-EPISODIO.css: Vercel -> /api/css; el parámetro episode no cambia el CSS de Watch.
+* /css/UUID.css del overlay (prefijo reservado a71e0a9d-): CSS real de css/vr-overlay.css.
+* Los UUID de CSS secundarios y de fuentes se reconocen y devuelven su hoja original.
+* Rutas relativas en CSS de fuentes se convierten en rutas absolutas para que sigan cargando .woff/.ttf.
+* Selección por página: mismo Referer de origen. Si el browser no envía Referer, se usa Inicio.
+* Sin cambios en ningún JS/HTML existente. Los CSS físicos no fueron modificados.
+
+En AkiraPlayer:
+* /css/ID.css y /css/ID-SERIE?episode=ID-EPISODIO.css -> /api/css -> dist/AkiraPlayer.css.
+* JS, HTML y CSS compilados existentes no fueron modificados. No se ejecutó nueva compilación.
+
+Verificar en un deploy PREVIEW de Vercel antes de publicar en producción.
+No se ocultaron CSS: las URLs por ID son aliases, no protección de código.

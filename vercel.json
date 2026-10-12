@@ -174,91 +174,6 @@
       "permanent": false
     },
     {
-      "source": "/css/satv-route-about.css",
-      "destination": "/css/246ed69e-c6a3-5f37-82c3-0b7012a06168.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-emailchange-approve.css",
-      "destination": "/css/dd62ed80-87f9-5600-86f3-cb1f2cbee3f6.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-emailchange.css",
-      "destination": "/css/107bce16-a000-5e04-b938-17451d1c670c.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-index.css",
-      "destination": "/css/b2065b77-0867-5da1-9e69-e43c7b5b037b.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-login.css",
-      "destination": "/css/55a36bb4-cae1-5944-a590-ba2e59db7c56.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-mylist.css",
-      "destination": "/css/724bc985-c464-5b1a-818f-7c1f5235bcf8.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-oldabout.css",
-      "destination": "/css/caefa962-1282-5f76-882b-a2d38860bf30.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-privacy.css",
-      "destination": "/css/fb33c7c7-d5db-51b1-9be6-97d42f189a8a.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-profile.css",
-      "destination": "/css/3eb111bb-fdeb-585e-a39e-8b707825ea6a.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-profiles.css",
-      "destination": "/css/e32ec473-d682-565e-b32e-8aa0f7729860.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-recovery-pass.css",
-      "destination": "/css/44061fcb-dcbd-5474-8e2b-a482e0ef5df3.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-recovery.css",
-      "destination": "/css/735d1b0b-1ed1-5e9b-8ccd-ea4895950bbc.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-register.css",
-      "destination": "/css/d9722b75-982d-5333-a7e3-5142460b2ee1.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-support.css",
-      "destination": "/css/51328088-b3a6-5836-8a48-ff593da1e7e3.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-title.css",
-      "destination": "/css/c33d9be3-e3fd-5902-bf0a-0e555be2d30f.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-vr.css",
-      "destination": "/css/e89ac30f-2000-51a1-9a47-69593260488c.css",
-      "permanent": false
-    },
-    {
-      "source": "/css/satv-route-watch.css",
-      "destination": "/css/8c8bc7f9-a4a3-5b04-aafb-72c424f1c273.css",
-      "permanent": false
-    },
-    {
       "source": "/css/styles.css",
       "destination": "/css/fac96421-04ac-5bfd-92d9-b943d18ce41a.css",
       "permanent": false
@@ -1745,6 +1660,82 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/js/4521e87e-cca6-5b14-8dfe-b1c3c92d7cea.js",
+      "destination": "/js/about.js"
+    },
+    {
+      "source": "/js/5dfe6773-b341-5543-b7e9-e64994123843.js",
+      "destination": "/js/api.js"
+    },
+    {
+      "source": "/js/40a795bb-a0ae-514b-97f5-e0414330ba41.js",
+      "destination": "/js/auth.js"
+    },
+    {
+      "source": "/js/23a7c948-5e91-5e3d-a36a-86f2baf18b0b.js",
+      "destination": "/js/config.js"
+    },
+    {
+      "source": "/js/a79a6349-207e-5612-bece-f367739e62a8.js",
+      "destination": "/js/css-ids.js"
+    },
+    {
+      "source": "/js/41c2f4bf-4304-57f6-b10f-f667dc4ce7b3.js",
+      "destination": "/js/cupFixtures.js"
+    },
+    {
+      "source": "/js/05aff8d4-26ff-5132-b4f0-2bd098920975.js",
+      "destination": "/js/home.js"
+    },
+    {
+      "source": "/js/60434b6c-cf46-5357-aaae-bfb83d1e7876.js",
+      "destination": "/js/mylist.js"
+    },
+    {
+      "source": "/js/e7a03432-d8f7-54fa-9f30-16c9a99859e6.js",
+      "destination": "/js/navigation.js"
+    },
+    {
+      "source": "/js/331b4d6f-d9ec-5679-b95d-c667b01bc87a.js",
+      "destination": "/js/privacy.js"
+    },
+    {
+      "source": "/js/7da0c82d-7ed4-56bf-9b0c-5dbf629f076e.js",
+      "destination": "/js/profile.js"
+    },
+    {
+      "source": "/js/fb37295b-d5fc-5399-b391-ca068a12280d.js",
+      "destination": "/js/profiles.js"
+    },
+    {
+      "source": "/js/297b65b6-ed4f-519f-95b2-9885d9943d0e.js",
+      "destination": "/js/supabaseClient.js"
+    },
+    {
+      "source": "/js/950645ed-4c3d-5f07-b99c-2bfe300f9e60.js",
+      "destination": "/js/support.js"
+    },
+    {
+      "source": "/js/6ee0a564-6a8d-59c9-8de3-9fa8c0fe6414.js",
+      "destination": "/js/title.js"
+    },
+    {
+      "source": "/js/2affb467-74bf-532e-b7f8-a857386a504e.js",
+      "destination": "/js/ui.js"
+    },
+    {
+      "source": "/js/cf65a751-2fee-5f3d-8393-21a7ad83106d.js",
+      "destination": "/js/viewerProfiles.js"
+    },
+    {
+      "source": "/js/5f5a645f-09b1-5b1c-a171-ef91ae595b2e.js",
+      "destination": "/js/vr-overlay.js"
+    },
+    {
+      "source": "/js/37674c2e-172e-57d9-8ffa-e6028bfa62fe.js",
+      "destination": "/js/watch.js"
+    },
     {
       "source": "/css/6271cab5-2cc5-52d5-9f34-68d29478b20b.ttf",
       "destination": "/css/fonts/amazon/Amazon-Ember-Medium.ttf"

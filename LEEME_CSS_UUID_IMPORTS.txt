@@ -1,0 +1,32 @@
+SATV+ Web — CSS por UUID, incluidos los CSS @import y /css/fonts/
+================================================================
+
+Peticiones de Inicio/Title/MyList/Watch:
+  El generador de URL que ya existe en js/css-ids.js queda intacto.
+  Vercel sigue sirviendo la hoja combinada correspondiente a cada pagina.
+
+CSS secundarios/independientes:
+  Cada hoja CSS local (por ejemplo AEmber.css) tiene UUID fijo en /css/.
+  Los HTML del proyecto cambian sus enlaces a esos UUID.
+  Los CSS combinados cambian sus @import a esos UUID.
+  vercel.json dirige cada UUID al CONTENIDO COMPLETO de su CSS original.
+  Las copias normalizadas viven en css/uuid-content/ para que las fuentes
+  e imagenes mantengan la ruta real aunque la URL publica sea /css/UUID.css.
+  No se renombran ni borran los archivos CSS o font existentes.
+  No se editan archivos JavaScript.
+
+Overlay VR:
+  Continuan vigentes las reglas del namespace aleatorio del overlay.
+  No se introducen query strings ?v=.
+
+LIMITACIONES:
+  vercel.json NO puede transformar automaticamente los href o @import
+  que vienen en un HTML o CSS: por eso el ZIP actualiza las referencias
+  de HTML y las importaciones de los CSS combinados, SIN cambiar JS.
+  CSS externos de Google Fonts, Font Awesome u otros dominios no se modifican.
+  Si en el futuro se agrega un CSS nuevo, generar alias/rewrite y actualizar
+  las referencias correspondientes. No hay reescritura universal en runtime.
+  Nota: la identificacion de la pagina por Referer del sistema anterior
+  se conserva tal cual. Es sensible a la politica Referrer-Policy.
+
+Ver MAPA_CSS_UUID.json para la correspondencia exacta de archivos.
