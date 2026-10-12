@@ -3565,7 +3565,6 @@ body.catalog-section-page main > [hidden] { display: none !important; }
   object-fit: cover;
   object-position: center;
   pointer-events: none;
-  border-radius: var(--radius) !important;
 }
 
 
