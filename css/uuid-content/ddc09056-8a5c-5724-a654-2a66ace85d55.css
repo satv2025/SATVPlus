@@ -1,0 +1,27 @@
+@font-face {
+    font-family: "HBOMaxSans";
+    src: url("/css/551298cb-6c6d-59e3-947f-5467d29d0e71.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "HBOMaxSans";
+    src: url("/css/af15b345-4e88-5c3a-bdf7-d95b6d08afb1.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "HBOMaxSansCond";
+    src: url("/css/ff577852-a2a2-587c-8d58-06cfacb5f625.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "HBOMaxSansCond";
+    src: url("/css/edcf9c2f-1753-5642-bc7f-d501a36bcd21.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+}

@@ -1,0 +1,12 @@
+SATV+ WEB — JS, CSS, fuentes e imágenes con rutas UUID.
+- NO se modificaron los archivos /js/*.js originales.
+- Vercel redirige /js/nombre.js -> /js/UUID.js (copia idéntica).
+- Los estilos por ID de título, lista y episodio mantienen el sistema existente de css-ids.js.
+- Los CSS secundarios de /css/fonts o @import tienen UUID fijo y se resuelven a CSS real.
+- Las referencias a archivos de fuentes desde CSS UUID también usan URL UUID y rewrite al archivo físico original.
+- Los iconos locales bajo /images se redirigen a rutas UUID con copias estáticas. 
+- Las URLs de contenido /remote-media, API y medios no se cambian: sus relaciones internas dependen de las rutas.
+- Mapas: MAPA_CSS_UUID.json, MAPA_RECURSOS_UUID.json
+- Todos los archivos CSS y JS originales permanecen intactos. Solo se modifican vercel.json, copias CSS normalizadas, HTML precargas CSS ya normalizadas, y se añaden aliases.
+- AVISO: Al desplegar el contenido en Vercel es imprescindible conservar tus archivos de fuentes originales en /css/fonts/. Por licencias, los ZIP entregados no incluyen archivos binarios de fuentes.
+- No se han podido ejecutar pruebas reales en Vercel; el entorno no permite desplegar sin tus credenciales.

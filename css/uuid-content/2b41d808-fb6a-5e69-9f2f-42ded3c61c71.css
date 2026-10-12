@@ -1,0 +1,239 @@
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/091dde80-cf18-566f-ad14-6b4a29a5da19.woff2") format("woff2"),
+       url("/css/249ea4ac-d56b-5035-9d6e-a2e2fed5b403.woff") format("woff"),
+       url("/css/0a6ee902-391a-5fc3-995c-9c27b8efedfc.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/aa509480-5f40-5a09-8201-0b127e1b0419.woff2") format("woff2"),
+       url("/css/c3e817c6-b54c-55c4-9288-97a6a096a714.woff") format("woff"),
+       url("/css/e4c70c33-2fb7-54d3-ab53-7570ee56ab5f.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/e29dbc8a-09ec-5c2e-a482-df3ea20a8cdc.woff2") format("woff2"),
+       url("/css/aed8de4a-7497-5ef0-a693-a19dc858f0a2.woff") format("woff"),
+       url("/css/6c1aa90a-fa16-58da-99b1-9d3cd63f5129.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/5a838a1f-624f-5b20-a4fd-dc4475545f8d.woff2") format("woff2"),
+       url("/css/8b1ef9d3-1506-564d-af61-1ed5abd0aec6.woff") format("woff"),
+       url("/css/2f435df6-2076-583f-bcba-6aa4cbb6a2e9.ttf") format("truetype");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/afff7c33-e5a6-5846-a6a5-38c07295a491.woff2") format("woff2"),
+       url("/css/8d1666c9-6f12-555f-bfdf-7685fefa07c0.woff") format("woff"),
+       url("/css/bbe9ae73-6dfe-59cb-9360-060e5b084af7.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/700985bb-20a2-548c-9f52-493203fd35a6.woff2") format("woff2"),
+       url("/css/8eb7be06-8a4f-5843-90fe-16a795a1782e.woff") format("woff"),
+       url("/css/48309f4e-141e-55e5-ac13-7336b1fd7c01.ttf") format("truetype");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/928d8bce-b94f-581b-98f1-b06071b64586.woff2") format("woff2"),
+       url("/css/29ea467a-351b-5cc2-bdbc-f49a295c07f4.woff") format("woff"),
+       url("/css/fc0e968f-ede1-58eb-a969-85547e85a828.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/add924ed-c47b-564f-98f1-bf5beb5f9411.woff2") format("woff2"),
+       url("/css/c333ff95-d1fb-5dfc-a022-1680b1c0e82d.woff") format("woff"),
+       url("/css/f252174f-3f14-5216-a4ec-78d12bf2f2c6.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/090e04fa-605b-5982-a3c3-6e9f61d7fd2e.woff2") format("woff2"),
+       url("/css/e0827e37-3fee-5de6-85ab-e45498192397.woff") format("woff"),
+       url("/css/a4d5fb6b-2345-579d-ab3d-66aa56931628.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/f7112368-1e40-50c7-8ab9-875ac9e30aee.woff2") format("woff2"),
+       url("/css/cf62f393-8534-5c83-ba18-bfbbd6bc1f5c.woff") format("woff"),
+       url("/css/dc195158-fb06-5518-8f83-88b28e67ac6d.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/7d2bd321-c7e8-5c24-b7c8-240011ba7b3e.woff2") format("woff2"),
+       url("/css/a7660726-e5cb-5eb3-99c6-bead7ba30166.woff") format("woff"),
+       url("/css/8e5e035c-7104-5a51-8287-64c7f644c12a.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/10b66596-3fd3-530b-9dbd-d95478d71676.woff2") format("woff2"),
+       url("/css/a9970a2c-a64f-56f0-a963-a5524f712de0.woff") format("woff"),
+       url("/css/971e08cb-aa4a-5d9b-964c-e960a9bb26b5.ttf") format("truetype");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/d7abe7c9-b0b0-5a10-9109-231439213f97.woff2") format("woff2"),
+       url("/css/ebc1ba96-4400-5ad1-9c85-6ac52012c066.woff") format("woff"),
+       url("/css/adcda231-50f6-5ad2-a854-6ba5489a2d07.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/7d4be6d3-609a-5902-b451-0fad4a212dd5.woff2") format("woff2"),
+       url("/css/0d0a8529-63a7-59dd-8bca-cd0e6b321b49.woff") format("woff"),
+       url("/css/2944c417-a542-5ee2-84e0-bd4c4d79199c.ttf") format("truetype");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/d15e8fb2-912e-529c-bb72-c86a3c76f536.woff2") format("woff2"),
+       url("/css/89e31046-54d7-5977-a239-36f0f4d4d90f.woff") format("woff"),
+       url("/css/d006a0a3-b47d-53c6-886a-d72c917e07cc.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/2f6072fc-bcc7-5544-8ec5-b93f2ee90542.woff2") format("woff2"),
+       url("/css/c46445d2-9274-520e-9ce5-ba47e185be4f.woff") format("woff"),
+       url("/css/c5be7a55-5be9-59d3-af83-a9fca7d0781a.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/e8fb7990-d284-5b46-b1a6-5a3954661310.woff2") format("woff2"),
+       url("/css/583e7b57-8121-59c8-86de-aa70b7db10c0.woff") format("woff"),
+       url("/css/55845758-4068-5807-a5b4-bac91a6a0105.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/1a8b3e32-dda3-50f4-926e-3db9ba776ae0.woff2") format("woff2"),
+       url("/css/4583ac95-d62d-584c-8fb6-98dbea462a70.woff") format("woff"),
+       url("/css/b7080912-30e2-50d9-83d7-aeed2b55e4e5.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/082e4d81-64a3-5004-9c41-55b8c402fbb8.woff2") format("woff2"),
+       url("/css/6e83bd2f-1d23-5a5b-9a1a-552a7f79101b.woff") format("woff"),
+       url("/css/ec515f65-f321-5776-a405-8b64d66bec7a.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/efa6ae6c-8b07-59fb-8f5a-aeafae90e0f8.woff2") format("woff2"),
+       url("/css/b23a3c26-3b5a-5003-9995-2ae5e639f5d1.woff") format("woff"),
+       url("/css/278e8320-fa15-52d6-9287-82d2f8a576ed.ttf") format("truetype");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/cb6b051a-f14c-561b-a148-ece1f35d3e44.woff2") format("woff2"),
+       url("/css/198f7724-a527-535f-b85a-3ebfab4d430d.woff") format("woff"),
+       url("/css/4156a059-834e-5191-9ca5-57a780ca2b2d.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/f8c8ef53-59a6-5cd6-b19e-b40215d707d8.woff2") format("woff2"),
+       url("/css/19f949ff-78a1-5b0a-a382-309c8bdece21.woff") format("woff"),
+       url("/css/c9360730-d7a0-5bc4-86bf-9102e8316c05.ttf") format("truetype");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/ad53f82d-ea37-5731-a788-ed9f2f4d2f7e.woff2") format("woff2"),
+       url("/css/cae8bbc8-d544-5ab3-8ec9-6f538074b7da.woff") format("woff"),
+       url("/css/35a07173-8b14-5230-aed2-4ba57e356099.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SATVPlus";
+  src: url("/css/9bf796b4-929c-5d9f-9442-60005420aaa9.woff2") format("woff2"),
+       url("/css/ba8dfd8e-9e15-597e-8d4b-933d54d97506.woff") format("woff"),
+       url("/css/be637403-bbcb-5664-bb18-b6dbd5237ede.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}

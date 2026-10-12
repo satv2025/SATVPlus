@@ -1,0 +1,581 @@
+/* home.css — overrides finales corregidos */
+
+:root {
+    --bg: #313131 !important;
+    --panel: #313131 !important;
+    --panel-2: #353535 !important;
+    
+    
+    --hover-tarjeta-bg: #313131 !important;
+    --ui-pad-x: clamp(24px, 4vw, 58px) !important;
+    --hero-synopsis-maxw: clamp(320px, 66vw, 720px) !important;
+}
+
+/*
+   En escritorio mantenemos el scale(1.3), pero reducimos el ancho lógico
+   al inverso del scale para que el borde derecho siga entrando dentro del hero.
+   76.9230769% × 1.3 = 100%.
+*/
+.home-hero-inner {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    transform-origin: initial !important;
+}
+
+/* HEADER RESPONSIVE */
+.topnav .nav-inner {
+    display: grid !important;
+    grid-template-columns: auto minmax(220px, 386px) auto !important;
+    align-items: center !important;
+    gap: clamp(10px, 1.4vw, 18px) !important;
+    width: 100% !important;
+}
+
+.nav-left,
+.nav-right{
+    min-width: 0 !important;
+}
+
+.nav-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: clamp(8px, 1vw, 14px) !important;
+    flex-wrap: nowrap !important;
+}
+
+
+
+.nav-right {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: clamp(8px, 1vw, 10px) !important;
+    min-width: 0 !important;
+}
+
+.topnav-search,
+.topnav-search-input {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* HEADER + HERO FLOW */
+.topnav {
+    position: absolute !important;
+}
+
+main.container {
+    padding-top: 0 !important;
+}
+
+/* Asegura la estructura nueva del bloque derecho del hero. */
+.home-hero-layout {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-end !important;
+    justify-content: space-between !important;
+    gap: 0 !important;
+}
+
+.home-hero-right {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: var(--hero-volume-size) !important;
+    margin: 0 0 0 auto !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    align-self: flex-end !important;
+}
+
+.home-hero-right > .home-hero-actions {
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+}
+
+/* El botón ahora está en right > actions > btn. */
+.home-hero-right > .home-hero-actions > .home-hero-volume-btn {
+    margin: 0 !important;
+    display: grid !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+/* TABLET */
+@media (max-width: 980px) {
+    .topnav {
+        position: relative !important;
+    }
+
+    .topnav .nav-inner {
+        grid-template-columns: 1fr auto !important;
+        grid-template-areas:
+            "left right"
+            "center center" !important;
+    }
+
+    .nav-left {
+        grid-area: left !important;
+        flex-wrap: wrap !important;
+    }
+
+    
+
+    .nav-right {
+        grid-area: right !important;
+    }
+
+    .topnav-search-wrap {
+        max-width: none !important;
+    }
+
+    .hero {
+        margin-top: 0 !important;
+    }
+
+    /* Desde tablet se elimina el scale para evitar clipping y overflow. */
+.home-hero-inner {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    transform-origin: initial !important;
+}
+
+.home-hero-layout {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-end !important;
+    justify-content: space-between !important;
+    gap: 0 !important;
+}
+
+.home-hero-right {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: var(--hero-volume-size) !important;
+    margin: 0 0 0 auto !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    align-self: flex-end !important;
+}
+
+.home-hero-right > .home-hero-actions {
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+}
+
+    .carousel {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        margin-left: calc(50% - 50vw) !important;
+        margin-right: calc(50% - 50vw) !important;
+    }
+
+    .section {
+        margin-top: 18px !important;
+    }
+}
+
+/* MOBILE */
+@media (max-width: 640px) {
+    .topnav .nav-inner {
+        grid-template-columns: 1fr !important;
+        grid-template-areas:
+            "left"
+            "center"
+            "right" !important;
+        align-items: stretch !important;
+    }
+
+    .nav-left,
+    .nav-right {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+
+    
+
+    .topnav-search {
+        height: 42px !important;
+    }
+
+    .topnav-search-input {
+        font-size: 14px !important;
+    }
+
+    .brand-logo {
+        width: clamp(110px, 42vw, 180px) !important;
+    }
+
+    .navlink,
+.btn{
+        font-size: 13px !important;
+    }
+
+    .hero {
+        margin-top: 0 !important;
+        height: clamp(360px, 86vw, 520px) !important;
+        min-height: clamp(360px, 86vw, 520px) !important;
+        padding-top: 18px !important;
+    }
+
+.home-hero-inner {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    transform-origin: initial !important;
+}
+
+.home-hero-layout {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-end !important;
+    justify-content: space-between !important;
+    gap: 0 !important;
+}
+
+.home-hero-right {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: var(--hero-volume-size) !important;
+    margin: 0 0 0 auto !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    align-self: flex-end !important;
+}
+
+.home-hero-right > .home-hero-actions {
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+}
+
+    .home-hero-left,
+    .home-hero-synopsis {
+        max-width: 100% !important;
+    }
+
+    :root {
+        --hero-synopsis-maxw: 100% !important;
+    }
+}
+
+/* EXTRA CHICO */
+@media (max-width: 380px) {
+
+    .nav-left,
+    .nav-right {
+        gap: 6px !important;
+    }
+
+    .topnav-search {
+        padding: 0 10px !important;
+    }
+
+    .topnav-search-input::placeholder {
+        font-size: 12px !important;
+    }
+}
+
+/* =========================================================
+   QUICK MODAL — TITLE ROW + (+) MYLIST + "Mas info"
+========================================================= */
+
+
+
+/* Botón "+" dentro del modal (mismo ícono) */
+
+
+
+
+
+
+/* Estado activo (en Mi Lista) */
+.card-mylist-plus-btn.is-active{
+    border: 1px solid rgba(255, 255, 255, .18);
+    background: rgb(from var(--panel) r g b / .55);
+    color: #fff;
+}
+
+/* evita click "caído" en el path */
+
+
+/* "Mas info" — recuadro blanco SIN fondo */
+
+
+
+
+
+
+/* Mobile tuning */
+
+
+#card-quick-modal-root .card-quick-modal-mylist-float,
+#card-quick-modal-root .card-quick-modal-mylist-float svg,
+#card-quick-modal-root .card-quick-modal-mylist-float path {
+    color: #fff !important;
+    fill: #fff !important;
+}
+
+/* =========================================================
+   CARD: Botón "Mas info" (al lado del título)
+========================================================= */
+
+.card .card-title .card-more-info-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px solid #fff !important;
+    background: transparent !important;
+    color: #fff !important;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 2px 5px;
+    border-radius: .25em;
+    font-weight: 800;
+    font-size: 12px;
+    line-height: 1;
+    letter-spacing: .02em;
+
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    flex: 0 0 auto;
+
+    opacity: .92;
+    transform: translateZ(0);
+    transition: transform .18s ease, background .18s ease, opacity .18s ease;
+    top: 62% !important;
+    right: 4px !important;
+}
+
+/* Se mantiene oculto por decisión de layout. */
+.card-more-info-btn {
+    display: none !important;
+}
+
+.card-more-info-btn span {
+    margin-top: 0.1em;
+}
+
+.card .card-title .card-more-info-btn:hover {
+    background: #fff !important;
+    opacity: 1;
+    transform: scale(1.03);
+    color: #000 !important;
+}
+
+.card .card-title .card-more-info-btn:active {
+    transform: scale(.98);
+}
+
+.card .card-title .card-more-info-btn:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/* Mobile tuning */
+@media (max-width: 768px) {
+    .card .card-title .card-more-info-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+}
+
+/* =========================================================
+   QUICK MODAL — MYLIST FLOAT (+ / -) ARRIBA DEL VOLUMEN
+   (JS crea: .card-quick-modal-mylist-float)
+========================================================= */
+
+#card-quick-modal-root .card-quick-modal-media-wrap {
+    position: relative !important;
+}
+
+#card-quick-modal-root .card-quick-modal-mylist-float {
+    position: absolute !important;
+    right: 14px !important;
+    bottom: calc(14px + 44px + 10px) !important;
+
+    z-index: 9 !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(255, 255, 255, .18) !important;
+    background: rgb(from var(--panel) r g b / .55) !important;
+    backdrop-filter: blur(6px) !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    touch-action: manipulation !important;
+
+    color: #fff !important;
+    pointer-events: auto !important;
+}
+
+#card-quick-modal-root .card-quick-modal-mylist-float:hover {
+    background: rgb(from var(--panel) r g b / .88) !important;
+    border-color: #fff !important;
+}
+
+#card-quick-modal-root .card-quick-modal-mylist-float svg {
+    width: 18px !important;
+    height: 18px !important;
+    display: block !important;
+    fill: currentColor !important;
+}
+
+#card-quick-modal-root .card-quick-modal-mylist-float svg,
+#card-quick-modal-root .card-quick-modal-mylist-float path {
+    pointer-events: none !important;
+}
+
+@media (max-width: 768px) {
+    #card-quick-modal-root .card-quick-modal-mylist-float {
+        width: 40px !important;
+        height: 40px !important;
+        bottom: calc(10px + 40px + 10px) !important;
+        right: 10px !important;
+    }
+}
+
+/* =========================================================
+   CARD RADIUS + CONTINUE WATCHING
+   La thumb necesita overflow visible para que la progressbar pueda salir,
+   así que el recorte visual se resuelve en los hijos/overlays.
+========================================================= */
+
+.card {
+    border-radius: var(--radius) !important;
+}
+
+.card > .thumb {
+    overflow: visible !important;
+    background-clip: padding-box !important;
+    border-radius: var(--radius) !important;
+}
+
+.card > .thumb::before,
+.card > .thumb::after {
+    border-radius: inherit !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+.card .card-collection-overlay {
+    overflow: hidden !important;
+}
+
+/* Progressbar visible sobre la card */
+.card .progressbar {
+    z-index: 8 !important;
+    overflow: hidden !important;
+}
+
+#continue-row .card {
+    overflow: visible !important;
+}
+
+#continue-row .thumb {
+    overflow: visible !important;
+}
+
+#continue-row .progressbar {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 20 !important;
+}
+
+/* =========================================================
+   AJUSTE FINAL — SEARCH/OVERLAY CON TUS RADIOS
+========================================================= */
+
+.topnav-search,
+.search-overlay-inputbar {
+    border-radius: var(--media-card-radius, var(--radius)) !important;
+    overflow: hidden !important;
+}
+
+.topnav-search-input,
+.search-overlay-input {
+    border-radius: inherit !important;
+}
+
+.overlay-hover-tarjeta,
+.overlay-hover-tarjeta-inner{
+    border-radius: var(--hover-tarjeta-radio) !important;
+    overflow: hidden !important;
+}
+
+.overlay-hover-tarjeta-media{
+    border-radius: var(--hover-tarjeta-radio) var(--hover-tarjeta-radio) 0 0 !important;
+    overflow: hidden !important;
+}
+
+.overlay-hover-tarjeta-cuerpo {
+    border-radius: 0 0 var(--hover-tarjeta-radio) var(--hover-tarjeta-radio) !important;
+}

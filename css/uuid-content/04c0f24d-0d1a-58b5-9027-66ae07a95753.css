@@ -1,0 +1,551 @@
+/* =========================================
+   SATV+ · Mi Lista
+   CSS DESDE CERO (Streaming / Premium UI)
+   ========================================= */
+
+/* -----------------------------
+   Tokens
+----------------------------- */
+:root {
+    --satv-bg: #313131;
+    --satv-text: #f5f7fb;
+    --satv-text-soft: rgba(245, 247, 251, 0.78);
+    --satv-text-faint: rgba(182, 191, 209, 0.55);
+    --satv-line: rgba(255, 255, 255, 0.10);
+    --satv-accent: #434343;
+    --satv-accent-2: #565656;
+    --satv-accent-glow: rgba(255, 255, 255, 0.06);
+    --satv-radius-md: 14px;
+    --satv-radius-lg: 18px;
+    --satv-radius-xl: 22px;
+    --satv-gap: clamp(12px, 1.4vw, 18px);
+    --satv-grid-min: 270px;
+    --satv-hero-height: clamp(220px, 34vh, 380px);
+}
+
+/* -----------------------------
+   Base
+----------------------------- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+::selection {
+    background: #fff;
+    color: var(--satv-bg);
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background:
+        radial-gradient(900px 420px at 8% -8%, rgba(255, 255, 255, 0.05), transparent 60%),
+        radial-gradient(1000px 540px at 100% 0%, rgba(255, 255, 255, 0.03), transparent 64%),
+        var(--satv-bg);
+    color: var(--satv-text);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* -----------------------------
+   Hero
+----------------------------- */
+#mylist-hero {
+    position: relative;
+    isolation: isolate;
+    height: 330px;
+    overflow: hidden;
+
+    /* respetando tu layout actual con topnav */
+    margin-top: -9em;
+    margin-bottom: -3.1em;
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.title-hero {
+    position: absolute;
+    inset: 0;
+    display: none;
+    /* se activa por JS */
+    background-color: #313131;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transform: scale(1.02);
+    filter: saturate(1.04) contrast(1.02);
+}
+
+.title-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to bottom,
+            rgb(from var(--satv-bg) r g b / 0.25) 0%,
+            rgb(from var(--satv-bg) r g b / 0.58) 48%,
+            rgb(from var(--satv-bg) r g b / 0.96) 100%);
+}
+
+.title-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to right,
+            rgb(from var(--satv-bg) r g b / 0.76) 0%,
+            rgb(from var(--satv-bg) r g b / 0.38) 42%,
+            rgb(from var(--satv-bg) r g b / 0.12) 100%);
+    pointer-events: none;
+}
+
+.title-hero-inner {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -8px;
+    z-index: 2;
+    padding-inline: 4em;
+}
+
+#title-heading {
+    margin: 0;
+    color: var(--satv-text);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    font-size: clamp(28px, 4vw, 44px);
+    text-shadow: 0 8px 26px rgba(0, 0, 0, 0.34);
+}
+
+#title-heading::after {
+    content: "";
+    display: block;
+    width: min(130px, 24vw);
+    height: 4px;
+    margin-top: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--satv-accent), var(--satv-accent-2));
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 8px 22px var(--satv-accent-glow);
+}
+
+.mylist-subtitle {
+    max-width: 72ch;
+    color: var(--satv-text-soft);
+    font-size: 14px;
+    line-height: 1.35;
+    text-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
+}
+
+/* -----------------------------
+   Content / State
+----------------------------- */
+#mylist-content {
+    position: relative;
+    z-index: 3;
+    overflow: visible;
+    padding-block: 30px;
+    padding-inline: 4em;
+    background: transparent;
+}
+
+.mylist-state {
+    margin: 10px 0 14px;
+    padding: 12px 14px;
+    border-radius: var(--satv-radius-md);
+    border: 1px solid var(--satv-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+    color: var(--satv-text-soft);
+    font-size: 14px;
+    line-height: 1.35;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* -----------------------------
+   Grid (robusto con wrappers)
+----------------------------- */
+#mylist-row,
+#mylist-row.row {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    margin-top: 47px;
+    padding: 2px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--satv-grid-min)), 1fr));
+    gap: var(--satv-gap);
+    align-items: stretch;
+    background: transparent;
+    overflow: visible;
+}
+
+#mylist-row>* {
+    min-width: 0;
+    margin: 0;
+    display: block;
+    height: 100%;
+    overflow: visible;
+    position: relative;
+}
+
+#mylist-row a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+    min-width: 0;
+    height: 100%;
+    overflow: visible;
+}
+
+/* -----------------------------
+   Card (nuevo diseño)
+----------------------------- */
+#mylist-row .card {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--satv-radius-lg);
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+    border: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transition: none;
+    will-change: auto;
+    cursor: pointer;
+}
+
+#mylist-row .card::before {
+    content: none;
+    display: none;
+}
+
+#mylist-row .card::after {
+    content: none;
+    display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+    #mylist-row .card:hover,
+    #mylist-row a:hover .card,
+    #mylist-row>*:hover .card {
+        transform: none;
+        z-index: 3;
+    }
+}
+
+#mylist-row .card:focus-within,
+#mylist-row a:focus-visible .card {
+    transform: none;
+    box-shadow: none;
+}
+
+#mylist-row .card:focus-within::before,
+#mylist-row a:focus-visible .card::before {
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+}
+
+/* -----------------------------
+   Thumb / Poster / Cover (16:9)
+----------------------------- */
+#mylist-row .thumb,
+#mylist-row .card img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    display: block;
+    flex: 0 0 auto;
+    background-color: transparent;
+    object-fit: cover;
+    transition: none;
+    backface-visibility: hidden;
+    transform: none;
+}
+
+#mylist-row .thumb {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+#mylist-row .thumb::after {
+    content: none;
+    display: none;
+}
+
+#mylist-row .thumb,
+#mylist-row .card img {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* -----------------------------
+   Body / Textos
+----------------------------- */
+#mylist-row .card-body {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    padding: 12px 12px 13px;
+    min-height: 92px;
+}
+
+#mylist-row .card-title {
+    margin: 0;
+    color: var(--satv-text);
+    font-weight: 700;
+    font-size: clamp(15px, 1.1vw, 17px);
+    line-height: 1.22;
+    letter-spacing: -0.01em;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+#mylist-row .card-subtitle {
+    margin: 0;
+    color: var(--satv-text-soft);
+    font-size: 13px;
+    line-height: 1.32;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+#mylist-row .card-subtitle:empty {
+    display: none;
+}
+
+/* -----------------------------
+   Empty state visual
+----------------------------- */
+#mylist-row:empty {
+    min-height: 170px;
+    border-radius: var(--satv-radius-xl);
+    border: 1px dashed rgba(255, 255, 255, 0.10);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+    display: grid;
+    place-items: center;
+    color: var(--satv-text-faint);
+}
+
+#mylist-row:empty::before {
+    content: "Tu lista está vacía… todavía";
+    font-size: 14px;
+    letter-spacing: 0.01em;
+}
+
+/* -----------------------------
+   Responsive
+----------------------------- */
+@media (min-width: 1600px) {
+    :root {
+        --satv-grid-min: 300px;
+        --satv-gap: 20px;
+    }
+}
+
+@media (max-width: 1280px) {
+    :root {
+        --satv-grid-min: 245px;
+    }
+}
+
+@media (max-width: 1024px) {
+    :root {
+        --satv-grid-min: 220px;
+        --satv-hero-height: clamp(210px, 30vh, 300px);
+    }
+
+    #mylist-hero {
+        margin-bottom: -2.6em;
+    }
+
+    .title-hero-inner {
+        bottom: 12px;
+    }
+
+    #title-heading::after {
+        height: 3px;
+        margin-top: 8px;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --satv-grid-min: 190px;
+        --satv-gap: 14px;
+    }
+
+    #mylist-hero {
+        min-height: 190px;
+        height: 26vh;
+        margin-top: -7.8em;
+        margin-bottom: -2.1em;
+    }
+
+    .title-hero-inner {
+        bottom: 10px;
+    }
+
+    #title-heading {
+        font-size: clamp(24px, 7vw, 32px);
+    }
+
+    .mylist-subtitle {
+        margin-top: 8px;
+        font-size: 13px;
+    }
+
+    #mylist-content {
+        padding-top: 16px;
+        padding-bottom: 24px;
+    }
+
+    #mylist-row .card-body {
+        padding: 10px 10px 12px;
+        min-height: 84px;
+    }
+
+    #mylist-row .card-title {
+        font-size: 15px;
+    }
+
+    #mylist-row .card-subtitle {
+        font-size: 12.5px;
+    }
+}
+
+@media (max-width: 520px) {
+    :root {
+        --satv-gap: 12px;
+    }
+
+    #mylist-row,
+    #mylist-row.row {
+        grid-template-columns: 1fr;
+    }
+
+    #mylist-row .thumb,
+    #mylist-row .card img {
+        min-height: 180px;
+    }
+
+    .mylist-state {
+        font-size: 13px;
+        padding: 11px 12px;
+    }
+}
+
+/* -----------------------------
+   Motion preferences
+----------------------------- */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+
+    #mylist-row .card:hover,
+    #mylist-row a:hover .card,
+    #mylist-row>*:hover .card {
+        transform: none !important;
+    }
+}
+
+
+/* =========================================================
+   AJUSTE FINAL — MI LISTA IMAGE-ONLY, RESPETANDO TU RADIO
+   ========================================================= */
+#mylist-row .card,
+#mylist-row a .card {
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: var(--satv-radius-lg) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  transform: none !important;
+  transition: none !important;
+  will-change: auto !important;
+}
+
+#mylist-row .card::before,
+#mylist-row .card::after {
+  content: none !important;
+  display: none !important;
+}
+
+#mylist-row .card:hover,
+#mylist-row a:hover .card,
+#mylist-row > *:hover .card,
+#mylist-row .card:focus-within,
+#mylist-row a:focus-visible .card {
+  transform: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#mylist-row .thumb,
+#mylist-row .card > img,
+#mylist-row .card .thumb {
+  border-radius: var(--satv-radius-lg) !important;
+  overflow: hidden !important;
+  outline: 4px solid transparent;
+  outline-offset: 5px;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+  transition: outline-color .18s ease !important;
+}
+
+#mylist-row .card:hover .thumb,
+#mylist-row a:hover .thumb,
+#mylist-row > *:hover .thumb,
+#mylist-row .card:focus-within .thumb,
+#mylist-row a:focus-visible .thumb,
+#mylist-row .card:hover > img,
+#mylist-row a:focus-visible .card > img {
+  outline-color: #fff !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+#mylist-row .card-body,
+#mylist-row .card-title,
+#mylist-row .card-subtitle {
+  display: none !important;
+}

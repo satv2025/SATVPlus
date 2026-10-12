@@ -1,0 +1,78 @@
+@font-face {
+    font-family: "SATVPlus FONT";
+    src: url("/css/fonts/discord/ggsans/GG%20Sans%20Normal.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "SATVPlus FONT";
+    src: url("/css/fonts/discord/ggsans/GG%20Sans%20Normal%20Italic.ttf") format("truetype");
+    font-weight: 400;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "SATVPlus FONT";
+    src: url("/css/fonts/discord/ggsans/GG%20Sans%20Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "SATVPlus FONT";
+    src: url("/css/fonts/discord/ggsans/GG%20Sans%20Medium%20Italic.ttf") format("truetype");
+    font-weight: 500;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "SATVPlus FONT";
+    src: url("/css/fonts/discord/ggsans/GG%20Sans%20Semibold.ttf") format("truetype");
+    font-weight: 600;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "SATVPlus FONT";
+    src: url("/css/fonts/discord/ggsans/GG%20Sans%20Semibold%20Italic.ttf") format("truetype");
+    font-weight: 600;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "SATVPlus FONT";
+    src: url("/css/fonts/discord/ggsans/GG%20Sans%20Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "SATVPlus FONT";
+    src: url("/css/fonts/discord/ggsans/GG%20Sans%20Bold%20Italic.ttf") format("truetype");
+    font-weight: 700;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "SATVPlus FONT";
+    src: url("/css/fonts/discord/ggsans/GG%20Sans%20Extra%20Bold.ttf") format("truetype");
+    font-weight: 800;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "SATVPlus FONT";
+    src: url("/css/fonts/discord/ggsans/GG%20Sans%20Extra%20Bold%20Italic.ttf") format("truetype");
+    font-weight: 800;
+    font-style: italic;   font-display: swap;
+}

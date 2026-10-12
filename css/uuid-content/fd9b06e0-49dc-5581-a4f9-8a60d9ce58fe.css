@@ -1,0 +1,105 @@
+/* SATV+ VR Cinema — landing limpia, cine premium, azul noche + texto blanco.
+   Únicamente afecta los elementos de .vr-cinema-page: no altera el header del resto del sitio. */
+.vr-cinema-page {
+  --vrc-bg: #050c1c;
+  --vrc-surface: #0b1832;
+  --vrc-surface-lift: #101e3c;
+  --vrc-border: #203865;
+  --vrc-accent: #2458c5;
+  --vrc-white: #fff;
+  color: #fff;
+  background: linear-gradient(180deg,#071328 0%,#050d1d 40%,#08142b 100%);
+  margin: 0;
+  min-width: 320px;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.vr-cinema-page *, .vr-cinema-page *::before, .vr-cinema-page *::after { box-sizing: border-box; }
+.vr-cinema-page .vr-main { overflow: clip; }
+.vr-cinema-page a { color: inherit; }
+.vr-cinema-page strong { color: #fff; font-weight: 800; }
+.vr-cinema-page .vr-sitehead { position: relative; z-index: 10; min-height: 65px; background:#071329; }
+.vr-cinema-page #topnav { position: relative !important; inset: auto !important; transform: none !important; width: 100%; min-height: 65px; background: #071329; border-bottom: 1px solid #18315b; }
+.vr-cinema-page .vr-fallback { display: inline-block; padding: 20px 28px; text-decoration:none; font-weight:950; font-size:22px; color:#fff; }
+.vr-cinema-page .vr-width, .vr-cinema-page .vr-hero { max-width: 1210px; margin-inline: auto; padding-inline: 32px; }
+.vr-cinema-page .vr-eyebrow { margin:0 0 18px; font-size:11px; font-weight:900; letter-spacing:.16em; color:#fff; text-transform:uppercase; opacity:.82; }
+.vr-cinema-page .vr-brandline { margin:0 0 15px; font-size:16px; font-weight:950; letter-spacing:.08em; color:#fff; }
+.vr-cinema-page .vr-brandline span { border-left:1px solid #4563a1; padding-left:10px; margin-left:5px; }
+.vr-cinema-page h1, .vr-cinema-page h2, .vr-cinema-page h3, .vr-cinema-page p { max-width:100%; }
+
+/* Hero: texto editorial + fotografía generada, sin sobrecarga de elementos. */
+.vr-cinema-page .vr-hero { display:grid; grid-template-columns:minmax(0,1.03fr) minmax(320px,.92fr); gap:clamp(25px,4.5vw,70px); align-items:center; min-height:635px; padding-top:58px; padding-bottom:80px; }
+.vr-cinema-page .vr-hero-copy { position:relative; z-index:1; }
+.vr-cinema-page .vr-hero h1 { margin:0; color:#fff; font-size:clamp(46px,5.6vw,78px); font-weight:950; line-height:1.015; letter-spacing:-.055em; text-wrap:balance; }
+.vr-cinema-page .vr-hero h1 span { display:block; color:#fff; }
+.vr-cinema-page .vr-lede { margin:23px 0 26px; color:#fff; opacity:.88; font-size:clamp(16px,1.65vw,19px); font-weight:520; line-height:1.62; max-width:610px; }
+.vr-cinema-page .vr-hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:20px; }
+.vr-cinema-page .vr-button { display:inline-flex; align-items:center; justify-content:center; gap:13px; min-height:45px; padding:12px 17px; text-decoration:none; font-size:13px; font-weight:850; letter-spacing:.015em; color:#fff; border:1px solid #466cb8; border-radius:8px; background:#162b58; transition:background-color .18s,border-color .18s; }
+.vr-cinema-page .vr-button:hover { background:#1d4084; border-color:#5b80ce; }
+.vr-cinema-page .vr-button-primary { background:#1e4ca8; border-color:#3566c8; }
+.vr-cinema-page .vr-hero-date { display:inline-flex; align-items:center; gap:9px; color:#fff; font-size:11px; font-weight:850; letter-spacing:.08em; }
+.vr-cinema-page .vr-live-dot { width:7px;height:7px;border-radius:50%; background:#396ae1; box-shadow:0 0 10px #355cba; }
+.vr-cinema-page .vr-hero-media { position:relative; min-width:0; border-radius:20px; isolation:isolate; }
+.vr-cinema-page .vr-hero-media::before { content:''; position:absolute; z-index:-1; inset:5% -7%; border-radius:40%; background:rgba(29,65,150,.3); filter:blur(48px); pointer-events:none; }
+.vr-cinema-page .vr-hero-image { display:block; width:100%; height:auto; aspect-ratio:4/3; object-fit:cover; object-position:center; border-radius:19px; border:1px solid #294371; box-shadow:0 24px 65px rgba(0,0,0,.45); }
+.vr-cinema-page .vr-media-caption { position:absolute; bottom:15px; left:17px; right:17px; font-size:10px; font-weight:880; letter-spacing:.11em; color:#fff; text-shadow:0 1px 12px #000; }
+
+/* Pequeño texto editorial, sin otra tarjeta decorativa. */
+.vr-cinema-page .vr-experience { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:clamp(28px,5vw,76px); padding-block:67px 75px; border-top:1px solid #1b335e; }
+.vr-cinema-page .vr-experience h2 { margin:0; font-size:clamp(32px,3.8vw,49px); line-height:1.11; letter-spacing:-.045em; color:#fff; font-weight:930; }
+.vr-cinema-page .vr-experience h2 span { display:block; color:#fff; }
+.vr-cinema-page .vr-experience-copy { padding-top:4px; }
+.vr-cinema-page .vr-experience-copy p { margin:0 0 15px; color:#fff; opacity:.84; font-size:15px; line-height:1.76; }
+
+/* Comparativa compacta, pero con información técnica completa en detalles. */
+.vr-cinema-page .vr-differences { padding-block:72px 100px; border-top:1px solid #1b335e; }
+.vr-cinema-page .vr-section-heading { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,.76fr); align-items:end; gap:34px; margin-bottom:32px; }
+.vr-cinema-page .vr-section-heading h2 { margin:0; color:#fff; font-size:clamp(33px,4.1vw,53px); line-height:1.1; letter-spacing:-.047em; font-weight:930; }
+.vr-cinema-page .vr-section-heading h2 span { display:block; color:#fff; }
+.vr-cinema-page .vr-section-lede { color:#fff; opacity:.84; font-size:14px; line-height:1.72; margin:0 0 4px; }
+.vr-cinema-page .vr-compare { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:stretch; }
+.vr-cinema-page .vr-compare-card { padding:26px 27px 22px; border:1px solid #233f73; background:linear-gradient(155deg,#0d1d3b,#0a152c); border-radius:15px; color:#fff; min-width:0; }
+.vr-cinema-page .vr-compare-featured { grid-column:1 / -1; border-color:#3260ad; background:linear-gradient(140deg,#122a57,#0a1732 65%); }
+.vr-cinema-page .vr-compare-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:15px; }
+.vr-cinema-page .vr-index { display:block; margin-bottom:11px; color:#fff; opacity:.7; font-size:10px; font-weight:900; letter-spacing:.12em; }
+.vr-cinema-page .vr-compare-card h3 { margin:0 0 4px; color:#fff; font-size:clamp(29px,3.5vw,44px); letter-spacing:-.055em; line-height:1; font-weight:960; }
+.vr-cinema-page .vr-subtitle { font-size:13px; color:#fff; opacity:.84; font-weight:650; }
+.vr-cinema-page .vr-status { border-radius:5px; padding:8px 9px; background:#142744; border:1px solid #32517e; color:#fff; font-size:10px; font-weight:900; letter-spacing:.04em; text-align:center; white-space:nowrap; }
+.vr-cinema-page .vr-status-yes { background:#18418e; border-color:#4674cf; }
+.vr-cinema-page .vr-compare-description { margin:0 0 19px; color:#fff; opacity:.86; font-size:14px; line-height:1.7; max-width:840px; }
+.vr-cinema-page .vr-more { border-top:1px solid #2a4168; }
+.vr-cinema-page .vr-more summary { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:16px 0 5px; list-style:none; color:#fff; font-size:12px; font-weight:850; cursor:pointer; }
+.vr-cinema-page .vr-more summary::-webkit-details-marker { display:none; }
+.vr-cinema-page .vr-more summary span { display:inline-flex; width:22px; height:22px; flex:none; align-items:center; justify-content:center; font-size:20px; font-weight:400; color:#fff; line-height:1; border:1px solid #3a5990; border-radius:5px; }
+.vr-cinema-page .vr-more[open] summary span { transform:rotate(45deg); }
+.vr-cinema-page .vr-more summary:focus-visible { outline:2px solid #4778d4; outline-offset:4px; }
+.vr-cinema-page .vr-more-content { padding-top:9px; }
+.vr-cinema-page .vr-more-content p { margin:0 0 12px; color:#fff; opacity:.86; font-size:13px; line-height:1.68; }
+.vr-cinema-page .vr-compare-footnote { margin:22px 0 0; color:#fff; opacity:.68; font-size:12px; line-height:1.7; }
+
+.vr-cinema-page .vr-finale { display:flex; justify-content:space-between; align-items:center; gap:30px; padding-block:57px 66px; border-top:1px solid #1b335e; }
+.vr-cinema-page .vr-finale h2 { margin:0; font-size:clamp(28px,3.4vw,43px); font-weight:925; letter-spacing:-.045em; line-height:1.1; color:#fff; }
+.vr-cinema-page .vr-footer { padding:23px 25px; border-top:1px solid #142a50; color:#fff; opacity:.65; font-size:11px; font-weight:700; letter-spacing:.1em; text-align:center; }
+@media(max-width:950px) {
+  .vr-cinema-page .vr-hero { grid-template-columns:minmax(0,1fr) minmax(280px,.9fr); gap:28px; min-height:0; padding-top:54px; padding-bottom:65px; }
+  .vr-cinema-page .vr-hero h1 { font-size:clamp(38px,5vw,60px); }
+  .vr-cinema-page .vr-section-heading { grid-template-columns:1fr; gap:12px; }
+}
+@media(max-width:710px) {
+  .vr-cinema-page .vr-width, .vr-cinema-page .vr-hero { padding-inline:20px; }
+  .vr-cinema-page .vr-hero { display:flex; flex-direction:column-reverse; align-items:stretch; gap:28px; padding-block:30px 60px; }
+  .vr-cinema-page .vr-hero h1 { font-size:clamp(39px,8.7vw,58px); }
+  .vr-cinema-page .vr-hero-media { max-width:620px; width:100%; margin-inline:auto; }
+  .vr-cinema-page .vr-media-caption { font-size:9px; }
+  .vr-cinema-page .vr-experience { grid-template-columns:1fr; gap:20px; padding-block:55px; }
+  .vr-cinema-page .vr-differences { padding-block:55px 75px; }
+  .vr-cinema-page .vr-compare { grid-template-columns:1fr; }
+  .vr-cinema-page .vr-compare-featured { grid-column:auto; }
+  .vr-cinema-page .vr-finale { flex-direction:column; align-items:flex-start; padding-block:52px; }
+}
+@media(max-width:430px) {
+  .vr-cinema-page .vr-compare-card { padding:22px 18px; }
+  .vr-cinema-page .vr-compare-head { flex-wrap:wrap; gap:13px; }
+  .vr-cinema-page .vr-hero-actions { align-items:flex-start; }
+}
+@media(prefers-reduced-motion:reduce) { .vr-cinema-page .vr-button { transition:none; } }

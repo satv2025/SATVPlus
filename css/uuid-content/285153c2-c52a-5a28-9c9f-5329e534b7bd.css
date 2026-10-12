@@ -1,0 +1,54 @@
+:root {
+    --bg: #313131;
+    --panel: #313131;
+    --panel-2: #353535;
+    --text: #f5f7fb;
+}
+
+.password-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-field input {
+    width: 100%;
+    padding-right: 44px;
+}
+
+.pw-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    padding: 6px;
+    line-height: 1;
+    color: #fff;
+    opacity: .9;
+    display: grid;
+    place-items: center;
+}
+
+.pw-toggle:hover {
+    opacity: 1;
+}
+
+.pw-toggle svg {
+    display: block;
+}
+
+/* SATV+ · iconos mostrar/ocultar contraseña siempre blancos */
+.pw-toggle,
+.pw-toggle:hover,
+.pw-toggle:focus-visible {
+  color: #FFFFFF !important;
+}
+
+.pw-toggle svg,
+.pw-toggle svg path {
+  color: #FFFFFF !important;
+  fill: #FFFFFF !important;
+}

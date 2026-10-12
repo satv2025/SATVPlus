@@ -1,0 +1,3934 @@
+// home.js
+// REEMPLAZO COMPLETO - FIX CARRUSEL BUG (PATRÓN PORTAL PARA OVERLAY)
+//
+// CAMBIOS APLICADOS:
+// - El overlay ya no vive dentro de .card (lo que obligaba a romper el overflow del carrusel).
+// - Ahora se inyecta directo en document.body (Portal).
+// - Se calculan coordenadas absolutas reales (top/left) sumando scrollX/scrollY.
+// - Se elimina la mutación de clases "fila-hover-abierta" que causaba el salto visual.
+
+import {
+  renderNav,
+  CATALOG_SECTIONS,
+  getCatalogSection,
+  matchesCatalogSection,
+  cupCatalogFilter,
+  renderAuthButtons,
+  toast,
+  cardHtml,
+  escapeHtml,
+  $,
+  formatTime,
+  enableDataHrefNavigation,
+  applyDisguisedCssFromId,
+  buildTitleUrl,
+  initTopnavSearch,
+  initSearchExperience,
+} from './ui.js';
+
+import { getSession, requireAuthOrRedirect } from './auth.js';
+import {
+  fetchContinueWatching,
+  fetchLatest,
+  fetchByCategory,
+  fetchAllMovies,
+  fetchMovie,
+  isReleaseReminderSet,
+  setReleaseReminder,
+  removeReleaseReminder,
+} from './api.js';
+import { supabase } from './supabaseClient.js';
+import { isCupFixtureSection, renderCupFixtures, installCupShieldFallback } from './cupFixtures.js';
+
+/* =========================================================
+   TIPOGRAFÍA INLINE SOLO PARA 2 LÍNEAS
+========================================================= */
+
+let __twoLinesRaf = 0;
+let __twoLinesInstalled = false;
+
+const TWO_LINE_TOL = 0.35;
+
+function getLineHeightPx(el, cs = null) {
+  try {
+    const st = cs || getComputedStyle(el);
+    const lh = parseFloat(st.lineHeight);
+    if (Number.isFinite(lh) && lh > 0) return lh;
+
+    const fs = parseFloat(st.fontSize) || 16;
+    return fs * 1.25;
+  } catch {
+    return 18;
+  }
+}
+
+function getContentHeightPx(el, cs = null) {
+  const st = cs || getComputedStyle(el);
+  const h = el.getBoundingClientRect().height || el.offsetHeight || 0;
+
+  const pt = parseFloat(st.paddingTop) || 0;
+  const pb = parseFloat(st.paddingBottom) || 0;
+  const bt = parseFloat(st.borderTopWidth) || 0;
+  const bb = parseFloat(st.borderBottomWidth) || 0;
+
+  return Math.max(0, h - pt - pb - bt - bb);
+}
+
+function lineRawFromMetrics(el) {
+  const cs = getComputedStyle(el);
+  const lh = getLineHeightPx(el, cs);
+  const contentH = getContentHeightPx(el, cs);
+  if (!lh || !contentH) return 0;
+  return contentH / lh;
+}
+
+function measureBaseLineRaw(el) {
+  if (!el) return 0;
+
+  const style = el.style;
+  const hadOur = el.dataset.twoLinesApplied === '1';
+
+  const fsVal = style.getPropertyValue('font-size');
+  const fsPr = style.getPropertyPriority('font-size');
+  const wVal = style.getPropertyValue('font-weight');
+  const wPr = style.getPropertyPriority('font-weight');
+
+  if (hadOur) {
+    style.removeProperty('font-size');
+    style.removeProperty('font-weight');
+  }
+
+  const raw = lineRawFromMetrics(el);
+
+  if (hadOur) {
+    if (fsVal) style.setProperty('font-size', fsVal, fsPr);
+    if (wVal) style.setProperty('font-weight', wVal, wPr);
+  }
+
+  return raw;
+}
+
+function isBaseExactlyTwoLines(el) {
+  const raw = measureBaseLineRaw(el);
+  return raw > 2 - TWO_LINE_TOL && raw < 2 + TWO_LINE_TOL;
+}
+
+function setCondensedInline(el, weight) {
+  el.style.setProperty('font-size', '12px', 'important');
+  el.style.setProperty('font-weight', String(weight), 'important');
+  el.dataset.twoLinesApplied = '1';
+  el.dataset.twoLinesWeight = String(weight);
+}
+
+function clearCondensedInlineIfOurs(el) {
+  if (el.dataset.twoLinesApplied !== '1') return;
+  el.style.removeProperty('font-size');
+  el.style.removeProperty('font-weight');
+  delete el.dataset.twoLinesApplied;
+  delete el.dataset.twoLinesWeight;
+}
+
+function applyInlineByTwoLinesRule(el, weight) {
+  if (!el) return;
+
+  if (el.classList.contains('is-2lines')) el.classList.remove('is-2lines');
+
+  const should = isBaseExactlyTwoLines(el);
+
+  if (should) {
+    setCondensedInline(el, weight);
+  } else {
+    clearCondensedInlineIfOurs(el);
+  }
+}
+
+function applyTwoLinesTypographyInline(scope = document) {
+  // Las cards ahora son image-only. Se conserva la función para no romper
+  // llamadas existentes, pero ya no fuerza mediciones ni reflow de textos.
+  void scope;
+}
+
+function scheduleTwoLinesScan(scope = document) {
+  if (__twoLinesRaf) cancelAnimationFrame(__twoLinesRaf);
+  __twoLinesRaf = requestAnimationFrame(() => {
+    __twoLinesRaf = 0;
+    applyTwoLinesTypographyInline(scope);
+  });
+}
+
+function installTwoLinesObservers() {
+  if (__twoLinesInstalled) return;
+  __twoLinesInstalled = true;
+
+  if (document.fonts?.ready?.then) {
+    document.fonts.ready.then(() => scheduleTwoLinesScan()).catch(() => {});
+  }
+
+  window.addEventListener('load', () => scheduleTwoLinesScan(), {
+    passive: true,
+  });
+  window.addEventListener('resize', () => scheduleTwoLinesScan(), {
+    passive: true,
+  });
+
+  try {
+    const ro = new ResizeObserver(() => scheduleTwoLinesScan());
+    ro.observe(document.documentElement);
+  } catch {}
+
+  setTimeout(() => scheduleTwoLinesScan(), 150);
+  setTimeout(() => scheduleTwoLinesScan(), 600);
+
+  scheduleTwoLinesScan();
+}
+
+/* =========================================================
+   HOME HERO DESTACADO ESTABLE
+========================================================= */
+
+let __homeHeroRotationTimer = null;
+const HOME_HERO_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+const HOME_HERO_STORAGE_PREFIX = 'homeHeroSelection:v1';
+
+/* =========================================================
+   HOME HERO TRAILER VIDEO
+========================================================= */
+
+const HERO_VOLUME_ICON_MUTE = 'https://satvplus.com.ar/images/svg/heromute.svg';
+const HERO_VOLUME_ICON_UNMUTE = 'https://satvplus.com.ar/images/svg/heroon.svg';
+
+/* =========================================================
+   CARD QUICK MODAL
+========================================================= */
+
+let __quickModalRoot = null;
+let __quickModalLastFocus = null;
+let __quickModalInstalled = false;
+let __quickModalScrollY = 0;
+
+function getQuickModalRoot() {
+  if (__quickModalRoot && document.body.contains(__quickModalRoot)) {
+    return __quickModalRoot;
+  }
+
+  const root = document.createElement('div');
+  root.id = 'card-quick-modal-root';
+  root.className = 'card-quick-modal-backdrop';
+  root.hidden = true;
+  root.setAttribute('aria-hidden', 'true');
+
+  document.body.appendChild(root);
+  __quickModalRoot = root;
+  return root;
+}
+
+function lockQuickModalScroll() {
+  __quickModalScrollY =
+    window.scrollY || document.documentElement.scrollTop || 0;
+  document.body.classList.add('card-quick-modal-open');
+  document.documentElement.style.scrollBehavior = 'auto';
+}
+
+function unlockQuickModalScroll() {
+  document.body.classList.remove('card-quick-modal-open');
+  document.documentElement.style.scrollBehavior = '';
+}
+
+function closeQuickCardModal() {
+  const root = getQuickModalRoot();
+
+  try {
+    root.querySelectorAll('video').forEach((video) => {
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        video.load?.();
+      } catch {}
+    });
+  } catch {}
+
+  root.hidden = true;
+  root.setAttribute('aria-hidden', 'true');
+  root.innerHTML = '';
+
+  unlockQuickModalScroll();
+  __quickModalLastFocus = null;
+}
+
+function installQuickModalGlobalEvents() {
+  if (__quickModalInstalled) return;
+  __quickModalInstalled = true;
+
+  document.addEventListener('keydown', (ev) => {
+    const root = getQuickModalRoot();
+    if (!root.hidden && ev.key === 'Escape') {
+      ev.preventDefault();
+      closeQuickCardModal();
+    }
+  });
+}
+
+function syncQuickModalVolumeUi(video, btn, icon) {
+  const isMuted = !!video.muted;
+  icon.src = isMuted ? HERO_VOLUME_ICON_MUTE : HERO_VOLUME_ICON_UNMUTE;
+  btn.setAttribute('aria-label', isMuted ? 'Activar sonido' : 'Silenciar');
+  btn.setAttribute('aria-pressed', String(!isMuted));
+  btn.title = isMuted ? 'Activar sonido' : 'Silenciar';
+}
+
+function buildQuickModalPoster(posterUrl, title = '') {
+  const posterWrap = document.createElement('div');
+  posterWrap.className = 'card-quick-modal-poster';
+
+  if (posterUrl) {
+    const img = document.createElement('img');
+    img.className = 'card-quick-modal-poster-img';
+    img.src = posterUrl;
+    img.alt = title ? `Poster de ${title}` : 'Poster';
+    img.decoding = 'async';
+    img.loading = 'eager';
+    posterWrap.appendChild(img);
+  }
+
+  const shade = document.createElement('div');
+  shade.className = 'card-quick-modal-shade';
+  posterWrap.appendChild(shade);
+
+  return posterWrap;
+}
+
+function mountQuickModalTrailer(container, movie) {
+  if (!container || !movie) return;
+
+  const trailerUrl = String(movie.trailer_url || '').trim();
+  const poster = movie.banner_url || movie.thumbnail_url || '';
+  const title = movie.title || '';
+
+  if (!trailerUrl) {
+    container.appendChild(buildQuickModalPoster(poster, title));
+    return;
+  }
+
+  const media = document.createElement('div');
+  media.className = 'card-quick-modal-media';
+
+  const video = document.createElement('video');
+  video.className = 'card-quick-modal-video';
+  video.src = trailerUrl;
+  if (poster) video.poster = poster;
+
+  video.autoplay = true;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = 'metadata';
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
+
+  const shade = document.createElement('div');
+  shade.className = 'card-quick-modal-shade';
+
+  const volBtn = document.createElement('button');
+  volBtn.type = 'button';
+  volBtn.className = 'card-quick-modal-volume-btn';
+  volBtn.setAttribute('aria-label', 'Activar sonido');
+  volBtn.setAttribute('aria-pressed', 'false');
+
+  const volIcon = document.createElement('img');
+  volIcon.alt = '';
+  volIcon.decoding = 'async';
+  volIcon.src = HERO_VOLUME_ICON_MUTE;
+  volBtn.appendChild(volIcon);
+
+  function playVideo() {
+    const p = video.play?.();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  }
+
+  volBtn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    video.muted = !video.muted;
+    syncQuickModalVolumeUi(video, volBtn, volIcon);
+    playVideo();
+  });
+
+  const onReady = () => media.classList.add('is-ready');
+  video.addEventListener('loadeddata', onReady, { once: true });
+  video.addEventListener('canplay', onReady, { once: true });
+
+  video.addEventListener(
+    'error',
+    () => {
+      container.innerHTML = '';
+      container.appendChild(buildQuickModalPoster(poster, title));
+    },
+    { once: true }
+  );
+
+  media.appendChild(video);
+  media.appendChild(shade);
+  media.appendChild(volBtn);
+  container.appendChild(media);
+
+  syncQuickModalVolumeUi(video, volBtn, volIcon);
+
+  requestAnimationFrame(playVideo);
+}
+
+/* =========================================================
+   HOME SESSION CACHE
+========================================================= */
+
+let __homeSessionCache = null;
+let __homeUserIdCache = null;
+let __homeSessionPromise = null;
+
+async function getHomeSessionCached() {
+  if (__homeSessionCache) return __homeSessionCache;
+  if (__homeSessionPromise) return __homeSessionPromise;
+
+  __homeSessionPromise = getSession()
+    .then((s) => {
+      __homeSessionCache = s || null;
+      __homeUserIdCache = s?.user?.id || null;
+      return __homeSessionCache;
+    })
+    .catch(() => null)
+    .finally(() => {
+      __homeSessionPromise = null;
+    });
+
+  return __homeSessionPromise;
+}
+
+function getHomeUserIdCachedSync() {
+  return __homeUserIdCache || null;
+}
+
+/* =========================================================
+   ICONOS (+ / -) PARA MI LISTA
+========================================================= */
+
+const MYLIST_ICON_PLUS = `
+  <svg class="card-quick-plus-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1920" aria-hidden="true" focusable="false">
+    <path d="M866.332 213v653.332H213v186.666h653.332v653.332h186.666v-653.332h653.332V866.332h-653.332V213z" fill-rule="evenodd"></path>
+  </svg>
+`;
+
+const MYLIST_ICON_MINUS = `
+  <svg class="card-quick-plus-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1920" aria-hidden="true" focusable="false">
+    <path d="M213 866.332h1493.332v186.666H213z" fill-rule="evenodd"></path>
+  </svg>
+`;
+
+function setMyListPlusMinusIcon(btn, added) {
+  if (!btn) return;
+  btn.innerHTML = added ? MYLIST_ICON_MINUS : MYLIST_ICON_PLUS;
+}
+
+/* =========================================================
+   AVISOS DE LANZAMIENTO - BOTONES EN HOME
+========================================================= */
+
+function releaseReminderIconHtml(active = false) {
+  return `<i class="${active ? 'fa-solid' : 'fa-regular'} fa-bell" aria-hidden="true"></i>`;
+}
+
+function getLiveStartDateForReminder(movieOrDataset) {
+  const raw =
+    movieOrDataset?.live_starts_at ??
+    movieOrDataset?.liveStartsAt ??
+    movieOrDataset?.live_start_at ??
+    movieOrDataset?.live_datetime ??
+    movieOrDataset?.live_at ??
+    null;
+
+  if (!raw) return null;
+
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function shouldShowReleaseReminder(movieOrDataset) {
+  const liveModeRaw =
+    movieOrDataset?.live_mode ?? movieOrDataset?.liveMode ?? false;
+  const isLiveMode =
+    liveModeRaw === true ||
+    String(liveModeRaw).toLowerCase() === 'true' ||
+    liveModeRaw === '1';
+  if (!isLiveMode) return false;
+
+  const d = getLiveStartDateForReminder(movieOrDataset);
+  return !!d && d.getTime() > Date.now();
+}
+
+function setReleaseReminderBtnState(
+  btn,
+  { active = false, pending = false } = {}
+) {
+  if (!btn) return;
+
+  btn.classList.toggle('is-active', !!active);
+  btn.dataset.releaseReminderState = active ? 'on' : 'off';
+  btn.dataset.releaseReminderPending = pending ? '1' : '0';
+  btn.setAttribute('aria-pressed', String(!!active));
+  btn.setAttribute(
+    'aria-label',
+    active ? 'Quitar aviso de lanzamiento' : 'Avisarme cuando se lance'
+  );
+
+  try {
+    btn.disabled = !!pending;
+  } catch {}
+
+  const label = pending
+    ? 'Actualizando…'
+    : active
+      ? 'Aviso activado'
+      : 'Avisarme';
+  btn.innerHTML = `${releaseReminderIconHtml(active)}<span>${label}</span>`;
+}
+
+const RELEASE_REMINDER_BUTTON_CLASSES = [
+  'card-release-reminder-btn',
+  'home-hero-reminder',
+  'title-reminder-btn',
+];
+
+let __releaseReminderGlobalSyncInstalled = false;
+
+function isReleaseReminderButtonElement(btn) {
+  return (
+    !!btn?.classList &&
+    RELEASE_REMINDER_BUTTON_CLASSES.some((className) =>
+      btn.classList.contains(className)
+    )
+  );
+}
+
+function getReleaseReminderButtonsByMovieId(movieId) {
+  const id = String(movieId || '');
+  if (!id) return [];
+
+  return Array.from(document.querySelectorAll('[data-movie-id]')).filter(
+    (btn) =>
+      isReleaseReminderButtonElement(btn) &&
+      String(btn.dataset.movieId || '') === id
+  );
+}
+
+function syncReleaseReminderButtonsByMovieId(
+  movieId,
+  { active = false, pending = false } = {}
+) {
+  getReleaseReminderButtonsByMovieId(movieId).forEach((button) => {
+    setReleaseReminderBtnState(button, { active, pending });
+  });
+}
+
+function ensureReleaseReminderGlobalSync() {
+  if (__releaseReminderGlobalSyncInstalled) return;
+  __releaseReminderGlobalSyncInstalled = true;
+
+  window.addEventListener('satv:release-reminders-changed', (ev) => {
+    const movieId = ev?.detail?.movieId || ev?.detail?.contentId;
+    if (!movieId || typeof ev?.detail?.active === 'undefined') return;
+
+    syncReleaseReminderButtonsByMovieId(movieId, {
+      active: !!ev.detail.active,
+      pending: false,
+    });
+  });
+}
+
+async function getReleaseReminderUserId() {
+  const session = __homeSessionCache || (await getHomeSessionCached());
+  return session?.user?.id || null;
+}
+
+async function refreshReleaseReminderButton(btn) {
+  if (!btn?.dataset?.movieId) return;
+  const movieId = String(btn.dataset.movieId);
+
+  setReleaseReminderBtnState(btn, {
+    active: btn.dataset.releaseReminderState === 'on',
+    pending: true,
+  });
+
+  const userId = await getReleaseReminderUserId();
+  const active = await isReleaseReminderSet(userId, movieId);
+  syncReleaseReminderButtonsByMovieId(movieId, { active, pending: false });
+}
+
+function bindReleaseReminderButton(btn) {
+  if (!btn?.dataset?.movieId) return;
+  ensureReleaseReminderGlobalSync();
+  if (btn.dataset.releaseReminderBound === '1') return;
+  btn.dataset.releaseReminderBound = '1';
+
+  setReleaseReminderBtnState(btn, { active: false, pending: true });
+  refreshReleaseReminderButton(btn).catch((e) => {
+    console.warn('[home] no se pudo refrescar Avisarme:', e);
+    setReleaseReminderBtnState(btn, { active: false, pending: false });
+  });
+
+  btn.addEventListener(
+    'click',
+    async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      if (btn.dataset.releaseReminderPending === '1') return;
+
+      const movieId = String(btn.dataset.movieId || '');
+      if (!movieId) return;
+
+      const wasActive = btn.dataset.releaseReminderState === 'on';
+      syncReleaseReminderButtonsByMovieId(movieId, {
+        active: wasActive,
+        pending: true,
+      });
+
+      try {
+        const userId = await getReleaseReminderUserId();
+
+        if (wasActive) {
+          await removeReleaseReminder(userId, movieId);
+          syncReleaseReminderButtonsByMovieId(movieId, {
+            active: false,
+            pending: false,
+          });
+          toast?.('Aviso desactivado.', 'success');
+        } else {
+          await setReleaseReminder(userId, movieId);
+          syncReleaseReminderButtonsByMovieId(movieId, {
+            active: true,
+            pending: false,
+          });
+          toast?.('Te avisaremos cuando esté disponible.', 'success');
+        }
+
+        window.dispatchEvent(
+          new CustomEvent('satv:release-reminders-changed', {
+            detail: { movieId, active: !wasActive },
+          })
+        );
+      } catch (e) {
+        console.warn('[home] toggle Avisarme error:', e);
+        syncReleaseReminderButtonsByMovieId(movieId, {
+          active: wasActive,
+          pending: false,
+        });
+        toast?.('No se pudo actualizar el aviso.', 'error');
+      }
+    },
+    { passive: false }
+  );
+}
+
+function buildReleaseReminderButton(
+  movieId,
+  className = 'card-release-reminder-btn'
+) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = className;
+  btn.dataset.movieId = String(movieId);
+  btn.setAttribute('aria-pressed', 'false');
+  setReleaseReminderBtnState(btn, { active: false, pending: false });
+  return btn;
+}
+
+function ensureReleaseReminderButtonOnCard(card, movieId) {
+  if (!card || !movieId) return;
+
+  if (!shouldShowReleaseReminder(card.dataset)) {
+    card
+      .querySelectorAll('.card-release-reminder-btn')
+      .forEach((btn) => btn.remove());
+    return;
+  }
+
+  const thumb = card.querySelector('.thumb');
+  if (!thumb) return;
+
+  let btn = card.querySelector('.card-release-reminder-btn');
+  if (!btn) {
+    btn = buildReleaseReminderButton(movieId, 'card-release-reminder-btn');
+  }
+
+  // El botón vive dentro del thumbnail para no sumar alto ni romper el layout de la card.
+  if (btn.parentElement !== thumb) {
+    thumb.appendChild(btn);
+  }
+
+  btn.dataset.movieId = String(movieId);
+  bindReleaseReminderButton(btn);
+}
+
+function bindHomeHeroReleaseReminderButton(hero = document) {
+  const btn = hero?.querySelector?.('.home-hero-reminder');
+  if (!btn) return;
+  bindReleaseReminderButton(btn);
+}
+
+function addHomeMovieDataToCardHtml(html, movie) {
+  const movieId = movie?.id;
+  if (!html || !movieId) return html || '';
+
+  const state = escapeHtml(
+    String(movie?.publish_state || 'public').toLowerCase()
+  );
+  const title = escapeHtml(String(movie?.title || ''));
+  const liveMode = Boolean(movie?.live_mode) ? 'true' : 'false';
+  const liveStartsAt = escapeHtml(String(movie?.live_starts_at || ''));
+
+  return addMovieIdToCardHtml(html, movieId).replace(
+    /<div\s+class="([^"]*\bcard\b[^"]*)"/,
+    `<div class="$1" data-publish-state="${state}" data-live-mode="${liveMode}" data-live-starts-at="${liveStartsAt}" data-movie-title="${title}"`
+  );
+}
+
+/* =========================================================
+   MI LISTA - Supabase + fallback local
+========================================================= */
+
+const MY_LIST_KEY = 'satv_my_list_ids';
+
+function getMyListIdsLocal() {
+  try {
+    const raw = localStorage.getItem(MY_LIST_KEY);
+    const arr = JSON.parse(raw || '[]');
+    return Array.isArray(arr)
+      ? [...new Set(arr.filter(Boolean).map(String))]
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMyListIdsLocal(ids) {
+  try {
+    localStorage.setItem(
+      MY_LIST_KEY,
+      JSON.stringify([...new Set((ids || []).filter(Boolean).map(String))])
+    );
+  } catch (e) {
+    console.warn('[home] no se pudo guardar Mi Lista local:', e);
+  }
+}
+
+function isInMyListLocal(contentId) {
+  return getMyListIdsLocal().includes(String(contentId));
+}
+
+function setLocalMyListMembership(contentId, added) {
+  const id = String(contentId);
+  const ids = getMyListIdsLocal();
+  const exists = ids.includes(id);
+
+  let next = ids;
+  if (added && !exists) next = [...ids, id];
+  if (!added && exists) next = ids.filter((x) => x !== id);
+
+  saveMyListIdsLocal(next);
+  return added;
+}
+
+function toggleLocalMyList(contentId) {
+  const id = String(contentId);
+  const ids = getMyListIdsLocal();
+  const exists = ids.includes(id);
+  const next = exists ? ids.filter((x) => x !== id) : [...ids, id];
+  saveMyListIdsLocal(next);
+  return !exists;
+}
+
+async function isInMyListRemote(profileId, contentId) {
+  if (!profileId || !contentId) return false;
+
+  const { data, error } = await supabase
+    .from('my_list')
+    .select('id')
+    .eq('profile_id', profileId)
+    .eq('content_id', contentId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data;
+}
+
+async function addToMyListRemote(profileId, contentId) {
+  const payload = {
+    profile_id: profileId,
+    content_id: contentId,
+    added_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from('my_list').upsert(payload, {
+    onConflict: 'profile_id,content_id',
+    ignoreDuplicates: false,
+  });
+
+  if (error) throw error;
+  return true;
+}
+
+async function removeFromMyListRemote(profileId, contentId) {
+  const { error } = await supabase
+    .from('my_list')
+    .delete()
+    .eq('profile_id', profileId)
+    .eq('content_id', contentId);
+
+  if (error) throw error;
+  return true;
+}
+
+async function resolveHeroMyListState({ userId, contentId }) {
+  const localAdded = isInMyListLocal(contentId);
+
+  if (!userId) {
+    return { added: localAdded, source: 'local', isLoggedIn: false };
+  }
+
+  try {
+    const remoteAdded = await isInMyListRemote(userId, contentId);
+    setLocalMyListMembership(contentId, remoteAdded);
+    return { added: remoteAdded, source: 'supabase', isLoggedIn: true };
+  } catch (e) {
+    console.warn('[home] resolveHeroMyListState remote error; uso local:', e);
+    return { added: localAdded, source: 'local', isLoggedIn: true, error: e };
+  }
+}
+
+function setMyListIconBtnState(
+  btn,
+  { contentId, added = false, pending = false, source = 'unknown' } = {}
+) {
+  if (!btn || !contentId) return;
+
+  btn.dataset.myListContentId = String(contentId);
+  btn.dataset.myListState = added ? 'in' : 'out';
+  btn.dataset.myListPending = pending ? '1' : '0';
+  btn.dataset.myListSource = source;
+
+  btn.classList.toggle('is-active', !!added);
+  btn.setAttribute('aria-pressed', String(!!added));
+  btn.setAttribute(
+    'aria-label',
+    added ? 'Quitar de Mi Lista' : 'Agregar a Mi Lista'
+  );
+
+  setMyListPlusMinusIcon(btn, !!added);
+
+  try {
+    btn.disabled = !!pending;
+  } catch {}
+}
+
+async function refreshMyListIconButton(btn, { userId, contentId }) {
+  if (!btn || !contentId) return null;
+
+  setMyListIconBtnState(btn, {
+    contentId,
+    added: isInMyListLocal(contentId),
+    pending: true,
+    source: 'unknown',
+  });
+
+  const state = await resolveHeroMyListState({ userId, contentId });
+
+  setMyListIconBtnState(btn, {
+    contentId,
+    added: state.added,
+    pending: false,
+    source: state.source,
+  });
+
+  return state;
+}
+
+function bindMyListIconButton(btn, { userId, contentId }) {
+  if (!btn || !contentId) return;
+  if (btn.dataset.myListBound === '1') return;
+  btn.dataset.myListBound = '1';
+
+  refreshMyListIconButton(btn, { userId, contentId }).catch(() => {
+    setMyListIconBtnState(btn, {
+      contentId,
+      added: isInMyListLocal(contentId),
+      pending: false,
+      source: 'local',
+    });
+  });
+
+  btn.addEventListener(
+    'click',
+    async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      const currentId = btn.dataset.myListContentId || String(contentId);
+      if (!currentId) return;
+      if (btn.dataset.myListPending === '1') return;
+
+      setMyListIconBtnState(btn, {
+        contentId: currentId,
+        added: btn.dataset.myListState === 'in',
+        pending: true,
+        source: btn.dataset.myListSource || 'unknown',
+      });
+
+      try {
+        const session = __homeSessionCache || (await getHomeSessionCached());
+        const uid = userId || session?.user?.id || null;
+
+        const state = await resolveHeroMyListState({
+          userId: uid,
+          contentId: currentId,
+        });
+
+        if (state.source === 'supabase' && uid) {
+          if (state.added) {
+            await removeFromMyListRemote(uid, currentId);
+            setLocalMyListMembership(currentId, false);
+            setMyListIconBtnState(btn, {
+              contentId: currentId,
+              added: false,
+              pending: false,
+              source: 'supabase',
+            });
+            toast?.('Quitado de Mi Lista.', 'success');
+          } else {
+            await addToMyListRemote(uid, currentId);
+            setLocalMyListMembership(currentId, true);
+            setMyListIconBtnState(btn, {
+              contentId: currentId,
+              added: true,
+              pending: false,
+              source: 'supabase',
+            });
+            toast?.('Agregado a Mi Lista.', 'success');
+          }
+          return;
+        }
+
+        const added = toggleLocalMyList(currentId);
+        setMyListIconBtnState(btn, {
+          contentId: currentId,
+          added,
+          pending: false,
+          source: 'local',
+        });
+        toast?.(
+          added ? 'Agregado a Mi Lista.' : 'Quitado de Mi Lista.',
+          'success'
+        );
+      } catch (e) {
+        console.warn('[home] toggle mylist icon error:', e);
+        try {
+          const session = __homeSessionCache || (await getHomeSessionCached());
+          const uid = userId || session?.user?.id || null;
+          await refreshMyListIconButton(btn, {
+            userId: uid,
+            contentId: currentId,
+          });
+        } catch {
+          setMyListIconBtnState(btn, {
+            contentId: currentId,
+            added: isInMyListLocal(currentId),
+            pending: false,
+            source: 'local',
+          });
+        }
+        toast?.('No se pudo actualizar Mi Lista.', 'error');
+      }
+    },
+    { passive: false }
+  );
+}
+
+/* =========================================================
+   MAS INFO
+========================================================= */
+
+function buildCardMoreInfoButton(movieId) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'card-more-info-btn';
+  btn.innerHTML = `${MYLIST_ICON_PLUS}<span>Más</span>`;
+  btn.setAttribute('aria-label', 'Mas info');
+
+  btn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    openQuickCardModal(movieId, btn);
+  });
+
+  return btn;
+}
+
+function ensureMoreInfoNextToTitle(card, movieId) {
+  const titleEl = card?.querySelector?.('.card-title');
+  if (!titleEl) return;
+
+  if (titleEl.querySelector('.card-more-info-btn')) return;
+
+  const btn = buildCardMoreInfoButton(movieId);
+
+  titleEl.style.position = titleEl.style.position || 'relative';
+  titleEl.style.paddingRight = titleEl.style.paddingRight || '86px';
+
+  btn.style.position = 'absolute';
+  btn.style.right = '10px';
+  btn.style.top = '50%';
+  btn.style.transform = 'translateY(-50%)';
+  btn.style.zIndex = '2';
+
+  titleEl.appendChild(btn);
+}
+
+/* =========================================================
+   HERO MYLIST
+========================================================= */
+
+function setHeroMyListBtnState(
+  btn,
+  { contentId, added = false, pending = false, source = 'unknown' } = {}
+) {
+  if (!btn || !contentId) return;
+
+  btn.dataset.myListContentId = String(contentId);
+  btn.dataset.myListState = added ? 'in' : 'out';
+  btn.dataset.myListPending = pending ? '1' : '0';
+  btn.dataset.myListSource = source;
+
+  btn.setAttribute('aria-pressed', String(!!added));
+  btn.setAttribute(
+    'aria-label',
+    added ? 'Quitar de Mi Lista' : 'Agregar a Mi Lista'
+  );
+  btn.classList.toggle('is-active', !!added);
+
+  try {
+    btn.disabled = !!pending;
+  } catch {}
+
+  const label = pending ? 'Actualizando…' : added ? 'En Mi Lista' : 'Mi Lista';
+  const labelNode = btn.querySelector('.home-hero-mylist-label');
+  if (labelNode) labelNode.textContent = label;
+}
+
+async function refreshHeroMyListButton(btn, { userId, contentId }) {
+  if (!btn || !contentId) return null;
+
+  setHeroMyListBtnState(btn, {
+    contentId,
+    added: isInMyListLocal(contentId),
+    pending: true,
+    source: 'unknown',
+  });
+
+  const state = await resolveHeroMyListState({ userId, contentId });
+
+  setHeroMyListBtnState(btn, {
+    contentId,
+    added: state.added,
+    pending: false,
+    source: state.source,
+  });
+
+  return state;
+}
+
+function bindHeroMyListButton({ movie, userId }) {
+  const btn = document.querySelector('.home-hero-mylist');
+  if (!btn || !movie?.id) return;
+
+  const contentId = String(movie.id);
+  btn.dataset.myListContentId = contentId;
+
+  refreshHeroMyListButton(btn, { userId, contentId }).catch(() => {
+    setHeroMyListBtnState(btn, {
+      contentId,
+      added: isInMyListLocal(contentId),
+      pending: false,
+      source: 'local',
+    });
+  });
+
+  btn.addEventListener(
+    'click',
+    async (ev) => {
+      ev.preventDefault();
+
+      const currentId = btn.dataset.myListContentId || contentId;
+      if (!currentId) return;
+      if (btn.dataset.myListPending === '1') return;
+
+      setHeroMyListBtnState(btn, {
+        contentId: currentId,
+        added: btn.dataset.myListState === 'in',
+        pending: true,
+        source: btn.dataset.myListSource || 'unknown',
+      });
+
+      try {
+        const state = await resolveHeroMyListState({
+          userId,
+          contentId: currentId,
+        });
+
+        if (state.source === 'supabase' && userId) {
+          if (state.added) {
+            await removeFromMyListRemote(userId, currentId);
+            setLocalMyListMembership(currentId, false);
+            setHeroMyListBtnState(btn, {
+              contentId: currentId,
+              added: false,
+              pending: false,
+              source: 'supabase',
+            });
+            toast?.('Quitado de Mi Lista.', 'success');
+          } else {
+            await addToMyListRemote(userId, currentId);
+            setLocalMyListMembership(currentId, true);
+            setHeroMyListBtnState(btn, {
+              contentId: currentId,
+              added: true,
+              pending: false,
+              source: 'supabase',
+            });
+            toast?.('Agregado a Mi Lista.', 'success');
+          }
+          return;
+        }
+
+        const added = toggleLocalMyList(currentId);
+        setHeroMyListBtnState(btn, {
+          contentId: currentId,
+          added,
+          pending: false,
+          source: 'local',
+        });
+        toast?.(
+          added
+            ? 'Agregado a Mi Lista (local).'
+            : 'Quitado a Mi Lista (local).',
+          'success'
+        );
+      } catch (e) {
+        console.warn('[home] toggle hero Mi Lista error:', e);
+        try {
+          await refreshHeroMyListButton(btn, { userId, contentId: currentId });
+        } catch {
+          setHeroMyListBtnState(btn, {
+            contentId: currentId,
+            added: isInMyListLocal(currentId),
+            pending: false,
+            source: 'local',
+          });
+        }
+        toast?.('No se pudo actualizar Mi Lista.', 'error');
+      }
+    },
+    { passive: false }
+  );
+}
+
+function buildMyListUrl(userId) {
+  if (!userId) return '/mylist';
+  const q = new URLSearchParams({ list: String(userId), user: String(userId) });
+  return `/mylist?${q.toString()}`;
+}
+
+function ensureMyListNavLink(userId) {
+  const topnav = document.getElementById('topnav');
+  if (!topnav) return;
+
+  const navLeft = topnav.querySelector('.nav-left');
+  if (!navLeft) return;
+
+  let link = topnav.querySelector("[data-mylist-nav='1']");
+  if (!link) {
+    link = document.createElement('a');
+    link.className = 'navlink';
+    link.dataset.mylistNav = '1';
+    link.textContent = 'Mi Lista';
+    navLeft.appendChild(link);
+  }
+
+  link.href = buildMyListUrl(userId);
+  const inicio = navLeft.querySelector('a.navlink[href="/"]');
+  if (inicio) inicio.after(link);
+}
+
+/* =========================================================
+   QUICK MODAL
+========================================================= */
+
+async function openQuickCardModal(movieId, triggerEl = null) {
+  if (!movieId) return;
+
+  installQuickModalGlobalEvents();
+  __quickModalLastFocus = triggerEl || document.activeElement || null;
+
+  const root = getQuickModalRoot();
+
+  lockQuickModalScroll();
+
+  root.hidden = false;
+  root.setAttribute('aria-hidden', 'false');
+
+  root.innerHTML = `
+    <div class="card-quick-modal" role="dialog" aria-modal="true" aria-label="Vista rápida">
+      <button class="card-quick-modal-close" type="button" aria-label="Cerrar">
+        <span aria-hidden="true">×</span>
+      </button>
+
+      <div class="card-quick-modal-media-wrap">
+        <div class="card-quick-modal-loading">Cargando…</div>
+      </div>
+
+      <div class="card-quick-modal-body">
+        <h3 class="card-quick-modal-title">Cargando…</h3>
+        <p class="card-quick-modal-synopsis"></p>
+      </div>
+    </div>
+  `;
+
+  const modal = root.querySelector('.card-quick-modal');
+  const closeBtn = root.querySelector('.card-quick-modal-close');
+
+  closeBtn?.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    closeQuickCardModal();
+  });
+
+  root.onclick = (ev) => {
+    if (ev.target === root) closeQuickCardModal();
+  };
+
+  modal?.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+  });
+
+  try {
+    const movie = await fetchMovie(movieId);
+    if (!movie) throw new Error('No se encontró el contenido');
+
+    const mediaWrap = root.querySelector('.card-quick-modal-media-wrap');
+    const titleNode = root.querySelector('.card-quick-modal-title');
+    const synopsisNode = root.querySelector('.card-quick-modal-synopsis');
+
+    if (titleNode) titleNode.textContent = movie.title || 'Sin título';
+    if (synopsisNode)
+      synopsisNode.textContent =
+        movie.description || movie.sinopsis || 'Sin sinopsis disponible.';
+
+    if (mediaWrap) {
+      mediaWrap.innerHTML = '';
+      mountQuickModalTrailer(mediaWrap, movie);
+
+      const mediaInner =
+        mediaWrap.querySelector('.card-quick-modal-media') || mediaWrap;
+
+      let myListFloat = mediaInner.querySelector(
+        '.card-quick-modal-mylist-float'
+      );
+      if (!myListFloat) {
+        myListFloat = document.createElement('button');
+        myListFloat.type = 'button';
+        myListFloat.className = 'card-quick-modal-mylist-float';
+        myListFloat.setAttribute('aria-label', 'Agregar a Mi Lista');
+        myListFloat.setAttribute('aria-pressed', 'false');
+        myListFloat.innerHTML = MYLIST_ICON_PLUS;
+        mediaInner.appendChild(myListFloat);
+      }
+
+      const session = __homeSessionCache || (await getHomeSessionCached());
+      const userId = session?.user?.id || null;
+      const contentId = String(movie.id);
+      bindMyListIconButton(myListFloat, { userId, contentId });
+    }
+  } catch (e) {
+    console.error('[home] quick modal error:', e);
+
+    const mediaWrap = root.querySelector('.card-quick-modal-media-wrap');
+    const titleNode = root.querySelector('.card-quick-modal-title');
+    const synopsisNode = root.querySelector('.card-quick-modal-synopsis');
+
+    if (mediaWrap) {
+      mediaWrap.innerHTML = `<div class="card-quick-modal-loading">No se pudo cargar el trailer.</div>`;
+    }
+    if (titleNode) titleNode.textContent = 'Error';
+    if (synopsisNode)
+      synopsisNode.textContent =
+        'No se pudo cargar la información del contenido.';
+  }
+}
+
+/* =========================================================
+   OVERLAY HOVER DE TARJETAS
+========================================================= */
+
+const TEXTOS_HOVER_TARJETA = {
+  cargando: 'Cargando…',
+  errorCarga: 'No se pudo cargar.',
+  sinTitulo: 'Sin título',
+  sinSinopsis: 'Sin sinopsis disponible.',
+  reproducir: 'Reproducir',
+  agregarMiLista: 'Agregar a Mi Lista',
+  serie: 'Serie',
+  temporada: 'temporada',
+  temporadas: 'temporadas',
+  episodio: 'episodio',
+  episodios: 'episodios',
+  minuto: 'min',
+  hora: 'h',
+};
+
+const ICONO_BOTON_REPRODUCIR = `
+  <svg class="icono-boton-reproducir" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+    <path d="M23.5 17.2v29.6c0 2.1 2.3 3.4 4.1 2.3l23.1-14.8c1.6-1 1.6-3.4 0-4.4L27.6 15C25.8 13.8 23.5 15.1 23.5 17.2z" fill="currentColor"></path>
+  </svg>
+`;
+
+const __cachePeliculasHoverTarjeta = new Map();
+
+let __tarjetaHoverActiva = null;
+let __secuenciaGlobalHoverTarjeta = 0;
+let __eventosGlobalesHoverInstalados = false;
+let __overlayHoverPositionRaf = 0;
+
+let __bloquearCierreHoverHasta = 0;
+let __ultimoPointerHoverX = 0;
+let __ultimoPointerHoverY = 0;
+
+const SELECTOR_INTERACTIVO_HOVER_TARJETA = [
+  'button',
+  'a',
+  'input',
+  'select',
+  'textarea',
+  "[role='button']",
+  '.boton-mi-lista-hover',
+  '.card-quick-modal-volume-btn',
+  '.boton-reproducir-hover',
+].join(', ');
+
+function bloquearCierreHoverTarjeta(ms = 900) {
+  __bloquearCierreHoverHasta = Date.now() + ms;
+}
+
+function cierreHoverBloqueado() {
+  return Date.now() < __bloquearCierreHoverHasta;
+}
+
+function registrarPointerHover(ev) {
+  if (!ev) return;
+
+  if (Number.isFinite(ev.clientX)) __ultimoPointerHoverX = ev.clientX;
+  if (Number.isFinite(ev.clientY)) __ultimoPointerHoverY = ev.clientY;
+}
+
+// NUEVO: Busca el overlay en el documento, ya no solo en la card
+function targetDentroOverlayHover(target) {
+  return !!target?.closest?.('.overlay-hover-tarjeta');
+}
+
+function targetDentroCardHoverActiva(target, card) {
+  if (!target || !card) return false;
+
+  let overlay = null;
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+    if (n.__hostCard === card) overlay = n;
+  });
+
+  return (
+    card.contains(target) ||
+    (overlay && overlay.contains(target)) ||
+    !!target.closest?.('.overlay-hover-tarjeta')
+  );
+}
+
+function punteroDentroCardUOverlay(card) {
+  if (!card) return false;
+
+  let overlay = null;
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+    if (n.__hostCard === card) overlay = n;
+  });
+
+  let el = null;
+  try {
+    el = document.elementFromPoint(
+      __ultimoPointerHoverX,
+      __ultimoPointerHoverY
+    );
+  } catch {
+    el = null;
+  }
+  if (!el) return false;
+
+  return (
+    card.contains(el) ||
+    (overlay && overlay.contains(el)) ||
+    !!el.closest?.('.overlay-hover-tarjeta')
+  );
+}
+
+function relatedTargetDentroCardUOverlay(card, relatedTarget) {
+  if (!card || !relatedTarget) return false;
+
+  let overlay = null;
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+    if (n.__hostCard === card) overlay = n;
+  });
+
+  return (
+    card.contains(relatedTarget) ||
+    (overlay && overlay.contains(relatedTarget)) ||
+    !!relatedTarget.closest?.('.overlay-hover-tarjeta')
+  );
+}
+
+function mantenerHoverVivo(card, ms = 900) {
+  bloquearCierreHoverTarjeta(ms);
+
+  if (card) {
+    clearTimeout(card.__hoverCloseTimer);
+    clearTimeout(card.__hoverSafetyCloseTimer);
+  }
+}
+
+/* =========================================================
+   SUSPENDER NAVEGACIÓN BASE DE LA CARD
+========================================================= */
+
+function obtenerHrefHoverTarjeta(card, movieId) {
+  if (!card) return buildTitleUrl(movieId);
+
+  return (
+    card.dataset.hoverSavedDataHref ||
+    card.dataset.hoverSavedHref ||
+    card.dataset.href ||
+    card.getAttribute('data-href') ||
+    card.getAttribute('href') ||
+    buildTitleUrl(movieId)
+  );
+}
+
+function suspenderNavegacionBaseCardHover(card) {
+  if (!card || card.dataset.hoverNavSuspendida === '1') return;
+
+  const dataHref = card.dataset.href || card.getAttribute('data-href') || '';
+
+  const hrefAttr = card.getAttribute('href') || '';
+
+  if (dataHref) {
+    card.dataset.hoverSavedDataHref = dataHref;
+  }
+
+  if (hrefAttr) {
+    card.dataset.hoverSavedHref = hrefAttr;
+  }
+
+  try {
+    delete card.dataset.href;
+  } catch {}
+
+  try {
+    card.removeAttribute('data-href');
+  } catch {}
+
+  try {
+    if (card.matches?.('a[href]')) {
+      card.removeAttribute('href');
+    }
+  } catch {}
+
+  card.dataset.hoverNavSuspendida = '1';
+}
+
+function restaurarNavegacionBaseCardHover(card) {
+  if (!card || card.dataset.hoverNavSuspendida !== '1') return;
+
+  const dataHref = card.dataset.hoverSavedDataHref || '';
+  const hrefAttr = card.dataset.hoverSavedHref || '';
+
+  if (dataHref) {
+    card.dataset.href = dataHref;
+    card.setAttribute('data-href', dataHref);
+  }
+
+  if (hrefAttr && card.matches?.('a')) {
+    card.setAttribute('href', hrefAttr);
+  }
+
+  delete card.dataset.hoverSavedDataHref;
+  delete card.dataset.hoverSavedHref;
+  delete card.dataset.hoverNavSuspendida;
+}
+
+/* =========================================================
+   HELPERS DE METADATA
+========================================================= */
+
+function construirTextoDuracionHover(movie = {}) {
+  const categoria = String(movie?.category || '').toLowerCase();
+  const meta = movie?.movie_meta || null;
+
+  if (categoria === 'series') {
+    const cantidadTemporadas = Number(
+      meta?.seasons_count || movie?.seasons_count || 0
+    );
+    const cantidadEpisodios = Number(
+      meta?.episodes_count || movie?.episodes_count || 0
+    );
+
+    // REGLA 1: Si tiene 2 o más temporadas, mostramos la cantidad de temporadas
+    if (cantidadTemporadas >= 2) {
+      return `${cantidadTemporadas} ${TEXTOS_HOVER_TARJETA.temporadas}`;
+    }
+
+    // REGLA 2: Si tiene 1 temporada (o dice 0 pero tiene episodios), mostramos los episodios
+    if (cantidadEpisodios > 0) {
+      return `${cantidadEpisodios} ${
+        cantidadEpisodios === 1
+          ? TEXTOS_HOVER_TARJETA.episodio
+          : TEXTOS_HOVER_TARJETA.episodios
+      }`;
+    }
+
+    // Fallback por si no hay metadata de nada
+    return TEXTOS_HOVER_TARJETA.serie;
+  }
+
+  // Lógica de películas (queda igual)
+  if (movie?.duration_text) {
+    return String(movie.duration_text);
+  }
+
+  const minutos = Number(movie?.duration_minutes || 0);
+
+  if (minutos > 0) {
+    if (minutos < 60) return `${minutos} ${TEXTOS_HOVER_TARJETA.minuto}`;
+
+    const horas = Math.floor(minutos / 60);
+    const restoMinutos = minutos % 60;
+
+    return restoMinutos
+      ? `${horas} ${TEXTOS_HOVER_TARJETA.hora} ${restoMinutos} ${TEXTOS_HOVER_TARJETA.minuto}`
+      : `${horas} ${TEXTOS_HOVER_TARJETA.hora}`;
+  }
+
+  return '';
+}
+
+function obtenerEdadHover(movie = {}) {
+  const raw = String(movie?.movie_meta?.fullage || movie?.fullage || '').trim();
+
+  if (!raw) return '';
+
+  const norm = raw
+    .toLowerCase()
+    .replaceAll('público', 'publico')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (/^atp\b/i.test(raw)) return 'ATP';
+  if (/(apto|apta)\s+para\s+todo\s+publico/.test(norm)) return 'ATP';
+
+  const m = raw.match(/(\+\s*\d{1,2}|\d{1,2}\s*\+)/);
+  if (m) return m[0].replace(/\s+/g, '');
+
+  const m2 = norm.match(/mayores\s+de\s+(\d{1,2})/i);
+  if (m2) return `${m2[1]}+`;
+
+  if (/(apto|apta)\s+para\b/.test(norm)) return 'Semi-ATP';
+
+  const short = raw.match(/^[A-Za-z0-9+\-]{2,8}/);
+  return short ? short[0] : '';
+}
+
+function construirMetaHoverPartes(movie = {}) {
+  const items = [];
+
+  if (movie.release_year) {
+    items.push(String(movie.release_year));
+  }
+
+  const duracion = construirTextoDuracionHover(movie);
+  if (duracion) {
+    items.push(duracion);
+  }
+
+  return {
+    items,
+    age: obtenerEdadHover(movie),
+  };
+}
+
+function renderizarMetaHover(metaEl, movie = {}) {
+  if (!metaEl) return;
+
+  const { items, age } = construirMetaHoverPartes(movie);
+
+  metaEl.innerHTML = '';
+
+  const hay = (items && items.length > 0) || !!age;
+  metaEl.hidden = !hay;
+  if (!hay) return;
+
+  metaEl.style.setProperty('display', 'flex', 'important');
+  metaEl.style.setProperty('align-items', 'center', 'important');
+  metaEl.style.setProperty('gap', '6px', 'important');
+  metaEl.style.setProperty('flex-wrap', 'nowrap', 'important');
+  metaEl.style.setProperty('white-space', 'nowrap', 'important');
+
+  const frag = document.createDocumentFragment();
+
+  const addSep = () => {
+    const sep = document.createElement('span');
+    sep.className = 'overlay-hover-tarjeta-meta-sep';
+    sep.setAttribute('aria-hidden', 'true');
+    sep.textContent = '•';
+    sep.style.setProperty('opacity', '0.65');
+    sep.style.setProperty('margin', '0 2px');
+    frag.appendChild(sep);
+  };
+
+  (items || []).forEach((txt, idx) => {
+    const s = document.createElement('span');
+    s.className = 'overlay-hover-tarjeta-meta-item';
+    s.textContent = String(txt || '');
+    s.style.setProperty('white-space', 'nowrap');
+    frag.appendChild(s);
+
+    if (idx < items.length - 1) addSep();
+  });
+
+  if (age) {
+    if (items.length > 0) addSep();
+
+    const badge = document.createElement('span');
+    badge.className = 'overlay-hover-tarjeta-age';
+    badge.textContent = age;
+
+    badge.style.setProperty('display', 'inline-flex');
+    badge.style.setProperty('align-items', 'center');
+    badge.style.setProperty('justify-content', 'center');
+    badge.style.setProperty('padding', '0 10px');
+    badge.style.setProperty('min-height', '24px');
+    badge.style.setProperty('border-radius', '6px');
+    badge.style.setProperty('border', '1px solid rgba(214, 225, 239, .28)');
+    badge.style.setProperty('background', 'rgba(226, 236, 248, .20)');
+    badge.style.setProperty('color', 'rgba(255,255,255,.95)');
+    badge.style.setProperty('backdrop-filter', 'blur(8px)');
+    badge.style.setProperty('-webkit-backdrop-filter', 'blur(8px)');
+    badge.style.setProperty('font-size', '12px');
+    badge.style.setProperty('font-weight', '800');
+    badge.style.setProperty('line-height', '1');
+    badge.style.setProperty('letter-spacing', '.01em');
+    badge.style.setProperty('white-space', 'nowrap');
+
+    frag.appendChild(badge);
+  }
+
+  metaEl.appendChild(frag);
+}
+
+function hoverTarjetaDeshabilitado() {
+  try {
+    return (
+      window.matchMedia?.('(hover: none), (pointer: coarse)')?.matches ||
+      window.innerWidth <= 768
+    );
+  } catch {
+    return window.innerWidth <= 768;
+  }
+}
+
+function forzarSinopsisEnBloque(nodo) {
+  if (!nodo) return;
+
+  nodo.style.setProperty('display', 'block', 'important');
+  nodo.style.setProperty('white-space', 'normal', 'important');
+  nodo.style.setProperty('overflow', 'visible', 'important');
+  nodo.style.setProperty('text-overflow', 'clip', 'important');
+  nodo.style.setProperty('max-height', 'none', 'important');
+  nodo.style.setProperty('-webkit-line-clamp', 'unset', 'important');
+  nodo.style.setProperty('-webkit-box-orient', 'initial', 'important');
+}
+
+/* =========================================================
+   CONTEXTO DEL CARRUSEL (Actualizado)
+   Ya no rompemos el overflow del carrusel con clases.
+========================================================= */
+
+function alternarContextoHoverTarjeta(card, abierto) {
+  if (!card) return;
+
+  if (abierto) {
+    // La card conserva data-href: el overlay es un portal y corta su propio click.
+    card.classList.add('tarjeta-hover-host');
+  } else {
+    card.classList.remove('tarjeta-hover-host');
+  }
+}
+
+/* =========================================================
+   LIMPIEZA DE VIDEO / OVERLAY (Actualizado)
+========================================================= */
+
+function detenerYResetearMediaHover(card) {
+  if (!card) return;
+
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((overlay) => {
+    if (overlay.__hostCard !== card) return;
+    try {
+      overlay.querySelectorAll('video').forEach((video) => {
+        try {
+          video.pause();
+          video.muted = true;
+          video.currentTime = 0;
+          video.removeAttribute('src');
+          video.load?.();
+        } catch {}
+      });
+    } catch {}
+  });
+}
+
+function eliminarOverlayHoverTarjeta(card) {
+  if (!card) return;
+  detenerYResetearMediaHover(card);
+
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((overlay) => {
+    if (overlay.__hostCard === card) {
+      try {
+        overlay.remove();
+      } catch {}
+    }
+  });
+}
+
+function resetearHoverTarjeta(card, { eliminarOverlay = true } = {}) {
+  if (!card) return;
+
+  clearTimeout(card.__hoverOpenTimer);
+  clearTimeout(card.__hoverCloseTimer);
+  clearTimeout(card.__hoverSafetyCloseTimer);
+
+  if (__overlayHoverPositionRaf) {
+    cancelAnimationFrame(__overlayHoverPositionRaf);
+    __overlayHoverPositionRaf = 0;
+  }
+
+  card.dataset.hoverSeq = '';
+
+  card.classList.remove('tarjeta-hover-abierta', 'tarjeta-hover-host');
+
+  detenerYResetearMediaHover(card);
+
+  let overlayNode = null;
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+    if (n.__hostCard === card) overlayNode = n;
+  });
+
+  if (overlayNode) {
+    overlayNode.classList.remove(
+      'overlay-hover-abierto',
+      'overlay-hover-cerrando'
+    );
+    overlayNode.setAttribute('aria-hidden', 'true');
+
+    if (eliminarOverlay) {
+      try {
+        overlayNode.remove();
+      } catch {}
+    }
+  }
+
+  alternarContextoHoverTarjeta(card, false);
+  restaurarNavegacionBaseCardHover(card);
+}
+
+function resetearTodosLosHoversTarjeta({ excepto = null } = {}) {
+  const tarjetas = new Set();
+
+  document
+    .querySelectorAll('.tarjeta-hover-host, .tarjeta-hover-abierta')
+    .forEach((card) => tarjetas.add(card));
+
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((overlay) => {
+    const card = overlay.__hostCard;
+    if (card) {
+      tarjetas.add(card);
+    } else {
+      try {
+        overlay.remove();
+      } catch {}
+    }
+  });
+
+  tarjetas.forEach((card) => {
+    if (excepto && card === excepto) return;
+    resetearHoverTarjeta(card, { eliminarOverlay: true });
+  });
+
+  if (!excepto) {
+    __tarjetaHoverActiva = null;
+  }
+}
+
+/* =========================================================
+   CREACIÓN DEL OVERLAY (Actualizado Portal)
+========================================================= */
+
+function asegurarOverlayHoverTarjeta(card, movieId) {
+  if (!card || !movieId) return null;
+
+  eliminarOverlayHoverTarjeta(card);
+
+  // No se suspende la navegación base: la card también debe ser clickeable.
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay-hover-tarjeta';
+  overlay.setAttribute('aria-hidden', 'true');
+
+  // Vinculamos la tarjeta de forma directa al DOM del overlay
+  overlay.__hostCard = card;
+
+  const hrefInicial = obtenerHrefHoverTarjeta(card, movieId);
+
+  overlay.innerHTML = `
+    <div class="overlay-hover-tarjeta-inner">
+      <div class="overlay-hover-tarjeta-media">
+        <div class="overlay-hover-tarjeta-cargando">${TEXTOS_HOVER_TARJETA.cargando}</div>
+      </div>
+
+      <div class="overlay-hover-tarjeta-cuerpo">
+        <div class="overlay-hover-tarjeta-acciones">
+          <a class="boton-reproducir-hover" href="${hrefInicial}" aria-label="${TEXTOS_HOVER_TARJETA.reproducir}">
+            ${ICONO_BOTON_REPRODUCIR}
+            <span>${TEXTOS_HOVER_TARJETA.reproducir}</span>
+          </a>
+
+          <button class="boton-mi-lista-hover" type="button" aria-label="${TEXTOS_HOVER_TARJETA.agregarMiLista}" aria-pressed="false">
+            ${MYLIST_ICON_PLUS}
+          </button>
+        </div>
+
+        <div class="overlay-hover-tarjeta-titulo"></div>
+        <div class="overlay-hover-tarjeta-meta"></div>
+        <div class="overlay-hover-tarjeta-sinopsis"></div>
+      </div>
+    </div>
+  `;
+
+  const mantenerDesdeOverlay = (ev) => {
+    registrarPointerHover(ev);
+    mantenerHoverVivo(card, 1200);
+    ev.stopPropagation();
+  };
+
+  overlay.addEventListener('pointerenter', (ev) => {
+    registrarPointerHover(ev);
+    mantenerHoverVivo(card, 1200);
+  });
+
+  overlay.addEventListener('pointermove', mantenerDesdeOverlay, {
+    passive: true,
+  });
+  overlay.addEventListener('pointerdown', mantenerDesdeOverlay, {
+    passive: true,
+  });
+  overlay.addEventListener('pointerup', mantenerDesdeOverlay, {
+    passive: true,
+  });
+
+  overlay.addEventListener('mousedown', (ev) => {
+    mantenerHoverVivo(card, 1200);
+    ev.stopPropagation();
+  });
+
+  overlay.addEventListener('mouseup', (ev) => {
+    mantenerHoverVivo(card, 1200);
+    ev.stopPropagation();
+  });
+
+  overlay.addEventListener(
+    'touchstart',
+    (ev) => {
+      mantenerHoverVivo(card, 1200);
+      ev.stopPropagation();
+    },
+    { passive: true }
+  );
+
+  overlay.addEventListener('mouseenter', () => {
+    mantenerHoverVivo(card, 1200);
+  });
+
+  overlay.addEventListener(
+    'mousemove',
+    (ev) => {
+      registrarPointerHover(ev);
+      mantenerHoverVivo(card, 700);
+    },
+    { passive: true }
+  );
+
+  overlay.addEventListener('mouseleave', (ev) => {
+    registrarPointerHover(ev);
+
+    clearTimeout(card.__hoverCloseTimer);
+
+    if (relatedTargetDentroCardUOverlay(card, ev.relatedTarget)) {
+      mantenerHoverVivo(card, 700);
+      return;
+    }
+
+    card.__hoverCloseTimer = setTimeout(() => {
+      cerrarOverlayHoverTarjeta(card, {
+        forzar: true,
+      });
+    }, 120);
+  });
+
+  overlay.addEventListener('click', (ev) => {
+    mantenerHoverVivo(card, 1200);
+
+    const interactivo = ev.target.closest(SELECTOR_INTERACTIVO_HOVER_TARJETA);
+
+    if (interactivo) {
+      ev.stopPropagation();
+
+      if (!interactivo.matches('a, .boton-reproducir-hover')) {
+        ev.preventDefault();
+      }
+
+      return;
+    }
+
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const href = obtenerHrefHoverTarjeta(card, movieId);
+    if (href) window.location.href = href;
+  });
+
+  // MAGIA DEL PORTAL: Se inyecta directo en el body
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+/* =========================================================
+   BOTÓN MI LISTA EN EL OVERLAY
+========================================================= */
+
+function obtenerBotonMiListaHover(overlay) {
+  if (!overlay) return null;
+
+  const acciones = overlay.querySelector('.overlay-hover-tarjeta-acciones');
+  if (!acciones) return null;
+
+  acciones.querySelectorAll('.boton-mi-lista-hover').forEach((btn) => {
+    try {
+      btn.remove();
+    } catch {}
+  });
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'boton-mi-lista-hover';
+  btn.setAttribute('aria-label', TEXTOS_HOVER_TARJETA.agregarMiLista);
+  btn.setAttribute('aria-pressed', 'false');
+  btn.innerHTML = MYLIST_ICON_PLUS;
+
+  btn.addEventListener(
+    'pointerdown',
+    (ev) => {
+      bloquearCierreHoverTarjeta(1200);
+      ev.stopPropagation();
+    },
+    { passive: true }
+  );
+
+  btn.addEventListener('mousedown', (ev) => {
+    bloquearCierreHoverTarjeta(1200);
+    ev.stopPropagation();
+  });
+
+  btn.addEventListener('click', (ev) => {
+    bloquearCierreHoverTarjeta(1200);
+    ev.preventDefault();
+    ev.stopPropagation();
+  });
+
+  acciones.appendChild(btn);
+  return btn;
+}
+
+/* =========================================================
+   POSICIÓN / ANIMACIÓN (Actualizado Portal absoluto)
+========================================================= */
+
+function posicionarOverlayHoverTarjeta(card, overlay) {
+  if (!card || !overlay) return;
+
+  const rect = card.getBoundingClientRect();
+
+  const viewportW =
+    window.innerWidth || document.documentElement.clientWidth || 0;
+  const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+  const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
+
+  const viewportMargin = 12;
+  const maxOverlayWidth = Math.max(0, viewportW - viewportMargin * 2);
+  const overlayWidth = Math.min(520, Math.max(360, maxOverlayWidth));
+
+  /*
+    Portal real:
+    el overlay vive en document.body, por eso se posiciona con coordenadas
+    absolutas del documento. getBoundingClientRect() da coordenadas de viewport;
+    sumamos scrollX/scrollY para llevarlas al documento.
+
+    No se ancla al primer/último item visible del carrusel: se centra sobre
+    la card hover real y solo se clampa contra el viewport. Así, después de
+    mover el carrusel, no aparece al costado de la card.
+  */
+  let viewportLeft = rect.left + rect.width / 2 - overlayWidth / 2;
+  viewportLeft = Math.max(
+    viewportMargin,
+    Math.min(viewportLeft, viewportW - viewportMargin - overlayWidth)
+  );
+
+  const overlayTop = Math.floor(rect.top + scrollY);
+  const overlayLeft = Math.round(viewportLeft + scrollX);
+
+  let originX = rect.left + rect.width / 2 - viewportLeft;
+  originX = Math.max(0, Math.min(overlayWidth, originX));
+
+  overlay.style.setProperty('position', 'absolute', 'important');
+  overlay.style.setProperty('top', `${overlayTop}px`, 'important');
+  overlay.style.setProperty('left', `${overlayLeft}px`, 'important');
+  overlay.style.setProperty(
+    'width',
+    `${Math.round(overlayWidth)}px`,
+    'important'
+  );
+  overlay.style.setProperty('z-index', '2147483000', 'important');
+  overlay.style.setProperty('--hover-origin-x', `${Math.round(originX)}px`);
+  overlay.style.setProperty('--hover-origin-y', '0px');
+  overlay.style.removeProperty('--desplazamiento-hover-x');
+}
+
+function buscarOverlayHoverTarjeta(card) {
+  if (!card) return null;
+
+  let overlay = null;
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+    if (n.__hostCard === card) overlay = n;
+  });
+
+  return overlay;
+}
+
+function estabilizarPosicionOverlayHoverTarjeta(card, overlay, frames = 12) {
+  if (!card || !overlay) return;
+
+  if (__overlayHoverPositionRaf) {
+    cancelAnimationFrame(__overlayHoverPositionRaf);
+    __overlayHoverPositionRaf = 0;
+  }
+
+  let restantes = Math.max(1, frames | 0);
+
+  const tick = () => {
+    if (!document.body.contains(overlay)) return;
+    if (overlay.__hostCard !== card) return;
+    if (__tarjetaHoverActiva !== card) return;
+
+    posicionarOverlayHoverTarjeta(card, overlay);
+
+    restantes -= 1;
+    if (restantes > 0) {
+      __overlayHoverPositionRaf = requestAnimationFrame(tick);
+    } else {
+      __overlayHoverPositionRaf = 0;
+    }
+  };
+
+  __overlayHoverPositionRaf = requestAnimationFrame(tick);
+}
+
+function reiniciarAnimacionOverlayHover(card, overlay) {
+  if (!card || !overlay) return;
+
+  card.classList.remove('tarjeta-hover-abierta');
+  overlay.classList.remove('overlay-hover-abierto', 'overlay-hover-cerrando');
+  overlay.setAttribute('aria-hidden', 'false');
+
+  void overlay.offsetWidth;
+
+  requestAnimationFrame(() => {
+    alternarContextoHoverTarjeta(card, true);
+    posicionarOverlayHoverTarjeta(card, overlay);
+
+    requestAnimationFrame(() => {
+      card.classList.add('tarjeta-hover-abierta');
+      overlay.classList.add('overlay-hover-abierto');
+      estabilizarPosicionOverlayHoverTarjeta(card, overlay, 18);
+    });
+  });
+}
+
+/* =========================================================
+   HIDRATACIÓN
+========================================================= */
+
+async function hidratarOverlayHoverTarjeta(card, movieId, seq) {
+  if (!card || !movieId) return;
+
+  let overlay = null;
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+    if (n.__hostCard === card) overlay = n;
+  });
+  if (!overlay) return;
+
+  try {
+    let movie = __cachePeliculasHoverTarjeta.get(String(movieId));
+
+    if (!movie) {
+      movie = await fetchMovie(movieId);
+      if (movie) __cachePeliculasHoverTarjeta.set(String(movieId), movie);
+    }
+
+    if (!movie || card.dataset.hoverSeq !== String(seq)) return;
+    if (__tarjetaHoverActiva !== card) return;
+
+    const media = overlay.querySelector('.overlay-hover-tarjeta-media');
+    const titulo = overlay.querySelector('.overlay-hover-tarjeta-titulo');
+    const meta = overlay.querySelector('.overlay-hover-tarjeta-meta');
+    const sinopsis = overlay.querySelector('.overlay-hover-tarjeta-sinopsis');
+    const botonReproducir = overlay.querySelector('.boton-reproducir-hover');
+
+    if (titulo) {
+      titulo.textContent = movie.title || TEXTOS_HOVER_TARJETA.sinTitulo;
+    }
+
+    if (meta) {
+      renderizarMetaHover(meta, movie);
+    }
+
+    if (sinopsis) {
+      sinopsis.textContent =
+        movie.description || movie.sinopsis || TEXTOS_HOVER_TARJETA.sinSinopsis;
+
+      forzarSinopsisEnBloque(sinopsis);
+    }
+
+    if (botonReproducir) {
+      botonReproducir.href = buildTitleUrl(movie.id, {
+        collectionId: movie.collection_id || null,
+      });
+
+      botonReproducir.addEventListener(
+        'pointerdown',
+        (ev) => {
+          bloquearCierreHoverTarjeta(1200);
+          ev.stopPropagation();
+        },
+        { passive: true }
+      );
+
+      botonReproducir.addEventListener('mousedown', (ev) => {
+        bloquearCierreHoverTarjeta(1200);
+        ev.stopPropagation();
+      });
+
+      botonReproducir.addEventListener('click', (ev) => {
+        bloquearCierreHoverTarjeta(1200);
+        ev.stopPropagation();
+      });
+    }
+
+    if (media) {
+      media.innerHTML = '';
+
+      mountQuickModalTrailer(media, movie);
+
+      const botonVolumen = media.querySelector('.card-quick-modal-volume-btn');
+
+      if (botonVolumen) {
+        botonVolumen.addEventListener(
+          'pointerdown',
+          (ev) => {
+            bloquearCierreHoverTarjeta(1200);
+            ev.stopPropagation();
+          },
+          { passive: true }
+        );
+
+        botonVolumen.addEventListener('mousedown', (ev) => {
+          bloquearCierreHoverTarjeta(1200);
+          ev.stopPropagation();
+        });
+
+        botonVolumen.addEventListener('click', (ev) => {
+          bloquearCierreHoverTarjeta(1200);
+          ev.stopPropagation();
+        });
+      }
+
+      const video = media.querySelector('video');
+
+      if (video) {
+        try {
+          video.pause();
+          video.muted = true;
+          video.currentTime = 0;
+          video.setAttribute('muted', '');
+          video.playsInline = true;
+          video.setAttribute('playsinline', '');
+          video.setAttribute('webkit-playsinline', '');
+        } catch {}
+
+        const p = video.play?.();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      }
+    }
+
+    const botonMiLista = obtenerBotonMiListaHover(overlay);
+
+    if (botonMiLista) {
+      const session = __homeSessionCache || (await getHomeSessionCached());
+      const userId = session?.user?.id || null;
+
+      bindMyListIconButton(botonMiLista, {
+        userId,
+        contentId: String(movie.id),
+      });
+    }
+
+    posicionarOverlayHoverTarjeta(card, overlay);
+    estabilizarPosicionOverlayHoverTarjeta(card, overlay, 6);
+  } catch (e) {
+    console.warn('[home] overlay hover tarjeta error:', e);
+
+    const media = overlay.querySelector('.overlay-hover-tarjeta-media');
+
+    if (media) {
+      media.innerHTML = `<div class="overlay-hover-tarjeta-cargando">${TEXTOS_HOVER_TARJETA.errorCarga}</div>`;
+    }
+  }
+}
+
+/* =========================================================
+   ABRIR / CERRAR
+========================================================= */
+
+function abrirOverlayHoverTarjeta(card, movieId) {
+  if (!card || !movieId || hoverTarjetaDeshabilitado()) return;
+  if (card.classList.contains('carousel-card-covered')) return;
+  if (card.classList.contains('carousel-card-partial')) return;
+
+  let __overlayExistente = null;
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+    if (n.__hostCard === card) __overlayExistente = n;
+  });
+
+  if (__overlayExistente?.classList?.contains?.('overlay-hover-abierto')) {
+    __tarjetaHoverActiva = card;
+    mantenerHoverVivo(card, 1500);
+    posicionarOverlayHoverTarjeta(card, __overlayExistente);
+    estabilizarPosicionOverlayHoverTarjeta(card, __overlayExistente, 8);
+    return;
+  }
+
+  resetearTodosLosHoversTarjeta({ excepto: card });
+
+  if (__tarjetaHoverActiva && __tarjetaHoverActiva !== card) {
+    resetearHoverTarjeta(__tarjetaHoverActiva, { eliminarOverlay: true });
+  }
+
+  __tarjetaHoverActiva = card;
+
+  clearTimeout(card.__hoverOpenTimer);
+  clearTimeout(card.__hoverCloseTimer);
+  clearTimeout(card.__hoverSafetyCloseTimer);
+
+  // Mantener data-href permite abrir el título haciendo click antes de que aparezca el overlay.
+  card.__hoverOpenTimer = setTimeout(() => {
+    if (__tarjetaHoverActiva !== card) return;
+
+    __secuenciaGlobalHoverTarjeta += 1;
+
+    const seq = String(__secuenciaGlobalHoverTarjeta);
+    card.dataset.hoverSeq = seq;
+
+    const overlay = asegurarOverlayHoverTarjeta(card, movieId);
+    if (!overlay) return;
+
+    reiniciarAnimacionOverlayHover(card, overlay);
+    hidratarOverlayHoverTarjeta(card, movieId, seq);
+  }, 1000);
+}
+
+function cerrarOverlayHoverTarjeta(card, options = {}) {
+  if (!card) return;
+
+  const inmediato = options.inmediato === true;
+  const forzar = options.forzar === true;
+
+  if (!forzar && !inmediato && cierreHoverBloqueado()) return;
+  if (!forzar && !inmediato && punteroDentroCardUOverlay(card)) return;
+
+  clearTimeout(card.__hoverOpenTimer);
+  clearTimeout(card.__hoverCloseTimer);
+  clearTimeout(card.__hoverSafetyCloseTimer);
+
+  if (__tarjetaHoverActiva === card) {
+    __tarjetaHoverActiva = null;
+  }
+
+  card.dataset.hoverSeq = '';
+
+  let overlay = null;
+  document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+    if (n.__hostCard === card) overlay = n;
+  });
+
+  const limpiar = () => {
+    if (!forzar && cierreHoverBloqueado()) return;
+    if (!forzar && punteroDentroCardUOverlay(card)) return;
+
+    resetearHoverTarjeta(card, { eliminarOverlay: true });
+
+    if (!document.querySelector('.tarjeta-hover-host')) {
+      resetearTodosLosHoversTarjeta();
+    }
+  };
+
+  if (!overlay || inmediato) {
+    limpiar();
+    return;
+  }
+
+  overlay.classList.remove('overlay-hover-abierto');
+  overlay.classList.add('overlay-hover-cerrando');
+  overlay.setAttribute('aria-hidden', 'true');
+  card.classList.remove('tarjeta-hover-abierta');
+
+  card.__hoverCloseTimer = setTimeout(() => {
+    overlay.classList.remove('overlay-hover-cerrando');
+    limpiar();
+  }, 260);
+}
+
+function programarCierreHoverTarjetaSiFuera(card, delay = 180) {
+  if (!card) return;
+
+  clearTimeout(card.__hoverSafetyCloseTimer);
+
+  card.__hoverSafetyCloseTimer = setTimeout(() => {
+    if (cierreHoverBloqueado()) return;
+    if (punteroDentroCardUOverlay(card)) return;
+
+    cerrarOverlayHoverTarjeta(card);
+  }, delay);
+}
+
+/* =========================================================
+   BIND POR CARD
+========================================================= */
+
+function bindCardHoverPreview(card, movieId) {
+  if (!card || !movieId) return;
+  if (card.dataset.hoverPreviewBound === '1') return;
+
+  card.dataset.hoverPreviewBound = '1';
+
+  card.addEventListener(
+    'mouseenter',
+    (ev) => {
+      registrarPointerHover(ev);
+      abrirOverlayHoverTarjeta(card, String(movieId));
+    },
+    { passive: true }
+  );
+
+  card.addEventListener(
+    'mousemove',
+    (ev) => {
+      registrarPointerHover(ev);
+
+      if (__tarjetaHoverActiva === card) {
+        mantenerHoverVivo(card, 700);
+      }
+    },
+    { passive: true }
+  );
+
+  card.addEventListener(
+    'mouseleave',
+    (ev) => {
+      registrarPointerHover(ev);
+
+      if (relatedTargetDentroCardUOverlay(card, ev.relatedTarget)) {
+        mantenerHoverVivo(card, 700);
+        return;
+      }
+
+      clearTimeout(card.__hoverCloseTimer);
+
+      card.__hoverCloseTimer = setTimeout(() => {
+        cerrarOverlayHoverTarjeta(card, {
+          forzar: true,
+        });
+      }, 120);
+    },
+    { passive: true }
+  );
+
+  card.addEventListener('focusin', () => {
+    let overlay = null;
+    document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+      if (n.__hostCard === card) overlay = n;
+    });
+
+    if (overlay?.classList?.contains?.('overlay-hover-abierto')) {
+      mantenerHoverVivo(card, 1500);
+      return;
+    }
+    abrirOverlayHoverTarjeta(card, String(movieId));
+  });
+
+  card.addEventListener('focusout', () => {
+    if (__tarjetaHoverActiva === card) {
+      mantenerHoverVivo(card, 1200);
+    }
+  });
+}
+
+/* =========================================================
+   LIMPIEZA GLOBAL
+========================================================= */
+
+function instalarLimpiezaGlobalHoverTarjeta() {
+  if (__eventosGlobalesHoverInstalados) return;
+  __eventosGlobalesHoverInstalados = true;
+
+  document.addEventListener(
+    'pointermove',
+    (ev) => {
+      registrarPointerHover(ev);
+
+      const activa = __tarjetaHoverActiva;
+      if (!activa) return;
+
+      const target = ev.target;
+
+      if (targetDentroCardHoverActiva(target, activa)) {
+        mantenerHoverVivo(activa, 700);
+        return;
+      }
+
+      if (cierreHoverBloqueado()) return;
+
+      programarCierreHoverTarjetaSiFuera(activa, 260);
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    'pointerdown',
+    (ev) => {
+      registrarPointerHover(ev);
+
+      const activa = __tarjetaHoverActiva;
+      if (!activa) return;
+
+      const target = ev.target;
+
+      if (
+        targetDentroCardHoverActiva(target, activa) ||
+        targetDentroOverlayHover(target)
+      ) {
+        mantenerHoverVivo(activa, 1500);
+        return;
+      }
+
+      bloquearCierreHoverTarjeta(450);
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    'click',
+    (ev) => {
+      const activa = __tarjetaHoverActiva;
+      if (!activa) return;
+
+      const target = ev.target;
+
+      if (
+        targetDentroCardHoverActiva(target, activa) ||
+        targetDentroOverlayHover(target)
+      ) {
+        mantenerHoverVivo(activa, 1500);
+        return;
+      }
+
+      bloquearCierreHoverTarjeta(450);
+    },
+    true
+  );
+
+  document.addEventListener(
+    'scroll',
+    () => {
+      const activa = __tarjetaHoverActiva;
+      if (!activa) return;
+
+      const overlay = buscarOverlayHoverTarjeta(activa);
+      if (overlay?.classList?.contains?.('overlay-hover-abierto')) {
+        posicionarOverlayHoverTarjeta(activa, overlay);
+      }
+    },
+    true
+  );
+
+  window.addEventListener(
+    'blur',
+    () => {
+      resetearTodosLosHoversTarjeta();
+    },
+    { passive: true }
+  );
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      resetearTodosLosHoversTarjeta();
+    }
+  });
+
+  window.addEventListener(
+    'resize',
+    () => {
+      document.querySelectorAll('.card.tarjeta-hover-host').forEach((card) => {
+        let overlay = null;
+        document.querySelectorAll('.overlay-hover-tarjeta').forEach((n) => {
+          if (n.__hostCard === card) overlay = n;
+        });
+
+        if (overlay?.classList.contains('overlay-hover-abierto')) {
+          posicionarOverlayHoverTarjeta(card, overlay);
+        }
+      });
+    },
+    { passive: true }
+  );
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (__tarjetaHoverActiva && !cierreHoverBloqueado()) {
+        cerrarOverlayHoverTarjeta(__tarjetaHoverActiva, {
+          inmediato: true,
+          forzar: true,
+        });
+      }
+    },
+    { passive: true }
+  );
+}
+
+instalarLimpiezaGlobalHoverTarjeta();
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+function buildCardQuickPlusButton(movieId) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'card-quick-plus-btn card-mylist-plus-btn';
+  btn.setAttribute('aria-label', 'Agregar a Mi Lista');
+  btn.setAttribute('aria-pressed', 'false');
+  btn.dataset.movieId = String(movieId);
+  btn.innerHTML = MYLIST_ICON_PLUS;
+  return btn;
+}
+
+function enhanceCarouselCardsWithQuickPlus(scope = document) {
+  const cards = scope?.classList?.contains('card')
+    ? [scope]
+    : Array.from(scope.querySelectorAll('.card'));
+
+  cards.forEach((card) => {
+    let movieId =
+      card.dataset.movieId || card.getAttribute('data-movie-id') || '';
+
+    if (!movieId) {
+      const href = String(
+        card.dataset.href || card.getAttribute('data-href') || ''
+      );
+      try {
+        const url = new URL(href, window.location.origin);
+        movieId = url.searchParams.get('title') || '';
+      } catch {}
+    }
+
+    if (!movieId) return;
+
+    card.dataset.movieId = String(movieId);
+
+    card
+      .querySelectorAll('.card-quick-plus-btn, .card-mylist-plus-btn')
+      .forEach((btn) => {
+        try {
+          btn.remove();
+        } catch {}
+      });
+
+    ensureMoreInfoNextToTitle(card, movieId);
+    ensureReleaseReminderButtonOnCard(card, movieId);
+
+    bindCardHoverPreview(card, String(movieId));
+  });
+}
+
+function addMovieIdToCardHtml(html, movieId) {
+  if (!html || !movieId) return html || '';
+  return String(html).replace(
+    /<div\s+class="([^"]*\bcard\b[^"]*)"/,
+    `<div class="$1" data-movie-id="${String(movieId)}"`
+  );
+}
+
+/* =========================================================
+   HOME HERO VIDEO + RESTO
+========================================================= */
+
+function mountHomeHeroTrailerVideo(hero, movie) {
+  if (!hero || !movie?.id) return;
+
+  const trailerUrl = String(movie?.trailer_url || '').trim();
+  if (!trailerUrl) return;
+
+  const banner = movie.banner_url || movie.thumbnail_url || '';
+
+  hero.classList.remove('hero-video-ready');
+  hero.querySelectorAll('.home-hero-media').forEach((n) => n.remove());
+  hero.querySelectorAll('.home-hero-volume-btn').forEach((n) => n.remove());
+
+  const media = document.createElement('div');
+  media.className = 'home-hero-media';
+
+  const video = document.createElement('video');
+  video.className = 'home-hero-video';
+  video.src = trailerUrl;
+  if (banner) video.poster = banner;
+
+  video.autoplay = true;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = 'metadata';
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
+
+  const shade = document.createElement('div');
+  shade.className = 'home-hero-video-shade';
+
+  media.appendChild(video);
+  media.appendChild(shade);
+  hero.prepend(media);
+
+  const volBtn = document.createElement('button');
+  volBtn.type = 'button';
+  volBtn.className = 'home-hero-volume-btn';
+  volBtn.setAttribute('aria-label', 'Activar sonido');
+  volBtn.setAttribute('aria-pressed', 'false');
+
+  const volIcon = document.createElement('img');
+  volIcon.alt = '';
+  volIcon.decoding = 'async';
+  volIcon.src = HERO_VOLUME_ICON_MUTE;
+  volBtn.appendChild(volIcon);
+
+  function syncVolumeUi() {
+    const isMuted = !!video.muted;
+    volIcon.src = isMuted ? HERO_VOLUME_ICON_MUTE : HERO_VOLUME_ICON_UNMUTE;
+    volBtn.setAttribute('aria-label', isMuted ? 'Activar sonido' : 'Silenciar');
+    volBtn.setAttribute('aria-pressed', String(!isMuted));
+    volBtn.title = isMuted ? 'Activar sonido' : 'Silenciar';
+  }
+
+  volBtn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    video.muted = !video.muted;
+    syncVolumeUi();
+    const p = video.play?.();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  });
+
+  const heroRight = hero.querySelector('.home-hero-right');
+
+  if (heroRight) {
+    let heroActions = heroRight.querySelector('.home-hero-actions');
+
+    if (!heroActions) {
+    heroActions = document.createElement('div');
+    heroActions.className = 'home-hero-actions';
+    heroRight.appendChild(heroActions);
+  }
+
+  heroActions.appendChild(volBtn);
+  }
+
+  syncVolumeUi();
+
+  video.addEventListener(
+    'error',
+    () => {
+      volBtn.remove();
+      media.remove();
+      hero.classList.remove('hero-video-ready');
+      console.warn('[home] trailer hero error:', trailerUrl);
+    },
+    { once: true }
+  );
+
+  const showVideo = () => hero.classList.add('hero-video-ready');
+  video.addEventListener('loadeddata', showVideo, { once: true });
+  video.addEventListener('canplay', showVideo, { once: true });
+
+  requestAnimationFrame(() => {
+    const p = video.play?.();
+    if (p && typeof p.catch === 'function') {
+      p.catch((err) => console.warn('[home] autoplay trailer bloqueado:', err));
+    }
+  });
+}
+
+function getMovieCollectionId(movie) {
+  return movie?.collection_id || null;
+}
+
+function normalizeGenreList(value) {
+  if (Array.isArray(value)) {
+    return [
+      ...new Set(
+        value.map((item) => String(item || '').trim()).filter(Boolean)
+      ),
+    ];
+  }
+
+  return [
+    ...new Set(
+      String(value || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    ),
+  ];
+}
+
+function getMovieGenres(movie) {
+  const fromMovies = normalizeGenreList(movie?.genres);
+  if (fromMovies.length) return fromMovies;
+  return normalizeGenreList(movie?.movie_meta?.fullgenres);
+}
+
+function formatGenresInline(movie, { limit = 2 } = {}) {
+  const genres = getMovieGenres(movie);
+  if (!genres.length) return '';
+
+  const safeLimit = Math.max(1, Number(limit) || 2);
+  const visible = genres.slice(0, safeLimit);
+  const extra = genres.length - visible.length;
+
+  return extra > 0 ? `${visible.join(', ')} +${extra}` : visible.join(', ');
+}
+
+function getGenreSectionId(genre) {
+  return `genre-${
+    String(genre || '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'otros'
+  }`;
+}
+
+function renderGenreSections(catalog = []) {
+  const main =
+    document.querySelector('main.container') || document.querySelector('main');
+  if (!main) return;
+
+  main
+    .querySelectorAll(".genre-section[data-generated='genre']")
+    .forEach((node) => node.remove());
+
+  const byGenre = new Map();
+  const seenInGenre = new Map();
+
+  (catalog || []).forEach((movie) => {
+    if (!movie?.id) return;
+
+    getMovieGenres(movie).forEach((genre) => {
+      const cleanGenre = String(genre || '').trim();
+      if (!cleanGenre) return;
+
+      if (!byGenre.has(cleanGenre)) {
+        byGenre.set(cleanGenre, []);
+        seenInGenre.set(cleanGenre, new Set());
+      }
+
+      const seen = seenInGenre.get(cleanGenre);
+      const id = String(movie.id);
+      if (seen.has(id)) return;
+
+      seen.add(id);
+      byGenre.get(cleanGenre).push(movie);
+    });
+  });
+
+  const collator = new Intl.Collator('es', { sensitivity: 'base' });
+  const genres = [...byGenre.keys()].sort((a, b) => collator.compare(a, b));
+
+  genres.forEach((genre) => {
+    const items = byGenre.get(genre) || [];
+    if (!items.length) return;
+
+    const section = document.createElement('section');
+    section.className = 'section genre-section';
+    section.dataset.generated = 'genre';
+    section.dataset.genre = genre;
+
+    const rowId = getGenreSectionId(genre);
+    section.innerHTML = `
+      <div class="section-head">
+        <h2 class="section-title">${escapeHtml(genre)}</h2>
+      </div>
+      <div class="row" id="${escapeHtml(rowId)}" data-arrows="1"></div>
+    `;
+
+    main.appendChild(section);
+
+    const row = section.querySelector('.row');
+    setRow(row, items.map((m) => homeCatalogCardHtml(m)).join(''));
+    promoteCatalogCardBadges(row);
+    buildCarousel(row);
+  });
+}
+
+function getUniqueCatalogItems(catalog = []) {
+  const byId = new Map();
+
+  (catalog || []).forEach((item) => {
+    const id = item?.id ? String(item.id) : '';
+    if (!id || byId.has(id)) return;
+    byId.set(id, item);
+  });
+
+  return [...byId.values()];
+}
+
+function ensureAllCatalogSection() {
+  const main =
+    document.querySelector('main.container') || document.querySelector('main');
+  if (!main) return null;
+
+  let section = document.getElementById('all-catalog-section');
+  if (!section) {
+    section = document.createElement('section');
+    section.id = 'all-catalog-section';
+    section.className = 'section all-catalog-section';
+    section.dataset.generated = 'all-catalog';
+    section.innerHTML = `
+      <div class="section-head">
+        <h2 class="section-title">Todo nuestro contenido/catálogo</h2>
+      </div>
+      <div class="catalog-grid catalog-grid-5" id="allcataloggrid"></div>
+    `;
+  }
+
+  const latestSection =
+    document.getElementById('latest-row')?.closest?.('.section') || null;
+  const continueSection =
+    document.getElementById('continue-wrap')?.closest?.('.section') || null;
+
+  if (latestSection?.parentNode) {
+    latestSection.parentNode.insertBefore(section, latestSection);
+  } else if (continueSection?.parentNode) {
+    continueSection.parentNode.insertBefore(
+      section,
+      continueSection.nextSibling
+    );
+  } else if (!section.parentNode) {
+    main.appendChild(section);
+  }
+
+  return section;
+}
+
+function renderAllCatalogSection(catalog = []) {
+  const section = ensureAllCatalogSection();
+  if (!section) return;
+
+  const grid = section.querySelector('#allcataloggrid, #all-catalog-grid');
+  if (!grid) return;
+
+  const items = getUniqueCatalogItems(catalog);
+  if (!items.length) {
+    section.classList.add('hidden');
+    grid.innerHTML = '';
+    return;
+  }
+
+  section.classList.remove('hidden');
+  setRow(grid, items.map((m) => homeCatalogCardHtml(m)).join(''));
+  promoteCatalogCardBadges(grid);
+}
+
+function homeHeroMeta(movie) {
+  const year = movie?.release_year ? String(movie.release_year) : '';
+  let right = '';
+
+  if (movie?.category === 'series') {
+    const mm = movie?.movie_meta || null;
+    const sc = Number(mm?.seasons_count || 0);
+    const ec = Number(mm?.episodes_count || 0);
+    if (sc > 0) right = `${sc} ${sc === 1 ? 'temporada' : 'temporadas'}`;
+    else if (ec > 0) right = `${ec} ${ec === 1 ? 'episodio' : 'episodios'}`;
+    else right = 'Serie';
+  } else {
+    const mins = Number(movie?.duration_minutes || 0);
+    if (mins > 0) {
+      if (mins < 60) right = `${mins} min`;
+      else {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        right = m ? `${h} h ${m} min` : `${h} h`;
+      }
+    }
+  }
+
+  return [year, right, formatGenresInline(movie)].filter(Boolean).join(' · ');
+}
+
+function renderHomeHeroItem(movie, { userId } = {}) {
+  const hero = document.querySelector('main .hero');
+  if (!hero || !movie?.id) return;
+
+  const banner = movie.banner_url || movie.thumbnail_url || '';
+  hero.style.backgroundImage = banner ? `url("${banner}")` : '';
+
+  const meta = homeHeroMeta(movie);
+  const synopsis = movie.description || movie.sinopsis || '';
+  const title = movie.title || 'Destacado';
+  const titleHref = buildTitleUrl(movie.id, {
+    collectionId: getMovieCollectionId(movie),
+  });
+
+  hero.innerHTML = `
+    <div class="home-hero-inner">
+      <h1 class="home-hero-title">${title}</h1>
+
+      <div class="home-hero-layout">
+        <div class="home-hero-left">
+          ${meta ? `<div class="home-hero-meta">${meta}</div>` : ''}
+          ${synopsis ? `<p class="home-hero-synopsis">${synopsis}</p>` : ''}
+
+          <div class="home-hero-actions">
+            <a class="btn" href="${titleHref}">Reproducir <span aria-hidden="true"> ▶</span></a>
+
+            <button
+              class="btn ghost home-hero-mylist"
+              type="button"
+              aria-label="Agregar a Mi Lista"
+              aria-pressed="false"
+            >
+              <svg class="home-hero-mylist-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1920" aria-hidden="true" focusable="false">
+                <path d="M866.332 213v653.332H213v186.666h653.332v653.332h186.666v-653.332h653.332V866.332h-653.332V213z" fill-rule="evenodd"/>
+              </svg>
+              <span class="home-hero-mylist-label">Mi Lista</span>
+            </button>
+
+            ${
+              shouldShowReleaseReminder(movie)
+                ? `
+              <button
+                class="btn ghost home-hero-reminder"
+                type="button"
+                data-movie-id="${String(movie.id)}"
+                aria-label="Avisarme cuando se lance"
+                aria-pressed="false"
+              >
+                <i class="fa-regular fa-bell" aria-hidden="true"></i>
+                <span>Avisarme</span>
+              </button>
+            `
+                : ''
+            }
+          </div>
+        </div>
+
+        <div class="home-hero-right"></div>
+      </div>
+    </div>
+  `;
+
+  mountHomeHeroTrailerVideo(hero, movie);
+  bindHeroMyListButton({ movie, userId });
+  bindHomeHeroReleaseReminderButton(hero);
+}
+
+/* =========================================================
+   LIVE MODE / CARDS / CAROUSEL / INIT
+========================================================= */
+
+const LIVE_DISPLAY_TIMEZONE = 'America/Argentina/Buenos_Aires';
+
+function getMovieLiveStartDate(movie) {
+  if (!movie) return null;
+  const raw =
+    movie.live_starts_at ??
+    movie.live_start_at ??
+    movie.live_datetime ??
+    movie.live_at ??
+    null;
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatMovieLiveDateTime(
+  movie,
+  { timeZone = LIVE_DISPLAY_TIMEZONE } = {}
+) {
+  const d = getMovieLiveStartDate(movie);
+  if (!d) return '';
+
+  const fecha = new Intl.DateTimeFormat('es-AR', {
+    timeZone,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(d);
+
+  const hora = new Intl.DateTimeFormat('es-AR', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
+
+  return `${fecha} - ${hora}`;
+}
+
+function getMovieCardPublicLabel(movie) {
+  if (!movie) return '';
+
+  const publishState = String(movie.publish_state || 'public').toLowerCase();
+  const customText = String(movie.publish_state_text || '').trim();
+
+  if (publishState === 'upcoming') {
+    return customText || 'Próximamente';
+  }
+
+  if (publishState === 'other') {
+    return customText || 'Otro';
+  }
+
+  if (Boolean(movie.live_mode)) {
+    const d = getLiveStartDateForReminder(movie);
+    if (d && d.getTime() <= Date.now()) return 'Recién agregado';
+
+    const liveDate = formatMovieLiveDateTime(movie);
+    return liveDate || (publishState === 'live' ? 'En Vivo' : '');
+  }
+
+  if (publishState === 'live') {
+    return 'En Vivo';
+  }
+
+  return '';
+}
+
+function homeCatalogCardHtml(movie) {
+  const stateLabel = getMovieCardPublicLabel(movie);
+  const href = buildTitleUrl(movie?.id, {
+    collectionId: getMovieCollectionId(movie),
+  });
+
+  const html = stateLabel
+    ? cardHtml(movie, href, stateLabel, null, { showCollectionOverlay: true })
+    : cardHtml(movie, href, null, null, { showCollectionOverlay: true });
+
+  return addHomeMovieDataToCardHtml(html, movie);
+}
+
+function promoteCatalogCardBadges(rootEl) {
+  if (!rootEl) return;
+
+  rootEl.querySelectorAll('.card .card-subtitle').forEach((node) => {
+    const text = String(node.textContent || '').trim();
+    if (!text) return;
+
+    const badge = document.createElement('div');
+    badge.className = 'card-badge card-badge-upcoming';
+    badge.textContent = text;
+
+    node.replaceWith(badge);
+  });
+}
+
+function getCarouselCards(row) {
+  if (!row?.querySelectorAll) return [];
+
+  try {
+    return Array.from(row.querySelectorAll(':scope > .card'));
+  } catch {
+    return Array.from(row.children || []).filter((node) =>
+      node?.classList?.contains?.('card')
+    );
+  }
+}
+
+function getMaxScrollLeft(row) {
+  if (!row) return 0;
+  return Math.max(0, Math.ceil(row.scrollWidth - row.clientWidth));
+}
+
+function getScrollStep(row) {
+  if (!row) return 360;
+
+  const firstCard = getCarouselCards(row)[0] || null;
+  if (!firstCard) return 360;
+
+  const rowStyles = getComputedStyle(row);
+  const gap = parseFloat(rowStyles.columnGap || rowStyles.gap || '0') || 0;
+  const cardWidth = firstCard.getBoundingClientRect().width || 280;
+
+  // Un click equivale siempre al ancho de UNA card más su gap.
+  return Math.max(1, cardWidth + gap);
+}
+
+function isCarouselButtonVisible(button) {
+  if (!button) return false;
+
+  const rect = button.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return false;
+
+  const styles = getComputedStyle(button);
+  return (
+    styles.display !== 'none' &&
+    styles.visibility !== 'hidden' &&
+    Number.parseFloat(styles.opacity || '1') > 0 &&
+    styles.pointerEvents !== 'none'
+  );
+}
+
+function storeCarouselCardAccessibility(card) {
+  if (!card || card.dataset.carouselA11yStored === '1') return;
+
+  card.dataset.carouselA11yStored = '1';
+  card.dataset.carouselPreviousAriaHidden = card.hasAttribute('aria-hidden')
+    ? card.getAttribute('aria-hidden') || ''
+    : '__none__';
+  card.dataset.carouselPreviousTabindex = card.hasAttribute('tabindex')
+    ? card.getAttribute('tabindex') || ''
+    : '__none__';
+  card.dataset.carouselPreviousInert = card.hasAttribute('inert') ? '1' : '0';
+}
+
+function restoreCarouselCardAccessibility(card) {
+  if (!card || card.dataset.carouselA11yStored !== '1') return;
+
+  const previousAria = card.dataset.carouselPreviousAriaHidden;
+  const previousTabindex = card.dataset.carouselPreviousTabindex;
+  const previousInert = card.dataset.carouselPreviousInert;
+
+  if (previousAria === '__none__') card.removeAttribute('aria-hidden');
+  else card.setAttribute('aria-hidden', previousAria || '');
+
+  if (previousTabindex === '__none__') card.removeAttribute('tabindex');
+  else card.setAttribute('tabindex', previousTabindex || '');
+
+  if (previousInert === '1') card.setAttribute('inert', '');
+  else card.removeAttribute('inert');
+
+  delete card.dataset.carouselA11yStored;
+  delete card.dataset.carouselPreviousAriaHidden;
+  delete card.dataset.carouselPreviousTabindex;
+  delete card.dataset.carouselPreviousInert;
+}
+
+function updateCarouselCoveredCards(row) {
+  if (!row) return;
+
+  const cards = getCarouselCards(row);
+  if (!cards.length) return;
+
+  const rowRect = row.getBoundingClientRect();
+  if (rowRect.width <= 0 || rowRect.height <= 0) return;
+
+  const carousel = row.closest('.carousel');
+  const leftButton = carousel?.querySelector(':scope > .carousel-btn.left');
+  const rightButton = carousel?.querySelector(':scope > .carousel-btn.right');
+
+  let freeLeft = rowRect.left;
+  let freeRight = rowRect.right;
+
+  if (isCarouselButtonVisible(leftButton)) {
+    const leftRect = leftButton.getBoundingClientRect();
+    if (leftRect.right > rowRect.left && leftRect.left < rowRect.right) {
+      freeLeft = Math.max(freeLeft, Math.min(rowRect.right, leftRect.right));
+    }
+  }
+
+  if (isCarouselButtonVisible(rightButton)) {
+    const rightRect = rightButton.getBoundingClientRect();
+    if (rightRect.right > rowRect.left && rightRect.left < rowRect.right) {
+      freeRight = Math.min(freeRight, Math.max(rowRect.left, rightRect.left));
+    }
+  }
+
+  const tolerance = 1.5;
+
+  cards.forEach((card) => {
+    const cardRect = card.getBoundingClientRect();
+    const intersectsRow =
+      cardRect.right > rowRect.left + tolerance &&
+      cardRect.left < rowRect.right - tolerance;
+    const isFullyVisible =
+      cardRect.width > tolerance &&
+      cardRect.left >= freeLeft - tolerance &&
+      cardRect.right <= freeRight + tolerance;
+    const isPartial = intersectsRow && !isFullyVisible;
+    const isCovered = !intersectsRow;
+    const mustBlock = !isFullyVisible;
+
+    card.classList.toggle('carousel-card-partial', isPartial);
+    card.classList.toggle('carousel-card-covered', isCovered);
+
+    if (mustBlock) {
+      storeCarouselCardAccessibility(card);
+      card.setAttribute('aria-hidden', 'true');
+      card.setAttribute('tabindex', '-1');
+      card.setAttribute('inert', '');
+
+      if (card.contains(document.activeElement)) {
+        document.activeElement?.blur?.();
+      }
+
+      if (__tarjetaHoverActiva === card) {
+        cerrarOverlayHoverTarjeta(card, {
+          inmediato: true,
+          forzar: true,
+        });
+      }
+    } else {
+      restoreCarouselCardAccessibility(card);
+    }
+  });
+}
+
+function updateCarouselArrows(row) {
+  const carousel = row?.closest?.('.carousel');
+  if (!row || !carousel) return;
+
+  const left = carousel.querySelector(':scope > .carousel-btn.left');
+  const right = carousel.querySelector(':scope > .carousel-btn.right');
+  const max = getMaxScrollLeft(row);
+  const tolerance = 4;
+  const current = Math.max(0, Math.min(max, row.scrollLeft));
+  const canScroll = max > tolerance && row.dataset.arrows !== '0';
+  const isAtStart = current <= tolerance;
+  const isAtEnd = canScroll && current >= max - tolerance;
+
+  carousel.classList.toggle('no-arrows', !canScroll);
+  carousel.classList.toggle('is-at-start', isAtStart);
+  carousel.classList.toggle('is-at-end', isAtEnd);
+
+  if (left) {
+    left.disabled = !canScroll || isAtStart;
+    left.setAttribute('aria-hidden', String(!canScroll || isAtStart));
+  }
+
+  if (right) {
+    // En el final la flecha sigue activa: el próximo click vuelve al inicio.
+    right.disabled = !canScroll;
+    right.setAttribute('aria-hidden', String(!canScroll));
+    right.setAttribute(
+      'aria-label',
+      isAtEnd ? 'Volver al inicio' : 'Siguiente'
+    );
+  }
+
+  updateCarouselCoveredCards(row);
+}
+
+function scrollCarouselPage(row, direction = 1) {
+  if (!row) return;
+
+  const max = getMaxScrollLeft(row);
+  const tolerance = 4;
+  const current = Math.max(0, Math.min(max, row.scrollLeft));
+  const step = getScrollStep(row);
+  const normalizedDirection = direction < 0 ? -1 : 1;
+  let next = current;
+
+  if (normalizedDirection > 0) {
+    next = current >= max - tolerance ? 0 : Math.min(max, current + step);
+  } else {
+    next = current <= tolerance ? 0 : Math.max(0, current - step);
+  }
+
+  row.scrollTo({ left: next, behavior: 'smooth' });
+
+  requestAnimationFrame(() => {
+    updateCarouselArrows(row);
+    updateCarouselCoveredCards(row);
+  });
+}
+
+function createCarouselButton(side) {
+  const button = document.createElement('button');
+  const isLeft = side === 'left';
+
+  button.className = `carousel-btn ${isLeft ? 'left' : 'right'}`;
+  button.type = 'button';
+  button.setAttribute('aria-label', isLeft ? 'Anterior' : 'Siguiente');
+  button.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="${isLeft ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `;
+
+  return button;
+}
+
+function ensureCarouselWrapper(row) {
+  if (!row) return null;
+
+  let carousel = row.parentElement?.classList?.contains?.('carousel')
+    ? row.parentElement
+    : row.closest('.carousel');
+
+  if (!carousel) {
+    const parent = row.parentElement;
+    if (!parent) return null;
+
+    carousel = document.createElement('div');
+    carousel.className = 'carousel';
+    parent.insertBefore(carousel, row);
+    carousel.appendChild(row);
+  }
+
+  let leftButton = carousel.querySelector(':scope > .carousel-btn.left');
+  let rightButton = carousel.querySelector(':scope > .carousel-btn.right');
+
+  if (!leftButton) {
+    leftButton = createCarouselButton('left');
+    carousel.insertBefore(leftButton, row);
+  }
+
+  if (!rightButton) {
+    rightButton = createCarouselButton('right');
+    carousel.appendChild(rightButton);
+  }
+
+  return carousel;
+}
+
+function resetCarouselState(row) {
+  if (!row) return;
+
+  if (__tarjetaHoverActiva && row.contains(__tarjetaHoverActiva)) {
+    cerrarOverlayHoverTarjeta(__tarjetaHoverActiva, {
+      inmediato: true,
+      forzar: true,
+    });
+  }
+
+  if (row.__carouselCleanup && typeof row.__carouselCleanup === 'function') {
+    try {
+      row.__carouselCleanup();
+    } catch {}
+  }
+
+  if (row.__carouselRaf) cancelAnimationFrame(row.__carouselRaf);
+
+  getCarouselCards(row).forEach((card) => {
+    card.classList.remove('carousel-card-covered', 'carousel-card-partial');
+    restoreCarouselCardAccessibility(card);
+  });
+
+  row.scrollLeft = 0;
+  delete row.dataset.carouselReady;
+  delete row.__carouselCleanup;
+  delete row.__resizeHandler;
+  delete row.__scrollHandler;
+  delete row.__carouselRaf;
+
+  const carousel = row.closest('.carousel');
+  if (carousel) {
+    carousel.classList.remove(
+      'carousel-disabled',
+      'no-arrows',
+      'is-at-start',
+      'is-at-end'
+    );
+  }
+}
+
+function buildCarousel(row) {
+  if (!row) return;
+
+  if (row.dataset.carouselReady === '1') {
+    updateCarouselArrows(row);
+    updateCarouselCoveredCards(row);
+    return;
+  }
+
+  const cards = getCarouselCards(row);
+  if (!cards.length) return;
+
+  const carousel = ensureCarouselWrapper(row);
+  if (!carousel) return;
+
+  const btnLeft = carousel.querySelector(':scope > .carousel-btn.left');
+  const btnRight = carousel.querySelector(':scope > .carousel-btn.right');
+
+  // Estado inicial real: sin clones, sin recentrado y con scrollLeft = 0.
+  row.scrollLeft = 0;
+  row.dataset.carouselReady = '1';
+
+  const scheduleRowUpdate = () => {
+    if (row.__carouselRaf) cancelAnimationFrame(row.__carouselRaf);
+
+    row.__carouselRaf = requestAnimationFrame(() => {
+      row.__carouselRaf = 0;
+      updateCarouselArrows(row);
+      updateCarouselCoveredCards(row);
+
+      if (__tarjetaHoverActiva && row.contains(__tarjetaHoverActiva)) {
+        cerrarOverlayHoverTarjeta(__tarjetaHoverActiva, {
+          inmediato: true,
+          forzar: true,
+        });
+      }
+    });
+  };
+
+  const onScroll = () => scheduleRowUpdate();
+  const onResize = () => {
+    scheduleRowUpdate();
+    scheduleTwoLinesScan(carousel);
+  };
+  const onLeftClick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    scrollCarouselPage(row, -1);
+    updateCarouselCoveredCards(row);
+  };
+  const onRightClick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    scrollCarouselPage(row, 1);
+    updateCarouselCoveredCards(row);
+  };
+
+  btnLeft?.addEventListener('click', onLeftClick);
+  btnRight?.addEventListener('click', onRightClick);
+  row.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onResize, { passive: true });
+
+  let resizeObserver = null;
+  try {
+    resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(row);
+  } catch {}
+
+  row.__scrollHandler = onScroll;
+  row.__resizeHandler = onResize;
+  row.__carouselCleanup = () => {
+    if (row.__carouselRaf) cancelAnimationFrame(row.__carouselRaf);
+    btnLeft?.removeEventListener('click', onLeftClick);
+    btnRight?.removeEventListener('click', onRightClick);
+    row.removeEventListener('scroll', onScroll);
+    window.removeEventListener('resize', onResize);
+    resizeObserver?.disconnect?.();
+  };
+
+  updateCarouselArrows(row);
+  updateCarouselCoveredCards(row);
+
+  requestAnimationFrame(() => {
+    row.scrollLeft = 0;
+    updateCarouselArrows(row);
+    updateCarouselCoveredCards(row);
+    scheduleTwoLinesScan(carousel);
+  });
+}
+
+function setRow(el, html) {
+  if (!el) return;
+  resetCarouselState(el);
+  el.innerHTML = html;
+
+  enhanceCarouselCardsWithQuickPlus(el);
+  scheduleTwoLinesScan(el);
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent('satv:cards-rendered', { detail: { root: el } })
+    );
+  } catch {}
+}
+
+window.addEventListener('app:searchrendered', (ev) => {
+  const root = ev?.detail?.root || document.getElementById('search-results');
+  if (!root) return;
+  enhanceCarouselCardsWithQuickPlus(root);
+  scheduleTwoLinesScan(root);
+});
+
+window.addEventListener('satv:enhance-cards', (ev) => {
+  const root = ev?.detail?.root || document;
+  enhanceCarouselCardsWithQuickPlus(root);
+  scheduleTwoLinesScan(root);
+});
+
+/* ================= CONTINUE WATCHING HELPERS ================= */
+
+function buildContinueHref(row) {
+  const m = row?.movies;
+  if (!m?.id) return '#';
+
+  const episodeId = row?.episode_id || row?.episodes?.id || null;
+  const collectionId = m?.collection_id || null;
+
+  return buildTitleUrl(m.id, { collectionId, episodeId });
+}
+
+function parseContinueDurationToSeconds(value) {
+  if (value === null || value === undefined || value === '') return 0;
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value > 0 ? Math.floor(value) : 0;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return 0;
+
+  if (raw.includes(':')) {
+    const parts = raw.split(':').map((part) => Number(part.trim()));
+    if (parts.some((n) => !Number.isFinite(n) || n < 0)) return 0;
+
+    if (parts.length === 3) {
+      const [h, m, s] = parts;
+      return h * 3600 + m * 60 + s;
+    }
+
+    if (parts.length === 2) {
+      const [m, s] = parts;
+      return m * 60 + s;
+    }
+  }
+
+  const numeric = Number(raw.replace(/,/g, '.'));
+  return Number.isFinite(numeric) && numeric > 0 ? Math.floor(numeric) : 0;
+}
+
+function getContinueTotalSeconds(row) {
+  const direct = parseContinueDurationToSeconds(row?.duration_seconds || 0);
+  if (direct > 0) return direct;
+
+  const episode = row?.episodes || null;
+  const episodeDuration = parseContinueDurationToSeconds(
+    episode?.epduration || 0
+  );
+  if (episodeDuration > 0) return episodeDuration;
+
+  const movie = row?.movies || null;
+  const movieMinutes = Number(movie?.duration_minutes || 0);
+  if (Number.isFinite(movieMinutes) && movieMinutes > 0) {
+    return Math.floor(movieMinutes * 60);
+  }
+
+  return 0;
+}
+
+function buildContinueSubtitle(row) {
+  const ep = row?.episodes || null;
+  const progressSec = Number(row?.progress_seconds || 0);
+  const totalSec = getContinueTotalSeconds(row);
+  const progressText = formatTime(progressSec);
+  const totalText = totalSec > 0 ? formatTime(totalSec) : '--:--';
+  const timeText = `${progressText} / ${totalText}`;
+
+  if (ep) {
+    const season = Number(ep.season ?? 0);
+    const episodeNumber = Number(ep.episode_number ?? 0);
+    return `T${season}E${episodeNumber} ${timeText}`;
+  }
+
+  return timeText;
+}
+
+function buildContinuePct(row) {
+  const m = row?.movies || null;
+  const progressSec = Number(row?.progress_seconds || 0);
+  let totalSec = Number(row?.duration_seconds || 0);
+
+  if (!totalSec && m?.category === 'movie') {
+    totalSec = Number(m?.duration_minutes || 0) * 60;
+  }
+
+  if (totalSec > 0)
+    return Math.min(
+      98,
+      Math.max(2, Math.round((progressSec / totalSec) * 100))
+    );
+  return 8;
+}
+
+/* =========================================================
+   INIT
+========================================================= */
+
+/* Consulta sólo la sección solicitada y muestra cada página al llegar. */
+async function fetchSectionCatalog(section, onPage = null) {
+  const catalog = [];
+  const seen = new Set();
+  const pageSize = 100;
+  for (let offset = 0; ; ) {
+    let query = supabase.from('movies').select(`
+      id, title, description, thumbnail_url, banner_url, m3u8_url, vtt_url,
+      trailer_url, category, created_at, release_year, duration_minutes,
+      genres, live_mode, live_starts_at, publish_state, publish_state_text, collection_id,
+      is_sports, sports_sections
+    `).order('created_at', { ascending: false }).order('id', { ascending: true });
+    if (section === 'peliculas') query = query.eq('category', 'movie');
+    else if (section === 'series') query = query.eq('category', 'series');
+    else {
+      query = query.eq('is_sports', true);
+      if (section === 'espn') {
+        query = query.overlaps('sports_sections', ['espn', 'espnpremium']);
+      } else if (section === 'libertadores' || section === 'sudamericana') {
+        query = query.or(cupCatalogFilter(section));
+      } else if (section !== 'deportes') {
+        query = query.contains('sports_sections', [section]);
+      }
+    }
+    const { data, error } = await query.range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    if (!data?.length) break;
+    const batch = data.filter(movie => {
+      const id = movie?.id ? String(movie.id) : '';
+      if (!id || seen.has(id) || !matchesCatalogSection(movie, section)) return false;
+      seen.add(id);
+      return true;
+    });
+    if (batch.length) {
+      catalog.push(...batch);
+      if (typeof onPage === 'function') onPage(batch);
+    }
+    // No se corta por una página corta: respeta también el límite del servidor.
+    offset += data.length;
+  }
+  return catalog;
+}
+
+function hideHomeForCatalogSection() {
+  const main = document.querySelector('main.container') || document.querySelector('main');
+  if (!main) return null;
+  document.body.classList.add('catalog-section-page');
+  // .hidden tiene prioridad sobre display:flex/grid de los carruseles y el hero.
+  [...main.children].forEach(node => {
+    node.hidden = true;
+    node.classList.add('hidden');
+  });
+  return main;
+}
+
+async function renderCatalogPage(section) {
+  const main = hideHomeForCatalogSection();
+  if (!main) return;
+  const label = CATALOG_SECTIONS[section].label;
+  document.title = `${label} · SATV+`;
+  const host = document.createElement('section');
+  host.className = 'section catalog-section-view';
+  host.innerHTML = `
+    <div class="section-head"><h1 class="section-title">${escapeHtml(label)}</h1></div>
+    ${CATALOG_SECTIONS[section].summary ? `<p class="catalog-section-summary">${escapeHtml(CATALOG_SECTIONS[section].summary)}</p>` : ''}
+    ${renderCupFixtures(section)}
+    <div class="catalog-section-transmissions" data-cup-transmissions hidden>
+      <h2>Transmisiones disponibles</h2>
+    </div>
+    <p class="muted" data-section-status role="status" aria-live="polite">Cargando contenido…</p>
+    <button type="button" class="btn ghost" data-section-retry hidden>Reintentar</button>
+    <div class="catalog-section-empty" data-section-empty hidden role="status" aria-live="polite">
+      <div class="catalog-section-empty-copy">
+        <h2>Lo próximo está por llegar.</h2>
+        <p>Volvé pronto para descubrir nuevos títulos.</p>
+      </div>
+    </div>
+    <div class="catalog-grid catalog-grid-5" data-section-grid aria-busy="true" hidden></div>
+  `;
+  // Respaldo automático si los PNG de images/nav aún no se copiaron al proyecto.
+  installCupShieldFallback(host);
+  main.appendChild(host);
+  const status = host.querySelector('[data-section-status]');
+  const grid = host.querySelector('[data-section-grid]');
+  const retry = host.querySelector('[data-section-retry]');
+  const empty = host.querySelector('[data-section-empty]');
+  const transmissionsHeading = host.querySelector('[data-cup-transmissions]');
+  const isCup = isCupFixtureSection(section);
+  const load = async () => {
+    retry.hidden = true;
+    empty.hidden = true;
+    if (transmissionsHeading) transmissionsHeading.hidden = true;
+    grid.hidden = true;
+    status.hidden = false;
+    status.textContent = 'Cargando contenido…';
+    grid.setAttribute('aria-busy', 'true');
+    setRow(grid, '');
+    let visibleTitles = 0;
+    try {
+      await fetchSectionCatalog(section, batch => {
+        grid.insertAdjacentHTML('beforeend', batch.map(movie => homeCatalogCardHtml(movie)).join(''));
+        visibleTitles += batch.length;
+        if (transmissionsHeading) transmissionsHeading.hidden = !isCup || visibleTitles === 0;
+        enhanceCarouselCardsWithQuickPlus(grid);
+        promoteCatalogCardBadges(grid);
+        grid.hidden = false;
+        status.textContent = '';
+        status.hidden = true;
+        scheduleTwoLinesScan(grid);
+      });
+      grid.hidden = visibleTitles === 0;
+      empty.hidden = isCup || visibleTitles > 0;
+      status.textContent = '';
+      status.hidden = true;
+    } catch (error) {
+      console.error('[home] error cargando sección:', error);
+      status.hidden = false;
+      status.textContent = visibleTitles > 0
+        ? 'No se pudo cargar el resto de esta sección. Intentá de nuevo.'
+        : 'No se pudo cargar esta sección. Intentá de nuevo.';
+      retry.hidden = false;
+    } finally {
+      grid.setAttribute('aria-busy', 'false');
+    }
+  };
+  retry.addEventListener('click', load);
+  await load();
+}
+
+async function loadContinueWatchingSection(viewerProfileId) {
+  const contWrap = $('#continue-wrap');
+  const contRow = $('#continue-row');
+
+  if (viewerProfileId) {
+    try {
+      const rows = await fetchContinueWatching(viewerProfileId, 24);
+      const filtered = rows.filter(
+        (r) => (Number(r.progress_seconds) || 0) >= 5
+      );
+
+      const grouped = filtered.reduce((acc, r) => {
+        const movieId = r.movies?.id || r.movie_id;
+        if (!movieId) return acc;
+
+        if (
+          !acc[movieId] ||
+          new Date(r.updated_at) > new Date(acc[movieId].updated_at)
+        ) {
+          acc[movieId] = r;
+        }
+        return acc;
+      }, {});
+
+      const uniqueRows = Object.values(grouped);
+
+      if (uniqueRows.length) {
+        contWrap?.classList?.remove('hidden');
+
+        setRow(
+          contRow,
+          uniqueRows
+            .map((r) => {
+              const m = r.movies;
+              if (!m) return '';
+
+              const href = buildContinueHref(r);
+              const pct = buildContinuePct(r);
+              const continueTime = buildContinueSubtitle(r);
+
+              return addMovieIdToCardHtml(
+                cardHtml(m, href, continueTime, pct, {
+                  showCollectionOverlay: true,
+                }),
+                m?.id
+              );
+            })
+            .join('')
+        );
+
+        buildCarousel(contRow);
+      } else {
+        contWrap?.classList?.add('hidden');
+      }
+    } catch (e) {
+      console.error('[home] continue watching error:', e);
+      contWrap?.classList?.add('hidden');
+    }
+  } else {
+    contWrap?.classList?.add('hidden');
+  }
+}
+
+function renderHomeHeroPool(items, userId) {
+    const heroPoolMap = new Map();
+    items.forEach((item) => {
+      if (item?.id && !heroPoolMap.has(item.id)) heroPoolMap.set(item.id, item);
+    });
+
+    const pool = [...heroPoolMap.values()];
+    if (pool.length) {
+      const now = Date.now();
+      const key = `${HOME_HERO_STORAGE_PREFIX}:${userId || 'guest'}`;
+
+      let chosen = null;
+      try {
+        const raw = localStorage.getItem(key);
+        const saved = raw ? JSON.parse(raw) : null;
+        if (saved?.id && Number(saved.expiresAt) > now) {
+          chosen = pool.find((x) => String(x.id) === String(saved.id)) || null;
+        }
+      } catch {}
+
+      if (!chosen) {
+        chosen = pool[Math.floor(Math.random() * pool.length)];
+        try {
+          localStorage.setItem(
+            key,
+            JSON.stringify({
+              id: chosen.id,
+              chosenAt: now,
+              expiresAt: now + HOME_HERO_TTL_MS,
+            })
+          );
+        } catch {}
+      }
+
+      renderHomeHeroItem(chosen, { userId });
+    }
+
+}
+
+async function loadHomeCatalog(userId) {
+  let errorShown = false;
+  const loadCarousel = async (rowId, fetchItems) => {
+    try {
+      const items = await fetchItems();
+      const row = document.getElementById(rowId);
+      setRow(row, items.map(movie => homeCatalogCardHtml(movie)).join(''));
+      promoteCatalogCardBadges(row);
+      buildCarousel(row);
+      return items;
+    } catch (error) {
+      console.warn(`[home] no se pudo cargar ${rowId}:`, error);
+      if (!errorShown) {
+        errorShown = true;
+        toast('No se pudo cargar parte del catálogo.', 'error');
+      }
+      return [];
+    }
+  };
+  // Cada fila aparece cuando su propia consulta termina.
+  const rows = [
+    loadCarousel('latest-row', () => fetchLatest(24)),
+    loadCarousel('movies-row', () => fetchByCategory('movie', 24)),
+    loadCarousel('series-row', () => fetchByCategory('series', 24)),
+  ];
+  const hero = Promise.all(rows).then(groups => {
+    renderHomeHeroPool(groups.flat(), userId);
+    scheduleTwoLinesScan();
+  });
+  const genres = (async () => {
+    let allCatalog;
+    try {
+      allCatalog = await fetchAllMovies(500);
+    } catch (error) {
+      console.warn('[home] no se pudieron cargar secciones por género:', error);
+      allCatalog = getUniqueCatalogItems((await Promise.all(rows)).flat());
+    }
+    renderAllCatalogSection(allCatalog);
+    renderGenreSections(allCatalog);
+    scheduleTwoLinesScan();
+  })();
+  await Promise.all([hero, genres]);
+}
+
+async function init() {
+  const catalogSection = getCatalogSection();
+  if (catalogSection) hideHomeForCatalogSection();
+
+  // CSS por ID se carga sincronicamente desde /js/css-ids.js.
+
+  // El Home nunca se renderiza sin sesión y perfil de visualización activo.
+  const session = await requireAuthOrRedirect({ requireProfile: true });
+  if (!session) return;
+
+  enableDataHrefNavigation();
+  initTopnavSearch();
+  initSearchExperience();
+
+  installQuickModalGlobalEvents();
+
+  renderNav({ active: 'home' });
+  const activeViewerProfile = await renderAuthButtons({ session });
+  if (!activeViewerProfile) return;
+
+  installTwoLinesObservers();
+
+  __homeSessionCache = session || null;
+  __homeUserIdCache = session?.user?.id || null;
+
+  const userId = session?.user?.id || null;
+  ensureMyListNavLink(userId);
+
+  if (catalogSection) {
+    await renderCatalogPage(catalogSection);
+    return;
+  }
+
+  await Promise.all([
+    loadContinueWatchingSection(activeViewerProfile.id),
+    loadHomeCatalog(userId),
+  ]);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // init verifica sesión y perfil una vez antes de consultar contenido.
+  init().catch(error => {
+    console.error('[home] init error:', error);
+    toast('No se pudo iniciar la página. Intentá de nuevo.', 'error');
+  });
+});

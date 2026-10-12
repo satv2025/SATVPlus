@@ -1,0 +1,218 @@
+/* =========================
+   AEmber
+   ========================= */
+
+/* Por Peso */
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/e2b7fecc-31d4-50b5-bd94-ed4155810f5d.ttf") format("truetype");
+    font-weight: 100;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/e4005fc9-fde3-588e-a1c8-b7ab9f54f503.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/480ff95d-8d7e-5ce1-8076-583be4d45bed.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/6271cab5-2cc5-52d5-9f34-68d29478b20b.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/8dfc1156-5c02-5e68-aa68-a04a8912bd2f.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/a9c49228-bdce-557a-b5f4-b8aee2a974ed.ttf") format("truetype");
+    font-weight: 800;
+    font-style: normal;
+  font-display: swap;
+}
+
+/* Cursiva */
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/0017ac7a-9744-5805-9410-50b5f3e25a47.ttf") format("truetype");
+    font-weight: 100;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/51bf12fd-2d20-566f-a51e-33cfd4deccc1.ttf") format("truetype");
+    font-weight: 300;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/222bd66c-4c1f-520d-b886-4b78d24f5b43.ttf") format("truetype");
+    font-weight: 400;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/ef544aad-012f-5dad-8318-c8e1188b93e6.ttf") format("truetype");
+    font-weight: 500;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/c93c3960-312f-5dce-a8aa-576c7bbe1fb0.ttf") format("truetype");
+    font-weight: 700;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmber";
+    src: url("/css/0eaabe6d-7e94-5b31-adb2-9c4ce0db6ecd.ttf") format("truetype");
+    font-weight: 800;
+    font-style: italic;
+  font-display: swap;
+}
+
+
+/* =========================
+   AEmberC
+   ========================= */
+
+/* Por Peso */
+@font-face {
+    font-family: "AEmberC";
+    src: url("/css/168e4f4b-8dfa-5734-a328-249bbb3169b9.ttf") format("truetype");
+    font-weight: 100;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("/css/83809111-876f-5784-91c0-c66eae02766f.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("/css/028ad0b0-2059-57d7-83dd-0860d5858a2c.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("/css/719d3b7f-8a26-5396-9619-f4db3757c3fe.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+  font-display: swap;
+}
+
+/* Cursiva */
+@font-face {
+    font-family: "AEmberC";
+    src: url("/css/d4b4da23-afb9-5e4e-8597-d6b0f38de9ce.ttf") format("truetype");
+    font-weight: 100;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("/css/05117ab3-b0aa-5b45-a275-ae582b0031ba.ttf") format("truetype");
+    font-weight: 300;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("/css/24af947f-b670-5b98-8079-505ddfe9b10f.ttf") format("truetype");
+    font-weight: 400;
+    font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmberC";
+    src: url("/css/495d9039-e6bf-5e99-9c10-012912e6652e.ttf") format("truetype");
+    font-weight: 700;
+    font-style: italic;
+  font-display: swap;
+}
+
+
+/* =========================
+   AEmberD
+   ========================= */
+
+/* Por Peso */
+@font-face {
+    font-family: "AEmberD";
+    src: url("/css/7c607245-c664-5dd4-a68d-67addac1c699.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmberD";
+    src: url("/css/03960641-cffa-55fc-912c-417e5df36f57.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmberD";
+    src: url("/css/b48e46e5-2160-5014-b40d-a46f9df277ba.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmberD";
+    src: url("/css/48e877ac-7dfe-55a9-9749-0a028da5f474.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+    font-family: "AEmberD";
+    src: url("/css/a49cbe87-2d5c-59f5-8d1a-5287ced95790.ttf") format("truetype");
+    font-weight: 800;
+    font-style: normal;
+  font-display: swap;
+}

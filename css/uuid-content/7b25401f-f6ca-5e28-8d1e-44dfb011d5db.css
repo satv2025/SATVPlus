@@ -1,0 +1,167 @@
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/456a3872-05d4-5bb3-b064-9911ee16bd61.woff2") format("woff2"),
+    url("/css/1af13f5a-688d-513e-b3b9-ab2d4a38d52c.woff") format("woff"),
+    url("/css/f2912154-10ff-5e19-a1bf-c65b67cdb98e.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Black%20Italic.otf") format("opentype");
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/714b8968-50ef-507e-a53b-67217841321f.woff2") format("woff2"),
+    url("/css/c2bb5b57-2b99-5e6b-9d32-8aafea8748e6.woff") format("woff"),
+    url("/css/f8362f18-db59-5f33-97ba-a7fa4d9d8ada.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Black.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/b220c4b2-7c32-5ed7-807d-93e6c27928ad.woff2") format("woff2"),
+    url("/css/793de5dd-decc-5762-b866-1bd130664ac9.woff") format("woff"),
+    url("/css/caaa9884-592c-5094-a037-c26024066ac4.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Bold%20Italic.otf") format("opentype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/adba0b12-568f-50ad-a723-539e14e6dde8.woff2") format("woff2"),
+    url("/css/1b8d11fc-f4df-56ac-bf17-fd25042752e6.woff") format("woff"),
+    url("/css/f32adf9e-b91b-5354-bbf3-355d82f888d1.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/6b89d340-54bc-5c83-bef7-c9ad00fe58b4.woff2") format("woff2"),
+    url("/css/c5313e26-3f3e-5a66-9e8f-d230f8ff7d60.woff") format("woff"),
+    url("/css/b2070cb2-2bfa-5faf-ac3a-87d8f35f56ce.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Extrabold%20Italic.otf") format("opentype");
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/965b3d94-6fbc-5e33-a87b-5738ce7f5729.woff2") format("woff2"),
+    url("/css/b83ae81e-505c-5739-814a-f1c738310de6.woff") format("woff"),
+    url("/css/b369701e-a048-52ea-8b09-dba424a2b6db.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Extrabold.otf") format("opentype");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/02270eee-cc87-5a66-9580-0d54f962319d.woff2") format("woff2"),
+    url("/css/d788c0da-837f-5fc9-8fbd-db54af5deaf2.woff") format("woff"),
+    url("/css/93465d7d-8440-51d5-b579-f78701861398.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Light%20Italic.otf") format("opentype");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/d34ff1f2-5b65-5e53-b8ee-500c605d90ca.woff2") format("woff2"),
+    url("/css/b12aa73b-4391-5e1b-9404-02bfde8f7222.woff") format("woff"),
+    url("/css/42e3637a-1964-5f66-827c-ba54dedfa443.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/ccb1ef70-9b75-52d4-9a07-bebf710a2406.woff2") format("woff2"),
+    url("/css/befe5b63-2582-5c58-be65-fa3cac197e0e.woff") format("woff"),
+    url("/css/9becef50-e681-54d8-b689-f3b6b78fa988.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Regular%20Italic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/9f1e6e00-5321-5394-9543-503d7b6c4ffe.woff2") format("woff2"),
+    url("/css/e1774015-a915-51aa-a685-a3659e22c9a9.woff") format("woff"),
+    url("/css/b87d3b12-4b6d-5fd0-bf48-b1cebb9a5ac5.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/c102d9c3-6b5c-5c71-9ed2-77d3f4a3d0c9.woff2") format("woff2"),
+    url("/css/8c2aad3c-725a-5beb-a85d-6cd927fd1f73.woff") format("woff"),
+    url("/css/8cff7444-50e3-52c1-9272-06c6ae1794d2.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Semibold%20Italic.otf") format("opentype");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/be266881-e4c5-5b1e-90a3-98676343b528.woff2") format("woff2"),
+    url("/css/e25ef098-cdae-5ce4-9a61-76fcbc071968.woff") format("woff"),
+    url("/css/1e7a5341-8dd7-5fd0-b70d-aa699b0aa07f.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Semibold.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/2955b19f-0738-5ea6-b0c9-97b0aaeb9adc.woff2") format("woff2"),
+    url("/css/1dd56204-4d15-56ac-a1cf-64769928b899.woff") format("woff"),
+    url("/css/eaf5947c-97d1-5351-be63-08cbbf5901be.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Thin%20Italic.otf") format("opentype");
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParamountPN";
+  src:
+    url("/css/57dc6a59-9247-5738-8bf5-7fa12fb10319.woff2") format("woff2"),
+    url("/css/1fd90a44-4c67-5678-87d7-93a564252935.woff") format("woff"),
+    url("/css/b6a93c73-a61c-5eda-8093-2f931c2cf302.ttf") format("truetype"),
+    url("/css/fonts/premium/proximanova/Proxima%20Nova%20Thin.otf") format("opentype");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}

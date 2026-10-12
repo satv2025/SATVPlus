@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+<!-- ESCUDO PROVISIONAL: sustituir por escudo oficial cuando esté disponible. -->
+<path d="M60 7 105 23 100 77Q92 98 60 113Q28 98 20 77L15 23Z" fill="#163e88" stroke="#ffcb35" stroke-width="3"/>
+<path d="M60 14 98 28 93 76Q87 93 60 104Q33 93 27 76L22 28Z" fill="none" stroke="#ffcb35" stroke-opacity=".55" stroke-width="1.5"/>
+<text x="60" y="66" font-family="Arial, sans-serif" font-weight="800" font-size="22" text-anchor="middle" fill="#ffcb35">CABJ</text>
+</svg>

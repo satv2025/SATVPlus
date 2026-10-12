@@ -1,0 +1,116 @@
+/* SATV+ / VR OVERLAY GRAPH: NO CAMBIA EL HEADER NI EL FLUJO DEL DOCUMENTO */
+#satv-vr-graph, #satv-vr-graph * { box-sizing: border-box; }
+#satv-vr-graph {
+  --vr-ice: #bcdcff;
+  position: absolute;
+  z-index: 220;
+  width: min(930px, calc(100vw - 28px));
+  max-width: 100%;
+  margin: 0;
+  color: #f9fbff;
+  background:
+    linear-gradient(115deg, transparent 20%, rgba(228,242,255,.08) 38%, transparent 62%),
+    linear-gradient(110deg, rgba(31,42,58,.95), rgba(64,80,101,.93) 38%, rgba(24,37,56,.95));
+  border: 1px solid rgba(192,218,248,.4);
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.17);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  pointer-events: none; /* Sólo el enlace es interactivo: el hero sigue recibiendo clicks */
+  isolation: isolate;
+}
+#satv-vr-graph::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(#e7f4ff,#8cb6e3 40%,#4d78a9);
+}
+#satv-vr-graph::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; width: 27%; height: 100%;
+  background: repeating-linear-gradient(126deg, transparent 0 20px, rgba(223,237,255,.09) 21px, transparent 22px 43px);
+  opacity: .65; pointer-events: none;
+}
+#satv-vr-graph .satv-vr-graph__body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 89px minmax(0,1fr) 153px;
+  align-items: center;
+  gap: 13px;
+  min-height: 68px;
+  padding: 6px 13px 6px 8px;
+}
+#satv-vr-graph .satv-vr-graph__plate {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  align-self: stretch; min-width: 0;
+  padding: 5px 10px 5px 6px;
+  clip-path: polygon(0 0,88% 0,100% 50%,88% 100%,0 100%);
+  background: linear-gradient(135deg,#6d86a7,#304663 56%,#1b2b43);
+  border-left: 2px solid #b8daff;
+  text-align: center;
+}
+#satv-vr-graph .satv-vr-graph__plate-name {font-size:8px; font-weight:900; letter-spacing:.06em;line-height:1.1;}
+#satv-vr-graph .satv-vr-graph__plate-name span {color:#b8dbff;}
+#satv-vr-graph .satv-vr-graph__plate-mark {font-size:26px; font-weight:950; line-height:.98; letter-spacing:-.07em;}
+#satv-vr-graph .satv-vr-graph__plate-code {font-size:7px; color:#c8dbf2; font-weight:800; letter-spacing:.03em;white-space:nowrap;}
+#satv-vr-graph .satv-vr-graph__story {display:flex;flex-direction:column;justify-content:center;min-width:0;gap:4px;}
+#satv-vr-graph .satv-vr-graph__overline {color:#bedcff;font-size:8px;letter-spacing:.15em;font-weight:900;display:flex;align-items:center;gap:6px;}
+#satv-vr-graph .satv-vr-graph__overline i {width:5px;height:5px;background:#b9deff;box-shadow:0 0 8px #8fbff1;border-radius:50%;}
+#satv-vr-graph .satv-vr-graph__headline {color:#fff;font-size:clamp(13px,1.3vw,17px);font-weight:900;line-height:1.2;letter-spacing:-.02em;}
+#satv-vr-graph .satv-vr-graph__headline span {color:#cce4ff;}
+#satv-vr-graph .satv-vr-graph__subline {color:#c9d5e5;font-size:10px;font-weight:600;line-height:1.25;}
+#satv-vr-graph .satv-vr-graph__action {
+  display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:7px;
+  padding-left:13px; min-width:0;
+  border-left:1px solid rgba(193,219,252,.26);
+}
+#satv-vr-graph .satv-vr-graph__action > span {color:#b7cbe2;font-size:8px;font-weight:900;letter-spacing:.12em;white-space:nowrap;}
+#satv-vr-graph .satv-vr-graph__action b {color:#7395bd;}
+#satv-vr-graph .satv-vr-graph__link {
+  pointer-events: auto;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  min-height:29px;padding:0 10px;border-radius:3px;
+  background:linear-gradient(115deg,#85add8,#42678d);
+  border:1px solid rgba(211,235,255,.46);
+  color:#fff;text-decoration:none;white-space:nowrap;
+  font-size:9px;font-weight:900;letter-spacing:.025em;
+  box-shadow:inset 0 1px rgba(255,255,255,.2);
+  transition:filter .15s,transform .15s;
+}
+#satv-vr-graph .satv-vr-graph__link svg {width:14px;height:14px;flex:0 0 14px;}
+#satv-vr-graph .satv-vr-graph__link:hover {color:#fff;filter:brightness(1.2);transform:translateX(2px);}
+#satv-vr-graph .satv-vr-graph__link:focus-visible {outline:2px solid #fff;outline-offset:2px;}
+#satv-vr-graph .satv-vr-graph__rundown {
+  display:flex;align-items:center;gap:11px;
+  height:18px; padding:2px 15px;
+  position:relative;z-index:1;
+  border-top:1px solid rgba(189,220,252,.16);
+  background:rgba(9,17,30,.43);
+  font-size:8px;font-weight:800;letter-spacing:.12em;color:#b0c4dd;
+}
+#satv-vr-graph .satv-vr-graph__rundown-line {height:1px;flex:1; background:linear-gradient(90deg,#96b9dd44,transparent);}
+#satv-vr-graph .satv-vr-graph__rundown b {color:#7595b6;margin:0 3px;}
+@media(max-width:690px) {
+  #satv-vr-graph .satv-vr-graph__body {grid-template-columns:64px minmax(0,1fr) 35px;gap:8px;min-height:75px;padding:7px 8px;}
+  #satv-vr-graph .satv-vr-graph__plate {padding:5px 7px 5px 3px;}
+  #satv-vr-graph .satv-vr-graph__plate-mark {font-size:22px;}
+  #satv-vr-graph .satv-vr-graph__plate-code {font-size:6px;}
+  #satv-vr-graph .satv-vr-graph__overline {font-size:7px;letter-spacing:.04em;}
+  #satv-vr-graph .satv-vr-graph__headline {font-size:12px;}
+  #satv-vr-graph .satv-vr-graph__subline {font-size:9px;}
+  #satv-vr-graph .satv-vr-graph__action {padding-left:5px;}
+  #satv-vr-graph .satv-vr-graph__action > span {display:none;}
+  #satv-vr-graph .satv-vr-graph__link {font-size:0;width:30px;height:30px;min-height:30px;padding:0;gap:0;}
+  #satv-vr-graph .satv-vr-graph__link svg {width:17px;height:17px;flex-basis:17px;}
+  #satv-vr-graph .satv-vr-graph__rundown {padding-inline:10px;font-size:7px;}
+}
+@media(max-width:390px) {
+  #satv-vr-graph .satv-vr-graph__overline {font-size:6px;}
+  #satv-vr-graph .satv-vr-graph__rundown > span:first-child {display:none;}
+  #satv-vr-graph .satv-vr-graph__headline {font-size:11px;}
+}
+@media(prefers-reduced-motion:reduce){#satv-vr-graph .satv-vr-graph__link{transition:none;}}
