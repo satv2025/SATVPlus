@@ -1,0 +1,29 @@
+CSS por ID mediante vercel.json — sin modificar JS
+
+Todas las paginas HTML del proyecto (17):
+- index.html -> /css/satv-route-index.css -> styles.css + initial.html.css
+- title.html -> /css/satv-route-title.css -> styles.css + title.css
+- mylist.html -> /css/satv-route-mylist.css -> styles.css + mylist.css
+- watch.html -> /css/satv-route-watch.css -> watch.css
+- login.html -> /css/satv-route-login.css -> styles.css + auth.css
+- register.html -> /css/satv-route-register.css -> styles.css
+- profiles.html -> /css/satv-route-profiles.css -> styles.css + profiles.css
+- profile.html -> /css/satv-route-profile.css -> styles.css + account.css
+- recovery.html -> /css/satv-route-recovery.css -> styles.css
+- recovery-pass.html -> /css/satv-route-recovery-pass.css -> styles.css
+- emailchange.html -> /css/satv-route-emailchange.css -> styles.css
+- emailchange-approve.html -> /css/satv-route-emailchange-approve.css -> styles.css
+- about.html -> /css/satv-route-about.css -> about.css
+- oldabout.html -> /css/satv-route-oldabout.css -> oldabout.css
+- privacy.html -> /css/satv-route-privacy.css -> privacy.css
+- support.html -> /css/satv-route-support.css -> support.css
+- vr.html -> /css/satv-route-vr.css -> styles.css + vr.css
+
+Overlay VR: /css/a71e0a9d-<resto_UUID>.css -> css/vr-overlay.css
+Cada URL /css/<uuid>.css o /css/<uuid>?episode=<id>.css conserva la ID generada por los JS EXISTENTES, sin modificarlos.
+Vercel selecciona el paquete de CSS mediante el encabezado Referer de la pagina que lo solicita.
+IMPORTANTE: si el navegador no envia Referer, se usa Inicio como respaldo (las paginas internas podrían verse incorrectamente).
+IMPORTANTE: Vercel documenta que las condiciones has no funcionan completamente con vercel dev; verificar en despliegue de prueba.
+El CSS original permanece sin cambios; las hojas satv-route-*.css son copias concatenadas.
+AkiraPlayer conserva su CSS original (dist/AkiraPlayer.css) mediante rewrite en su vercel.json.
+El JS original (incluido api/css.js) no se modifico. La ruta /api/css.js ya no participa en este rewrite.

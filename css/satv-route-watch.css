@@ -1,0 +1,159 @@
+@import url('fonts/amazon/AEmber.css');
+@import url('fonts/discord/ggsans/GGSans.css');
+@import url('fonts/satvplusfont/satvplusfont.css');
+@import url('fonts/premium/proximanova/ParamountPN.css');
+
+/* Origen original: /css/watch.css */
+/* ========= ========= CUSTOM FONTS — SATVPlus Font ======== ========== */
+
+
+
+
+@import url('https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400..700;1,400..700&display=swap');
+
+* {
+    font-family: AEmber !important;
+}
+
+body {
+    margin: 0;
+    background: #000;
+    height: 100%;
+    overflow: hidden;
+}
+
+#akira-player-root {
+    width: 100%;
+    min-height: 100vh;
+    background: #010101;
+    color: #fff;
+    position: relative;
+}
+
+/* Loader global de watch: SIEMPRE por encima de Akira */
+#watch-loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647 !important;
+    display: grid;
+    place-items: center;
+    background: #000000 !important;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+    pointer-events: all;
+    box-sizing: border-box;
+}
+
+#watch-loading-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.watch-loading-spinner {
+    width: 84px;
+    height: 84px;
+    border-radius: 999px;
+    border: 5px solid rgb(255 255 255 / 0%) !important;
+    border-top-color: #ffffff !important;
+    animation: satv-watch-spin 0.8s linear infinite;
+    box-sizing: border-box;
+}
+
+.watch-loading-text {
+    font-size: 14px !important;
+    opacity: 0.9;
+    color: #ffffff !important;
+    text-align: center;
+    max-width: min(92vw, 520px);
+    word-break: break-word;
+    margin-top: 12px;
+}
+
+@keyframes satv-watch-spin {
+    to { transform: rotate(360deg); }
+}
+
+.watch-error {
+    color: #fff;
+    padding: 16px;
+    margin: 16px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 12px;
+    white-space: pre-wrap;
+    line-height: 1.4;
+}
+
+.watch-fallback {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #000;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.watch-fallback-card {
+    width: min(1200px, 100%);
+    display: grid;
+    gap: 12px;
+}
+
+.watch-fallback-title {
+    font: 600 18px/1.3 system-ui, sans-serif;
+    color: #fff;
+    opacity: 0.95;
+}
+
+.watch-fallback-meta {
+    color: #93c5fd;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 10px;
+    margin: 0;
+    max-height: 240px;
+    overflow: auto;
+}
+
+.watch-fallback video {
+    width: 100%;
+    max-height: 78vh;
+    background: #000;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#satv-debug-overlay {
+    position: fixed;
+    right: 8px;
+    bottom: 8px;
+    width: min(560px, calc(100vw - 16px));
+    max-height: 42vh;
+    overflow: auto;
+    z-index: 999999;
+    background: rgba(0, 0, 0, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    color: #dbeafe;
+    padding: 10px;
+    display: none;
+    box-sizing: border-box;
+    backdrop-filter: blur(6px);
+}
+
+#satv-debug-overlay.visible { display: block; }
+#satv-debug-overlay .line { margin-bottom: 6px; white-space: pre-wrap; word-break: break-word; }
+#satv-debug-overlay .line.err { color: #fca5a5; }
+#satv-debug-overlay .line.warn { color: #fde68a; }
+#satv-debug-overlay .line.ok { color: #86efac; }
+
+.akira-video.boltrue { object-fit: contain !important; }
+
+/* Después del primer `playing`, waiting/stalled deja ver el video y muestra solo el spinner. */
+#watch-loading-overlay.middle-buffer {
+    background: transparent !important;
+}

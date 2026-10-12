@@ -11,17 +11,464 @@
   ],
   "rewrites": [
     {
-      "source": "^/css/([a-fA-F0-9-]{36})\\.css$",
-      "destination": "/api/css?id=$1"
+      "source": "^/css/a71e0a9d-[0-9a-fA-F-]{27}\\.css$",
+      "destination": "/css/vr-overlay.css"
     },
     {
-      "source": "^/css/([a-fA-F0-9-]{36})$",
-      "destination": "/api/css?id=$1"
+      "source": "^/css/a71e0a9d-[0-9a-fA-F-]{27}$",
+      "destination": "/css/vr-overlay.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/title(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-title.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/title(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-title.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/mylist(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-mylist.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/mylist(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-mylist.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/watch(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-watch.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/watch(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-watch.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/login(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-login.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/login(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-login.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/register(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-register.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/register(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-register.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/profiles(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-profiles.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/profiles(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-profiles.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/profile(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-profile.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/profile(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-profile.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/recovery(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-recovery.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/recovery(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-recovery.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/recovery\\-pass(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-recovery-pass.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/recovery\\-pass(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-recovery-pass.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/emailchange(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-emailchange.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/emailchange(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-emailchange.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/emailchange\\-approve(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-emailchange-approve.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/emailchange\\-approve(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-emailchange-approve.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/about(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-about.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/about(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-about.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/oldabout(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-oldabout.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/oldabout(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-oldabout.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/privacy(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-privacy.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/privacy(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-privacy.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/support(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-support.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/support(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-support.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/vr(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-vr.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "has": [
+        {
+          "type": "header",
+          "key": "referer",
+          "value": {
+            "re": "^https?://[^/]+/vr(?:\\.html)?(?:\\?.*)?$"
+          }
+        }
+      ],
+      "destination": "/css/satv-route-vr.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "destination": "/css/satv-route-index.css"
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "destination": "/css/satv-route-index.css"
     }
   ],
-  "functions": {
-    "api/css.js": {
-      "includeFiles": "css/*.css"
+  "headers": [
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store, max-age=0"
+        },
+        {
+          "key": "Vary",
+          "value": "Referer"
+        }
+      ]
+    },
+    {
+      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store, max-age=0"
+        },
+        {
+          "key": "Vary",
+          "value": "Referer"
+        }
+      ]
     }
-  }
+  ]
 }
