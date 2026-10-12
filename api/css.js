@@ -7,6 +7,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+// ID UUID reservado para vr-overlay.css; no colisiona con URLs de pagina.
+const VR_OVERLAY_UUID_PREFIX = 'a71e0a9d-';
+
 const CSS_BY_PAGE = Object.freeze({
   index: ['styles.css', 'initial.html.css'],
   title: ['styles.css', 'title.css'],
@@ -63,9 +66,12 @@ module.exports = (req, res) => {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     return res.end('CSS ID invalido');
   }
-  const page = resolvePage(req);
+  const isVrOverlay = slug.toLowerCase().startsWith(VR_OVERLAY_UUID_PREFIX);
+  const page = isVrOverlay ? 'vr-overlay' : resolvePage(req);
   try {
-    const body = combine(CSS_BY_PAGE[page]);
+    // El CSS por UUID devuelve el contenido REAL de los archivos existentes.
+    const files = isVrOverlay ? ['vr-overlay.css'] : CSS_BY_PAGE[page];
+    const body = combine(files);
     res.statusCode = 200;
     res.setHeader('Content-Type', 'text/css; charset=utf-8');
     // La misma ID puede usarse en /title y /watch: no almacenar por URL.

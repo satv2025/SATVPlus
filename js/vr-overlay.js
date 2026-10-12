@@ -6,7 +6,24 @@ const VR_HOST_ID = 'satv-vr-overlay-portal';
 const VR_CLOSED_KEY = 'satv:vr-midnight-overlay:closed:v1';
 const VR_PATHS = new Set(['/', '/index.html', '/title', '/title.html', '/mylist', '/mylist.html']);
 
-const VR_CSS_URL = "/css/vr-overlay.css";
+// CSS original: /css/vr-overlay.css. URL publica: UUID propio del overlay.
+// Los primeros 8 digitos identifican el paquete CSS para la funcion de Vercel;
+// el resto es aleatorio y conserva el formato UUID v4.
+const VR_CSS_UUID_NAMESPACE = 'a71e0a9d';
+function makeVrOverlayCssUrl() {
+  let id;
+  if (globalThis.crypto?.randomUUID) {
+    id = crypto.randomUUID();
+  } else {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    id = [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');
+  }
+  return '/css/' + VR_CSS_UUID_NAMESPACE + id.slice(8) + '.css';
+}
 
 const VR_HTML = `
 <section class="card" id="vr-card" aria-label="Lanzamiento de SATV+ VR en diciembre de 2026">
@@ -57,10 +74,10 @@ function mountVrOverlay() {
   root.innerHTML = VR_HTML;
   const stylesheet = document.createElement('link');
   stylesheet.rel = 'stylesheet';
-  stylesheet.href = VR_CSS_URL;
+  stylesheet.href = makeVrOverlayCssUrl();
   stylesheet.addEventListener('load', () => { host.hidden = false; }, {once: true});
   stylesheet.addEventListener('error', () => {
-    console.error('[SATV+ VR] No se pudo cargar el CSS externo:', VR_CSS_URL);
+    console.error('[SATV+ VR] No se pudo cargar el CSS externo:', stylesheet.href);
   }, {once: true});
   root.prepend(stylesheet);
   document.body.appendChild(host);
