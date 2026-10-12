@@ -11,15 +11,15 @@
   ],
   "rewrites": [
     {
-      "source": "^/css/a71e0a9d-[0-9a-fA-F-]{27}\\.css$",
+      "source": "/css/a71e0a9d-:suffix.css",
       "destination": "/css/vr-overlay.css"
     },
     {
-      "source": "^/css/a71e0a9d-[0-9a-fA-F-]{27}$",
+      "source": "/css/a71e0a9d-:suffix",
       "destination": "/css/vr-overlay.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -32,7 +32,7 @@
       "destination": "/css/satv-route-title.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -45,7 +45,7 @@
       "destination": "/css/satv-route-title.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -58,7 +58,7 @@
       "destination": "/css/satv-route-mylist.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -71,7 +71,7 @@
       "destination": "/css/satv-route-mylist.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -84,7 +84,7 @@
       "destination": "/css/satv-route-watch.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -97,7 +97,7 @@
       "destination": "/css/satv-route-watch.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -110,7 +110,7 @@
       "destination": "/css/satv-route-login.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -123,7 +123,7 @@
       "destination": "/css/satv-route-login.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -136,7 +136,7 @@
       "destination": "/css/satv-route-register.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -149,7 +149,7 @@
       "destination": "/css/satv-route-register.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -162,7 +162,7 @@
       "destination": "/css/satv-route-profiles.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -175,7 +175,7 @@
       "destination": "/css/satv-route-profiles.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -188,7 +188,7 @@
       "destination": "/css/satv-route-profile.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -201,7 +201,7 @@
       "destination": "/css/satv-route-profile.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -214,7 +214,7 @@
       "destination": "/css/satv-route-recovery.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -227,7 +227,7 @@
       "destination": "/css/satv-route-recovery.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -240,7 +240,7 @@
       "destination": "/css/satv-route-recovery-pass.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -253,7 +253,7 @@
       "destination": "/css/satv-route-recovery-pass.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -266,7 +266,7 @@
       "destination": "/css/satv-route-emailchange.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -279,7 +279,7 @@
       "destination": "/css/satv-route-emailchange.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -292,7 +292,7 @@
       "destination": "/css/satv-route-emailchange-approve.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -305,7 +305,7 @@
       "destination": "/css/satv-route-emailchange-approve.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -318,7 +318,7 @@
       "destination": "/css/satv-route-about.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -331,7 +331,7 @@
       "destination": "/css/satv-route-about.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -344,7 +344,7 @@
       "destination": "/css/satv-route-oldabout.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -357,7 +357,7 @@
       "destination": "/css/satv-route-oldabout.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -370,7 +370,7 @@
       "destination": "/css/satv-route-privacy.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -383,7 +383,7 @@
       "destination": "/css/satv-route-privacy.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -396,7 +396,7 @@
       "destination": "/css/satv-route-support.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -409,7 +409,7 @@
       "destination": "/css/satv-route-support.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "has": [
         {
           "type": "header",
@@ -422,7 +422,7 @@
       "destination": "/css/satv-route-vr.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "has": [
         {
           "type": "header",
@@ -435,17 +435,17 @@
       "destination": "/css/satv-route-vr.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "destination": "/css/satv-route-index.css"
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "destination": "/css/satv-route-index.css"
     }
   ],
   "headers": [
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\\.css$",
+      "source": "/css/:id.css",
       "headers": [
         {
           "key": "Cache-Control",
@@ -458,7 +458,7 @@
       ]
     },
     {
-      "source": "^/css/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$",
+      "source": "/css/:id",
       "headers": [
         {
           "key": "Cache-Control",

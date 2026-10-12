@@ -1,0 +1,18 @@
+SATV+ WEB - CORRECCION 404 EN CSS POR UUID
+
+Se modifico UNICAMENTE vercel.json. Todo el JavaScript, HTML y CSS se conserva identico al ZIP anterior.
+
+Causa: los rewrites tenian expresiones con ^ y $ en source; ahora usan rutas Vercel /css/:id.css y /css/:id.
+
+Reglas: UUID del overlay enrutado primero a /css/vr-overlay.css. Otros UUID se resuelven a la combinacion de estilos original segun Referer. Si no hay Referer, fallback al CSS de Inicio.
+
+Instalacion: reemplazar el vercel.json de la RAIZ del proyecto y desplegar en Vercel. No subir este ZIP como carpeta extra; colocar los contenidos del ZIP en la raiz del repositorio.
+
+Comprobacion DESPUES del deploy:
+  https://satvplus.com.ar/css/f17eec40-074f-421a-9194-a8f29f04b38e.css
+  https://satvplus.com.ar/css/a71e0a9d-eca4-438a-8e9a-51ad3bd5e399.css
+Ambas deben devolver HTTP 200 y text/css; la segunda es vr-overlay.css.
+
+Otros errores en la consola son independientes: Rest Countries CORS/301, Supabase 409 / FK lang_id_fkey, autoplay AbortError, preload warnings.
+
+Las URL pueden repetirse entre Title y Watch; Cache-Control: private, no-store en la ruta evita reutilizar CSS de la otra pagina. No modificar JS.
