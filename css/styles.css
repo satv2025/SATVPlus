@@ -3729,3 +3729,7 @@ body.catalog-section-page main > [hidden] { display: none !important; }
 *.reopen {
   font-family: AEmber !important;
 }
+
+div.card thumb img {
+  border-radius: var(--radius) !important;
+}
