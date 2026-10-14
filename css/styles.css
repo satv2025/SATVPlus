@@ -15,8 +15,8 @@
   --bg: #313131;
   --panel: #313131;
   --panel-2: #353535;
-  
-  
+
+
   --text: #f5f7fb;
   --muted: #b6bfd1;
   --line: rgba(255, 255, 255, .10);
@@ -39,14 +39,14 @@
   /* Layout */
   --container-max: 1920px;
   --ui-pad-x: clamp(10px, 2.4vw, 28px);
-  
-  
+
+
   --hero-pad-x: clamp(16px, 5vw, 58px);
   --hero-pad-y: clamp(16px, 3vw, 32px);
-  
+
 
   /* Hero */
-  
+
   --hero-fade-height: 45%;
   --hero-h-desktop: clamp(420px, 56vw, 946px);
   --hero-title-max: min(720px, 96%);
@@ -65,7 +65,7 @@
   --hover-tarjeta-radio: var(--media-card-radius);
   --hover-tarjeta-margen-seguro: 32px;
   /* Legado: la posición vertical ya no se aplica mediante esta variable. */
-  
+
   --hover-tarjeta-accion-alto: 52px;
   --hover-tarjeta-icono-play: 34px;
   --hover-tarjeta-boton-icono: 52px;
@@ -191,7 +191,7 @@ button,
 
 .nav-left,
 .nav-right,
-.nav-actions{
+.nav-actions {
   display: flex;
   align-items: center;
   min-width: 0;
@@ -242,7 +242,7 @@ img.brand-logo {
 
 .navlink,
 .btn,
-.control-center-trigger{
+.control-center-trigger {
   min-height: 38px;
   border-radius: var(--radius);
   text-decoration: none;
@@ -270,7 +270,7 @@ img.brand-logo {
   border-color: var(--line);
 }
 
-.btn{
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -287,14 +287,14 @@ img.brand-logo {
 
 .btn:hover,
 .btn.ghost:hover,
-a.pill.profile-link:hover{
+a.pill.profile-link:hover {
   color: #000;
   background: #dedede;
 }
 
 .btn:focus-visible,
 .navlink:focus-visible,
-.control-center-trigger:focus-visible{
+.control-center-trigger:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 3px;
 }
@@ -493,7 +493,7 @@ a.pill.profile-link:hover{
 }
 
 /* El volumen vive en: .home-hero-right > .home-hero-actions > .home-hero-volume-btn */
-.home-hero-right > .home-hero-actions {
+.home-hero-right>.home-hero-actions {
   width: auto;
   min-width: 0;
   margin: 0;
@@ -583,9 +583,9 @@ a.pill.profile-link:hover{
   fill: currentColor;
 }
 
-.home-hero-right > .home-hero-actions > .home-hero-volume-btn {
-    margin: 0;
-position: relative;
+.home-hero-right>.home-hero-actions>.home-hero-volume-btn {
+  margin: 0;
+  position: relative;
   z-index: 50;
   flex: 0 0 auto;
   width: var(--hero-volume-size, 56px);
@@ -607,17 +607,17 @@ position: relative;
   -webkit-appearance: none;
 }
 
-.home-hero-right > .home-hero-actions > .home-hero-volume-btn:hover {
+.home-hero-right>.home-hero-actions>.home-hero-volume-btn:hover {
   background: rgba(51, 51, 51, .5);
   border-color: #fff;
 }
 
-.home-hero-right > .home-hero-actions > .home-hero-volume-btn:focus-visible {
+.home-hero-right>.home-hero-actions>.home-hero-volume-btn:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 3px;
 }
 
-.home-hero-right > .home-hero-actions > .home-hero-volume-btn img {
+.home-hero-right>.home-hero-actions>.home-hero-volume-btn img {
   display: block;
   width: 72%;
   height: 72%;
@@ -1202,7 +1202,7 @@ textarea {
 /* ================= PLAYER / LEGACY EPISODES ================= */
 
 
-media-player{
+media-player {
   display: block;
   width: 100%;
   height: 100%;
@@ -2660,13 +2660,13 @@ button.alerts-tab:hover {
   background: #fff;
 }
 
-.fa-magnifying-glass::before{
+.fa-magnifying-glass::before {
   line-height: 1;
 }
 
 .episode-card,
 .episode-thumb-wrap,
-.more-card-thumb-wrap{
+.more-card-thumb-wrap {
   border-radius: var(--media-card-radius);
 }
 
@@ -2731,7 +2731,7 @@ button.alerts-tab:hover {
     grid-area: left;
   }
 
-  
+
 
   .nav-right {
     grid-area: right;
@@ -2778,7 +2778,7 @@ button.alerts-tab:hover {
   }
 
   .nav-left,
-.nav-right{
+  .nav-right {
     width: 100%;
     justify-content: flex-start;
   }
@@ -2798,39 +2798,39 @@ button.alerts-tab:hover {
     padding-top: 18px;
   }
 
-.home-hero-layout {
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 0;
-}
+  .home-hero-layout {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0;
+  }
 
-.home-hero-right {
-  flex: 0 0 auto;
-  width: auto;
-  min-width: var(--hero-volume-size);
-  margin: 0 0 0 auto;
-  padding: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  align-self: flex-end;
-}
+  .home-hero-right {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: var(--hero-volume-size);
+    margin: 0 0 0 auto;
+    padding: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    align-self: flex-end;
+  }
 
-.home-hero-right > .home-hero-actions {
-  width: auto;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  flex-wrap: nowrap;
-  gap: 0;
-}
+  .home-hero-right>.home-hero-actions {
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 0;
+  }
 
   .home-hero-left,
   .home-hero-synopsis {
@@ -2874,7 +2874,7 @@ button.alerts-tab:hover {
     flex-wrap: wrap;
   }
 
-  
+
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -2991,10 +2991,12 @@ button.alerts-tab:hover {
   gap: 10px;
 }
 
-a:visited {text-decoration: none;}
+a:visited {
+  text-decoration: none;
+}
 
 a {
-    text-decoration: none;
+  text-decoration: none;
 }
 
 .control-center-modal .alerts-item-thumb,
@@ -3196,7 +3198,7 @@ header.topnav {
   gap: clamp(5px, .6vw, 11px);
 }
 
-.topnav .nav-left > a.navlink {
+.topnav .nav-left>a.navlink {
   padding: 3px 11px 3px 11px;
   min-height: 33px;
   border: 1px solid transparent;
@@ -3208,16 +3210,16 @@ header.topnav {
   transition: color .16s ease, background-color .16s ease;
 }
 
-.topnav .nav-left > a.navlink:hover {
+.topnav .nav-left>a.navlink:hover {
   background: #fff;
   color: #000;
   border-color: transparent;
 }
 
 .navlink.active {
-    backdrop-filter: blur(17px);
-    color: #fff;
-    background: transparent;
+  backdrop-filter: blur(17px);
+  color: #fff;
+  background: transparent;
 }
 
 .topnav .nav-left .nav-sports {
@@ -3242,7 +3244,7 @@ header.topnav {
 }
 
 /* Áreas pulsables iguales en altura, con fondo solo en hover. */
-.topnav .nav-left .nav-sports > a.navlink {
+.topnav .nav-left .nav-sports>a.navlink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3256,8 +3258,8 @@ header.topnav {
   transition: background-color .16s ease;
 }
 
-.topnav .nav-left .nav-sports > a.navlink:hover,
-.topnav .nav-left .nav-sports > a.navlink:focus-visible {
+.topnav .nav-left .nav-sports>a.navlink:hover,
+.topnav .nav-left .nav-sports>a.navlink:focus-visible {
   background: #fff;
   border-color: transparent;
 }
@@ -3278,14 +3280,25 @@ header.topnav {
   transition: opacity .16s ease;
 }
 
-.topnav .nav-left .nav-sports > a.navlink:hover .nav-sports-logo {
+.topnav .nav-left .nav-sports>a.navlink:hover .nav-sports-logo {
   opacity: 1;
 }
 
-.topnav .nav-left .navlink-tycsports .nav-sports-logo { max-width: 83px; }
-.topnav .nav-left .navlink-tntsportspremium .nav-sports-logo { max-width: 108px; }
-.topnav .nav-left .navlink-espnpremium .nav-sports-logo { max-width: 98px; }
-.topnav .nav-left .navlink-espn .nav-sports-logo { max-width: 75px; }
+.topnav .nav-left .navlink-tycsports .nav-sports-logo {
+  max-width: 83px;
+}
+
+.topnav .nav-left .navlink-tntsportspremium .nav-sports-logo {
+  max-width: 108px;
+}
+
+.topnav .nav-left .navlink-espnpremium .nav-sports-logo {
+  max-width: 98px;
+}
+
+.topnav .nav-left .navlink-espn .nav-sports-logo {
+  max-width: 75px;
+}
 
 /* Notebook: el buscador pasa a su propia fila para evitar colisiones.
    Mayor especificidad por los !important de initial.html.css. */
@@ -3301,14 +3314,14 @@ header.topnav {
     row-gap: 4px !important;
   }
 
-  .topnav #topnav.nav-inner > .nav-left {
+  .topnav #topnav.nav-inner>.nav-left {
     grid-area: left !important;
     min-width: 0 !important;
     width: 100% !important;
     flex-wrap: wrap !important;
   }
 
-  .topnav #topnav.nav-inner > #nav-right {
+  .topnav #topnav.nav-inner>#nav-right {
     grid-area: right !important;
     grid-column: 1 / -1 !important;
     grid-row: 2 !important;
@@ -3326,8 +3339,9 @@ header.topnav {
 }
 
 @media (max-width: 760px) {
+
   /* SATV+, Inicio y Mi Lista arriba; canales en la fila siguiente. */
-  .topnav #topnav.nav-inner > .nav-left {
+  .topnav #topnav.nav-inner>.nav-left {
     column-gap: 5px !important;
     row-gap: 4px !important;
   }
@@ -3355,7 +3369,7 @@ header.topnav {
     padding-block: 9px;
   }
 
-  .topnav #topnav.nav-inner > #nav-right {
+  .topnav #topnav.nav-inner>#nav-right {
     flex-wrap: wrap !important;
     justify-content: flex-start !important;
     gap: 7px;
@@ -3366,7 +3380,7 @@ header.topnav {
     flex: 1 1 200px;
   }
 
-  .topnav .nav-left > a.navlink {
+  .topnav .nav-left>a.navlink {
     padding: 7px 8px;
     min-height: 36px;
     font-size: 13px;
@@ -3385,9 +3399,11 @@ header.topnav {
     padding: 2px 0;
   }
 
-  .topnav .nav-left .nav-sports::-webkit-scrollbar { display: none; }
+  .topnav .nav-left .nav-sports::-webkit-scrollbar {
+    display: none;
+  }
 
-  .topnav .nav-left .nav-sports > a.navlink {
+  .topnav .nav-left .nav-sports>a.navlink {
     min-height: 36px;
     padding: 5px 8px;
   }
@@ -3399,41 +3415,86 @@ header.topnav {
 }
 
 @media (max-width: 380px) {
-  .topnav .nav-left .nav-sports > a.navlink { padding: 5px 6px; }
-  .topnav .nav-left .nav-sports .nav-sports-logo { height: 19px; }
+  .topnav .nav-left .nav-sports>a.navlink {
+    padding: 5px 6px;
+  }
+
+  .topnav .nav-left .nav-sports .nav-sports-logo {
+    height: 19px;
+  }
 }
 
 
 /* Secciones y espacio para Películas / Series / Deportes.
    Se conservan el fondo transparente y los hover del CSS enviado. */
-.topnav .nav-left > a.navlink { flex: 0 0 auto; white-space: nowrap; }
-.topnav .nav-left .nav-sports > a.navlink.active { background: #fff; }
-.topnav .nav-left .nav-sports > a.navlink-espnpremium.active { background: #f00; }
-.topnav .nav-left a.navlink:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-body.catalog-section-page header.topnav { position: relative !important; }
-body.catalog-section-page main > [hidden] { display: none !important; }
-.catalog-section-view { padding-block: 24px 48px; min-height: 55vh; }
-.catalog-section-view .section-title { font-size: clamp(24px, 3vw, 36px); }
-.catalog-section-view [data-section-status] { margin: 0 0 20px; }
-.catalog-section-view [data-section-retry][hidden] { display: none; }
-.catalog-section-view [data-section-retry] { margin-bottom: 20px; }
+.topnav .nav-left>a.navlink {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.topnav .nav-left .nav-sports>a.navlink.active {
+  background: #fff;
+}
+
+.topnav .nav-left .nav-sports>a.navlink-espnpremium.active {
+  background: #f00;
+}
+
+.topnav .nav-left a.navlink:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+body.catalog-section-page header.topnav {
+  position: relative !important;
+}
+
+body.catalog-section-page main>[hidden] {
+  display: none !important;
+}
+
+.catalog-section-view {
+  padding-block: 24px 48px;
+  min-height: 55vh;
+}
+
+.catalog-section-view .section-title {
+  font-size: clamp(24px, 3vw, 36px);
+}
+
+.catalog-section-view [data-section-status] {
+  margin: 0 0 20px;
+}
+
+.catalog-section-view [data-section-retry][hidden] {
+  display: none;
+}
+
+.catalog-section-view [data-section-retry] {
+  margin-bottom: 20px;
+}
 
 /* La nueva cantidad de opciones necesita dos filas antes de 1800px. */
 @media (max-width: 1800px) {
-  header.topnav { position: relative !important; }
+  header.topnav {
+    position: relative !important;
+  }
+
   .topnav #topnav.nav-inner {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) !important;
     grid-template-areas: "left" "right" !important;
     row-gap: 4px !important;
   }
-  .topnav #topnav.nav-inner > .nav-left {
+
+  .topnav #topnav.nav-inner>.nav-left {
     grid-area: left !important;
     min-width: 0 !important;
     width: 100% !important;
     flex-wrap: wrap !important;
   }
-  .topnav #topnav.nav-inner > #nav-right {
+
+  .topnav #topnav.nav-inner>#nav-right {
     grid-area: right !important;
     grid-column: 1 / -1 !important;
     grid-row: 2 !important;
@@ -3441,14 +3502,18 @@ body.catalog-section-page main > [hidden] { display: none !important; }
     justify-content: space-between !important;
     width: 100% !important;
   }
+
   .topnav #nav-right .topnav-search-wrap {
     max-width: 360px !important;
     min-width: min(160px, 100%);
     flex: 1 1 220px;
   }
 }
+
 @media (max-width: 640px) {
-  .topnav #nav-right .topnav-search-wrap { max-width: none !important; }
+  .topnav #nav-right .topnav-search-wrap {
+    max-width: none !important;
+  }
 }
 
 
@@ -3456,11 +3521,13 @@ body.catalog-section-page main > [hidden] { display: none !important; }
 .catalog-section-view [data-section-grid] {
   display: grid;
 }
+
 .catalog-section-view [data-section-grid][hidden],
 .catalog-section-view [data-section-empty][hidden],
 .catalog-section-view [data-section-status][hidden] {
   display: none !important;
 }
+
 .catalog-section-view .catalog-section-empty {
   display: flex;
   align-items: center;
@@ -3471,7 +3538,11 @@ body.catalog-section-page main > [hidden] { display: none !important; }
   color: #fff;
   text-align: center;
 }
-.catalog-section-view .catalog-section-empty-copy { max-width: 880px; }
+
+.catalog-section-view .catalog-section-empty-copy {
+  max-width: 880px;
+}
+
 .catalog-section-view .catalog-section-empty h2 {
   margin: 0;
   font-size: clamp(26px, 3.2vw, 46px);
@@ -3492,15 +3563,16 @@ body.catalog-section-page main > [hidden] { display: none !important; }
 
 /* Mundial 2026: negro, coral, violeta y verde menta del marcador de referencia.
    Las franjas quedan dentro del botón para no recortarse en el nav móvil. */
-.topnav .nav-left .nav-sports > a.navlink-mundial2026 {
+.topnav .nav-left .nav-sports>a.navlink-mundial2026 {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   border-radius: 14px;
   transition: background-color .16s ease, box-shadow .16s ease;
 }
-.topnav .nav-left .nav-sports > a.navlink-mundial2026::before,
-.topnav .nav-left .nav-sports > a.navlink-mundial2026::after {
+
+.topnav .nav-left .nav-sports>a.navlink-mundial2026::before,
+.topnav .nav-left .nav-sports>a.navlink-mundial2026::after {
   content: "";
   position: absolute;
   inset-block: 0;
@@ -3509,54 +3581,61 @@ body.catalog-section-page main > [hidden] { display: none !important; }
   pointer-events: none;
   transition: opacity .16s ease;
 }
-.topnav .nav-left .nav-sports > a.navlink-mundial2026::before {
+
+.topnav .nav-left .nav-sports>a.navlink-mundial2026::before {
   left: 0;
   background: #f2a194;
 }
-.topnav .nav-left .nav-sports > a.navlink-mundial2026::after {
+
+.topnav .nav-left .nav-sports>a.navlink-mundial2026::after {
   right: 0;
   background: #b980e8;
 }
-.topnav .nav-left .nav-sports > a.navlink-mundial2026:hover,
-.topnav .nav-left .nav-sports > a.navlink-mundial2026:focus-visible,
-.topnav .nav-left .nav-sports > a.navlink-mundial2026.active {
-  background: linear-gradient(90deg, #f2a194 0%, #f2a194 28%, #3fffc1 50%, #b980e8 78%, #b980e8 100%)
-                left bottom / 100% 3px no-repeat,
-              #080a0b;
+
+.topnav .nav-left .nav-sports>a.navlink-mundial2026:hover,
+.topnav .nav-left .nav-sports>a.navlink-mundial2026:focus-visible,
+.topnav .nav-left .nav-sports>a.navlink-mundial2026.active {
+  background: linear-gradient(90deg, #f2a194 0%, #f2a194 28%, #3fffc1 50%, #b980e8 78%, #b980e8 100%) left bottom / 100% 3px no-repeat,
+    #080a0b;
   border-color: transparent;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2),
-              inset 0 -1px 0 rgba(255, 255, 255, .12);
+    inset 0 -1px 0 rgba(255, 255, 255, .12);
 }
-.topnav .nav-left .nav-sports > a.navlink-mundial2026:hover::before,
-.topnav .nav-left .nav-sports > a.navlink-mundial2026:hover::after,
-.topnav .nav-left .nav-sports > a.navlink-mundial2026:focus-visible::before,
-.topnav .nav-left .nav-sports > a.navlink-mundial2026:focus-visible::after,
-.topnav .nav-left .nav-sports > a.navlink-mundial2026.active::before,
-.topnav .nav-left .nav-sports > a.navlink-mundial2026.active::after {
+
+.topnav .nav-left .nav-sports>a.navlink-mundial2026:hover::before,
+.topnav .nav-left .nav-sports>a.navlink-mundial2026:hover::after,
+.topnav .nav-left .nav-sports>a.navlink-mundial2026:focus-visible::before,
+.topnav .nav-left .nav-sports>a.navlink-mundial2026:focus-visible::after,
+.topnav .nav-left .nav-sports>a.navlink-mundial2026.active::before,
+.topnav .nav-left .nav-sports>a.navlink-mundial2026.active::after {
   opacity: 1;
 }
-.topnav .nav-left .nav-sports > a.navlink-mundial2026 .nav-sports-logo {
+
+.topnav .nav-left .nav-sports>a.navlink-mundial2026 .nav-sports-logo {
   position: relative;
   z-index: 1;
   max-width: 86px;
 }
+
 @media (max-width: 640px) {
-  .topnav .nav-left .nav-sports > a.navlink-mundial2026 .nav-sports-logo {
+  .topnav .nav-left .nav-sports>a.navlink-mundial2026 .nav-sports-logo {
     max-width: 70px;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .topnav .nav-left .nav-sports > a.navlink-mundial2026,
-  .topnav .nav-left .nav-sports > a.navlink-mundial2026::before,
-  .topnav .nav-left .nav-sports > a.navlink-mundial2026::after,
-  .topnav .nav-left .nav-sports > a.navlink-mundial2026 .nav-sports-logo {
+
+  .topnav .nav-left .nav-sports>a.navlink-mundial2026,
+  .topnav .nav-left .nav-sports>a.navlink-mundial2026::before,
+  .topnav .nav-left .nav-sports>a.navlink-mundial2026::after,
+  .topnav .nav-left .nav-sports>a.navlink-mundial2026 .nav-sports-logo {
     transition: none;
   }
 }
 
 
 /* Miniaturas: carga nativa según cercanía a la pantalla; mismo recorte 16:9. */
-.card > .thumb > img.card-thumbnail-image {
+.card>.thumb>img.card-thumbnail-image {
   display: block;
   position: absolute;
   inset: 0;
@@ -3565,24 +3644,30 @@ body.catalog-section-page main > [hidden] { display: none !important; }
   object-fit: cover;
   object-position: center;
   pointer-events: none;
+  border-radius: var(--radius) !important;
 }
 
 
 /* CONMEBOL: logos locales incluidos y estados visibles sobre fondo oscuro. */
-.topnav .nav-left .nav-sports > a.navlink-libertadores,
-.topnav .nav-left .nav-sports > a.navlink-sudamericana {
+.topnav .nav-left .nav-sports>a.navlink-libertadores,
+.topnav .nav-left .nav-sports>a.navlink-sudamericana {
   border-radius: 5px;
   gap: 7px;
   --cup-accent: #c9aa63;
 }
-.topnav .nav-left .nav-sports > a.navlink-sudamericana { --cup-accent: #a6cdd3; }
-.topnav .nav-left .nav-sports > a.navlink-libertadores .nav-sports-logo,
-.topnav .nav-left .nav-sports > a.navlink-sudamericana .nav-sports-logo {
+
+.topnav .nav-left .nav-sports>a.navlink-sudamericana {
+  --cup-accent: #a6cdd3;
+}
+
+.topnav .nav-left .nav-sports>a.navlink-libertadores .nav-sports-logo,
+.topnav .nav-left .nav-sports>a.navlink-sudamericana .nav-sports-logo {
   height: 28px;
   width: auto;
   max-width: 40px;
   object-fit: contain;
 }
+
 .topnav .nav-cup-name {
   color: #f4f5f7;
   font-size: 12px;
@@ -3590,15 +3675,17 @@ body.catalog-section-page main > [hidden] { display: none !important; }
   letter-spacing: .2px;
   white-space: nowrap;
 }
-.topnav .nav-left .nav-sports > a.navlink-libertadores:hover,
-.topnav .nav-left .nav-sports > a.navlink-libertadores:focus-visible,
-.topnav .nav-left .nav-sports > a.navlink-libertadores.active,
-.topnav .nav-left .nav-sports > a.navlink-sudamericana:hover,
-.topnav .nav-left .nav-sports > a.navlink-sudamericana:focus-visible,
-.topnav .nav-left .nav-sports > a.navlink-sudamericana.active {
+
+.topnav .nav-left .nav-sports>a.navlink-libertadores:hover,
+.topnav .nav-left .nav-sports>a.navlink-libertadores:focus-visible,
+.topnav .nav-left .nav-sports>a.navlink-libertadores.active,
+.topnav .nav-left .nav-sports>a.navlink-sudamericana:hover,
+.topnav .nav-left .nav-sports>a.navlink-sudamericana:focus-visible,
+.topnav .nav-left .nav-sports>a.navlink-sudamericana.active {
   background: #10191b;
   box-shadow: inset 0 -3px 0 var(--cup-accent);
 }
+
 .catalog-section-view .catalog-section-summary {
   max-width: 950px;
   margin: -4px 0 22px;
@@ -3606,12 +3693,17 @@ body.catalog-section-page main > [hidden] { display: none !important; }
   font-size: clamp(14px, 1.2vw, 16px);
   line-height: 1.6;
 }
+
 @media (min-width: 641px) {
-  .topnav .nav-left .nav-sports { flex-wrap: wrap; }
+  .topnav .nav-left .nav-sports {
+    flex-wrap: wrap;
+  }
 }
+
 @media (max-width: 640px) {
-  .topnav .nav-left .nav-sports > a.navlink-libertadores .nav-sports-logo,
-  .topnav .nav-left .nav-sports > a.navlink-sudamericana .nav-sports-logo {
+
+  .topnav .nav-left .nav-sports>a.navlink-libertadores .nav-sports-logo,
+  .topnav .nav-left .nav-sports>a.navlink-sudamericana .nav-sports-logo {
     height: 25px;
     max-width: 36px;
   }
@@ -3621,109 +3713,235 @@ body.catalog-section-page main > [hidden] { display: none !important; }
    CONMEBOL 2026 — FIXTURE INDEPENDIENTE DEL CATÁLOGO
    Datos editables en js/cupFixtures.js
 ============================================== */
-.catalog-section-view .cup-fixtures { margin: 10px 0 34px; --fixture-accent: #d6b66d; }
-.catalog-section-view .cup-fixtures-sudamericana { --fixture-accent: #9acbd8; }
+.catalog-section-view .cup-fixtures {
+  margin: 10px 0 34px;
+  --fixture-accent: #d6b66d;
+}
+
+.catalog-section-view .cup-fixtures-sudamericana {
+  --fixture-accent: #9acbd8;
+}
+
 .catalog-section-view .cup-fixtures-heading {
-  display: flex; align-items: end; justify-content: space-between; gap: 16px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
   margin: 0 0 18px;
 }
+
 .catalog-section-view .cup-fixtures-kicker {
-  margin: 0 0 5px; color: var(--fixture-accent); letter-spacing: .16em;
-  font-size: 11px; font-weight: 800;
+  margin: 0 0 5px;
+  color: var(--fixture-accent);
+  letter-spacing: .16em;
+  font-size: 11px;
+  font-weight: 800;
 }
+
 .catalog-section-view .cup-fixtures-heading h2,
 .catalog-section-view .catalog-section-transmissions h2 {
-  margin: 0; color: #f9fafb; font-size: clamp(21px, 2vw, 27px);
-  line-height: 1.2; font-weight: 800;
+  margin: 0;
+  color: #f9fafb;
+  font-size: clamp(21px, 2vw, 27px);
+  line-height: 1.2;
+  font-weight: 800;
 }
+
 .catalog-section-view .cup-fixtures-count {
-  color: #bbc1ca; font-size: 12px; font-weight: 700;
-  border: 1px solid rgba(255,255,255,.13); padding: 7px 12px;
-  border-radius: 999px; white-space: nowrap;
+  color: #bbc1ca;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, .13);
+  padding: 7px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
+
 .catalog-section-view .cup-fixture-list {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
 }
+
 .catalog-section-view .cup-fixture-card {
-  min-width: 0; overflow: hidden; border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.13);
-  background: linear-gradient(145deg, rgba(255,255,255,.055), transparent 52%), #11151c;
-  box-shadow: 0 10px 26px rgba(0,0,0,.14);
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .055), transparent 52%), #11151c;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .14);
 }
+
 .catalog-section-view .cup-fixture-top {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 10px; padding: 14px 17px;
-  border-bottom: 1px solid rgba(255,255,255,.09);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 17px;
+  border-bottom: 1px solid rgba(255, 255, 255, .09);
 }
+
 .catalog-section-view .cup-fixture-phase {
-  font-size: 12px; font-weight: 800; color: var(--fixture-accent);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--fixture-accent);
   letter-spacing: .02em;
 }
+
 .catalog-section-view .cup-fixture-year {
-  font-size: 11px; color: #aeb6c0; font-weight: 750;
-  border: 1px solid rgba(255,255,255,.12); border-radius: 5px; padding: 3px 6px;
+  font-size: 11px;
+  color: #aeb6c0;
+  font-weight: 750;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 5px;
+  padding: 3px 6px;
 }
+
 .catalog-section-view .cup-fixture-match {
-  display: grid; grid-template-columns: minmax(0,1fr) 34px minmax(0,1fr);
-  gap: 10px; align-items: center; padding: 22px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 22px 16px;
 }
+
 .catalog-section-view .cup-fixture-team {
-  display: flex; flex-direction: column; align-items: center; text-align: center;
-  min-width: 0; gap: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+  gap: 12px;
 }
+
 .catalog-section-view .cup-fixture-shield {
-  height: 66px; width: 66px; display: grid; place-items: center;
-  border-radius: 12px; background: rgba(255,255,255,.055);
+  height: 66px;
+  width: 66px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .055);
 }
+
 .catalog-section-view .cup-fixture-shield img {
-  display: block; width: 58px; height: 58px; object-fit: contain;
+  display: block;
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
 }
+
 .catalog-section-view .cup-fixture-team strong {
-  color: #f7f8fb; font-size: 14px; font-weight: 800;
-  line-height: 1.3; min-height: 2.6em; overflow-wrap: anywhere;
+  color: #f7f8fb;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  min-height: 2.6em;
+  overflow-wrap: anywhere;
 }
+
 .catalog-section-view .cup-fixture-versus {
-  display: grid; place-items: center; width: 33px; height: 33px;
-  border-radius: 50%; font-size: 11px; font-weight: 900;
-  color: #e7eaf0; background: #242b37;
+  display: grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 900;
+  color: #e7eaf0;
+  background: #242b37;
 }
+
 .catalog-section-view .cup-fixture-details {
-  border-top: 1px solid rgba(255,255,255,.09);
-  display: grid; grid-template-columns: repeat(2,minmax(0,1fr));
+  border-top: 1px solid rgba(255, 255, 255, .09);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
 .catalog-section-view .cup-fixture-detail {
-  display: flex; align-items: flex-start; gap: 9px;
-  min-width: 0; padding: 14px 13px;
-  border-bottom: 1px solid rgba(255,255,255,.07);
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+  padding: 14px 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
 }
-.catalog-section-view .cup-fixture-detail:nth-child(odd) { border-right: 1px solid rgba(255,255,255,.07); }
-.catalog-section-view .cup-fixture-detail:nth-last-child(-n+2) { border-bottom: none; }
-.catalog-section-view .cup-fixture-detail > i {
-  margin-top: 2px; flex-shrink: 0; font-size: 13px; width: 15px;
-  text-align: center; color: var(--fixture-accent);
+
+.catalog-section-view .cup-fixture-detail:nth-child(odd) {
+  border-right: 1px solid rgba(255, 255, 255, .07);
 }
-.catalog-section-view .cup-fixture-detail div { min-width: 0; }
+
+.catalog-section-view .cup-fixture-detail:nth-last-child(-n+2) {
+  border-bottom: none;
+}
+
+.catalog-section-view .cup-fixture-detail>i {
+  margin-top: 2px;
+  flex-shrink: 0;
+  font-size: 13px;
+  width: 15px;
+  text-align: center;
+  color: var(--fixture-accent);
+}
+
+.catalog-section-view .cup-fixture-detail div {
+  min-width: 0;
+}
+
 .catalog-section-view .cup-fixture-detail span {
-  display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
   color: #a5afbd;
 }
+
 .catalog-section-view .cup-fixture-detail strong {
-  display: block; color: #e5e9ef; line-height: 1.45; font-size: 12px;
-  font-weight: 700; overflow-wrap: anywhere;
+  display: block;
+  color: #e5e9ef;
+  line-height: 1.45;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
+
 .catalog-section-view .cup-fixtures-footnote {
-  margin: 13px 0 0; color: #9ea8b5; font-size: 12px; line-height: 1.5;
+  margin: 13px 0 0;
+  color: #9ea8b5;
+  font-size: 12px;
+  line-height: 1.5;
 }
-.catalog-section-view .catalog-section-transmissions { margin: 34px 0 18px; }
-.catalog-section-view .catalog-section-transmissions[hidden] { display: none; }
+
+.catalog-section-view .catalog-section-transmissions {
+  margin: 34px 0 18px;
+}
+
+.catalog-section-view .catalog-section-transmissions[hidden] {
+  display: none;
+}
+
 @media (max-width: 1150px) {
-  .catalog-section-view .cup-fixture-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .catalog-section-view .cup-fixture-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
+
 @media (max-width: 680px) {
-  .catalog-section-view .cup-fixture-list { grid-template-columns: minmax(0,1fr); gap: 14px; }
-  .catalog-section-view .cup-fixture-match { padding: 21px 16px; }
-  .catalog-section-view .cup-fixture-detail { padding: 13px 12px; }
-  .catalog-section-view .cup-fixtures-count { font-size: 11px; }
+  .catalog-section-view .cup-fixture-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .catalog-section-view .cup-fixture-match {
+    padding: 21px 16px;
+  }
+
+  .catalog-section-view .cup-fixture-detail {
+    padding: 13px 12px;
+  }
+
+  .catalog-section-view .cup-fixtures-count {
+    font-size: 11px;
+  }
 }
 
 *.reopen {
