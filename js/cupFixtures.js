@@ -29,7 +29,7 @@ const CUP_FIXTURES = {
     competition: 'CONMEBOL Sudamericana 2026',
     games: [
       { id: 'sud-semi-ida', phase: 'Semifinal · Ida', a: 'boca', b: 'vasco', date: '13 de octubre de 2026', hour: '21:30', stadium: 'Estadio Alberto J. Armando (La Bombonera) · Buenos Aires, Argentina', referee: 'Piero Maza (Chile)' },
-      { id: 'sud-semi-vuelta', phase: 'Semifinal · Vuelta', a: 'vasco', b: 'boca', date: '20 de octubre de 2026', hour: '21:30', stadium: 'Sin definir (Río de Janeiro, Brasil)', referee: 'Sin definir' },
+      { id: 'sud-semi-vuelta', phase: 'Semifinal · Vuelta', a: 'vasco', b: 'boca', date: '20 de octubre de 2026', hour: '21:30', stadium: 'Maracaná (Río de Janeiro, Brasil)', referee: 'Sin definir' },
       { id: 'sud-final', phase: 'Final', a: 'tbd', b: 'tbd', date: '21 de noviembre de 2026', hour: 'Sin definir', stadium: 'Estadio Metropolitano Roberto Meléndez · Barranquilla, Colombia', referee: 'Sin definir' },
     ],
   },
