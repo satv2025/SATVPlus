@@ -973,7 +973,7 @@ a.pill.profile-link:hover {
   max-width: calc(100% - 16px);
   padding: 4px 8px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 0 var(--radius) 0 0;
   background: rgba(0, 0, 0, .74);
   color: #fff;
   font-size: 14px;
