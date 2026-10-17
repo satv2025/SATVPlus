@@ -5,6 +5,7 @@
 @import url("fonts/discord/ggsans/GGSans.css");
 @import url("fonts/satvplusfont/satvplusfont.css");
 @import url("fonts/premium/proximanova/ParamountPN.css");
+@import url("https://solargentinotv.com.ar/assets/fonts/Gilroy/Gilroy.css");
 @import url("https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400..700;1,400..700&display=swap");
 
 /* =========================================================
@@ -80,7 +81,7 @@
 }
 
 * {
-  font-family: AEmber !important;
+  font-family: Gilroy !important;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -3945,5 +3946,5 @@ body.catalog-section-page main>[hidden] {
 }
 
 *.reopen {
-  font-family: AEmber !important;
+  font-family: Gilroy !important;
 }

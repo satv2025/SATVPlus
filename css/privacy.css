@@ -9,6 +9,7 @@
 /* ================= CUSTOM FONT ================= */
 
 @import url("fonts/amazon/AEmber.css");
+@import url("https://solargentinotv.com.ar/assets/fonts/Gilroy/Gilroy.css");
 
 
 /* ================= ROOT ================= */
@@ -37,7 +38,7 @@
 *::after {
   box-sizing: border-box;
 
-  font-family: AEmber !important;
+  font-family: Gilroy !important;
 }
 
 html,
