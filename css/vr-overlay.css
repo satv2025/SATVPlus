@@ -60,14 +60,12 @@
   gap: 10px;
   font-size: 13px;
   font-weight: 900;
-  letter-spacing: .035em;
   color: #fff;
 }
 
 .logo strong {
   color: #fff;
   font-size: 19px;
-  letter-spacing: -.06em;
 }
 
 .close {
@@ -100,7 +98,6 @@
 .label {
   font-size: 11px;
   font-weight: 900;
-  letter-spacing: .12em;
   color: #fff;
   margin-bottom: 13px;
 }
@@ -110,7 +107,6 @@ h2 {
   font-size: clamp(24px, 3vw, 31px);
   font-weight: 950;
   line-height: 1.08;
-  letter-spacing: -.045em;
   color: #fff;
 }
 
@@ -148,7 +144,6 @@ h2 span {
 .date small {
   font-size: 9px;
   font-weight: 900;
-  letter-spacing: .09em;
   color: #fff;
 }
 
@@ -170,7 +165,6 @@ h2 span {
   text-decoration: none;
   font-size: 11px;
   font-weight: 950;
-  letter-spacing: .035em;
   border-radius: 6px;
   border: 1px solid #466be2;
   background: #2143b3;
