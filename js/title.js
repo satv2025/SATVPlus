@@ -1034,17 +1034,23 @@ function formatLiveTimeEs(d) {
 }
 
 function formatCountdown(diffMs) {
-  const total = Math.max(0, Math.floor(diffMs / 1000));
+  const total = Math.max(0, Math.ceil(diffMs / 1000));
   const days = Math.floor(total / 86400);
   const hours = Math.floor((total % 86400) / 3600);
   const mins = Math.floor((total % 3600) / 60);
   const secs = total % 60;
 
+  const dd = String(days).padStart(2, '0');
   const hh = String(hours).padStart(2, '0');
   const mm = String(mins).padStart(2, '0');
   const ss = String(secs).padStart(2, '0');
 
-  return days > 0 ? `${days}d ${hh}:${mm}:${ss}` : `${hh}:${mm}:${ss}`;
+  // Se eliminan solo las unidades iniciales que ya llegaron a cero.
+  // Los ceros intermedios se conservan para no confundir días/horas/minutos.
+  if (days > 0) return `${dd}:${hh}:${mm}:${ss}`;
+  if (hours > 0) return `${hh}:${mm}:${ss}`;
+  if (mins > 0) return `${mm}:${ss}`;
+  return ss;
 }
 
 function ensureWatchBtnCountdownBlocker(watchBtn) {
