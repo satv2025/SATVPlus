@@ -39,6 +39,96 @@ export function escapeHtml(str = '') {
 }
 
 /* =========================
+   NEURA AI · PROMOCIÓN SATV+
+   Gráfica independiente en Inicio.
+   CSS: /css/neura.satvplus.css
+   No altera la navegación ni requiere HTML adicional.
+========================= */
+
+const NEURA_PROMO_URL = 'https://neura.satvplus.com.ar/';
+const NEURA_PROMO_CLOSED_KEY = 'satvplus:neura-promo:closed-until';
+const NEURA_PROMO_HIDE_DAYS = 7;
+
+function initNeuraPromo() {
+  const isHome = (window.location.pathname === '/' || window.location.pathname === '/index.html')
+    && !new URLSearchParams(window.location.search).has('section');
+
+  const previous = document.getElementById('satv-neura-promo');
+  if (!isHome) {
+    previous?.remove();
+    return;
+  }
+  if (previous) return;
+
+  try {
+    const closedUntil = Number(window.localStorage.getItem(NEURA_PROMO_CLOSED_KEY) || 0);
+    if (Date.now() < closedUntil) return;
+  } catch (_) {
+    // localStorage puede estar deshabilitado: la promoción sigue funcionando.
+  }
+
+  if (!document.getElementById('satv-neura-promo-css')) {
+    const sheet = document.createElement('link');
+    sheet.id = 'satv-neura-promo-css';
+    sheet.rel = 'stylesheet';
+    sheet.href = '/css/neura.satvplus.css';
+    document.head.appendChild(sheet);
+  }
+
+  const promo = document.createElement('aside');
+  promo.id = 'satv-neura-promo';
+  promo.className = 'satv-neura-promo';
+  promo.setAttribute('aria-label', 'Conocé Neura AI de SATV+');
+
+  promo.innerHTML = `
+    <div class="satv-neura-promo__glow" aria-hidden="true"></div>
+    <div class="satv-neura-promo__orbit satv-neura-promo__orbit--one" aria-hidden="true"></div>
+    <div class="satv-neura-promo__orbit satv-neura-promo__orbit--two" aria-hidden="true"></div>
+    <button class="satv-neura-promo__close" type="button" aria-label="Cerrar promoción de Neura AI" title="Cerrar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="satv-neura-promo__content">
+      <span class="satv-neura-promo__eyebrow">
+        <span class="satv-neura-promo__spark" aria-hidden="true">✦</span>
+        NUEVO EN SATV+
+      </span>
+      <div class="satv-neura-promo__brand" aria-label="Neura AI">
+        NEURA <span>AI</span><i aria-hidden="true"></i>
+      </div>
+      <h2 class="satv-neura-promo__headline">Una nueva forma de conversar.</h2>
+      <p class="satv-neura-promo__description">Conocé nuestra nueva inteligencia artificial. Hablá, preguntá y explorá ideas con tu cuenta de SATV+.</p>
+      <div class="satv-neura-promo__actions">
+        <a class="satv-neura-promo__cta" href="${NEURA_PROMO_URL}" target="_blank" rel="noopener noreferrer" aria-label="Probar Neura AI gratis, abre en una pestaña nueva">
+          Probá Neura AI
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 12H19M12 5L19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        <span class="satv-neura-promo__free">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 7L10 17L4 11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Completamente gratis
+        </span>
+      </div>
+    </div>
+  `;
+
+  promo.querySelector('.satv-neura-promo__close')?.addEventListener('click', () => {
+    promo.classList.add('satv-neura-promo--leaving');
+    try {
+      window.localStorage.setItem(NEURA_PROMO_CLOSED_KEY,
+        String(Date.now() + NEURA_PROMO_HIDE_DAYS * 86400000));
+    } catch (_) {}
+    window.setTimeout(() => promo.remove(), 220);
+  });
+
+  document.body.appendChild(promo);
+}
+
+/* =========================
    APP NAME + TITLE
 ========================= */
 
@@ -255,6 +345,7 @@ export function renderNav({ active = 'home' } = {}) {
   // Las funciones son idempotentes, así que home.js puede seguir llamándolas.
   initTopnavSearch();
   initSearchExperience();
+  initNeuraPromo();
 }
 
 /* =========================
