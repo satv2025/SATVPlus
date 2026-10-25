@@ -71,7 +71,7 @@ function initNeuraPromo() {
     const sheet = document.createElement('link');
     sheet.id = 'satv-neura-promo-css';
     sheet.rel = 'stylesheet';
-    sheet.href = '/css/neura.satvplus.css';
+    sheet.href = '/css/c4e4a147-6a8d-4e31-9c02-7e1a924f5b30.css';
     document.head.appendChild(sheet);
   }
 

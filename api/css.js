@@ -86,7 +86,8 @@ const CSS_ASSETS = Object.freeze({
   "47cfe9de-4b47-54ae-a75e-085a2b60110b": "css/vr-graph.css",
   "27fd5a31-a979-5557-be13-82053dc58f36": "css/vr-overlay.css",
   "fd9b06e0-49dc-5581-a4f9-8a60d9ce58fe": "css/vr.css",
-  "aee7be2c-d9d3-5416-8f75-7db32c340afb": "css/watch.css"
+  "aee7be2c-d9d3-5416-8f75-7db32c340afb": "css/watch.css",
+  "c4e4a147-6a8d-4e31-9c02-7e1a924f5b30": "css/neura.satvplus.css",
 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const IMPORT = /@import\s+(?:url\(\s*(?:"[^"]*"|'[^']*'|[^)]*)\s*\)|"[^"]*"|'[^']*')\s*[^;]*;/gi;
