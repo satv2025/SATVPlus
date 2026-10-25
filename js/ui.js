@@ -41,7 +41,7 @@ export function escapeHtml(str = '') {
 /* =========================
    NEURA AI · PROMOCIÓN SATV+
    Gráfica independiente en Inicio.
-   CSS: /css/neura.satvplus.css
+   CSS: /css/c4e4a147-6a8d-4e31-9c02-7e1a924f5b30.css
    No altera la navegación ni requiere HTML adicional.
 ========================= */
 
