@@ -5,7 +5,7 @@
  */
 :host {
   display: block;
-  position: fixed;
+  position: absolute;
   left: auto;
   bottom: auto;
   top: 24px;
