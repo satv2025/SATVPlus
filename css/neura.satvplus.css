@@ -1,3 +1,4 @@
+/* css/neura.satvplus.css */
 /* SATV+ / Neura AI · CSS EXCLUSIVO para Shadow DOM.
  * Sin estilos globales. No afecta botones, textos, navegación ni VR Cinema.
  * Todo el posicionamiento está aquí, nunca en estilos inline JS.
@@ -5,15 +6,15 @@
 :host {
   display: block;
   position: fixed;
-  left: max(14px, env(safe-area-inset-left));
-  bottom: max(14px, env(safe-area-inset-bottom));
-  top: auto;
-  right: auto;
+  left: auto;
+  bottom: auto;
+  top: 24px;
+  right: 103px;
   width: min(415px, calc(100vw - 28px));
   max-width: 100%;
   margin: 0;
   padding: 0;
-  z-index: 91;
+  z-index: 100000000000000000000;
   pointer-events: none;
   color: #fff;
   color-scheme: dark;
@@ -37,6 +38,7 @@ button:focus, button:focus-visible, a:focus, a:focus-visible { outline: none !im
   box-shadow: 0 20px 54px rgba(0, 0, 0, .55), 0 0 0 1px rgba(111, 81, 218, .13);
   scrollbar-color: #3b317b #130f30;
   animation: neura-open .25s cubic-bezier(.2,.8,.2,1) both;
+  overflow-x: hidden;
 }
 .glow {
   position: absolute;
